@@ -180,16 +180,15 @@
 	const RING_VIEW = 100;
 	const RING_STROKE = 11;
 
-	// Ordem + cores dos 5 status — IDENTICAS as de /tarefas (taskLabels: em_andamento
-	// = info, para_validacao = primary, para_ajustes = warning, finalizada = success,
-	// nao_iniciada = muted). Os rotulos vem de `statusLabel` (mesma fonte do drop de
-	// selecao em tarefas), entao texto e cor batem com a tela de tarefas.
+	// Ordem + cores dos 5 status. Cada fatia usa o token de PAPEL da sua categoria
+	// (--ds-color-slice-*), calibrado para leitura lado a lado no donut. Os rotulos
+	// vem de `statusLabel` (mesma fonte do drop de selecao em tarefas).
 	const STATUS_ORDER = [
-		{ key: 'finalizada', color: 'var(--ds-color-success-600)' },
-		{ key: 'em_andamento', color: 'var(--ds-color-info-600)' },
-		{ key: 'para_validacao', color: 'var(--ds-color-primary-500)' },
-		{ key: 'para_ajustes', color: 'var(--ds-color-warning-600)' },
-		{ key: 'nao_iniciada', color: 'var(--color-text-muted)' }
+		{ key: 'finalizada', color: 'var(--ds-color-slice-finalizada)' },
+		{ key: 'em_andamento', color: 'var(--ds-color-slice-andamento)' },
+		{ key: 'para_validacao', color: 'var(--ds-color-slice-validacao)' },
+		{ key: 'para_ajustes', color: 'var(--ds-color-slice-ajustes)' },
+		{ key: 'nao_iniciada', color: 'var(--ds-color-slice-nao-iniciada)' }
 	] as const;
 
 	const statusCounts = $derived.by(() => ({
@@ -235,11 +234,11 @@
 	// Metadados de tipo de pedido (icone FontAwesome + cor). `duvida` usa roxo
 	// literal (sem token dedicado no design system).
 	const TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
-		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-danger-600)' },
-		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-warning-600)' },
+		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-text-danger)' },
+		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-text-warning)' },
 		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: 'var(--ds-color-violet-600)' },
-		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--color-text-muted)' },
-		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-primary-600)' }
+		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--ds-color-text-muted)' },
+		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-text-brand)' }
 	};
 	// "outros" tem icone/cor em TYPE_META (usado na lista de recentes), mas NAO
 	// vira chip em "Por tipo" — fica de fora da ordem dos chips de propósito.
@@ -450,7 +449,7 @@
 					{#snippet header()}
 						<a
 							href={`${base}/tarefas`}
-							class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							Ver todas
 							<i class="fas fa-arrow-right" aria-hidden="true"></i>
@@ -474,7 +473,7 @@
 										cy={RING_VIEW / 2}
 										r={ring.r}
 										fill="none"
-										stroke="var(--color-border)"
+										stroke="var(--ds-color-border-base)"
 										stroke-width={RING_STROKE - 2}
 									/>
 									{#each ring.segs as seg, i (i)}
@@ -525,7 +524,7 @@
 									{#each taskTypes as ty (ty.key)}
 										<a
 											href={`${base}/tarefas?tipo=${ty.key}`}
-											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<i class="fas {ty.icon}" style="color: {ty.color};" aria-hidden="true"></i>
 											{ty.label}
@@ -551,11 +550,11 @@
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<span
 												class="flex h-5 w-5 shrink-0 items-center justify-center"
-												style="color: {meta?.color ?? 'var(--color-text-muted)'};"
+												style="color: {meta?.color ?? 'var(--ds-color-text-muted)'};"
 												aria-hidden="true"
 											>
 												<i class="fas {meta?.icon ?? 'fa-circle-dot'}"></i>
@@ -607,7 +606,11 @@
 	/* Caixa "hero" do painel de tarefas (anel + legenda): gradiente sutil de
 	   surface-muted -> surface, como no mock concept4. Tokens => dark mode ok. */
 	.dashboard-tasks-hero {
-		background: linear-gradient(180deg, var(--color-surface-muted), var(--color-surface));
+		background: linear-gradient(
+			180deg,
+			var(--ds-color-surface-muted),
+			var(--ds-color-surface-base)
+		);
 	}
 
 	/* Anel responsivo: largura acompanha a coluna (clamp), sempre quadrado. O

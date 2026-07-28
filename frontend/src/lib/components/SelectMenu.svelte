@@ -279,10 +279,10 @@
 
 	const triggerClass = $derived.by<string>(() => {
 		if (unstyled) {
-			return 'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50';
+			return 'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50';
 		}
 		const base =
-			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50';
+			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50';
 		const sizeClass =
 			size === 'sm'
 				? 'h-[var(--control-h-sm)] px-2.5 text-[12.5px]'
@@ -366,7 +366,7 @@
 						autocomplete="off"
 						placeholder="Buscar..."
 						aria-label="Buscar opção"
-						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 					/>
 				</div>
 			{/if}
@@ -396,7 +396,7 @@
 						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors duration-fast {item
 							.option?.disabled
 							? 'cursor-not-allowed opacity-50'
-							: 'cursor-pointer'} {isSelected ? 'bg-primary-100' : isHighlighted ? 'bg-surface-muted' : ''}"
+							: 'cursor-pointer'} {isSelected ? 'bg-wash-brand' : isHighlighted ? 'bg-surface-muted' : ''}"
 					>
 						{#if item.option?.dot}
 							<span class="h-2 w-2 shrink-0 rounded-full" style:background={item.option.dot}
@@ -405,7 +405,7 @@
 						<span
 							class="min-w-0 flex-1 truncate {item.isAll
 								? 'font-semibold'
-								: ''} {isSelected ? 'font-semibold text-primary-700' : 'text-text-primary'}"
+								: ''} {isSelected ? 'font-semibold text-brand' : 'text-text-primary'}"
 						>
 							{item.label}
 						</span>

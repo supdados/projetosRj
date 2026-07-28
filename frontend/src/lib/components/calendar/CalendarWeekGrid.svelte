@@ -128,8 +128,8 @@
 				</span>
 				<span
 					class="flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold leading-none transition-colors"
-					class:bg-primary-600={today}
-					class:text-primary-fg={today}
+					class:bg-brand={today}
+					class:text-on-brand={today}
 					class:text-text-primary={!today}
 				>
 					{day.getDate()}
@@ -168,7 +168,7 @@
 					{@const colors = eventColorClasses(ev)}
 					<button
 						type="button"
-						class="mb-0.5 block w-full truncate rounded px-1.5 py-0.5 text-left text-2xs font-medium leading-tight transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {colors.block}"
+						class="mb-0.5 block w-full truncate rounded px-1.5 py-0.5 text-left text-2xs font-medium leading-tight transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {colors.block}"
 						onclick={() => onSelectEvent?.(ev)}
 						aria-label="{ev.title} — dia inteiro"
 					>

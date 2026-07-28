@@ -57,8 +57,8 @@
 	/**
 	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone Font
 	 * Awesome (`fas fa-*`, 1:1 com o template v4.5) e classes de cor da pilula de
-	 * tipo — os mesmos tons do Badge compartilhado (Badge.svelte): primary usa
-	 * `bg-primary-100`, demais tons `bg-surface-muted` + texto colorido
+	 * tipo — os mesmos tons do Badge compartilhado (Badge.svelte): projeto usa
+	 * `bg-wash-brand`, demais tons `bg-surface-muted` + texto colorido
 	 * (dark-safe via tokens).
 	 */
 	const SECTIONS: ReadonlyArray<{
@@ -71,7 +71,7 @@
 			key: 'projects',
 			label: 'Projetos',
 			icon: 'fa-folder-open',
-			badgeClass: 'bg-primary-100 text-primary-700'
+			badgeClass: 'bg-wash-brand text-brand'
 		},
 		{
 			key: 'stages',
@@ -401,7 +401,7 @@
 					aria-label="Buscar projetos, etapas, tarefas e eventos"
 					aria-describedby="busca-hint"
 					placeholder="Buscar projetos, etapas, tarefas e eventos…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
 			<div
@@ -417,9 +417,9 @@
 						type="button"
 						aria-pressed={active}
 						onclick={() => toggleType(section.key)}
-						class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {active
-							? 'border-primary-500 bg-primary-100 text-primary-700'
-							: 'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700'}"
+						class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {active
+							? 'border-brand bg-wash-brand text-brand'
+							: 'border-border-subtle bg-surface text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'}"
 					>
 						<i class="fas {section.icon} text-2xs" aria-hidden="true"></i>
 						{section.label}{#if typeCount !== undefined}
@@ -441,7 +441,7 @@
 			class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 		>
 			<div
-				class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+				class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-wash-neutral text-xl text-brand"
 			>
 				<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
 			</div>
@@ -465,7 +465,7 @@
 				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 			>
 				<div
-					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-wash-neutral text-xl text-brand"
 				>
 					<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
 				</div>
@@ -505,7 +505,7 @@
 									<li>
 										<a
 											href={item.url}
-											class="group mx-1.5 my-1 flex items-start justify-between gap-3 rounded-md border border-border-subtle px-3 py-3 text-text-primary no-underline transition-[background-color,border-color] duration-fast hover:border-border-strong hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="group mx-1.5 my-1 flex items-start justify-between gap-3 rounded-md border border-border-subtle px-3 py-3 text-text-primary no-underline transition-[background-color,border-color] duration-fast hover:border-border-strong hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<span class="flex min-w-0 flex-1 flex-col gap-1">
 												<span class="flex min-w-0 items-center gap-1.5">
@@ -515,7 +515,7 @@
 														{item.type_label}
 													</span>
 													<span
-														class="truncate text-base font-medium text-primary-700 group-hover:underline"
+														class="truncate text-base font-medium text-brand group-hover:underline"
 													>
 														{item.title}
 													</span>

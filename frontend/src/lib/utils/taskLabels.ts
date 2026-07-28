@@ -101,7 +101,7 @@ export const CHIP_BASE =
 
 const CHIP_TONE: Record<BadgeTone, string> = {
 	neutral: 'border-border-subtle bg-surface text-text-secondary dark:border-white/10',
-	primary: 'border-primary-500/30 bg-primary-500/10 text-primary-700 dark:border-white/10',
+	primary: 'border-primary-500/30 bg-primary-500/10 text-brand dark:border-white/10',
 	info: 'border-info/30 bg-info/10 text-info dark:border-white/10',
 	warning: 'border-warning/40 bg-warning/10 text-warning dark:border-white/10',
 	orange: 'border-orange/40 bg-orange/10 text-orange dark:border-white/10',

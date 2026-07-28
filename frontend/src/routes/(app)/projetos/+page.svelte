@@ -274,9 +274,9 @@
 	function statusDot(value: string): string | undefined {
 		switch (value.toLowerCase()) {
 			case 'vigente':
-				return 'var(--ds-color-success-600)';
+				return 'var(--ds-color-fill-success)';
 			case 'suspenso':
-				return 'var(--ds-color-warning-600)';
+				return 'var(--ds-color-fill-warning)';
 			case 'finalizado':
 				return 'var(--ds-color-primary-500)';
 			default:
@@ -678,7 +678,7 @@
 	// renderizar Prioridade/Status como TEXTO colorido em vez de badge preenchido.
 	const toneTextClass: Record<string, string> = {
 		neutral: 'text-text-secondary',
-		primary: 'text-primary-700',
+		primary: 'text-brand',
 		success: 'text-success',
 		warning: 'text-warning',
 		danger: 'text-danger',
@@ -758,7 +758,7 @@
 					oninput={onSearchInput}
 					aria-label="Busca livre"
 					placeholder="Digite título, órgão ou indicador…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
 
@@ -817,9 +817,9 @@
 					aria-expanded={advancedOpen}
 					aria-controls="projetosAdvancedPanel"
 					title={advancedOpen ? 'Menos filtros' : 'Mais filtros'}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {advancedOpen
-						? 'border-primary-500/50 bg-primary-100 text-primary-700'
-						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-primary-700'}"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {advancedOpen
+						? 'border-primary-500/50 bg-wash-brand text-brand'
+						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-brand'}"
 				>
 					<i class="fas fa-sliders-h" aria-hidden="true"></i>
 					{advancedOpen ? 'Menos filtros' : 'Mais filtros'}
@@ -830,7 +830,7 @@
 						onclick={clearFilters}
 						title="Limpar filtros"
 						aria-label="Limpar filtros"
-						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
 					</button>
@@ -920,7 +920,7 @@
 							onblur={() => setTimeout(closeAbep, 120)}
 							aria-label="Filtrar por indicador ABEP"
 							placeholder="Indicador ABEP (número ou título)…"
-							class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+							class="h-9 w-full rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 						/>
 						{#if abepOpen}
 							<!--
@@ -945,9 +945,9 @@
 												id={`abep-option-${index}`}
 												role="option"
 												aria-selected={option.value === abepIndicator}
-												class="block w-full cursor-pointer px-2.5 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-primary-100 hover:text-primary-700 {index ===
+												class="block w-full cursor-pointer px-2.5 py-2 text-left text-sm text-text-primary transition-colors duration-fast hover:bg-wash-neutral hover:text-brand {index ===
 												abepActiveIndex
-													? 'bg-primary-100 text-primary-700'
+													? 'bg-wash-neutral text-brand'
 													: ''}"
 												onmousedown={(e) => e.preventDefault()}
 												onclick={() => selectAbep(option.value, option.label)}
@@ -988,7 +988,7 @@
 				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
 			>
 				<div
-					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-primary-100 text-xl text-primary-700"
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-wash-neutral text-xl text-brand"
 				>
 					<i class="fas fa-folder-open" aria-hidden="true"></i>
 				</div>
@@ -1008,7 +1008,7 @@
 					<button
 						type="button"
 						onclick={() => goToPage(lastPage)}
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-all duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-arrow-left" aria-hidden="true"></i>
 						Ir para a última página
@@ -1017,7 +1017,7 @@
 					<button
 						type="button"
 						onclick={() => (createModalOpen = true)}
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary-600 px-3 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast ease-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-all duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-plus" aria-hidden="true"></i>
 						Criar projeto
@@ -1117,14 +1117,14 @@
 									<td class="border-t border-border-subtle px-2.5 py-2.5 align-middle">
 										<a
 											href={projectDetailHref(project)}
-											class="text-base font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+											class="text-base font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											{project.titulo}
 										</a>
 										{#if isAcessoPorConvite(project.access_via)}
 											<span
 												title="Você acessa este projeto por convite"
-												class="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 align-middle text-2xs font-bold uppercase tracking-wide text-primary-700"
+												class="ml-2 inline-flex items-center gap-1 rounded-full bg-wash-neutral px-2 py-0.5 align-middle text-2xs font-bold uppercase tracking-wide text-brand"
 											>
 												<i class="fas fa-user-check" aria-hidden="true"></i>Convidado
 											</span>
@@ -1228,7 +1228,7 @@
 												href={projectEditHref(project)}
 												title="Editar projeto"
 												aria-label="Editar projeto"
-												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand"
 											>
 												<i class="fas fa-pen" aria-hidden="true"></i>
 											</a>
@@ -1313,7 +1313,7 @@
 				type="button"
 				onclick={cancelDelete}
 				disabled={deletingId !== null}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				Cancelar
 			</button>

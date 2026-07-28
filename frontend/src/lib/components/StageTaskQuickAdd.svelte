@@ -193,11 +193,11 @@
 		urgente: 'var(--ds-color-priority-urgente)'
 	};
 	const STATUS_DOT: Record<string, string> = {
-		nao_iniciada: 'var(--color-text-muted)',
-		em_andamento: 'var(--ds-color-info-600)',
+		nao_iniciada: 'var(--ds-color-text-muted)',
+		em_andamento: 'var(--ds-color-status-andamento)',
 		para_validacao: 'var(--ds-color-primary-500)',
-		para_ajustes: 'var(--ds-color-warning-600)',
-		finalizada: 'var(--ds-color-success-600)'
+		para_ajustes: 'var(--ds-color-fill-warning)',
+		finalizada: 'var(--ds-color-fill-success)'
 	};
 
 	// Placeholder "" vira `SelectMenu` sem opção (value null = mostra o placeholder).
@@ -407,7 +407,7 @@
 					type="button"
 					onclick={attemptClose}
 					aria-label="Fechar"
-					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 6 6 18M6 6l12 12" />
@@ -449,7 +449,7 @@
 				<button
 					type="button"
 					onclick={() => void loadTasks()}
-					class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Tentar novamente
 				</button>
@@ -459,7 +459,7 @@
 				<!-- Scroller horizontal ÚNICO (header de colunas + linhas + form),
 				     como no hub — colunas sempre alinhadas. -->
 				<div class="overflow-x-auto overflow-y-hidden">
-					<div class="task-hub-grid bg-primary-100 px-3 py-2">
+					<div class="task-hub-grid bg-wash-neutral px-3 py-2">
 						<span class="text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary">
 							Tarefa
 						</span>
@@ -517,7 +517,7 @@
 										rows="1"
 										placeholder="Descreva a tarefa…"
 										aria-label="Descrição da tarefa"
-										class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-sm border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
+										class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-sm border border-border-subtle bg-surface px-2 py-1.5 text-sm leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60"
 									></textarea>
 									<SelectMenu
 										options={PRIORIDADE_MENU_OPTIONS}
@@ -556,7 +556,7 @@
 											disabled={addDraft.saving}
 											title="Salvar"
 											aria-label="Salvar tarefa"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 										>
 											<i class="fas fa-check text-xs" aria-hidden="true"></i>
 										</button>
@@ -566,7 +566,7 @@
 											disabled={addDraft.saving}
 											title="Cancelar"
 											aria-label="Cancelar"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 										>
 											<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 										</button>
@@ -580,7 +580,7 @@
 							<button
 								type="button"
 								onclick={openAddForm}
-								class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+								class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
 								Adicionar nova tarefa
@@ -606,7 +606,7 @@
 					<button
 						type="button"
 						onclick={keepEditing}
-						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Continuar editando
 					</button>

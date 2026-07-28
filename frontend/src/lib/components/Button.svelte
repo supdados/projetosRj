@@ -46,14 +46,14 @@
 	}: Props & HTMLButtonAttributes & HTMLAnchorAttributes = $props();
 
 	const base =
-		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-all duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-all duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 
 	const variantClass: Record<Variant, string> = {
 		primary:
-			'bg-primary-600 text-primary-fg shadow-sm hover:-translate-y-0.5 hover:bg-primary-700 hover:shadow-md active:translate-y-0',
+			'bg-brand text-on-brand shadow-sm hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md active:translate-y-0',
 		// Espelha .btn-glass-secondary: superficie clara, borda/texto primary.
 		secondary:
-			'border border-primary-500 bg-surface text-primary-700 shadow-sm hover:-translate-y-0.5 hover:bg-primary-100 hover:shadow-md active:translate-y-0',
+			'border border-brand bg-surface text-brand shadow-sm hover:-translate-y-0.5 hover:bg-wash-brand hover:shadow-md active:translate-y-0',
 		// Espelha .btn-glass-remove: superficie + danger.
 		danger:
 			'border border-danger bg-surface text-danger hover:-translate-y-0.5 hover:bg-surface-muted hover:shadow-md active:translate-y-0',

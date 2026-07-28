@@ -62,12 +62,12 @@
 	// `color`: animar o texto junto causaria flicker branco-sobre-branco na troca
 	// de página ativa.
 	const ARROW =
-		'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-[background-color,border-color] duration-fast ease-out hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle disabled:hover:bg-surface disabled:hover:text-text-secondary';
+		'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm font-semibold text-text-secondary transition-[background-color,border-color] duration-fast ease-out hover:border-brand hover:bg-wash-neutral hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-subtle disabled:hover:bg-surface disabled:hover:text-text-secondary';
 	const PAGE_BASE =
-		'inline-flex h-8 min-w-9 items-center justify-center rounded-md border px-2.5 text-sm font-semibold tabular-nums transition-[background-color,border-color,box-shadow] duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed';
-	const PAGE_ACTIVE = 'border-transparent bg-primary-600 text-white shadow-sm';
+		'inline-flex h-8 min-w-9 items-center justify-center rounded-md border px-2.5 text-sm font-semibold tabular-nums transition-[background-color,border-color,box-shadow] duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed';
+	const PAGE_ACTIVE = 'border-transparent bg-brand text-white shadow-sm';
 	const PAGE_IDLE =
-		'border-border-subtle bg-surface text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700';
+		'border-border-subtle bg-surface text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand';
 	// Reticências: mesmo box (h-8 min-w-9) que um número, sem borda/hover — mantém
 	// a largura idêntica quando o gap surge/some.
 	const ELLIPSIS =

@@ -284,7 +284,7 @@
 	Focus-visible com ring triplo acessível.
 -->
 <div
-	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-lg bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-sm outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary-500 active:cursor-grabbing {dragging
+	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-lg bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-sm outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-brand active:cursor-grabbing {dragging
 		? 'is-dragging'
 		: ''} {settled ? 'is-drop-settling' : ''}"
 	draggable="true"
@@ -313,7 +313,7 @@
 		<a
 			href={`/projetos/${card.project_id}`}
 			draggable="false"
-			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-primary-600 transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			title={card.project_titulo}
 		>
 			{card.project_titulo}
@@ -442,7 +442,7 @@
 					type="button"
 					onclick={cancelDeleteConfirm}
 					disabled={deleting}
-					class="h-[26px] rounded-md border border-border-subtle bg-surface px-[0.44rem] text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="h-[26px] rounded-md border border-border-subtle bg-surface px-[0.44rem] text-xs font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					Cancelar
 				</button>
@@ -497,18 +497,18 @@
 	 * `flex: none` de propósito: o rótulo não trunca no meio — quando não cabe,
 	 * o rodapé adaptativo o SUPRIME inteiro (nível 1 do `refitFooter`). */
 	.kc-chip--tipo {
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 
 	/* Bolinha agregada de responsáveis ("+N", nível 2 do rodapé adaptativo). */
 	.kc-avatar-overflow {
 		background-color: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 
 	/* Lixeira sem fundo (só o ícone): o hover acende o vermelho (token puro). */
 	.kc-delete-btn:hover {
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	/*

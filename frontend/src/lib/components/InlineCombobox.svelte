@@ -187,7 +187,7 @@
 			disabled={pending}
 			onkeydown={onKeydown}
 			onblur={() => setTimeout(closeList, 120)}
-			class="ic-input w-full rounded-md border border-border-subtle bg-surface px-2 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none {wrap
+			class="ic-input w-full rounded-md border border-border-subtle bg-surface px-2 text-sm leading-tight text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none {wrap
 				? 'h-9'
 				: 'h-7'}"
 		/>
@@ -240,7 +240,7 @@
 			disabled={readonly || pending}
 			onclick={openList}
 			onkeydown={onClosedKeydown}
-			class="ic-closed group flex w-full gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {wrap
+			class="ic-closed group flex w-full gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {wrap
 				? 'min-h-9 items-start py-1.5'
 				: 'h-7 items-center'}"
 			class:is-empty={!hasValue}
@@ -290,7 +290,7 @@
 	}
 	.ic-closed:hover:not(:disabled) .ic-value,
 	.ic-closed:focus-visible .ic-value {
-		border-bottom-color: var(--color-border, #c4d5e7);
+		border-bottom-color: var(--ds-color-border-base, #c4d5e7);
 	}
 	.ic-closed.is-empty .ic-value {
 		font-style: italic;
@@ -316,7 +316,7 @@
 		display: block;
 		margin-top: 0.2rem;
 		font-size: 0.72rem;
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	:global([data-theme='dark']) .ic-listbox {

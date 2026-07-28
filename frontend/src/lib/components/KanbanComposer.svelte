@@ -231,7 +231,7 @@
 	<button
 		type="button"
 		onclick={requestOpen}
-		class="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-all duration-fast hover:border-primary-500 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border-strong bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-all duration-fast hover:border-brand hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		+ adicionar
 	</button>
@@ -283,7 +283,7 @@
 			rows="2"
 			placeholder="Descreva a tarefa…"
 			aria-label="Descrição da tarefa"
-			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
+			class="min-h-[64px] w-full resize-y rounded-md border border-border-subtle bg-surface px-[0.48rem] py-[0.38rem] text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
 		></textarea>
 
 		{#if project && responsavelOptions.length > 0}
@@ -334,14 +334,14 @@
 				type="button"
 				onclick={requestClose}
 				disabled={saving}
-				class="h-[30px] rounded-md border border-border-subtle bg-surface px-[0.56rem] text-xs font-semibold text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="h-[30px] rounded-md border border-border-subtle bg-surface px-[0.56rem] text-xs font-semibold text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 			>
 				Cancelar
 			</button>
 			<button
 				type="submit"
 				disabled={saving}
-				class="h-[30px] rounded-md bg-primary-600 px-[0.56rem] text-xs font-semibold text-primary-fg shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="h-[30px] rounded-md bg-brand px-[0.56rem] text-xs font-semibold text-on-brand shadow-sm transition-all duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 			>
 				{saving ? 'Salvando…' : 'Salvar'}
 			</button>

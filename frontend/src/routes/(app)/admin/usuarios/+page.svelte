@@ -224,7 +224,7 @@
 				placeholder="Buscar por nome ou login…"
 				aria-label="Buscar usuários por nome ou login"
 				autocomplete="off"
-				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-primary-500 focus:outline-none"
+				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-brand focus:outline-none"
 			/>
 
 			<!-- Seletor de área em árvore (mesmo componente de UserForm/CriarProjetoModal).
@@ -245,7 +245,7 @@
 				<button
 					type="button"
 					onclick={clearFilters}
-					class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Limpar
 				</button>
@@ -273,7 +273,7 @@
 			<button
 				type="button"
 				onclick={() => load()}
-				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				Tentar novamente
 			</button>
@@ -294,7 +294,7 @@
 				<button
 					type="button"
 					onclick={clearFilters}
-					class="mt-3 inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="mt-3 inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3.5 py-2 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Limpar filtros
 				</button>
@@ -318,7 +318,7 @@
 				</p>
 				<a
 					href={`${base}/admin/usuarios/novo`}
-					class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg no-underline transition-all duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+					class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand no-underline transition-all duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
 				>
 					<i class="fas fa-plus"></i>
 					Criar Primeiro Usuário
@@ -427,7 +427,7 @@
 												href={editHref(user)}
 												title="Editar Usuário"
 												aria-label="Editar usuário {user.name}"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
 												<i class="fas fa-pen"></i>
 											</a>

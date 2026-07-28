@@ -673,8 +673,8 @@
 
 <style>
 	.etapa-table-card {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 14px;
 		box-shadow: 0 8px 24px rgba(20, 45, 78, 0.06);
 		overflow-x: hidden;
@@ -696,12 +696,12 @@
 		border-collapse: separate;
 		border-spacing: 0;
 		margin: 0;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 	}
 	.etapa-table thead th {
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
-		color: var(--color-text-secondary);
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-secondary);
 		font-size: 0.72rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
@@ -751,7 +751,7 @@
 	   transition em <tr>/<td> são ignorados/recalculados pelo layout de tabela. */
 	.stage-placeholder-row td {
 		padding: 3px 8px;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 	}
 	.stage-placeholder-fill {
 		border-radius: 10px;
@@ -786,20 +786,20 @@
 		overflow: hidden;
 		border-radius: 12px;
 		border: 1px solid var(--ds-color-border-brand, #9db8d2);
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		box-shadow: 0 12px 36px rgba(0, 90, 146, 0.28);
 	}
 	:global(.stage-drag-ghost-row td) {
 		border-top: 0 !important;
 	}
 	:global([data-theme='dark'] .stage-drag-ghost-row) {
-		border-color: var(--color-border-strong);
+		border-color: var(--ds-color-border-strong);
 		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
 	}
 
 	.etapa-entry-row td,
 	.etapa-composer-row td {
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 		padding: 0.5rem 0.7rem;
 	}
 	/* Ocupa a linha inteira e centraliza: o tracejado vira a "última linha"
@@ -811,10 +811,10 @@
 		justify-content: center;
 		gap: 0.45rem;
 		background: none;
-		border: 1px dashed var(--color-border-strong);
+		border: 1px dashed var(--ds-color-border-strong);
 		border-radius: 8px;
 		padding: 0.6rem 0.9rem;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		font-size: 0.82rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -824,10 +824,10 @@
 	}
 	.etapa-entry-btn:hover {
 		background: rgba(37, 99, 235, 0.07);
-		border-color: var(--color-border-strong);
+		border-color: var(--ds-color-border-strong);
 	}
 	.composer-drag-placeholder {
-		color: var(--color-border-strong);
+		color: var(--ds-color-border-strong);
 	}
 	.composer-textarea,
 	.composer-input {
@@ -836,8 +836,8 @@
 		border: 1px solid var(--stage-input-border);
 		border-radius: 7px;
 		font-size: 0.875rem;
-		color: var(--color-text-primary);
-		background: var(--color-surface);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-base);
 		font-family: inherit;
 		line-height: 1.45;
 		box-sizing: border-box;
@@ -850,8 +850,8 @@
 	.composer-textarea:focus,
 	.composer-input:focus {
 		outline: none;
-		border-color: var(--ds-color-primary-500);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		border-color: var(--ds-color-border-brand);
+		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 	.composer-date-trigger {
 		cursor: pointer;
@@ -859,10 +859,10 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.composer-date-trigger--empty {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 	.etapa-task-pill-placeholder {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-weight: 500;
 	}
 	.cell-drag {
@@ -871,7 +871,7 @@
 	.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-weight: 500;
 	}
 	.cell-desc {
@@ -910,7 +910,7 @@
 		align-items: center;
 		justify-content: center;
 		border: 1px solid var(--stage-chip-border);
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		cursor: pointer;
 		transition: all 0.16s ease;
 	}
@@ -937,14 +937,14 @@
 	.no-etapas-cell {
 		padding: 0.7rem;
 		text-align: center;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 	.composer-error {
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 	.no-etapas-cell i {
 		font-size: 1.5rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		display: block;
 		margin-bottom: 0.5rem;
 	}

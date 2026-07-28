@@ -317,9 +317,9 @@
 
 {#snippet stageTableHead()}
 	<!-- Faixa azul com labels de coluna — mesma linguagem do StageGroupHeader do
-	     hub de Tarefas (bg-primary-100, text-2xs bold uppercase text-text-secondary). -->
+	     hub de Tarefas (bg-wash-neutral, text-2xs bold uppercase text-text-secondary). -->
 	<thead>
-		<tr class="border-b border-border-subtle bg-primary-100 text-left">
+		<tr class="border-b border-border-subtle bg-wash-neutral text-left">
 			<th scope="col" class={`${TH} text-left`}>Etapa</th>
 			<th scope="col" class={`${TH} text-center`}>Responsável</th>
 			<th scope="col" class={`${TH} text-center`}>Data Início</th>
@@ -360,10 +360,10 @@
 				disabled={isDone}
 				title="Ver e adicionar tarefas desta etapa"
 				aria-label="Ver e adicionar tarefas desta etapa"
-				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40
+				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40
 					{isEmpty
-					? 'border-dashed border-primary-500/40 bg-transparent text-text-secondary hover:border-primary-500 hover:bg-primary-100/40 hover:text-primary-700'
-					: 'border-primary-500/40 bg-primary-100 text-primary-700 hover:border-primary-500 hover:bg-wash-brand'}"
+					? 'border-dashed border-primary-500/40 bg-transparent text-text-secondary hover:border-brand hover:bg-primary-100/40 hover:text-brand'
+					: 'border-primary-500/40 bg-wash-neutral text-brand hover:border-brand hover:bg-wash-brand'}"
 			>
 				{#if isEmpty}
 					<i class="fas fa-plus" aria-hidden="true"></i>
@@ -404,7 +404,7 @@
 					href={`${base}/projetos/${project.id}`}
 					id={headingId}
 					title="Abrir projeto"
-					class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<span class="shrink-0 font-mono text-xs font-bold text-text-muted">{project.id}</span>
 					<span class="shrink-0 text-text-muted" aria-hidden="true">–</span>
@@ -446,7 +446,7 @@
 					onclick={toggleExpanded}
 					aria-expanded={isExpanded}
 					aria-controls={otherPanelId}
-					class="inline-flex w-fit items-center rounded-md text-sm font-semibold text-primary-700 transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex w-fit items-center rounded-md text-sm font-semibold text-brand transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<span>
 						{#if isExpanded}− Recolher{:else}+ {row.qtd_outras} {row.qtd_outras === 1 ? 'etapa fora do escopo' : 'etapas fora do escopo'}{/if}
@@ -546,35 +546,35 @@
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle {
 		background: var(--stage-chip-bg, #262626);
-		border-color: var(--color-border);
+		border-color: var(--ds-color-border-base);
 		color: var(--stage-chip-text, #e0e0e0);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle:hover:not(:disabled),
 	:global(html[data-theme='dark']) .etapa-status-toggle:focus-visible:not(:disabled) {
-		background: var(--color-surface-elevated);
-		border-color: var(--color-border-strong);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-raised);
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-primary);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle-done {
-		background: var(--ds-color-success-light-bg);
-		border-color: var(--ds-color-success-600);
-		color: var(--ds-color-success-600);
+		background: var(--ds-color-wash-success);
+		border-color: var(--ds-color-border-success);
+		color: var(--ds-color-text-success);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle-done:hover:not(:disabled),
 	:global(html[data-theme='dark']) .etapa-status-toggle-done:focus-visible:not(:disabled) {
 		background: rgba(73, 185, 135, 0.22);
-		border-color: var(--ds-color-success-600);
-		color: var(--ds-color-success-600);
+		border-color: var(--ds-color-border-success);
+		color: var(--ds-color-text-success);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle-started {
-		background: var(--ds-color-primary-100);
-		border-color: var(--ds-color-primary-500);
+		background: var(--ds-color-wash-brand);
+		border-color: var(--ds-color-border-brand);
 		color: var(--ds-color-primary-500);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle-started:hover:not(:disabled),
 	:global(html[data-theme='dark']) .etapa-status-toggle-started:focus-visible:not(:disabled) {
 		background: rgba(78, 149, 204, 0.28);
-		border-color: var(--ds-color-primary-500);
+		border-color: var(--ds-color-border-brand);
 		color: var(--ds-color-primary-500);
 	}
 </style>

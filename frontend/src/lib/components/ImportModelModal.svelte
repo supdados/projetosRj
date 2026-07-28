@@ -228,7 +228,7 @@
 			<header class="flex items-start justify-between gap-3">
 				<div class="flex items-start gap-3">
 					<span
-						class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-700"
+						class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wash-brand text-brand"
 						aria-hidden="true"
 					>
 						<i class="fas fa-file-import"></i>
@@ -246,7 +246,7 @@
 					type="button"
 					onclick={onClose}
 					aria-label="Fechar"
-					class="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-times" aria-hidden="true"></i>
 				</button>
@@ -294,7 +294,7 @@
 						aria-haspopup="dialog"
 						aria-expanded={startDatePickerOpen}
 						onclick={() => (startDatePickerOpen = !startDatePickerOpen)}
-						class="flex w-full items-center rounded-md border border-border-subtle bg-surface px-3 py-2 text-left text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60"
+						class="flex w-full items-center rounded-md border border-border-subtle bg-surface px-3 py-2 text-left text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
 					>
 						<span class={startDate ? '' : 'text-text-muted'}>
 							{startDateLabel(startDate) || 'Selecionar data'}
@@ -339,7 +339,7 @@
 										class="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-muted px-3 py-2"
 									>
 										<span
-											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700"
+											class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-xs font-semibold text-brand"
 											aria-hidden="true"
 										>
 											{stage.order}
@@ -360,7 +360,7 @@
 							</ol>
 
 							<p class="flex items-center gap-2 text-xs text-text-secondary">
-								<i class="fas fa-info-circle text-primary-700" aria-hidden="true"></i>
+								<i class="fas fa-info-circle text-brand" aria-hidden="true"></i>
 								<span>
 									<strong>Total:</strong>
 									{previewStages.length} etapa{previewStages.length > 1 ? 's' : ''} ·
@@ -385,7 +385,7 @@
 					type="button"
 					onclick={onClose}
 					disabled={submitting}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Cancelar
 				</button>
@@ -393,7 +393,7 @@
 					type="button"
 					onclick={confirm}
 					disabled={!canConfirm}
-					class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					{submitting ? 'Importando…' : 'Importar'}
 				</button>

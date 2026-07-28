@@ -337,7 +337,7 @@
 									aria-label="Editar comentário"
 									oninput={() => autoResize(editTextarea)}
 									onkeydown={(e) => onEditKeydown(e, comment.id)}
-									class="min-h-[32px] w-full resize-none overflow-hidden rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm leading-normal text-text-primary focus:border-primary-500 focus:outline-none"
+									class="min-h-[32px] w-full resize-none overflow-hidden rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm leading-normal text-text-primary focus:border-brand focus:outline-none"
 								></textarea>
 								<button
 									type="button"
@@ -345,7 +345,7 @@
 									onclick={() => saveEdit(comment.id)}
 									title="Salvar"
 									aria-label="Salvar"
-									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-primary-500 bg-primary-100 text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 								>
 									<i class="fas fa-check text-xs" aria-hidden="true"></i>
 								</button>
@@ -354,7 +354,7 @@
 									onclick={cancelEdit}
 									title="Cancelar"
 									aria-label="Cancelar"
-									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 								</button>
@@ -362,12 +362,12 @@
 						{:else}
 							<!-- Ícones de editar/excluir junto ao FIM do texto (igual à tarefa),
 							     revelados no hover da linha do comentário. -->
-							<p class="m-0 whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">{#each splitMentions(comment.content, knownNames) as seg}{#if seg.isMention}<span class="rounded bg-primary-100 px-1 font-medium text-primary-700">{seg.text}</span>{:else}{seg.text}{/if}{/each}{#if (comment.can_edit || comment.can_delete) && confirmingId !== comment.id}<span class="ml-1.5 inline-flex translate-y-px items-center gap-0.5 align-middle opacity-0 transition-opacity duration-fast group-hover/cmt:opacity-100 group-focus-within/cmt:opacity-100">{#if comment.can_edit}<button
+							<p class="m-0 whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">{#each splitMentions(comment.content, knownNames) as seg}{#if seg.isMention}<span class="rounded bg-wash-neutral px-1 font-medium text-brand">{seg.text}</span>{:else}{seg.text}{/if}{/each}{#if (comment.can_edit || comment.can_delete) && confirmingId !== comment.id}<span class="ml-1.5 inline-flex translate-y-px items-center gap-0.5 align-middle opacity-0 transition-opacity duration-fast group-hover/cmt:opacity-100 group-focus-within/cmt:opacity-100">{#if comment.can_edit}<button
 										type="button"
 										onclick={() => startEdit(comment.id, comment.content)}
 										aria-label="Editar comentário"
 										title="Editar"
-										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									><i class="fas fa-pen" aria-hidden="true"></i></button>{/if}{#if comment.can_delete}<button
 										type="button"
 										onclick={() => (confirmingId = comment.id)}
@@ -384,7 +384,7 @@
 									type="button"
 									onclick={() => (confirmingId = null)}
 									disabled={busy}
-									class="rounded border border-border-subtle px-2 py-0.5 text-2xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+									class="rounded border border-border-subtle px-2 py-0.5 text-2xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 								>
 									Cancelar
 								</button>
@@ -408,25 +408,25 @@
 			<svg width="44" height="32" viewBox="0 0 44 32" fill="none" aria-hidden="true">
 				<path
 					d="M27 3h11a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-5l-2.5 2.5V18H27a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z"
-					stroke="var(--color-border)"
+					stroke="var(--ds-color-border-base)"
 					stroke-width="1"
-					fill="var(--color-surface)"
+					fill="var(--ds-color-surface-base)"
 					stroke-dasharray="2.5 2.5"
 				/>
 				<path
 					d="M5 10h13a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-5l-2.5 2.5V25H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3z"
-					stroke="var(--color-text-muted)"
+					stroke="var(--ds-color-text-muted)"
 					stroke-width="1.1"
-					fill="var(--color-surface-muted)"
+					fill="var(--ds-color-surface-muted)"
 				/>
-				<circle cx="8" cy="17.5" r="1" fill="var(--color-text-muted)" />
-				<circle cx="11.5" cy="17.5" r="1" fill="var(--color-text-muted)" />
-				<circle cx="15" cy="17.5" r="1" fill="var(--color-text-muted)" />
+				<circle cx="8" cy="17.5" r="1" fill="var(--ds-color-text-muted)" />
+				<circle cx="11.5" cy="17.5" r="1" fill="var(--ds-color-text-muted)" />
+				<circle cx="15" cy="17.5" r="1" fill="var(--ds-color-text-muted)" />
 			</svg>
 			<button
 				type="button"
 				onclick={startComposing}
-				class="group/cta inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary shadow-sm transition-colors duration-fast hover:border-border-strong hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="group/cta inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary shadow-sm transition-colors duration-fast hover:border-border-strong hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<span>Faça o primeiro comentário</span>
 				<i
@@ -474,7 +474,7 @@
 			{/if}
 
 			<form
-				class="overflow-hidden rounded-lg border border-border-subtle bg-surface transition-colors duration-fast focus-within:border-primary-500"
+				class="overflow-hidden rounded-lg border border-border-subtle bg-surface transition-colors duration-fast focus-within:border-brand"
 				onsubmit={(e) => {
 					e.preventDefault();
 					void submit();
@@ -506,7 +506,7 @@
 							}}
 							title="Mencionar pessoa"
 							aria-label="Mencionar pessoa"
-							class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							<i class="fas fa-at text-xs" aria-hidden="true"></i>
 						</button>
@@ -516,7 +516,7 @@
 							disabled={uploading}
 							title="Anexar arquivo"
 							aria-label="Anexar arquivo"
-							class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+							class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 						>
 							<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'} text-xs" aria-hidden="true"></i>
 						</button>
@@ -534,7 +534,7 @@
 							<button
 								type="button"
 								onclick={discard}
-								class="rounded-md px-2.5 py-1 text-2xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="rounded-md px-2.5 py-1 text-2xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Descartar
 							</button>
@@ -542,7 +542,7 @@
 						<button
 							type="submit"
 							disabled={busy || draft.trim() === ''}
-							class="inline-flex items-center rounded-md bg-primary-600 px-3 py-1 text-2xs font-semibold text-white transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex items-center rounded-md bg-brand px-3 py-1 text-2xs font-semibold text-white transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Comentar
 						</button>
@@ -575,8 +575,8 @@
 		top: 0;
 		width: 22px;
 		height: 24px;
-		border-left: 1.5px solid var(--color-border);
-		border-bottom: 1.5px solid var(--color-border);
+		border-left: 1.5px solid var(--ds-color-border-base);
+		border-bottom: 1.5px solid var(--ds-color-border-base);
 		border-bottom-left-radius: 12px;
 		pointer-events: none;
 	}
@@ -587,7 +587,7 @@
 		top: 24px;
 		bottom: 0;
 		width: 1.5px;
-		background: var(--color-border);
+		background: var(--ds-color-border-base);
 		pointer-events: none;
 	}
 	.ict-cmt:last-child::after {

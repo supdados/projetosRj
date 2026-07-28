@@ -181,14 +181,14 @@
 	>
 		<span
 			class="cp-lrow-dot grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] {isFilled
-				? 'border-primary-600 bg-primary-600'
+				? 'border-primary-600 bg-brand'
 				: 'border-dashed border-border-strong bg-surface'}"
 			class:cp-lrow-dot-pop={celebrating}
 			aria-hidden="true"
 		>
 			<svg
 				viewBox="0 0 24 24"
-				class="h-3 w-3 text-primary-fg transition-opacity duration-fast {isFilled
+				class="h-3 w-3 text-on-brand transition-opacity duration-fast {isFilled
 					? 'opacity-100'
 					: 'opacity-0'}"
 				fill="none"
@@ -231,7 +231,7 @@
 					aria-expanded={open}
 					aria-controls={editorId}
 					onclick={openEditor}
-					class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -254,7 +254,7 @@
 					aria-expanded={open}
 					aria-controls={editorId}
 					onclick={openEditor}
-					class="flex h-8 flex-none items-center rounded-md border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-primary-600 transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="flex h-8 flex-none items-center rounded-md border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-primary-600 transition-colors duration-fast hover:border-brand hover:bg-surface-muted active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Adicionar
 				</button>
@@ -270,7 +270,7 @@
 						cancelRow(true);
 					}}
 					onclick={() => cancelRow(true)}
-					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -294,7 +294,7 @@
 						confirmRow(true);
 					}}
 					onclick={() => confirmRow(true)}
-					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -340,7 +340,7 @@
 						aria-label={label}
 						onkeydown={onInputKeydown}
 						onblur={onInputBlur}
-						class="w-full resize-y rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+						class="w-full resize-y rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 					></textarea>
 				{:else}
 					<input
@@ -352,7 +352,7 @@
 						aria-label={label}
 						onkeydown={onInputKeydown}
 						onblur={onInputBlur}
-						class="h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+						class="h-10 w-full rounded-md border border-border-subtle bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 					/>
 				{/if}
 			</div>

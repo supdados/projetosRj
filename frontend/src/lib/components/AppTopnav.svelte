@@ -281,7 +281,7 @@
 
 <svelte:window onclick={handleAnyOutside} onkeydown={handleWindowKeydown} />
 
-<header class="app-topnav sticky top-0 z-sticky border-b border-white/10 bg-topnav-gradient">
+<header class="app-topnav sticky top-0 z-sticky border-b border-white/10 bg-topnav">
 	<div
 		class="relative mx-auto flex min-h-[48px] items-center justify-between gap-6 px-5"
 	>
@@ -338,7 +338,7 @@
 							if (e.key === 'Enter') pressedPath = null;
 						}}
 						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
-							? 'text-primary-700 dark:text-white'
+							? 'text-brand dark:text-white'
 							: 'text-white/[0.78] hover:text-white'}"
 					>
 						<Nav3dIcon
@@ -372,7 +372,7 @@
 					title="Notificacoes"
 					aria-label="Notificacoes"
 					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {notifOpen
-						? 'border-white bg-white text-primary-700 dark:border-white/10 dark:bg-white/15 dark:text-white'
+						? 'border-white bg-white text-brand dark:border-white/10 dark:bg-white/15 dark:text-white'
 						: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
 				>
 					<i class="fas fa-bell" aria-hidden="true"></i>
@@ -437,7 +437,7 @@
 												></span>
 											{/if}
 											<span
-												class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-600"
+												class="flex h-8 w-8 items-center justify-center rounded-full bg-wash-neutral text-primary-600"
 											>
 												<i class="fas {notifIcon(item.event_type)}" aria-hidden="true"></i>
 											</span>
@@ -480,7 +480,7 @@
 						aria-label="Conta e administracao"
 						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {adminActive ||
 						adminOpen
-							? 'border-white bg-white text-primary-700 dark:border-white/10 dark:bg-white/15 dark:text-white'
+							? 'border-white bg-white text-brand dark:border-white/10 dark:bg-white/15 dark:text-white'
 							: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
 					>
 						<i class="fas fa-user-circle" aria-hidden="true"></i>
@@ -510,7 +510,7 @@
 										href={`${base}${link.path}`}
 										aria-current={active ? 'page' : undefined}
 										onclick={closeAdmin}
-										class="group flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {active
+										class="group flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {active
 											? 'bg-surface-muted text-text-primary'
 											: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
 									>
@@ -531,7 +531,7 @@
 								href="/projects/download"
 								download
 								onclick={closeAdmin}
-								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<i
 									class="fas fa-file-csv w-4 text-center text-text-muted transition-colors duration-fast group-hover:text-orange"
@@ -546,7 +546,7 @@
 								role="menuitem"
 								href="/logout"
 								data-sveltekit-reload
-								class="flex items-center gap-3 px-4 py-2 text-sm text-danger no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+								class="flex items-center gap-3 px-4 py-2 text-sm text-danger no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<i class="fas fa-sign-out-alt w-4 text-center" aria-hidden="true"></i>
 								<span>Sair</span>

@@ -338,7 +338,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Áreas responsáveis"
-			class="group inline-flex items-center rounded-md p-0.5 transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="group inline-flex items-center rounded-md p-0.5 transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
 			<span class="stage-resp-chips">
 				{#each visibleChips as chip (chip.area_id ?? chip.label)}
@@ -358,7 +358,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Selecionar áreas responsáveis"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
 			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Áreas
 		</button>
@@ -397,7 +397,7 @@
 								onclick={() => removeSelected(item)}
 								aria-label={`Remover ${item.label}`}
 								title={`Remover ${item.label}`}
-								class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-muted transition-colors duration-fast hover:bg-border-subtle hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-muted transition-colors duration-fast hover:bg-border-subtle hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								<i class="fas fa-xmark text-2xs" aria-hidden="true"></i>
 							</button>
@@ -509,15 +509,15 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--stage-chip-text);
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 	}
 	.stage-resp-chip--overflow {
 		color: var(--stage-chip-text-hover);
 		background: var(--stage-chip-bg-hover);
 	}
 	:global(html[data-theme='dark']) .stage-resp-chip {
-		background: var(--color-surface-elevated);
-		border-color: var(--color-border);
-		color: var(--color-text-secondary);
+		background: var(--ds-color-surface-raised);
+		border-color: var(--ds-color-border-base);
+		color: var(--ds-color-text-secondary);
 	}
 </style>

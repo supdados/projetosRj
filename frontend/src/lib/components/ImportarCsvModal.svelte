@@ -28,8 +28,8 @@
 
 	const STATUS_OPTIONS = ['Vigente', 'Suspenso', 'Finalizado'];
 	const STATUS_DOT: Record<string, string> = {
-		Vigente: 'var(--ds-color-success-600)',
-		Suspenso: 'var(--ds-color-warning-600)',
+		Vigente: 'var(--ds-color-fill-success)',
+		Suspenso: 'var(--ds-color-fill-warning)',
 		Finalizado: 'var(--ds-color-primary-500)'
 	};
 
@@ -114,14 +114,14 @@
 	<Modal labelId="import-csv-title" maxWidth="max-w-lg" onBackdrop={onClose}>
 		<div class="flex flex-col gap-4">
 			<div class="flex items-start justify-between gap-3">
-				<h2 id="import-csv-title" class="font-heading text-lg font-bold text-primary-700">
+				<h2 id="import-csv-title" class="font-heading text-lg font-bold text-brand">
 					<i class="fas fa-file-import mr-2" aria-hidden="true"></i>Importar projetos (CSV)
 				</h2>
 				<button
 					type="button"
 					onclick={onClose}
 					aria-label="Fechar"
-					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-times" aria-hidden="true"></i>
 				</button>
@@ -148,7 +148,7 @@
 						accept=".csv,text/csv"
 						required
 						onchange={onFileChange}
-						class="rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm text-text-primary file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm file:font-medium file:text-text-primary focus:border-primary-500 focus:outline-none"
+						class="rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm text-text-primary file:mr-3 file:rounded-md file:border-0 file:bg-surface-muted file:px-3 file:py-1 file:text-sm file:font-medium file:text-text-primary focus:border-brand focus:outline-none"
 					/>
 				</label>
 
@@ -214,14 +214,14 @@
 					<button
 						type="button"
 						onclick={onClose}
-						class="h-9 rounded-md border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="h-9 rounded-md border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Cancelar
 					</button>
 					<button
 						type="submit"
 						disabled={!canSubmit}
-						class="inline-flex h-9 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<i class="fas {submitting ? 'fa-spinner fa-spin' : 'fa-file-import'}" aria-hidden="true"></i>
 						Importar

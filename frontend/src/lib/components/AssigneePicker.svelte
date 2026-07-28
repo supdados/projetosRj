@@ -280,7 +280,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Responsáveis"
-			class="group inline-flex items-center rounded-full p-0.5 transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="group inline-flex items-center rounded-full p-0.5 transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
 			<span class="flex -space-x-1.5">
 				{#each visibleAvatars as a, i (a.id)}
@@ -320,7 +320,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Atribuir responsável"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
 			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Atribuir
 		</button>

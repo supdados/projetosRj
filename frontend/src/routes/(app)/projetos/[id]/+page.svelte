@@ -1181,7 +1181,7 @@
 				<button
 					type="button"
 					onclick={() => (historyOpen = true)}
-					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-history" aria-hidden="true"></i>Ver Histórico
 				</button>
@@ -1213,7 +1213,7 @@
 						onclick={onReopenProject}
 						disabled={reopenInFlight}
 						title="Voltar o projeto para o status Vigente e liberar a edição"
-						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						{#if reopenInFlight}
 							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Reabrindo...
@@ -1435,7 +1435,7 @@
 										aria-label={`Remover ${link.label}`}
 										disabled={projectFieldStates[`custom_link_${i}`]?.pending}
 										onclick={() => removeCustomLink(i)}
-										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
 									</button>
@@ -1460,7 +1460,7 @@
 										aria-label="Nome do novo link personalizado"
 										autofocus
 										onkeydown={onCustomLinkDraftKeydown}
-										class="h-8 w-32 shrink-0 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+										class="h-8 w-32 shrink-0 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 									/>
 									<input
 										bind:value={customLinkDraft.url}
@@ -1469,7 +1469,7 @@
 										placeholder="https://..."
 										aria-label="URL do novo link personalizado"
 										onkeydown={onCustomLinkDraftKeydown}
-										class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+										class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 									/>
 									<button
 										type="button"
@@ -1479,7 +1479,7 @@
 											customLinkDraft.label.trim() === '' ||
 											customLinkDraft.url.trim() === ''}
 										onclick={() => void confirmCustomLinkDraft()}
-										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-check text-xs" aria-hidden="true"></i>
 									</button>
@@ -1488,7 +1488,7 @@
 										title="Cancelar (Esc)"
 										aria-label="Cancelar novo link personalizado"
 										onclick={() => (customLinkDraft = null)}
-										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 									</button>
@@ -1502,7 +1502,7 @@
 								<button
 									type="button"
 									onclick={() => (customLinkDraft = { label: '', url: '' })}
-									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-primary-600 transition-colors duration-fast hover:border-primary-500 hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-primary-600 transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<i class="fas fa-plus text-xs" aria-hidden="true"></i>Adicionar link personalizado
 								</button>
@@ -1537,7 +1537,7 @@
 						     mount (mesmo destino do 302 do KEEP-ENDPOINT main.project_tasks). -->
 						<a
 							href={`/tarefas?project=${data.project.id}`}
-							class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-primary-700 no-underline shadow-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-brand no-underline shadow-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							<i class="fas fa-plus-circle" aria-hidden="true"></i>Adicionar tarefa
 						</a>
@@ -1557,7 +1557,7 @@
 				<button
 					type="button"
 					onclick={openImport}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-file-import" aria-hidden="true"></i>
 					Importar Modelo
@@ -1565,7 +1565,7 @@
 				<button
 					type="button"
 					onclick={openCreateMeeting}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fab fa-google" aria-hidden="true"></i>
 					Adicionar reunião
@@ -1738,7 +1738,7 @@
 		content: '';
 		flex: 1;
 		height: 1px;
-		background: var(--color-border);
+		background: var(--ds-color-border-base);
 	}
 
 	/* Menu de contexto de dias úteis (paridade .custom-context-menu) */
@@ -1757,8 +1757,8 @@
 		margin: 0;
 		padding: 0.4rem;
 		min-width: 170px;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
 		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 		transform-origin: top left;
@@ -1776,7 +1776,7 @@
 		border: 0;
 		border-radius: 8px;
 		background: none;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-size: 0.875rem;
 		text-align: left;
 		cursor: pointer;
@@ -1786,12 +1786,12 @@
 	}
 	.date-context-menu button:hover,
 	.date-context-menu button:focus-visible {
-		background-color: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background-color: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 		outline: none;
 	}
 	.date-context-menu .text-success {
-		color: var(--ds-color-success-600);
+		color: var(--ds-color-text-success);
 	}
 	@keyframes dateMenuIn {
 		from {
@@ -1812,16 +1812,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--color-overlay);
+		background: var(--ds-color-overlay);
 	}
 	.cascade-modal {
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		padding: 2rem;
 		border-radius: 16px;
 		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 		max-width: 400px;
 		text-align: center;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 	:global([data-theme='dark']) .cascade-modal {
 		box-shadow: var(--ds-shadow-md);
@@ -1829,7 +1829,7 @@
 	.cascade-modal h5 {
 		margin: 0 0 0.75rem;
 		font-weight: 700;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.cascade-buttons {
 		margin-top: 1.5rem;
@@ -1846,13 +1846,13 @@
 		border: 1px solid transparent;
 	}
 	.cascade-btn-secondary {
-		background: var(--color-surface-muted);
-		border-color: var(--color-border);
-		color: var(--color-text-secondary);
+		background: var(--ds-color-surface-muted);
+		border-color: var(--ds-color-border-base);
+		color: var(--ds-color-text-secondary);
 	}
 	.cascade-btn-primary {
-		background: var(--ds-color-primary-600);
-		color: var(--ds-color-primary-fg);
+		background: var(--ds-color-fill-brand);
+		color: var(--ds-color-fill-brand-fg);
 	}
 	.cascade-btn-primary:disabled {
 		opacity: 0.6;

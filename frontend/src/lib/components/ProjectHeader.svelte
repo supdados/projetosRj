@@ -272,8 +272,8 @@
 		baixa: 'var(--ds-color-priority-baixa)'
 	};
 	const STATUS_DOT: Record<string, string> = {
-		Vigente: 'var(--ds-color-success-600)',
-		Suspenso: 'var(--ds-color-warning-600)',
+		Vigente: 'var(--ds-color-fill-success)',
+		Suspenso: 'var(--ds-color-fill-warning)',
 		Finalizado: 'var(--ds-color-primary-500)'
 	};
 
@@ -1247,8 +1247,8 @@
 		gap: 0.85rem;
 	}
 	:global([data-theme='dark']) .project-compact-inner {
-		background: var(--color-surface-elevated);
-		border-color: var(--color-border);
+		background: var(--ds-color-surface-raised);
+		border-color: var(--ds-color-border-base);
 		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
 	}
 	.project-compact-main {
@@ -1265,7 +1265,7 @@
 		text-overflow: ellipsis;
 	}
 	:global([data-theme='dark']) .project-compact-title {
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.project-compact-description {
 		margin: 0.3rem 0 0;
@@ -1276,7 +1276,7 @@
 		text-overflow: ellipsis;
 	}
 	:global([data-theme='dark']) .project-compact-description {
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 	.project-compact-meta {
 		margin-top: 0.6rem;
@@ -1300,9 +1300,9 @@
 		white-space: nowrap;
 	}
 	:global([data-theme='dark']) .pc-chip {
-		background: var(--color-surface-muted);
-		color: var(--color-text-secondary);
-		border-color: var(--color-border);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-secondary);
+		border-color: var(--ds-color-border-base);
 	}
 	.pc-chip i {
 		font-size: 0.62rem;
@@ -1312,7 +1312,7 @@
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: var(--ds-color-success-600);
+		background: var(--ds-color-fill-success);
 	}
 	.pc-chip--status-suspenso i {
 		color: #9a6212;
@@ -1336,7 +1336,7 @@
 		color: #6d28d9;
 	}
 	:global([data-theme='dark']) .pc-chip--status-suspenso i {
-		color: var(--ds-color-warning-600);
+		color: var(--ds-color-text-warning);
 	}
 	:global([data-theme='dark']) .pc-chip--prio-urgente i {
 		color: var(--ds-color-priority-urgente);
@@ -1376,12 +1376,12 @@
 		color: #2f455d;
 	}
 	:global([data-theme='dark']) .project-compact-back {
-		background: var(--color-surface-muted);
-		border-color: var(--color-border);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		border-color: var(--ds-color-border-base);
+		color: var(--ds-color-text-primary);
 	}
 	:global([data-theme='dark']) .project-compact-back:hover {
-		background: var(--color-surface-elevated);
+		background: var(--ds-color-surface-raised);
 	}
 
 	@media (max-width: 991.98px) {

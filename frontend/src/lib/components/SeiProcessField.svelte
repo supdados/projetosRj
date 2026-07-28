@@ -226,7 +226,7 @@
 				? `Processos SEI: ${shownList.length}. Abrir lista`
 				: 'Processos SEI: nenhum. Abrir para adicionar'}
 			onclick={togglePopover}
-			class="flex h-full min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-default"
+			class="flex h-full min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default"
 		>
 			<span class="truncate text-sm {firstNumber ? 'text-text-primary' : 'italic text-text-muted'}">
 				{firstNumber ?? 'Não informado'}
@@ -240,7 +240,7 @@
 				aria-label={copiedIndex === -1 ? 'Número copiado' : `Copiar ${firstNumber}`}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={() => void copyNumber(firstNumber, -1)}
-				class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+				class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
 				-1
 					? 'text-primary-600'
 					: 'text-text-muted'}"
@@ -255,7 +255,7 @@
 
 		{#if extraCount > 0}
 			<span
-				class="inline-flex h-5 shrink-0 items-center rounded-full bg-primary-100 px-2 text-xs font-semibold text-primary-700"
+				class="inline-flex h-5 shrink-0 items-center rounded-full bg-wash-neutral px-2 text-xs font-semibold text-brand"
 			>
 				+{extraCount}
 			</span>
@@ -269,7 +269,7 @@
 				disabled={pending}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={togglePopover}
-				class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				{#if pending}
 					<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -312,7 +312,7 @@
 								aria-label={copiedIndex === index ? 'Número copiado' : `Copiar ${numero}`}
 								onmousedown={(e) => e.preventDefault()}
 								onclick={() => void copyNumber(numero, index)}
-								class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copiedIndex ===
+								class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
 								index
 									? 'text-primary-600'
 									: 'text-text-muted'}"
@@ -331,7 +331,7 @@
 									disabled={pending}
 									onmousedown={(e) => e.preventDefault()}
 									onclick={() => removeAt(index)}
-									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<svg
 										viewBox="0 0 24 24"
@@ -373,14 +373,14 @@
 						value={draftFormatted}
 						oninput={onDraftInput}
 						onkeydown={onDraftKeydown}
-						class="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+						class="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 					/>
 					<button
 						type="button"
 						disabled={!canAddDraft}
 						onmousedown={(e) => e.preventDefault()}
 						onclick={addDraft}
-						class="inline-flex h-7 shrink-0 items-center rounded-full border border-primary-500 bg-surface px-3 text-xs font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-7 shrink-0 items-center rounded-full border border-brand bg-surface px-3 text-xs font-medium text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Adicionar
 					</button>
@@ -419,7 +419,7 @@
 		display: block;
 		margin-top: 0.2rem;
 		font-size: 0.72rem;
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

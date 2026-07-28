@@ -45,7 +45,7 @@
 				type="button"
 				onclick={() => flash.dismiss(item.id)}
 				aria-label="Fechar aviso"
-				class="shrink-0 text-text-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="shrink-0 text-text-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				✕
 			</button>

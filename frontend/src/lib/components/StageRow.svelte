@@ -455,14 +455,14 @@
 
 <style>
 	.etapa-row :global(td) {
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 		padding: 0.62rem 0.7rem;
 		vertical-align: middle;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		font-size: 0.875rem;
 	}
 	.etapa-row:hover :global(td) {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 
 	/* Linha-fonte colapsada durante o drag: altura de <tr> vem do conteúdo, então
@@ -525,16 +525,16 @@
 
 	.cell-drag {
 		width: 44px;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 	.drag-handle {
 		display: inline-flex;
 		cursor: grab;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		transition: color 0.16s ease;
 	}
 	.drag-handle:hover {
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 	.drag-handle:active {
 		cursor: grabbing;
@@ -543,7 +543,7 @@
 	.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-weight: 500;
 		white-space: nowrap;
 		text-align: center;
@@ -566,11 +566,11 @@
 	}
 	.etapa-descricao {
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.etapa-done .etapa-descricao,
 	.etapa-done-text {
-		color: var(--color-text-muted) !important;
+		color: var(--ds-color-text-muted) !important;
 		text-decoration: line-through;
 	}
 	/* Reserva a altura de uma linha de comentário para que a célula tenha a MESMA
@@ -602,7 +602,7 @@
 	.etapa-comentario-display,
 	.etapa-comentario-placeholder {
 		background: none;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		cursor: pointer;
 	}
 	.etapa-comentario-display:hover,
@@ -624,23 +624,23 @@
 		opacity: 1;
 	}
 	.etapa-comment-editor {
-		color: var(--color-text-primary);
-		background: var(--color-surface);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-base);
 		border-color: var(--stage-input-border);
 		resize: none;
 		overflow: hidden;
 	}
 	.etapa-comment-editor:focus {
 		outline: none;
-		border-color: var(--ds-color-primary-500);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		border-color: var(--ds-color-border-brand);
+		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 
 	.cell-date {
 		width: 130px;
 		text-align: center;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-weight: 500;
 		white-space: nowrap;
 	}
@@ -671,14 +671,14 @@
 		border-radius: 8px;
 	}
 	.cell-readonly.editable-field-empty {
-		color: var(--color-text-secondary);
-		background: var(--color-surface-muted);
-		border: 1px dashed var(--color-border);
+		color: var(--ds-color-text-secondary);
+		background: var(--ds-color-surface-muted);
+		border: 1px dashed var(--ds-color-border-base);
 	}
 	.etapa-done .cell-readonly.editable-field-empty {
 		background: transparent;
 		border-color: transparent;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	.cell-tasks {
@@ -749,13 +749,13 @@
 		color: #1d4ed8;
 	}
 	:global([data-theme='dark']) .etapa-task-pill.is-empty {
-		border-color: var(--color-border);
-		color: var(--color-text-secondary);
+		border-color: var(--ds-color-border-base);
+		color: var(--ds-color-text-secondary);
 	}
 	:global([data-theme='dark']) .etapa-task-pill.is-empty:hover,
 	:global([data-theme='dark']) .etapa-task-pill.is-empty:focus-visible {
 		background: rgba(78, 149, 204, 0.12);
-		border-color: var(--color-border-strong);
+		border-color: var(--ds-color-border-strong);
 	}
 	.etapa-task-pill.is-empty .etapa-task-pill-has {
 		display: none;
@@ -788,7 +788,7 @@
 		border: 1px solid transparent;
 		font-size: 0.875rem;
 		background: transparent;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		cursor: pointer;
 		transition:
 			color 0.16s ease,
@@ -806,7 +806,7 @@
 	}
 
 	.text-muted-small {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-size: 0.78rem;
 	}
 
@@ -825,7 +825,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-size: 0.72rem;
 		font-weight: 500;
 		margin-top: 0.15rem;

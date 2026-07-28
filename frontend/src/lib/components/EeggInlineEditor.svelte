@@ -299,8 +299,8 @@
 							aria-checked={isSel}
 							disabled={pending || blocked}
 							onclick={() => toggleInd(ind.id)}
-							class="flex items-start gap-2.5 rounded-sm border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed {isSel
-								? 'border-transparent bg-primary-100 text-text-primary'
+							class="flex items-start gap-2.5 rounded-sm border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed {isSel
+								? 'border-transparent bg-wash-brand text-text-primary'
 								: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'} {blocked
 								? 'opacity-50'
 								: ''}"
@@ -308,11 +308,11 @@
 							<span
 								aria-hidden="true"
 								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-fast {isSel
-									? 'border-primary-500 bg-primary-500'
+									? 'border-brand bg-primary-500'
 									: 'border-border-strong bg-surface'}"
 							>
 								{#if isSel}
-									<svg viewBox="0 0 24 24" class="h-3 w-3 text-primary-fg" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+									<svg viewBox="0 0 24 24" class="h-3 w-3 text-on-brand" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
 										<path d="M5 13l4 4L19 7" />
 									</svg>
 								{/if}

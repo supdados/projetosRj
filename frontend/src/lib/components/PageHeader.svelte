@@ -4,7 +4,7 @@
 	 * hero atual do dashboard (routes/(app)/dashboard/+page.svelte):
 	 *   rounded-xl border border-border-subtle bg-surface px-4 py-3 shadow-sm
 	 *   flex flex-wrap items-center justify-between gap-4
-	 *   titulo: font-heading text-3xl font-bold leading-tight text-primary-700
+	 *   titulo: font-heading text-3xl font-bold leading-tight text-brand
 	 *
 	 * Objetivo: telas ficam UNIFORMES (mesmo tamanho, posicao, radius, peso de
 	 * fonte, cor e sombra) — so o titulo muda. A `min-h` garante que telas
@@ -91,7 +91,7 @@
 	<div class="min-w-0 flex-1">
 		<h1
 			id={labelId}
-			class="truncate font-heading font-bold leading-tight text-primary-700 motion-safe:transition-[font-size] {headerMotion} {compact
+			class="truncate font-heading font-bold leading-tight text-brand motion-safe:transition-[font-size] {headerMotion} {compact
 				? 'text-xl'
 				: 'text-3xl'}"
 		>

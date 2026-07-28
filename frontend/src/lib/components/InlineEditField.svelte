@@ -295,7 +295,7 @@
 						aria-describedby={error ? errorId : undefined}
 						aria-invalid={error ? 'true' : undefined}
 						onkeydown={onKeydown}
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					></textarea>
 				{:else if kind === 'select'}
 					<SelectMenu
@@ -317,7 +317,7 @@
 						aria-describedby={error ? errorId : undefined}
 						aria-invalid={error ? 'true' : undefined}
 						onkeydown={onKeydown}
-						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					/>
 				{/if}
 
@@ -326,7 +326,7 @@
 						type="button"
 						onclick={commit}
 						disabled={pending}
-						class="rounded-md border border-primary-500 bg-primary-100 px-3 py-1.5 text-sm font-medium text-primary-700 transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="rounded-md border border-brand bg-wash-brand px-3 py-1.5 text-sm font-medium text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						{pending ? 'Salvando…' : 'Salvar'}
 					</button>
@@ -334,7 +334,7 @@
 						type="button"
 						onclick={cancel}
 						disabled={pending}
-						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Cancelar
 					</button>
@@ -370,7 +370,7 @@
 						onclick={enterEdit}
 						disabled={pending}
 						aria-label={`Editar ${label}`}
-						class="shrink-0 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="shrink-0 rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-brand disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Editar
 					</button>
@@ -419,7 +419,7 @@
 		align-items: center;
 		height: var(--control-h-md);
 		min-height: var(--control-h-md);
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 0.5rem;
 		padding: 0 0.75rem;
 	}
@@ -502,32 +502,32 @@
 	}
 	.cell-editor:focus {
 		outline: none;
-		border-color: var(--ds-color-primary-500);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		border-color: var(--ds-color-border-brand);
+		box-shadow: 0 0 0 3px var(--ds-color-wash-brand);
 	}
 	.cell-error {
 		display: block;
 		margin-top: 0.2rem;
 		font-size: 0.72rem;
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	:global(html[data-theme='dark']) .editable-field:hover:not(:disabled) {
 		background-color: rgba(196, 210, 222, 0.18);
 	}
 	:global([data-theme='dark']) .editable-field-empty {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		background: transparent;
-		border-color: var(--color-border);
+		border-color: var(--ds-color-border-base);
 	}
 	:global([data-theme='dark']) .editable-field-empty:hover:not(:disabled) {
 		background: rgba(196, 210, 222, 0.12);
-		border-color: var(--color-border-strong);
-		color: var(--color-text-secondary);
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-secondary);
 	}
 	:global([data-theme='dark']) .cell-editor {
-		background: var(--color-surface);
-		color: var(--color-text-primary);
-		border-color: var(--color-border);
+		background: var(--ds-color-surface-base);
+		color: var(--ds-color-text-primary);
+		border-color: var(--ds-color-border-base);
 	}
 </style>

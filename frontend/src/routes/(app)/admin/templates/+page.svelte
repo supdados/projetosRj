@@ -627,7 +627,7 @@
 					bind:value={search}
 					oninput={onSearchInput}
 					placeholder="Buscar modelo por nome ou descrição…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
 
@@ -657,7 +657,7 @@
 						onclick={clearFilters}
 						title="Limpar filtros"
 						aria-label="Limpar filtros"
-						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
 					</button>
@@ -707,7 +707,7 @@
 							bind:value={formName}
 							required
 							placeholder="Ex.: Aquisição simples"
-							class="w-full rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-base font-semibold text-text-primary transition-all duration-fast placeholder:font-normal placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none"
+							class="w-full rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-base font-semibold text-text-primary transition-all duration-fast placeholder:font-normal placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-brand focus:bg-surface focus:outline-none"
 						/>
 
 						<label
@@ -721,7 +721,7 @@
 							bind:value={formDescription}
 							rows="2"
 							placeholder="Para que serve este modelo?"
-							class="w-full resize-y rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none"
+							class="w-full resize-y rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-brand focus:bg-surface focus:outline-none"
 						></textarea>
 					</div>
 
@@ -740,7 +740,7 @@
 							<button
 								type="button"
 								onclick={clearStages}
-								class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Limpar tudo
 							</button>
@@ -764,7 +764,7 @@
 									<!-- Indicador de soltura ANTES desta etapa (linha azul flutuante) -->
 									{#if dragStageIndex !== null && dropBeforeIndex === index}
 										<span
-											class="drop-indicator pointer-events-none absolute left-0 right-0 -mt-1 h-[3px] -translate-y-1/2 rounded-full bg-primary-600"
+											class="drop-indicator pointer-events-none absolute left-0 right-0 -mt-1 h-[3px] -translate-y-1/2 rounded-full bg-brand"
 											style="top: 0"
 											aria-hidden="true"
 										></span>
@@ -783,7 +783,7 @@
 											draggable={formStages.length > 1}
 											aria-label={`Arraste para reordenar a etapa ${index + 1}`}
 											title="Arraste para reordenar"
-											class="flex h-7 w-[22px] shrink-0 cursor-grab items-center justify-center rounded-md border-none bg-transparent text-border-strong transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:cursor-grabbing {formStages.length >
+											class="flex h-7 w-[22px] shrink-0 cursor-grab items-center justify-center rounded-md border-none bg-transparent text-border-strong transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand active:cursor-grabbing {formStages.length >
 											1
 												? ''
 												: 'pointer-events-none opacity-40'}"
@@ -806,7 +806,7 @@
 												aria-label={`Nome da etapa ${index + 1}`}
 												onkeydown={(e) => onStageNameKeydown(e, index)}
 												onfocusout={() => onStageFocusOut(index)}
-												class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+												class="h-[34px] w-full rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary transition-all duration-fast placeholder:text-text-muted focus:border-brand focus:outline-none"
 											/>
 											<div
 												class="flex h-[34px] items-center justify-center rounded-md border border-border-subtle bg-surface-muted"
@@ -832,7 +832,7 @@
 											onclick={() => moveStage(index, -1)}
 											disabled={index === 0}
 											aria-label={`Mover etapa ${index + 1} para cima`}
-											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:invisible group-focus-within:opacity-100"
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
 										>
 											<i class="fas fa-chevron-up" aria-hidden="true"></i>
 										</button>
@@ -841,7 +841,7 @@
 											onclick={() => removeStage(index)}
 											aria-label={`Remover etapa ${index + 1}`}
 											title="Remover etapa"
-											class="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md text-xs font-bold text-text-muted opacity-0 transition-all duration-fast hover:bg-surface-muted hover:text-danger focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 group-hover:opacity-100 group-focus-within:opacity-100"
+											class="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md text-xs font-bold text-text-muted opacity-0 transition-all duration-fast hover:bg-surface-muted hover:text-danger focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand group-hover:opacity-100 group-focus-within:opacity-100"
 										>
 											<i class="fas fa-times" aria-hidden="true"></i>
 										</button>
@@ -850,7 +850,7 @@
 											onclick={() => moveStage(index, 1)}
 											disabled={index === formStages.length - 1}
 											aria-label={`Mover etapa ${index + 1} para baixo`}
-											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:invisible group-focus-within:opacity-100"
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
 										>
 											<i class="fas fa-chevron-down" aria-hidden="true"></i>
 										</button>
@@ -860,7 +860,7 @@
 							<!-- Indicador de soltura AO FINAL da lista -->
 							{#if dragStageIndex !== null && dropBeforeIndex === formStages.length}
 								<span
-									class="drop-indicator pointer-events-none -mt-1 h-[3px] rounded-full bg-primary-600"
+									class="drop-indicator pointer-events-none -mt-1 h-[3px] rounded-full bg-brand"
 									aria-hidden="true"
 								></span>
 							{/if}
@@ -870,7 +870,7 @@
 							<button
 								type="button"
 								onclick={() => addStage({ draft: true })}
-								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all duration-fast hover:border-primary-500 hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all duration-fast hover:border-brand hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								<i class="fas fa-plus-circle" aria-hidden="true"></i>
 								<span>Adicionar nova etapa</span>
@@ -882,14 +882,14 @@
 						<button
 							type="button"
 							onclick={cancelForm}
-							class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary transition-all duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							Cancelar
 						</button>
 						<button
 							type="submit"
 							disabled={formSaving || !formValid}
-							class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg shadow-sm transition-all duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+							class="inline-flex h-9 items-center rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand shadow-sm transition-all duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 						>
 							{#if formSaving}
 								Salvando…
@@ -916,7 +916,7 @@
 				<button
 					type="button"
 					onclick={() => load()}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Tentar novamente
 				</button>
@@ -964,7 +964,7 @@
 							<button
 								type="button"
 								onclick={clearFilters}
-								class="rounded-lg border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="rounded-lg border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Limpar filtros
 							</button>
@@ -972,7 +972,7 @@
 						<button
 							type="button"
 							onclick={openCreate}
-							class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-base hover:-translate-y-px hover:bg-primary-700 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+							class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-base hover:-translate-y-px hover:bg-brand-hover hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
 						>
 							<i class="fas fa-plus" aria-hidden="true"></i>
 							<span>{search.trim() ? 'Novo modelo' : 'Criar primeiro modelo'}</span>
@@ -1040,7 +1040,7 @@
 										aria-label="Editar modelo {row.name}"
 										onclick={(e) => onRowActivate(e, row)}
 										onkeydown={(e) => onRowKeydown(e, row)}
-										class="group cursor-pointer border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:-ring-offset-2 focus-visible:ring-primary-500"
+										class="group cursor-pointer border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:-ring-offset-2 focus-visible:ring-brand"
 									>
 										<td class="min-w-[280px] px-4 py-3 align-middle">
 											<div class="flex items-center gap-3">
@@ -1052,7 +1052,7 @@
 												</span>
 												<div class="flex min-w-0 flex-col gap-0.5">
 													<div class="flex items-center gap-2">
-														<span class="text-sm font-semibold text-primary-700">
+														<span class="text-sm font-semibold text-brand">
 															{row.name}
 														</span>
 														{#if row.is_new}
@@ -1128,7 +1128,7 @@
 													disabled={busyRowId === row.id}
 													title="Duplicar modelo"
 													aria-label="Duplicar modelo {row.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 												>
 													{#if busyRowId === row.id}
 														<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
@@ -1142,7 +1142,7 @@
 													disabled={busyRowId === row.id}
 													title="Excluir modelo"
 													aria-label="Excluir modelo {row.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger/40 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger/40 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 												>
 													<i class="far fa-trash-alt" aria-hidden="true"></i>
 												</button>
@@ -1170,7 +1170,7 @@
 								onclick={() => goToPage(meta.page - 1)}
 								disabled={meta.page <= 1}
 								aria-label="Página anterior"
-								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-40"
+								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-40"
 							>
 								<i class="fas fa-chevron-left" aria-hidden="true"></i>
 							</button>
@@ -1179,9 +1179,9 @@
 									type="button"
 									onclick={() => goToPage(p)}
 									aria-current={p === meta.page ? 'page' : undefined}
-									class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {p ===
+									class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {p ===
 									meta.page
-										? 'border-primary-600 bg-primary-600 font-semibold text-primary-fg'
+										? 'border-primary-600 bg-brand font-semibold text-on-brand'
 										: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-text-primary'}"
 								>
 									{p}
@@ -1192,7 +1192,7 @@
 								onclick={() => goToPage(meta.page + 1)}
 								disabled={meta.page >= meta.total_pages}
 								aria-label="Próxima página"
-								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:pointer-events-none disabled:opacity-40"
+								class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-secondary transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-40"
 							>
 								<i class="fas fa-chevron-right" aria-hidden="true"></i>
 							</button>
@@ -1232,7 +1232,7 @@
 				type="text"
 				bind:value={confirmPhrase}
 				autocomplete="off"
-				class="mt-1 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-primary-500 focus:outline-none"
+				class="mt-1 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
 			/>
 			{#if deleteError}
 				<p role="alert" class="mt-2 text-sm text-danger">{deleteError}</p>
@@ -1241,7 +1241,7 @@
 				<button
 					type="button"
 					onclick={cancelDelete}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Cancelar
 				</button>
@@ -1250,7 +1250,7 @@
 					onclick={confirmDelete}
 					disabled={busyRowId === confirmDeleteRow.id ||
 						confirmPhrase.trim().toUpperCase() !== DELETE_PHRASE}
-					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-danger-fg transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-danger-fg transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					{busyRowId === confirmDeleteRow.id ? 'Apagando…' : 'Apagar modelo'}
 				</button>

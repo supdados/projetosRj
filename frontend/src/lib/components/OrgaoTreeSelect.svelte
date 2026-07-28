@@ -157,7 +157,7 @@
 		aria-label={ariaLabel ? `${ariaLabel}: ${triggerLabel}` : undefined}
 		onclick={() => (open ? closePanel() : openPanel())}
 		onkeydown={onTriggerKeydown}
-		class="flex h-[var(--control-h-md)] w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-left text-sm transition-colors duration-fast hover:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+		class="flex h-[var(--control-h-md)] w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-left text-sm transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
 			{triggerLabel}
@@ -198,7 +198,7 @@
 					autocomplete="off"
 					placeholder="Buscar sigla ou nome..."
 					aria-label="Buscar órgão"
-					class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-muted focus:border-primary-500 focus:outline-none"
+					class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 				/>
 			</div>
 
@@ -210,7 +210,7 @@
 					onclick={chooseTodos}
 					class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors duration-fast hover:bg-surface-muted {value ==
 					null
-						? 'bg-primary-100 text-primary-700'
+						? 'bg-wash-brand text-brand'
 						: 'text-text-primary'}"
 				>
 					<span>{todosLabel}</span>
@@ -240,7 +240,7 @@
 							}
 						}}
 						class="flex min-h-[30px] cursor-pointer items-center rounded-md pr-2 transition-colors duration-fast hover:bg-surface-muted {isSelected
-							? 'bg-primary-100'
+							? 'bg-wash-brand'
 							: ''}"
 					>
 						{#if !row.isSearch}

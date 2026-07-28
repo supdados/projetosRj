@@ -127,7 +127,7 @@
 						: row.option.nome}
 					class="flex min-h-[30px] cursor-pointer items-center rounded-md pr-2 transition-colors duration-fast hover:bg-surface-muted {isCovered
 						? 'opacity-70'
-						: ''} {isSelected ? 'bg-primary-100' : ''}"
+						: ''} {isSelected ? 'bg-wash-brand' : ''}"
 				>
 					{#if !row.isSearch}
 						<div class="shrink-0" style:width="{row.depth * 14}px"></div>
@@ -169,7 +169,7 @@
 					<!-- Checkbox visual: marcado (direto), marcado-herdado (cinza) ou vazio. -->
 					<span
 						class="mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border {isSelected
-							? 'border-primary-600 bg-primary-600 text-primary-fg'
+							? 'border-primary-600 bg-brand text-on-brand'
 							: isCovered
 								? 'border-border-strong bg-surface-muted text-text-muted'
 								: 'border-border-strong bg-surface'}"

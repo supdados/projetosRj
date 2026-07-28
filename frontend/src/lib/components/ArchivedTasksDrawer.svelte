@@ -209,7 +209,7 @@
 					type="button"
 					onclick={onClose}
 					aria-label="Fechar"
-					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 6 6 18M6 6l12 12" />
@@ -232,7 +232,7 @@
 						oninput={onSearchInput}
 						aria-label="Buscar nas tarefas arquivadas"
 						placeholder="Digite tarefa ou projeto…"
-						class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+						class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 					/>
 				</div>
 				<div class="archived-orgao-select w-44 shrink-0">
@@ -271,7 +271,7 @@
 					<button
 						type="button"
 						onclick={() => void load()}
-						class="self-start rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="self-start rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Tentar novamente
 					</button>
@@ -293,7 +293,7 @@
 								{#if group.project_id !== null}
 									<a
 										href={`${base}/projetos/${group.project_id}`}
-										class="flex min-w-0 items-baseline gap-1.5 text-sm font-semibold text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="flex min-w-0 items-baseline gap-1.5 text-sm font-semibold text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										title={group.project_titulo}
 									>
 										<span class="shrink-0 font-mono text-xs font-bold text-text-muted">{group.project_id}</span>
@@ -317,7 +317,7 @@
 												type="button"
 												onclick={() => onOpenTask(task.id)}
 												title="Abrir tarefa"
-												class="m-0 w-fit max-w-full truncate rounded-sm text-left text-sm text-text-primary transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+												class="m-0 w-fit max-w-full truncate rounded-sm text-left text-sm text-text-primary transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
 												{task.descricao}
 											</button>
@@ -339,7 +339,7 @@
 											onclick={() => void unarchive(task)}
 											disabled={unarchivingId !== null}
 											title="Desarquivar tarefa"
-											class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:border-primary-500 hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+											class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-brand transition-colors duration-fast hover:border-brand hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 										>
 											{#if unarchivingId === task.id}
 												<span

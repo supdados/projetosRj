@@ -286,7 +286,7 @@
 					type="button"
 					onclick={onClose}
 					aria-label="Fechar"
-					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 6 6 18M6 6l12 12" />
@@ -304,7 +304,7 @@
 					bind:value={searchTerm}
 					placeholder="Buscar no histórico…"
 					aria-label="Buscar no histórico"
-					class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+					class="h-8 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 				<div class="w-36 shrink-0">
 					<SelectMenu
@@ -347,7 +347,7 @@
 					<button
 						type="button"
 						onclick={() => void load()}
-						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Tentar novamente
 					</button>
@@ -373,7 +373,7 @@
 							typeFilter = 'all';
 							periodFilter = 'all';
 						}}
-						class="ml-1 rounded-sm font-semibold text-primary-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="ml-1 rounded-sm font-semibold text-primary-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Limpar filtros
 					</button>

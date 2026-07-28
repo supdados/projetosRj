@@ -26,7 +26,7 @@
 				<div class="border-t border-border-subtle">
 					<div class="flex flex-col gap-3 p-3">
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
-							<div class="task-hub-grid w-full items-center bg-primary-100 px-3 py-2">
+							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
 									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />
@@ -54,7 +54,7 @@
 							{/each}
 						</div>
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
-							<div class="task-hub-grid w-full items-center bg-primary-100 px-3 py-2">
+							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
 									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />
@@ -99,7 +99,7 @@
 				<div class="border-t border-border-subtle">
 					<div class="flex flex-col gap-3 p-3">
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
-							<div class="task-hub-grid w-full items-center bg-primary-100 px-3 py-2">
+							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
 									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />

@@ -1132,13 +1132,13 @@
 	// whitespace-nowrap: o rodapé tem 3 ações e o card do hub é estreito — sem
 	// isso os rótulos quebram em duas linhas.
 	const btnPrimaryClass =
-		'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-control bg-primary-600 px-5 text-[15px] font-semibold text-primary-fg transition-colors duration-fast hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-control bg-brand px-5 text-[15px] font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 	const btnSecondaryClass =
-		'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-border-subtle bg-surface px-4 text-[15px] font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
+		'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-border-subtle bg-surface px-4 text-[15px] font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
 	const btnGhostClass =
-		'inline-flex h-10 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-60';
+		'inline-flex h-10 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
 	const dashedAddClass =
-		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-primary-600 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
+		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-primary-600 transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const bodyClass = 'max-h-[70vh] min-h-0 flex-1 overflow-y-auto px-10 pb-8 pt-9';
 	// Passos essenciais não rolam: o dropdown de área precisa escapar do card.
 	const bodyOpenClass = 'px-8 pb-6 pt-7';
@@ -1169,7 +1169,7 @@
 			{#each Array.from({ length: total }) as _, i (i)}
 				<div
 					class="h-1.5 flex-1 rounded-full transition-colors duration-base {i < done
-						? 'bg-primary-600'
+						? 'bg-brand'
 						: 'bg-progress-track'}"
 				></div>
 			{/each}
@@ -1185,7 +1185,7 @@
 		type="button"
 		onclick={editarEssenciais}
 		aria-label="Editar informações essenciais"
-		class="grid h-9 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="grid h-9 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		<svg
 			viewBox="0 0 24 24"
@@ -1311,7 +1311,7 @@
 				onclick={requestClose}
 				disabled={submitting || salvandoSecao}
 				aria-label="Fechar"
-				class="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
 					<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
@@ -1417,8 +1417,8 @@
 											style={selected
 												? `background: var(--ds-color-priority-${p.value}); border-color: var(--ds-color-priority-${p.value});`
 												: ''}
-											class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border px-5 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-												? 'font-bold text-primary-fg'
+											class="inline-flex h-10 items-center justify-center whitespace-nowrap rounded-md border px-5 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
+												? 'font-bold text-on-brand'
 												: 'border-border-subtle bg-surface font-semibold text-text-secondary hover:bg-surface-muted'}"
 										>
 											{p.label}
@@ -1521,11 +1521,11 @@
 								<button
 									type="button"
 									onclick={() => abrirSecao(index)}
-									class="flex w-full items-center gap-3 border-t border-border-hairline px-1.5 py-2 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+									class="flex w-full items-center gap-3 border-t border-border-hairline px-1.5 py-2 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 								>
 									<span
 										class="grid h-5 w-5 flex-none place-items-center text-[11px] font-bold tabular-nums {feita
-											? 'text-success-700'
+											? 'text-success'
 											: 'text-text-faint'}"
 										aria-hidden="true"
 									>
@@ -1693,8 +1693,8 @@
 													type="button"
 													aria-pressed={selected}
 													onclick={() => (specialProject = selected ? '' : sp)}
-													class="inline-flex h-[var(--control-h-md)] flex-1 items-center justify-center rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-														? 'border-primary-600 bg-primary-600 text-primary-fg'
+													class="inline-flex h-[var(--control-h-md)] flex-1 items-center justify-center rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
+														? 'border-primary-600 bg-brand text-on-brand'
 														: 'border-border-strong bg-surface text-text-secondary hover:border-primary-600'}"
 												>
 													{sp}
@@ -1799,7 +1799,7 @@
 															aria-label={`Remover ${cl.label.trim() || 'link personalizado'}`}
 															onmousedown={(e) => e.preventDefault()}
 															onclick={() => removeCustomLink(index)}
-															class="grid h-10 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-danger-700 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+															class="grid h-10 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 														>
 															<svg
 																viewBox="0 0 24 24"
@@ -1838,7 +1838,7 @@
 								<div
 									class="flex items-center gap-3 rounded-control border border-border-subtle bg-surface-muted px-4 py-3.5"
 								>
-									<span class="grid h-7 w-7 flex-none place-items-center rounded-full bg-success-200 text-success-700">
+									<span class="grid h-7 w-7 flex-none place-items-center rounded-full bg-success-200 text-success">
 										{@render checkIcon('h-3.5 w-3.5')}
 									</span>
 									<p class="text-sm text-text-secondary">
@@ -1999,7 +1999,7 @@
 								type="button"
 								bind:this={discardCancelBtn}
 								onclick={closeDiscardConfirm}
-								class="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+								class="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Continuar editando
 							</button>

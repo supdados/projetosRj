@@ -129,7 +129,7 @@
 		{@const colors = eventColorClasses(p.ev)}
 		<button
 			type="button"
-			class="absolute overflow-hidden rounded px-1.5 py-0.5 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {colors.block}"
+			class="absolute overflow-hidden rounded px-1.5 py-0.5 text-left transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {colors.block}"
 			style="top: {p.topPx}px; height: {p.heightPx}px; left: {p.leftPct}%; width: {p.widthPct}%;"
 			onclick={(e) => handleEventClick(e, p.ev)}
 			onkeydown={(e) => handleEventKeydown(e, p.ev)}

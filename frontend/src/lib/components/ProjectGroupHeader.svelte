@@ -41,7 +41,7 @@
 		aria-expanded={open}
 		aria-controls={controlsId}
 		aria-label={open ? 'Recolher projeto' : 'Expandir projeto'}
-		class="-ml-1 inline-flex shrink-0 items-center rounded-md p-1 text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="-ml-1 inline-flex shrink-0 items-center rounded-md p-1 text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		<i
 			class="fas fa-chevron-right text-xs transition-transform duration-fast motion-reduce:transition-none {open
@@ -62,7 +62,7 @@
 		{#if href}
 			<a
 				{href}
-				class="truncate text-primary-700 no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="truncate text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				{titulo}
 			</a>

@@ -335,7 +335,7 @@
 				<button
 					type="button"
 					onclick={() => load()}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Tentar novamente
 				</button>
@@ -413,8 +413,8 @@
 <style>
 	/* Tokens semânticos p/ dark. */
 	.orgao-tree-card {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 16px;
 		box-shadow: var(--ds-shadow-sm);
 		overflow: hidden;
@@ -426,8 +426,8 @@
 		justify-content: space-between;
 		gap: 1rem;
 		padding: 0.875rem 1rem;
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 		flex-wrap: wrap;
 	}
 
@@ -443,7 +443,7 @@
 		left: 0.75rem;
 		top: 50%;
 		transform: translateY(-50%);
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-size: 0.8125rem;
 		pointer-events: none;
 	}
@@ -452,16 +452,16 @@
 		width: 100%;
 		height: 2.25rem;
 		padding: 0 0.75rem 0 2.25rem;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		font-size: 0.8125rem;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		transition: border-color 120ms ease;
 	}
 	.orgao-search-input:focus {
 		outline: none;
-		border-color: var(--ds-color-primary-500);
+		border-color: var(--ds-color-border-brand);
 	}
 
 	.orgao-tree-toolbar-actions {
@@ -478,7 +478,7 @@
 		border: 0;
 		padding: 0.25rem 0.5rem;
 		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		cursor: pointer;
 		border-radius: 6px;
 		transition:
@@ -486,12 +486,12 @@
 			background 120ms ease;
 	}
 	.orgao-toolbar-link:hover {
-		color: var(--ds-color-primary-700);
-		background: var(--ds-color-primary-light-bg);
+		color: var(--ds-color-text-brand);
+		background: var(--ds-color-wash-neutral);
 	}
 	.orgao-toolbar-link:focus-visible {
 		outline: none;
-		box-shadow: 0 0 0 2px var(--ds-color-primary-500);
+		box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
 	}
 
 	/* Lista rolável até 70vh (espelha .orgao-tree do v4.5). */
@@ -510,16 +510,16 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.625rem 1rem;
-		border-top: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-top: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 		font-size: 0.75rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	/* Card "última sincronização" (dados do SiorgSyncLog). */
 	.siorg-card {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
 		box-shadow: var(--ds-shadow-sm);
 		padding: 0.75rem 1rem;
@@ -538,8 +538,8 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: 10px;
-		background: var(--color-surface-muted);
-		color: var(--color-text-muted);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-muted);
 		flex-shrink: 0;
 	}
 
@@ -555,24 +555,24 @@
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		font-weight: 600;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	.siorg-card-line {
 		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 
 	.siorg-status {
 		font-weight: 700;
 		text-transform: capitalize;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.siorg-status[data-status='sucesso'] {
-		color: var(--ds-color-success-600, #15803d);
+		color: var(--ds-color-text-success, #15803d);
 	}
 	.siorg-status[data-status='erro'] {
-		color: var(--ds-color-danger-600, #b91c1c);
+		color: var(--ds-color-text-danger, #b91c1c);
 	}
 
 	.siorg-warn {
@@ -581,7 +581,7 @@
 		gap: 0.4rem;
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: var(--ds-color-warning-600, #b45309);
+		color: var(--ds-color-text-warning, #b45309);
 	}
 
 	.siorg-feedback {
@@ -592,16 +592,16 @@
 		padding: 0.625rem 1rem;
 		font-size: 0.875rem;
 		border: 1px solid transparent;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 	}
 	.siorg-feedback.is-success {
-		border-color: var(--ds-color-success-600, #15803d);
-		color: var(--ds-color-success-600, #15803d);
-		background: var(--ds-color-success-light-bg, rgba(21, 128, 61, 0.08));
+		border-color: var(--ds-color-border-success, #15803d);
+		color: var(--ds-color-text-success, #15803d);
+		background: var(--ds-color-wash-success, rgba(21, 128, 61, 0.08));
 	}
 	.siorg-feedback.is-error {
-		border-color: var(--ds-color-danger-600, #b91c1c);
-		color: var(--ds-color-danger-600, #b91c1c);
-		background: var(--ds-color-danger-light-bg, rgba(185, 28, 28, 0.08));
+		border-color: var(--ds-color-border-danger, #b91c1c);
+		color: var(--ds-color-text-danger, #b91c1c);
+		background: var(--ds-color-wash-danger, rgba(185, 28, 28, 0.08));
 	}
 </style>

@@ -72,7 +72,7 @@
 	// Foco discreto: só a borda muda de cor (sem ring — inputs de texto sempre
 	// casam com :focus-visible, então o anel piscava forte a cada clique).
 	const inputClass =
-		'h-10 w-full rounded-lg border border-border-subtle bg-surface-muted px-3 text-sm text-text-primary transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-primary-500 focus:bg-surface focus:outline-none disabled:opacity-60';
+		'h-10 w-full rounded-lg border border-border-subtle bg-surface-muted px-3 text-sm text-text-primary transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-brand focus:bg-surface focus:outline-none disabled:opacity-60';
 	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-muted';
 
 	// --- Vínculos de área (repeater área × papel) --------------------------
@@ -270,11 +270,11 @@
 				type="checkbox"
 				disabled={saving}
 				bind:checked={values.is_admin}
-				class="mt-0.5 h-4 w-4 rounded border-border-subtle text-primary-700 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="mt-0.5 h-4 w-4 rounded border-border-subtle text-brand focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-brand"
 			/>
 			<span class="flex min-w-0 flex-col gap-0.5">
 				<span class="text-sm font-semibold text-text-primary">
-					<i class="fas fa-shield-halved mr-1.5 text-primary-700" aria-hidden="true"></i>
+					<i class="fas fa-shield-halved mr-1.5 text-brand" aria-hidden="true"></i>
 					Administrador
 				</span>
 				<span class="text-xs text-text-muted">
@@ -311,14 +311,14 @@
 	<div class="flex items-center justify-end gap-2">
 		<a
 			href={cancelHref}
-			class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary no-underline transition-all duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+			class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary no-underline transition-all duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 		>
 			Cancelar
 		</a>
 		<button
 			type="submit"
 			disabled={saving}
-			class="inline-flex h-9 items-center rounded-md bg-primary-600 px-3.5 text-sm font-semibold text-primary-fg shadow-token transition-all duration-fast hover:bg-primary-700 hover:shadow-token-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+			class="inline-flex h-9 items-center rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand shadow-token transition-all duration-fast hover:bg-brand-hover hover:shadow-token-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 		>
 			{saving ? 'Salvando…' : submitLabel}
 		</button>

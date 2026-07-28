@@ -118,9 +118,9 @@
 
 	const microLabelClass = 'text-2xs font-semibold uppercase tracking-caps text-text-muted';
 	const pencilBtnClass =
-		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
+		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const removeBtnClass =
-		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500';
+		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const emptyBoxClass =
 		'rounded-lg border border-dashed border-border-subtle bg-surface-muted px-4 py-3.5 text-sm text-text-muted';
 	const sectionClass = 'cp-op-row-in relative mt-4 border-t border-border-subtle pt-3.5';
@@ -229,7 +229,7 @@
 									aria-pressed={selected}
 									onclick={() => pickResultado(resultado)}
 									style="animation-delay: {index * 40}ms"
-									class="cp-op-opt-in group flex items-baseline gap-3.5 border-b border-border-subtle py-3 text-left last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="cp-op-opt-in group flex items-baseline gap-3.5 border-b border-border-subtle py-3 text-left last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<span
 										class="w-6 flex-none text-xl font-light leading-none tabular-nums {selected
@@ -241,7 +241,7 @@
 									</span>
 									<span
 										class="text-sm font-medium leading-snug transition-colors duration-fast {selected
-											? 'text-primary-700'
+											? 'text-brand'
 											: 'text-text-primary group-hover:text-primary-600'}"
 									>
 										{resultado.descricao}
@@ -266,7 +266,7 @@
 						bind:this={resPencilEl}
 						aria-expanded={editRes}
 						onclick={startEditResultado}
-						class="flex-none self-end whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-primary-600 transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex-none self-end whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-primary-600 transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Trocar
 					</button>
@@ -293,8 +293,8 @@
 									type="button"
 									aria-pressed={checked}
 									onclick={() => onToggleIndicador(ind.id)}
-									class="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-[opacity,transform,color,background-color,border-color] duration-300 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {checked
-										? 'border-primary-500 bg-[color-mix(in_srgb,var(--ds-color-primary-600)_4%,transparent)] font-medium text-primary-700'
+									class="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-[opacity,transform,color,background-color,border-color] duration-300 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {checked
+										? 'border-brand bg-[color-mix(in_srgb,var(--ds-color-primary-600)_4%,transparent)] font-medium text-brand'
 										: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'} {revealedIndicadores.has(
 										ind.id
 									)
@@ -303,13 +303,13 @@
 								>
 									<span
 										class="grid h-4 w-4 flex-none place-items-center rounded border-[1.5px] transition-colors duration-fast {checked
-											? 'border-primary-600 bg-primary-600'
+											? 'border-primary-600 bg-brand'
 											: 'border-border-strong bg-surface'}"
 										aria-hidden="true"
 									>
 										<svg
 											viewBox="0 0 24 24"
-											class="h-2.5 w-2.5 text-primary-fg transition-opacity duration-fast {checked
+											class="h-2.5 w-2.5 text-on-brand transition-opacity duration-fast {checked
 												? 'opacity-100'
 												: 'opacity-0'}"
 											fill="none"
@@ -348,14 +348,14 @@
 							aria-pressed={selected}
 							onclick={() => pickObjetivo(objetivo)}
 							style="animation-delay: {index * 30}ms"
-							class="cp-op-opt-in relative min-h-[90px] overflow-hidden rounded-lg border-[1.5px] px-4 py-4 pr-10 text-left transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-px hover:border-primary-500 hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {selected
-								? 'border-primary-600 bg-primary-100'
+							class="cp-op-opt-in relative min-h-[90px] overflow-hidden rounded-lg border-[1.5px] px-4 py-4 pr-10 text-left transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-px hover:border-brand hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
+								? 'border-primary-600 bg-wash-brand'
 								: 'border-border-subtle bg-surface'}"
 						>
 							<span
 								class="pointer-events-none absolute -bottom-4 right-2 text-[64px] font-extralight leading-none tabular-nums {selected
 									? 'text-[color-mix(in_srgb,var(--ds-color-primary-600)_22%,transparent)]'
-									: 'text-[color-mix(in_srgb,var(--color-text-primary)_7%,transparent)]'}"
+									: 'text-[color-mix(in_srgb,var(--ds-color-text-primary)_7%,transparent)]'}"
 								aria-hidden="true"
 							>
 								{String(index + 1).padStart(2, '0')}

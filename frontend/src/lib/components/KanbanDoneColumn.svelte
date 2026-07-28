@@ -97,7 +97,7 @@
 				onclick={toggleOpen}
 				aria-expanded="false"
 				aria-label={`Expandir coluna ${column.label} (${count} tarefas)`}
-				class="flex min-h-0 flex-1 flex-col items-center gap-3 rounded-lg px-1 pt-0.5 text-text-muted transition-colors duration-fast hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="flex min-h-0 flex-1 flex-col items-center gap-3 rounded-lg px-1 pt-0.5 text-text-muted transition-colors duration-fast hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<svg
 					viewBox="0 0 24 24"
@@ -130,7 +130,7 @@
 					disabled={count === 0}
 					title="Arquivar tarefas finalizadas do escopo atual"
 					aria-label="Arquivar finalizados"
-					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-muted"
 				>
 					<i class="fas fa-box-archive text-xs" aria-hidden="true"></i>
 				</button>
@@ -145,7 +145,7 @@
 					aria-expanded="true"
 					aria-label={`Recolher coluna ${column.label}`}
 					title="Recolher coluna"
-					class="inline-flex h-6 w-6 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-6 w-6 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -172,7 +172,7 @@
 					onclick={requestArchive}
 					disabled={count === 0}
 					title="Arquivar tarefas finalizadas do escopo atual"
-					class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
+					class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
 				>
 					<i class="fas fa-box-archive" aria-hidden="true"></i>
 					Arquivar finalizados

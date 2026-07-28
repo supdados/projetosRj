@@ -23,7 +23,7 @@
 
 	const toneClass: Record<Tone, string> = {
 		neutral: 'bg-surface-muted text-text-secondary',
-		primary: 'bg-primary-100 text-primary-700',
+		primary: 'bg-wash-brand text-brand',
 		success: 'bg-surface-muted text-success',
 		warning: 'bg-surface-muted text-warning',
 		danger: 'bg-surface-muted text-danger',

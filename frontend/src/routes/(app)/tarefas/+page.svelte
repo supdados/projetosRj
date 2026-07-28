@@ -448,11 +448,11 @@
 		urgente: 'var(--ds-color-priority-urgente)'
 	};
 	const STATUS_DOT: Record<string, string> = {
-		nao_iniciada: 'var(--color-text-muted)',
-		em_andamento: 'var(--ds-color-info-600)',
+		nao_iniciada: 'var(--ds-color-text-muted)',
+		em_andamento: 'var(--ds-color-status-andamento)',
 		para_validacao: 'var(--ds-color-primary-500)',
-		para_ajustes: 'var(--ds-color-warning-600)',
-		finalizada: 'var(--ds-color-success-600)'
+		para_ajustes: 'var(--ds-color-fill-warning)',
+		finalizada: 'var(--ds-color-fill-success)'
 	};
 
 	// Opções dos SelectMenu — derivadas das constantes acima (sem duplicar dados).
@@ -809,7 +809,7 @@
 					type="button"
 					onclick={openArchiveConfirm}
 					disabled={archiving || loadState !== 'ready'}
-					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 					title="Arquivar tarefas finalizadas do escopo atual"
 				>
 					Arquivar finalizados
@@ -824,7 +824,7 @@
 				aria-expanded={archivedDrawerOpen}
 				aria-label="Ver tarefas arquivadas"
 				title="Ver tarefas arquivadas"
-				class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
 			</button>
@@ -861,7 +861,7 @@
 				oninput={onSearchInput}
 				aria-label="Busca livre"
 				placeholder="Digite tarefa ou projeto…"
-				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-primary-500 focus:outline-none"
+				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 			/>
 		</div>
 
@@ -926,7 +926,7 @@
 			<button
 				type="button"
 				onclick={clearFilters}
-				class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				Limpar
 			</button>
@@ -1071,7 +1071,7 @@
 																autofocus
 																placeholder="Descreva a tarefa…"
 																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60 2xl:text-sm"
+																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
 															></textarea>
 															<SelectMenu
 																size="sm"
@@ -1112,7 +1112,7 @@
 																	disabled={addDraft.saving}
 																	title="Salvar"
 																	aria-label="Salvar tarefa"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-primary-600 text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-brand text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 																>
 																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
 																</button>
@@ -1122,7 +1122,7 @@
 																	disabled={addDraft.saving}
 																	title="Cancelar"
 																	aria-label="Cancelar"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 																>
 																	<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 																</button>
@@ -1136,7 +1136,7 @@
 													<button
 														type="button"
 														onclick={() => openAddForm(group, stage)}
-														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 													>
 														<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
 														Adicionar nova tarefa
@@ -1182,7 +1182,7 @@
 					type="button"
 					onclick={cancelArchiveConfirm}
 					disabled={archiving}
-					class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					Cancelar
 				</button>
@@ -1190,7 +1190,7 @@
 					type="button"
 					onclick={() => void confirmArchive()}
 					disabled={archiving}
-					class="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-primary-fg shadow-sm hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-sm hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					{archiving ? 'Arquivando…' : 'Arquivar'}
 				</button>

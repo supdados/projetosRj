@@ -549,7 +549,7 @@
 			<section class="flex flex-col gap-3 px-5 py-4" aria-label="Convidar para o projeto">
 				<div bind:this={campoConvite} class="relative">
 					<div
-						class="flex items-stretch overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm transition-colors duration-fast focus-within:border-primary-500"
+						class="flex items-stretch overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm transition-colors duration-fast focus-within:border-brand"
 					>
 						<div
 							class="flex shrink-0 items-stretch border-r border-border-subtle bg-surface-muted"
@@ -591,7 +591,7 @@
 										type="button"
 										onclick={limparSelecao}
 										aria-label="Limpar pessoa selecionada"
-										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-times" aria-hidden="true"></i>
 									</button>
@@ -630,7 +630,7 @@
 										type="button"
 										onclick={limparOrgao}
 										aria-label="Limpar área selecionada"
-										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+										class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-times" aria-hidden="true"></i>
 									</button>
@@ -642,7 +642,7 @@
 							type="button"
 							onclick={convidar}
 							disabled={!podeConvidar}
-							class="shrink-0 self-stretch rounded-none bg-primary-600 px-[18px] text-sm font-semibold text-white transition-colors duration-fast hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+							class="shrink-0 self-stretch rounded-none bg-brand px-[18px] text-sm font-semibold text-white transition-colors duration-fast hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 						>
 							{enviando ? 'Convidando…' : 'Convidar'}
 						</button>
@@ -789,13 +789,13 @@
 			<button
 				type="button"
 				onclick={abrirGerenciar}
-				class="group flex w-full items-center gap-3 rounded-b-xl border-t border-border-subtle bg-surface-muted px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+				class="group flex w-full items-center gap-3 rounded-b-xl border-t border-border-subtle bg-surface-muted px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 			>
 				{#if pessoasComAcesso > 0}
 					<span class="flex shrink-0 items-center pl-2" aria-hidden="true">
 						{#each diretosComAcesso.slice(0, 5) as membro (membro.id)}
 							<span
-								class="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface-muted bg-primary-100 text-[9px] font-bold text-primary-700 transition-colors duration-fast group-hover:border-surface-chip"
+								class="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface-muted bg-wash-neutral text-[9px] font-bold text-brand transition-colors duration-fast group-hover:border-surface-chip"
 							>
 								{iniciais(membro.user_name)}
 							</span>
@@ -830,7 +830,7 @@
 						type="button"
 						onclick={voltarParaConvite}
 						aria-label="Voltar para o convite"
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-arrow-left" aria-hidden="true"></i>
 					</button>
@@ -849,7 +849,7 @@
 			<!-- Filtros da lista (client-side; nada volta ao servidor) -->
 			<div class="flex flex-wrap items-center gap-2.5 px-5 py-4">
 				<div
-					class="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 transition-colors duration-fast focus-within:border-primary-500"
+					class="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 transition-colors duration-fast focus-within:border-brand"
 				>
 					<i
 						class="fas fa-magnifying-glass shrink-0 text-[11px] text-text-faint"
@@ -869,7 +869,7 @@
 							type="button"
 							onclick={() => (filtroTermo = '')}
 							aria-label="Limpar filtro"
-							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							<i class="fas fa-times" aria-hidden="true"></i>
 						</button>
@@ -911,7 +911,7 @@
 						onclick={() => (revogadosAbertos = !revogadosAbertos)}
 						aria-expanded={revogadosAbertos}
 						aria-controls="compartilhar-revogados"
-						class="flex w-full items-center gap-2 border-t border-border-subtle bg-surface-muted px-5 py-2.5 text-left text-sm text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+						class="flex w-full items-center gap-2 border-t border-border-subtle bg-surface-muted px-5 py-2.5 text-left text-sm text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 					>
 						<i
 							class="fas fa-chevron-right text-[10px] text-text-muted transition-transform duration-fast"
@@ -946,7 +946,7 @@
 		type="button"
 		onclick={onClose}
 		aria-label="Fechar"
-		class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+		class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		<i class="fas fa-times" aria-hidden="true"></i>
 	</button>
@@ -958,9 +958,9 @@
 		type="button"
 		aria-pressed={modo === alvo}
 		onclick={() => trocarModo(alvo)}
-		class="grid w-[82px] place-items-center text-[12.5px] transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 {modo ===
+		class="grid w-[82px] place-items-center text-[12.5px] transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {modo ===
 		alvo
-			? 'bg-primary-600 font-semibold text-white'
+			? 'bg-brand font-semibold text-white'
 			: 'font-medium text-text-muted hover:text-text-primary'}"
 	>
 		{rotulo}
@@ -989,7 +989,7 @@
 		class="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-2.5 transition-colors duration-fast last:border-b-0 hover:bg-surface-muted"
 	>
 		<span
-			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-bold text-primary-700 {membro.status ===
+			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-[11px] font-bold text-brand {membro.status ===
 			'revogado'
 				? 'opacity-60'
 				: ''}"

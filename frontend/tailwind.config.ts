@@ -202,7 +202,7 @@ export default {
 					'linear-gradient(135deg, var(--ds-color-brand-from) 0%, var(--ds-color-brand-to) 100%)',
 				// Skeleton shimmer (90deg) — 10-skeleton.css:52.
 				'skeleton-shimmer':
-					'linear-gradient(90deg, var(--ds-color-skeleton-base) 0%, var(--ds-color-skeleton-highlight) 50%, var(--ds-color-skeleton-base) 100%)'
+					'linear-gradient(90deg, var(--ds-color-surface-skeleton) 0%, var(--ds-color-surface-skeleton-hi) 50%, var(--ds-color-surface-skeleton) 100%)'
 			},
 			fontFamily: {
 				body: [

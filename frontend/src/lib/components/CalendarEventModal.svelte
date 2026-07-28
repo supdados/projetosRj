@@ -928,7 +928,7 @@
 		animation: cal-overlay-in 0.16s ease both;
 	}
 	.cal-modal {
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		border-radius: 12px;
 		width: 100%;
 		max-width: 31rem;
@@ -956,13 +956,13 @@
 		display: flex;
 		align-items: center;
 		padding: 0.6rem 1.1rem 0.5rem;
-		border-bottom: 1px solid var(--color-border);
+		border-bottom: 1px solid var(--ds-color-border-base);
 	}
 	.cal-modal-title {
 		flex: 1;
 		font-size: 0.85rem;
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		margin: 0;
 	}
 	.cal-modal-close {
@@ -974,12 +974,12 @@
 		border-radius: 50%;
 		border: none;
 		background: none;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		cursor: pointer;
 		transition: background 0.12s;
 	}
 	.cal-modal-close:hover {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 
 	.cal-modal-body {
@@ -991,26 +991,26 @@
 	}
 	.cal-modal-sync-warn {
 		font-size: 0.8125rem;
-		color: var(--ds-color-warning-600);
+		color: var(--ds-color-text-warning);
 		border: 1px solid color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 		border-radius: 6px;
 		padding: 0.4rem 0.6rem;
 	}
 	.cal-modal-error {
 		font-size: 0.8125rem;
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	.cal-field-title input {
 		width: 100%;
 		border: none;
-		border-bottom: 2px solid var(--color-border);
+		border-bottom: 2px solid var(--ds-color-border-base);
 		border-radius: 0;
 		padding: 0.3rem 0;
 		font-size: 1.05rem;
 		font-weight: 500;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		background: transparent;
 		outline: none;
 		transition: border-color 0.14s;
@@ -1020,7 +1020,7 @@
 		border-bottom-color: var(--ds-color-primary-600);
 	}
 	.cal-field-title input::placeholder {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-weight: 400;
 	}
 
@@ -1032,7 +1032,7 @@
 	.cal-field-icon {
 		flex-shrink: 0;
 		width: 1.2rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		margin-top: 0.52rem;
 		display: flex;
 		align-items: center;
@@ -1052,7 +1052,7 @@
 	}
 	.cal-allday-label {
 		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		user-select: none;
 	}
 
@@ -1080,24 +1080,24 @@
 	}
 	.cal-datetime-sublabel {
 		font-size: 0.75rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	.cal-field-input {
 		width: 100%;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 6px;
 		padding: 0.38rem 0.55rem;
 		font-size: 0.8125rem;
-		color: var(--color-text-primary);
-		background: var(--color-surface);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-base);
 		outline: none;
 		transition: border-color 0.14s, box-shadow 0.14s;
 		font-family: inherit;
 	}
 	.cal-field-input:focus {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 	.cal-field-time {
 		font-variant-numeric: tabular-nums;
@@ -1121,7 +1121,7 @@
 		position: absolute;
 		inset: 0;
 		border-radius: 999px;
-		background: var(--color-border);
+		background: var(--ds-color-border-base);
 		cursor: pointer;
 		transition: background 0.16s;
 	}
@@ -1131,7 +1131,7 @@
 		width: 0.85rem;
 		height: 0.85rem;
 		border-radius: 50%;
-		background: var(--color-surface-elevated);
+		background: var(--ds-color-surface-raised);
 		left: 0.175rem;
 		top: 50%;
 		transform: translateY(-50%);
@@ -1139,7 +1139,7 @@
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
 	}
 	.cal-switch input:checked + .cal-switch-track {
-		background: var(--ds-color-primary-600);
+		background: var(--ds-color-fill-brand);
 	}
 	.cal-switch input:checked + .cal-switch-track::before {
 		left: calc(100% - 0.175rem - 0.85rem);
@@ -1150,13 +1150,13 @@
 		align-items: center;
 		gap: 0.55rem;
 		padding: 0.5rem 0.6rem;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 8px;
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s;
 	}
 	.cal-meet-row:hover {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-meet-row.is-active {
 		border-color: var(--ds-color-primary-600);
@@ -1166,8 +1166,8 @@
 		width: 1.4rem;
 		height: 1.4rem;
 		border-radius: 6px;
-		background: var(--ds-color-success-600);
-		color: var(--ds-color-success-fg);
+		background: var(--ds-color-fill-success);
+		color: var(--ds-color-fill-success-fg);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -1181,15 +1181,15 @@
 	}
 	.cal-meet-label {
 		font-size: 0.8125rem;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-meet-sub {
 		font-size: 0.75rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	.cal-meet-existing {
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 8px;
 		overflow: hidden;
 	}
@@ -1201,7 +1201,7 @@
 		align-items: center;
 		gap: 0.55rem;
 		padding: 0.5rem 2.4rem 0.5rem 0.6rem;
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 		cursor: pointer;
 		text-decoration: none;
 		color: inherit;
@@ -1226,9 +1226,9 @@
 		width: 1.55rem;
 		height: 1.55rem;
 		border-radius: 6px;
-		border: 1px solid var(--color-border);
-		background: var(--color-surface);
-		color: var(--color-text-muted);
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-base);
+		color: var(--ds-color-text-muted);
 		cursor: pointer;
 		opacity: 0;
 		transition: opacity 0.12s, background 0.12s;
@@ -1237,13 +1237,13 @@
 		opacity: 1;
 	}
 	.cal-meet-copy-btn:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-meet-url {
 		display: block;
 		font-size: 0.75rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1270,7 +1270,7 @@
 	}
 	.cal-meet-regen-msg span {
 		font-size: 0.75rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 	}
 	.cal-meet-action-btn {
 		display: inline-flex;
@@ -1280,24 +1280,24 @@
 		font-size: 0.75rem;
 		font-weight: 500;
 		border-radius: 6px;
-		border: 1px solid var(--color-border);
-		background: var(--color-surface);
-		color: var(--color-text-secondary);
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-base);
+		color: var(--ds-color-text-secondary);
 		cursor: pointer;
 		transition: background 0.12s, border-color 0.12s;
 		white-space: nowrap;
 	}
 	.cal-meet-action-btn:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-meet-action-btn--subtle {
 		border-color: transparent;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 	.cal-meet-action-btn--subtle:hover {
-		border-color: var(--color-border);
-		color: var(--color-text-primary);
+		border-color: var(--ds-color-border-base);
+		color: var(--ds-color-text-primary);
 	}
 
 	.cal-meet-toast {
@@ -1305,8 +1305,8 @@
 		top: 50%;
 		left: 50%;
 		transform: translate(-50%, -50%);
-		background: var(--color-text-primary);
-		color: var(--color-surface);
+		background: var(--ds-color-text-primary);
+		color: var(--ds-color-surface-base);
 		padding: 0.45rem 1rem;
 		border-radius: 8px;
 		font-size: 0.8125rem;
@@ -1325,12 +1325,12 @@
 
 	.cal-field-textarea {
 		width: 100%;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 6px;
 		padding: 0.4rem 0.55rem;
 		font-size: 0.8125rem;
-		color: var(--color-text-primary);
-		background: var(--color-surface);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-base);
 		resize: vertical;
 		min-height: 3.5rem;
 		outline: none;
@@ -1339,7 +1339,7 @@
 	}
 	.cal-field-textarea:focus {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 
 	.cal-modal-footer {
@@ -1348,7 +1348,7 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.7rem 1.1rem 0.9rem;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 	}
 	.cal-modal-footer-right {
 		display: flex;
@@ -1363,7 +1363,7 @@
 		border: none;
 		border-radius: 6px;
 		font-size: 0.8125rem;
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 		cursor: pointer;
 		transition: background 0.12s;
 	}
@@ -1373,20 +1373,20 @@
 	.cal-btn-cancel {
 		padding: 0.4rem 0.85rem;
 		background: none;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 6px;
 		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		cursor: pointer;
 		transition: background 0.12s;
 	}
 	.cal-btn-cancel:hover {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-btn-save {
 		padding: 0.4rem 1rem;
-		background: var(--ds-color-primary-600);
-		color: var(--ds-color-primary-fg);
+		background: var(--ds-color-fill-brand);
+		color: var(--ds-color-fill-brand-fg);
 		border: none;
 		border-radius: 6px;
 		font-size: 0.8125rem;
@@ -1395,7 +1395,7 @@
 		transition: background 0.12s;
 	}
 	.cal-btn-save:hover {
-		background: var(--ds-color-primary-700);
+		background: var(--ds-color-fill-brand-hover);
 	}
 	.cal-btn-delete:disabled,
 	.cal-btn-cancel:disabled,
@@ -1418,8 +1418,8 @@
 	.cdp-popover {
 		position: fixed;
 		z-index: 1110;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
@@ -1446,7 +1446,7 @@
 	.cdp-month-label {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		user-select: none;
 	}
 	.cdp-nav-btn {
@@ -1455,7 +1455,7 @@
 		border-radius: 50%;
 		border: none;
 		background: none;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -1463,8 +1463,8 @@
 		transition: background 0.12s, color 0.12s;
 	}
 	.cdp-nav-btn:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.cdp-weekdays {
 		display: grid;
@@ -1474,7 +1474,7 @@
 	.cdp-weekdays span {
 		text-align: center;
 		font-size: 0.6875rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-weight: 500;
 		padding: 0.18rem 0;
 		text-transform: uppercase;
@@ -1498,30 +1498,30 @@
 		cursor: pointer;
 		border: none;
 		background: none;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		transition: background 0.1s, color 0.1s, box-shadow 0.1s;
 		font-family: inherit;
 		padding: 0;
 		line-height: 1;
 	}
 	.cdp-day:hover:not(.cdp-day--selected):not(.cdp-day--disabled):not(.cdp-day--outside) {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.cdp-day--today:not(.cdp-day--selected) {
 		font-weight: 600;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		box-shadow: inset 0 0 0 1.5px var(--ds-color-primary-600);
 	}
 	.cdp-day--selected {
-		background: var(--ds-color-primary-600);
-		color: var(--ds-color-primary-fg);
+		background: var(--ds-color-fill-brand);
+		color: var(--ds-color-fill-brand-fg);
 		font-weight: 600;
 	}
 	.cdp-day--selected:hover {
-		background: var(--ds-color-primary-700);
+		background: var(--ds-color-fill-brand-hover);
 	}
 	.cdp-day--outside {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		opacity: 0.35;
 	}
 	.cdp-day--disabled {
@@ -1531,14 +1531,14 @@
 	}
 	.cdp-calendar-footer {
 		padding: 0.25rem 0.55rem 0.45rem;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 		display: flex;
 		justify-content: center;
 	}
 	.cdp-today-btn {
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		background: none;
 		border: none;
 		cursor: pointer;
@@ -1567,7 +1567,7 @@
 		padding: 0.34rem 0.5rem;
 		font-size: 0.8125rem;
 		font-variant-numeric: tabular-nums;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		border-radius: 6px;
 		cursor: pointer;
 		border: none;
@@ -1578,11 +1578,11 @@
 		line-height: 1.3;
 	}
 	.cdp-time-option:hover:not(.cdp-time-option--selected):not(.cdp-time-option--disabled) {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.cdp-time-option--selected {
-		background: var(--ds-color-primary-600);
-		color: var(--ds-color-primary-fg);
+		background: var(--ds-color-fill-brand);
+		color: var(--ds-color-fill-brand-fg);
 		font-weight: 500;
 	}
 	.cdp-time-option--disabled {
@@ -1597,7 +1597,7 @@
 	}
 	.cdp-trigger.cdp-active {
 		border-color: var(--ds-color-primary-600);
-		box-shadow: 0 0 0 3px var(--ds-color-primary-100);
+		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 
 	@media (max-width: 600px) {

@@ -427,26 +427,26 @@
 
 	/* No dark o topnav é carvão: a busca vira inset translúcido em vez de pill branco. */
 	:global([data-theme='dark']) .app-global-search-form {
-		border-color: var(--color-border);
+		border-color: var(--ds-color-border-base);
 		background: rgba(255, 255, 255, 0.08);
 	}
 	:global([data-theme='dark']) .app-global-search-form:hover {
 		background: rgba(255, 255, 255, 0.12);
-		border-color: var(--color-border-strong);
+		border-color: var(--ds-color-border-strong);
 	}
 	:global([data-theme='dark']) .app-global-search-form:focus-within {
 		background: rgba(255, 255, 255, 0.12);
-		border-color: var(--color-border-strong);
+		border-color: var(--ds-color-border-strong);
 		box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
 	}
 	:global([data-theme='dark']) .app-global-search-icon {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 	:global([data-theme='dark']) .app-global-search-input {
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	:global([data-theme='dark']) .app-global-search-input::placeholder {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	/* Remove o "x" nativo do type=search para manter o visual do v4.5. */
@@ -463,16 +463,16 @@
 		min-width: 360px;
 		max-height: min(70vh, 560px);
 		overflow-y: auto;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		box-shadow: var(--ds-shadow-lg);
 		padding: 0.4rem;
 	}
 
 	.app-global-search-state {
 		padding: 0.62rem 0.72rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-size: 0.875rem;
 	}
 
@@ -483,10 +483,10 @@
 	}
 
 	.app-global-search-group {
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 10px;
 		overflow: hidden;
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 
 	.app-global-search-group-title {
@@ -494,12 +494,12 @@
 		align-items: center;
 		gap: 0.42rem;
 		padding: 0.42rem 0.6rem;
-		border-bottom: 1px solid var(--color-border);
+		border-bottom: 1px solid var(--ds-color-border-base);
 		font-size: 0.6875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 		font-weight: 700;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 
 	.app-global-search-group-title i {
@@ -510,8 +510,8 @@
 		margin-left: auto;
 		border-radius: 999px;
 		padding: 0.1rem 0.46rem;
-		background: var(--ds-color-primary-100);
-		color: var(--ds-color-primary-700);
+		background: var(--ds-color-wash-neutral);
+		color: var(--ds-color-text-brand);
 		font-size: 0.6875rem;
 	}
 
@@ -521,9 +521,9 @@
 		justify-content: space-between;
 		gap: 0.65rem;
 		text-decoration: none;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		padding: 0.56rem 0.66rem;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 		transition:
 			background 0.16s ease,
 			border-color 0.16s ease;
@@ -535,8 +535,8 @@
 
 	.app-global-search-item:hover,
 	.app-global-search-item.active {
-		background: var(--ds-color-primary-light-bg);
-		border-color: var(--color-border);
+		background: var(--ds-color-wash-brand);
+		border-color: var(--ds-color-border-base);
 	}
 
 	.app-global-search-item-main {
@@ -562,29 +562,29 @@
 	}
 
 	.app-global-search-item-type.type-project {
-		background: var(--search-badge-project-bg);
-		color: var(--search-badge-project-fg);
+		background: var(--ds-color-wash-brand);
+		color: var(--ds-color-text-brand);
 	}
 
 	.app-global-search-item-type.type-stage {
-		background: var(--search-badge-stage-bg);
-		color: var(--search-badge-stage-fg);
+		background: var(--ds-color-wash-warning);
+		color: var(--ds-color-text-warning);
 	}
 
 	.app-global-search-item-type.type-task {
-		background: var(--search-badge-task-bg);
-		color: var(--search-badge-task-fg);
+		background: var(--ds-color-wash-success);
+		color: var(--ds-color-text-success);
 	}
 
 	.app-global-search-item-type.type-event {
-		background: var(--search-badge-event-bg);
-		color: var(--search-badge-event-fg);
+		background: var(--ds-color-wash-neutral);
+		color: var(--ds-color-text-secondary);
 	}
 
 	.app-global-search-item-title {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -593,7 +593,7 @@
 	.app-global-search-item-subtitle,
 	.app-global-search-item-meta {
 		font-size: 0.6875rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		line-height: 1.3;
 		white-space: nowrap;
 		overflow: hidden;
@@ -616,13 +616,13 @@
 		padding: 0.08rem 0.42rem;
 		font-size: 0.6875rem;
 		font-weight: 700;
-		background: var(--color-surface-muted);
-		color: var(--color-text-secondary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-secondary);
 	}
 
 	.app-global-search-match-text {
 		font-size: 0.6875rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		line-height: 1.3;
 		white-space: nowrap;
 		overflow: hidden;
@@ -630,7 +630,7 @@
 	}
 
 	.app-global-search-item-arrow {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-size: 0.6875rem;
 		margin-top: 0.16rem;
 	}
@@ -638,7 +638,7 @@
 	.app-global-search-footer {
 		margin-top: 0.24rem;
 		padding-top: 0.2rem;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 	}
 
 	.app-global-search-footer-link {
@@ -647,10 +647,10 @@
 		justify-content: space-between;
 		gap: 0.45rem;
 		text-decoration: none;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 9px;
-		background: var(--color-surface-muted);
-		color: var(--ds-color-primary-700);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-brand);
 		font-size: 0.8125rem;
 		font-weight: 600;
 		line-height: 1.2;
@@ -663,9 +663,9 @@
 
 	.app-global-search-footer-link:hover,
 	.app-global-search-footer-link:focus {
-		background: var(--ds-color-primary-100);
-		border-color: var(--color-border-strong);
-		color: var(--ds-color-primary-700);
+		background: var(--ds-color-wash-neutral);
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-brand);
 	}
 
 	@media (max-width: 767px) {

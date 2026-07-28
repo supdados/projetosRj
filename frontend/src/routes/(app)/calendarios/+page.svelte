@@ -1269,16 +1269,16 @@
 	   (--color-*, --ds-color-*) para o dark mode trocar sozinho.
 	   ════════════════════════════════════════════════════════════════════ */
 	.cal-page {
-		--app-color-surface: var(--color-surface);
-		--app-color-surface-muted: var(--color-surface-muted);
-		--app-color-border: var(--color-border);
-		--app-color-text-primary: var(--color-text-primary);
-		--app-color-text-secondary: var(--color-text-secondary);
-		--app-color-text-muted: var(--color-text-muted);
-		--app-color-primary: var(--ds-color-primary-600);
-		--app-color-primary-hover: var(--ds-color-primary-700);
-		--app-color-danger: var(--ds-color-danger-600);
-		--app-color-success: var(--ds-color-success-600);
+		--app-color-surface: var(--ds-color-surface-base);
+		--app-color-surface-muted: var(--ds-color-surface-muted);
+		--app-color-border: var(--ds-color-border-base);
+		--app-color-text-primary: var(--ds-color-text-primary);
+		--app-color-text-secondary: var(--ds-color-text-secondary);
+		--app-color-text-muted: var(--ds-color-text-muted);
+		--app-color-primary: var(--ds-color-fill-brand);
+		--app-color-primary-hover: var(--ds-color-fill-brand-hover);
+		--app-color-danger: var(--ds-color-fill-danger);
+		--app-color-success: var(--ds-color-text-success);
 
 		display: flex;
 		flex-direction: column;
@@ -1452,8 +1452,8 @@
 	/* Selecionado SUTIL: tint claro de primary (primary-100) + texto primary-700,
 	   para nao rivalizar com a acao primaria "Novo evento". */
 	.cal-toggle-btn.is-active {
-		background: var(--ds-color-primary-100);
-		color: var(--ds-color-primary-700);
+		background: var(--ds-color-wash-brand);
+		color: var(--ds-color-text-brand);
 		font-weight: 600;
 	}
 
@@ -1504,7 +1504,7 @@
 	.cal-action-notice--warning {
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
 		background: var(--app-color-surface-muted);
-		color: var(--ds-color-warning-600);
+		color: var(--ds-color-text-warning);
 	}
 
 	.cal-view {
@@ -1685,7 +1685,7 @@
 		background: #0f9d58;
 	}
 	.cal-span-bar.cal-pill--pending {
-		background: var(--ds-color-pending);
+		background: var(--ds-color-fill-pending);
 	}
 	.cal-span-bar.cal-pill--error {
 		background: var(--app-color-danger);
@@ -1771,7 +1771,7 @@
 		background: #0f9d58;
 	}
 	.cal-event-pill.cal-pill--pending::before {
-		background: var(--ds-color-pending);
+		background: var(--ds-color-fill-pending);
 	}
 	.cal-event-pill.cal-pill--error::before {
 		background: var(--app-color-danger);
@@ -1800,7 +1800,7 @@
 		background: #0f9d58;
 	}
 	.cal-event-pill--all-day.cal-pill--pending {
-		background: var(--ds-color-pending);
+		background: var(--ds-color-fill-pending);
 	}
 	.cal-event-pill--all-day.cal-pill--error {
 		background: var(--app-color-danger);
@@ -1839,8 +1839,8 @@
 		flex-direction: column;
 		gap: 0.65rem;
 		padding: 0.7rem 0.85rem 0.85rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 16px;
 		box-shadow: var(--ds-shadow-lg);
 		min-width: 15rem;
@@ -1866,7 +1866,7 @@
 		font-weight: 500;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 	}
 	.cal-popover-daynum {
 		width: 3rem;
@@ -1894,13 +1894,13 @@
 		font-size: 1.9rem;
 		line-height: 1;
 		cursor: pointer;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		padding: 0;
 		transition: color 0.1s, background 0.1s;
 	}
 	.cal-popover-close:hover {
-		color: var(--color-text-primary);
-		background: var(--color-surface-muted);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-popover-list {
 		display: flex;
@@ -1916,8 +1916,8 @@
 		font-size: 0.75rem;
 		line-height: 1.3;
 		cursor: pointer;
-		--cal-popover-dot: var(--ds-color-primary-600);
-		color: var(--color-text-secondary);
+		--cal-popover-dot: var(--ds-color-fill-brand);
+		color: var(--ds-color-text-secondary);
 		border-radius: 6px;
 		transition: background 0.1s, color 0.1s;
 		text-align: left;
@@ -1937,22 +1937,22 @@
 		white-space: nowrap;
 	}
 	.cal-popover-item:hover {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-popover-item.cal-pill--google {
 		--cal-popover-dot: #0f9d58;
 	}
 	.cal-popover-item.cal-pill--pending {
-		--cal-popover-dot: var(--ds-color-pending);
+		--cal-popover-dot: var(--ds-color-fill-pending);
 	}
 	.cal-popover-item.cal-pill--error {
-		--cal-popover-dot: var(--ds-color-danger-600);
+		--cal-popover-dot: var(--ds-color-fill-danger);
 	}
 	.cal-popover-item--span {
 		display: block;
 		padding: 0.34rem 0.72rem;
-		color: var(--ds-color-primary-fg);
-		background: var(--ds-color-primary-600);
+		color: var(--ds-color-fill-brand-fg);
+		background: var(--ds-color-fill-brand);
 		border-radius: 12px;
 		position: relative;
 	}
@@ -1964,16 +1964,16 @@
 	}
 	.cal-popover-item--span:hover {
 		filter: brightness(1.06);
-		background: var(--ds-color-primary-600);
+		background: var(--ds-color-fill-brand);
 	}
 	.cal-popover-item--span.cal-pill--google {
 		background: #0f9d58;
 	}
 	.cal-popover-item--span.cal-pill--pending {
-		background: var(--ds-color-pending);
+		background: var(--ds-color-fill-pending);
 	}
 	.cal-popover-item--span.cal-pill--error {
-		background: var(--ds-color-danger-600);
+		background: var(--ds-color-fill-danger);
 	}
 	.cal-popover-item--span.cal-popover-item--cut-right {
 		clip-path: polygon(0 0, calc(100% - 0.8rem) 0, 100% 50%, calc(100% - 0.8rem) 100%, 0 100%);
@@ -1989,8 +1989,8 @@
 		position: fixed;
 		z-index: 820;
 		width: min(22rem, calc(100vw - 1rem));
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
 		box-shadow: var(--ds-shadow-lg);
 		overflow: hidden;
@@ -2001,20 +2001,20 @@
 		justify-content: space-between;
 		gap: 0.55rem;
 		padding: 0.62rem 0.72rem 0.5rem;
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-event-popover-title {
 		font-size: 0.875rem;
 		font-weight: 700;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		line-height: 1.32;
 		word-break: break-word;
 	}
 	.cal-event-popover-close {
 		border: none;
 		background: none;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-size: 1.05rem;
 		line-height: 1;
 		cursor: pointer;
@@ -2022,7 +2022,7 @@
 		flex-shrink: 0;
 	}
 	.cal-event-popover-close:hover {
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-event-popover-body {
 		padding: 0.62rem 0.72rem 0.72rem;
@@ -2035,20 +2035,20 @@
 		align-items: flex-start;
 		gap: 0.42rem;
 		font-size: 0.8125rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		line-height: 1.42;
 	}
 	.cal-event-popover-info i {
 		width: 0.9rem;
 		margin-top: 0.12rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		text-align: center;
 		flex-shrink: 0;
 	}
 	.cal-event-popover-description {
 		margin-top: 0.08rem;
 		font-size: 0.75rem;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		line-height: 1.45;
 		white-space: pre-wrap;
 		word-break: break-word;
@@ -2087,10 +2087,10 @@
 	.cal-event-popover-gen-meet-btn {
 		background: transparent;
 		color: var(--ds-color-primary-600);
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 	}
 	.cal-event-popover-gen-meet-btn:hover {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 		border-color: var(--ds-color-primary-600);
 	}
 	.cal-event-popover-gen-meet-btn:disabled {
@@ -2104,20 +2104,20 @@
 		width: 1.7rem;
 		height: 1.7rem;
 		border-radius: 6px;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		background: transparent;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		cursor: pointer;
 		transition: background 0.12s, color 0.12s;
 		flex-shrink: 0;
 	}
 	.cal-event-popover-copy-btn:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-event-popover-copy-btn--copied {
-		color: var(--ds-color-success-600);
-		border-color: var(--ds-color-success-600);
+		color: var(--ds-color-text-success);
+		border-color: var(--ds-color-border-success);
 	}
 	.cal-event-popover-actions {
 		margin-top: 0.32rem;
@@ -2126,9 +2126,9 @@
 		gap: 0.36rem;
 	}
 	.cal-event-popover-action {
-		border: 1px solid var(--color-border);
-		background: var(--color-surface);
-		color: var(--color-text-secondary);
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-base);
+		color: var(--ds-color-text-secondary);
 		border-radius: 6px;
 		padding: 0.3rem 0.52rem;
 		font-size: 0.75rem;
@@ -2139,17 +2139,17 @@
 		transition: background 0.12s, border-color 0.12s, color 0.12s;
 	}
 	.cal-event-popover-action:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.cal-event-popover-action--danger {
 		border-color: color-mix(in srgb, var(--ds-color-danger-600) 26%, transparent);
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 	.cal-event-popover-action--danger:hover {
 		background: color-mix(in srgb, var(--ds-color-danger-600) 8%, transparent);
 		border-color: color-mix(in srgb, var(--ds-color-danger-600) 42%, transparent);
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 
 	.cal-popover-scrim {
@@ -2178,7 +2178,7 @@
 	.cal-event-popover-copy-btn:focus-visible,
 	.cal-event-popover-gen-meet-btn:focus-visible,
 	.cal-event-popover-action:focus-visible {
-		outline: 2px solid var(--ds-color-primary-500);
+		outline: 2px solid var(--ds-color-focus-ring);
 		outline-offset: 2px;
 	}
 

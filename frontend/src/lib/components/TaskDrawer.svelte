@@ -250,7 +250,7 @@
 							{#if detail.project}
 								<a
 									href={`/projetos/${detail.project.id}`}
-									class="truncate rounded-sm font-semibold text-primary-600 transition-colors duration-fast hover:text-primary-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="truncate rounded-sm font-semibold text-primary-600 transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									title={detail.project.titulo}
 								>
 									{detail.project.titulo}
@@ -292,7 +292,7 @@
 					type="button"
 					onclick={() => void close()}
 					aria-label="Fechar"
-					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M18 6 6 18M6 6l12 12" />
@@ -319,7 +319,7 @@
 							type="button"
 							onclick={cancelDeleteConfirm}
 							disabled={$store.acting}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+							class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 						>
 							Cancelar
 						</button>
@@ -368,7 +368,7 @@
 									type="button"
 									onclick={() => void toggleChooseEtapa()}
 									aria-expanded={choosingEtapa}
-									class="shrink-0 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors duration-fast hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+									class="shrink-0 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									{choosingEtapa ? 'Cancelar' : 'Associar etapa'}
 								</button>
@@ -417,7 +417,7 @@
 							onblur={flush}
 							disabled={!detail.permissions.can_edit}
 							rows="3"
-							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-primary-500 focus:outline-none disabled:opacity-60"
+							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60"
 						></textarea>
 					</div>
 
@@ -502,7 +502,7 @@
 						onclick={() => (commentsOpen = !commentsOpen)}
 						aria-expanded={commentsOpen}
 						aria-controls="drawer-comments-region"
-						class="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i
 							class="fas fa-chevron-right text-2xs text-text-muted transition-transform duration-fast {commentsOpen
@@ -537,7 +537,7 @@
 					type="button"
 					disabled={$store.acting}
 					onclick={() => void close()}
-					class="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-4 py-1.5 text-sm font-semibold text-primary-fg shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+					class="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-1.5 text-sm font-semibold text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					<i class="fas fa-check text-xs" aria-hidden="true"></i>
 					Salvar
@@ -551,14 +551,14 @@
 	/* Chip "Arquivada" do header (tinta âmbar suave). color-mix sobre tokens DS
 	 * (dark-safe); o Tailwind 3 não gera `bg-x/10` p/ cores via var(). */
 	.td-archived-chip {
-		color: var(--ds-color-warning-600);
+		color: var(--ds-color-text-warning);
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 45%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 12%, transparent);
 	}
 
 	/* Aviso de tarefa sem etapa (tinta âmbar, mais visível que o muted). */
 	.td-no-etapa {
-		color: var(--ds-color-warning-600);
+		color: var(--ds-color-text-warning);
 		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
 		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);
 	}

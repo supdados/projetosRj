@@ -101,7 +101,7 @@
 				title={copied ? 'Link copiado!' : 'Copiar link do Meet'}
 				aria-label={copied ? 'Link copiado' : 'Copiar link do Meet'}
 				aria-live="polite"
-				class="inline-flex h-[1.7rem] w-[1.7rem] items-center justify-center rounded-md border bg-surface text-text-muted transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {copied
+				class="inline-flex h-[1.7rem] w-[1.7rem] items-center justify-center rounded-md border bg-surface text-text-muted transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copied
 					? 'border-success text-success'
 					: 'border-border-subtle'}"
 			>
@@ -115,7 +115,7 @@
 					type="button"
 					onclick={onEdit}
 					disabled={busy}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-primary-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-brand disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-pen" aria-hidden="true"></i>
 					Editar

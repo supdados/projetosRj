@@ -83,7 +83,7 @@
 				type="button"
 				onclick={onClose}
 				aria-label="Fechar"
-				class="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				&times;
 			</button>
@@ -121,7 +121,7 @@
 						type="button"
 						onclick={prev}
 						aria-label="Anexo anterior"
-						class="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-chevron-left text-xs" aria-hidden="true"></i>
 					</button>
@@ -129,7 +129,7 @@
 						type="button"
 						onclick={next}
 						aria-label="Próximo anexo"
-						class="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-chevron-right text-xs" aria-hidden="true"></i>
 					</button>
@@ -140,7 +140,7 @@
 					<button
 						type="button"
 						onclick={onAdd}
-						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-plus" aria-hidden="true"></i>Anexar
 					</button>
@@ -150,7 +150,7 @@
 					target="_blank"
 					rel="noopener"
 					download={current.filename}
-					class="rounded-md bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-primary-fg no-underline shadow-sm transition-colors duration-fast hover:opacity-90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="rounded-md bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-on-brand no-underline shadow-sm transition-colors duration-fast hover:opacity-90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Baixar
 				</a>

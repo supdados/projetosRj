@@ -33,7 +33,7 @@
 	// semanticos para troca automatica no dark mode.
 	const priorityClass: Record<string, string> = {
 		baixa: 'text-success',
-		media: 'text-primary-700',
+		media: 'text-brand',
 		alta: 'text-orange',
 		urgente: 'text-danger'
 	};
@@ -68,7 +68,7 @@
 				<p class="mb-3 text-sm text-text-muted">Nenhum projeto cadastrado ainda.</p>
 				<a
 					href={`${base}/projetos`}
-					class="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+					class="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-plus" aria-hidden="true"></i>Criar Primeiro Projeto
 				</a>
@@ -86,7 +86,7 @@
 			     as linhas e empurrava as colunas fixas ~15px p/ a esquerda. -->
 			<div
 				role="row"
-				class="rp-grid sticky top-0 z-10 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-primary-700"
+				class="rp-grid sticky top-0 z-10 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-brand"
 			>
 				<span role="columnheader" class="px-3 py-2.5 text-center">ID</span>
 				<span role="columnheader" class="px-3 py-2.5">Projeto</span>
@@ -99,7 +99,7 @@
 					<a
 						role="row"
 						href={`${base}/projetos/${project.id}`}
-						class="rp-grid items-center border-b border-border-subtle no-underline transition-colors duration-slow hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+						class="rp-grid items-center border-b border-border-subtle no-underline transition-colors duration-slow hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 					>
 						<span role="cell" class="px-3 py-3 text-center text-base text-text-secondary">{project.id}</span>
 						<span role="cell" class="truncate px-3 py-3 text-base font-medium text-primary-600">{project.titulo}</span>

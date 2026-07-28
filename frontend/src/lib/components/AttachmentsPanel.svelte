@@ -119,7 +119,7 @@
 		<i class="fas fa-paperclip text-text-muted" aria-hidden="true"></i>
 		<span>Anexos</span>
 		<span
-			class="inline-flex min-w-[18px] items-center justify-center rounded-full bg-primary-100 px-1.5 text-2xs font-bold text-primary-700"
+			class="inline-flex min-w-[18px] items-center justify-center rounded-full bg-wash-neutral px-1.5 text-2xs font-bold text-brand"
 		>
 			{anexos.length}
 		</span>
@@ -139,7 +139,7 @@
 							target="_blank"
 							rel="noopener"
 							onclick={(e) => openPreview(anexo, e)}
-							class="flex min-w-0 flex-1 items-center gap-2 no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+							class="flex min-w-0 flex-1 items-center gap-2 no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							{#if anexo.is_image}
 								<img
@@ -150,14 +150,14 @@
 								/>
 							{:else}
 								<span
-									class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary-100 text-base text-primary-700"
+									class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-wash-neutral text-base text-brand"
 									aria-hidden="true"
 								>
 									<i class="fas fa-file"></i>
 								</span>
 							{/if}
 							<span class="flex min-w-0 flex-1 flex-col">
-								<span class="truncate text-sm font-medium text-text-primary hover:text-primary-700">
+								<span class="truncate text-sm font-medium text-text-primary hover:text-brand">
 									{anexo.filename}
 								</span>
 								<span class="truncate text-2xs text-text-muted">{anexo.uploaded_by}</span>
@@ -165,7 +165,7 @@
 						</a>
 					{:else}
 						<span
-							class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-primary-100 text-base text-primary-700"
+							class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-wash-neutral text-base text-brand"
 							aria-hidden="true"
 						>
 							<i class="fas fa-file"></i>
@@ -197,9 +197,9 @@
 				ondragover={onDragOver}
 				ondragleave={onDragLeave}
 				ondrop={onDrop}
-				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-primary-500 {dragActive
-					? 'border-primary-500 bg-primary-100 text-primary-700'
-					: 'border-border-strong bg-surface-muted/40 text-text-secondary hover:border-primary-500 hover:bg-primary-100 hover:text-primary-700'} {uploading
+				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-brand {dragActive
+					? 'border-brand bg-wash-brand text-brand'
+					: 'border-border-strong bg-surface-muted/40 text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'} {uploading
 					? 'opacity-60'
 					: ''}"
 			>
@@ -245,7 +245,7 @@
 				type="button"
 				onclick={closePreview}
 				aria-label="Fechar preview"
-				class="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				&times;
 			</button>
@@ -277,7 +277,7 @@
 				href={preview.url}
 				target="_blank"
 				rel="noopener"
-				class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				Abrir em nova aba
 			</a>
@@ -286,7 +286,7 @@
 				target="_blank"
 				rel="noopener"
 				download={preview.filename}
-				class="rounded-md bg-primary-600 px-3 py-1.5 text-xs font-semibold text-primary-fg no-underline shadow-sm transition-colors duration-fast hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+				class="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-on-brand no-underline shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				Baixar
 			</a>

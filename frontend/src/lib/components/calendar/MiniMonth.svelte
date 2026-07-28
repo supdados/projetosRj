@@ -60,7 +60,7 @@
 	// Em mode=week a faixa e continua com cantos apenas nas extremidades da semana;
 	// em mode=day destaca so o dia selecionado como celula arredondada isolada.
 	function cellHighlightClass(date: Date): string {
-		const bg = 'bg-primary-100 dark:bg-primary-500/25';
+		const bg = 'bg-wash-brand dark:bg-primary-500/25';
 
 		if (mode === 'day') {
 			if (selectedDay && isSameDay(date, selectedDay)) return `${bg} rounded`;
@@ -134,9 +134,9 @@
 						class={[
 							'relative flex h-6 w-6 flex-col items-center justify-center rounded-full text-2xs font-medium transition-colors',
 							today
-								? 'bg-primary-500 text-white dark:bg-primary-700'
+								? 'bg-primary-500 text-white dark:bg-brand-hover'
 								: highlighted
-									? 'font-semibold text-primary-700 dark:text-text-primary'
+									? 'font-semibold text-brand dark:text-text-primary'
 									: inMonth
 										? 'text-text-primary hover:bg-surface-muted'
 										: 'text-text-muted hover:bg-surface-muted',

@@ -20,18 +20,18 @@
 	const LABEL = 'self-center text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
 </script>
 
-<div class="task-hub-grid w-full bg-primary-100 px-3 py-2 text-left">
+<div class="task-hub-grid w-full bg-wash-neutral px-3 py-2 text-left">
 	<span class="flex min-w-0 items-center gap-2">
 		{#if stageCode}
 			<span
-				class="shrink-0 rounded bg-surface/80 px-1.5 py-0.5 font-mono text-2xs font-semibold text-primary-700"
+				class="shrink-0 rounded bg-surface/80 px-1.5 py-0.5 font-mono text-2xs font-semibold text-brand"
 			>
 				{stageCode}
 			</span>
 		{/if}
-		<span class="truncate text-sm font-semibold text-primary-700">{titulo ?? 'Sem etapa'}</span>
+		<span class="truncate text-sm font-semibold text-brand">{titulo ?? 'Sem etapa'}</span>
 		<span
-			class="shrink-0 rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-primary-700"
+			class="shrink-0 rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-brand"
 		>
 			{count}
 		</span>

@@ -83,11 +83,11 @@
 		urgente: 'var(--ds-color-priority-urgente)'
 	};
 	const STATUS_DOT: Record<string, string> = {
-		nao_iniciada: 'var(--color-text-muted)',
-		em_andamento: 'var(--ds-color-info-600)',
+		nao_iniciada: 'var(--ds-color-text-muted)',
+		em_andamento: 'var(--ds-color-status-andamento)',
 		para_validacao: 'var(--ds-color-primary-500)',
-		para_ajustes: 'var(--ds-color-warning-600)',
-		finalizada: 'var(--ds-color-success-600)'
+		para_ajustes: 'var(--ds-color-fill-warning)',
+		finalizada: 'var(--ds-color-fill-success)'
 	};
 
 	const prioridadeMenuOptions: SelectMenuOption[] = PRIORIDADE_OPTS.map((opt) => ({
@@ -336,7 +336,7 @@
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
-				class="min-h-7 w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-primary-500 focus:outline-none 2xl:text-sm"
+				class="min-h-7 w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-brand focus:outline-none 2xl:text-sm"
 			></textarea>
 		{:else}
 			<div class="flex min-w-0 items-center gap-1">
@@ -344,7 +344,7 @@
 					type="button"
 					onclick={onDescriptionClick}
 					title={nestedInDrawer ? 'Editar descrição' : undefined}
-					class="min-w-0 break-words text-left text-xs text-text-primary transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 2xl:text-sm"
+					class="min-w-0 break-words text-left text-xs text-text-primary transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand 2xl:text-sm"
 				>
 					{task.descricao}
 				</button>
@@ -353,7 +353,7 @@
 					onclick={startEditDesc}
 					title="Editar descrição"
 					aria-label="Editar descrição"
-					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-primary-700 focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-primary-500 group-hover/row:opacity-100"
+					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-brand focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand group-hover/row:opacity-100"
 				>
 					<i class="fas fa-pen text-2xs" aria-hidden="true"></i>
 				</button>
@@ -419,9 +419,9 @@
 				aria-label={`Comentários (${commentsCount})`}
 				aria-expanded={commentsOpen}
 				aria-controls={`${panelId}-comments-region`}
-				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 {commentsOpen
-					? 'text-primary-700'
-					: 'text-text-muted hover:text-primary-700'}"
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {commentsOpen
+					? 'text-brand'
+					: 'text-text-muted hover:text-brand'}"
 			>
 				<i class="{loadingComments ? 'fas fa-spinner fa-spin' : 'far fa-comment'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
 			</button>
@@ -433,7 +433,7 @@
 				aria-label={anexosCount === 0
 					? 'Anexar arquivo'
 					: `Ver anexos (${anexosCount})`}
-				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 			>
 				<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
 			</button>
@@ -506,7 +506,7 @@
 						type="button"
 						onclick={() => (confirming = false)}
 						disabled={deleting}
-						class="rounded-md border border-border-subtle px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+						class="rounded-md border border-border-subtle px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 					>
 						Cancelar
 					</button>

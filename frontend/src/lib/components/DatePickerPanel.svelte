@@ -233,8 +233,8 @@
 		inset: auto;
 		z-index: 1110;
 		width: 17rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
@@ -267,7 +267,7 @@
 	.dfp-month-label {
 		font-size: 0.8125rem;
 		font-weight: 600;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		user-select: none;
 	}
 	.dfp-nav-btn {
@@ -276,7 +276,7 @@
 		border-radius: 50%;
 		border: none;
 		background: none;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		cursor: pointer;
 		display: flex;
 		align-items: center;
@@ -284,8 +284,8 @@
 		transition: background 0.12s, color 0.12s;
 	}
 	.dfp-nav-btn:hover {
-		background: var(--color-surface-muted);
-		color: var(--color-text-primary);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-primary);
 	}
 	.dfp-weekdays {
 		display: grid;
@@ -295,7 +295,7 @@
 	.dfp-weekdays span {
 		text-align: center;
 		font-size: 0.6875rem;
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		font-weight: 500;
 		padding: 0.18rem 0;
 		text-transform: uppercase;
@@ -319,30 +319,30 @@
 		cursor: pointer;
 		border: none;
 		background: none;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		transition: background 0.1s, color 0.1s, box-shadow 0.1s;
 		font-family: inherit;
 		padding: 0;
 		line-height: 1;
 	}
 	.dfp-day:hover:not(.dfp-day--selected):not(.dfp-day--disabled):not(.dfp-day--outside) {
-		background: var(--color-surface-muted);
+		background: var(--ds-color-surface-muted);
 	}
 	.dfp-day--today:not(.dfp-day--selected) {
 		font-weight: 600;
-		color: var(--ds-color-primary-600);
-		box-shadow: inset 0 0 0 1.5px var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
+		box-shadow: inset 0 0 0 1.5px var(--ds-color-fill-brand);
 	}
 	.dfp-day--selected {
-		background: var(--ds-color-primary-600);
-		color: var(--ds-color-primary-fg);
+		background: var(--ds-color-fill-brand);
+		color: var(--ds-color-fill-brand-fg);
 		font-weight: 600;
 	}
 	.dfp-day--selected:hover {
-		background: var(--ds-color-primary-700);
+		background: var(--ds-color-fill-brand-hover);
 	}
 	.dfp-day--outside {
-		color: var(--color-text-muted);
+		color: var(--ds-color-text-muted);
 		opacity: 0.35;
 	}
 	.dfp-day--disabled {
@@ -352,7 +352,7 @@
 	}
 	.dfp-footer {
 		padding: 0.25rem 0.55rem 0.45rem;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--ds-color-border-base);
 		display: flex;
 		justify-content: center;
 		gap: 0.5rem;
@@ -360,7 +360,7 @@
 	.dfp-footer-btn {
 		font-size: 0.75rem;
 		font-weight: 500;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		background: none;
 		border: none;
 		cursor: pointer;
@@ -373,7 +373,7 @@
 		background: color-mix(in srgb, var(--ds-color-primary-600) 7%, transparent);
 	}
 	.dfp-footer-btn--clear {
-		color: var(--ds-color-danger-600);
+		color: var(--ds-color-text-danger);
 	}
 	.dfp-footer-btn--clear:hover {
 		background: color-mix(in srgb, var(--ds-color-danger-600) 7%, transparent);

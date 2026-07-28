@@ -21,7 +21,7 @@
 </script>
 
 <span
-	class="inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-primary-100 px-2.5 py-1 align-middle text-xs font-semibold text-primary-700 {extra}"
+	class="inline-flex items-center whitespace-nowrap rounded-md border border-primary-500/40 bg-wash-neutral px-2.5 py-1 align-middle text-xs font-semibold text-brand {extra}"
 >
 	{@render children()}
 </span>
