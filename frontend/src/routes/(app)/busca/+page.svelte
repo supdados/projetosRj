@@ -65,32 +65,12 @@
 		key: keyof SearchResultsByType;
 		label: string;
 		icon: string;
-		badgeClass: string;
+		titleClass: string;
 	}> = [
-		{
-			key: 'projects',
-			label: 'Projetos',
-			icon: 'fa-folder-open',
-			badgeClass: 'bg-wash-brand text-brand'
-		},
-		{
-			key: 'stages',
-			label: 'Etapas',
-			icon: 'fa-list-check',
-			badgeClass: 'bg-surface-muted text-warning'
-		},
-		{
-			key: 'tasks',
-			label: 'Tarefas',
-			icon: 'fa-clipboard-list',
-			badgeClass: 'bg-surface-muted text-success'
-		},
-		{
-			key: 'events',
-			label: 'Eventos',
-			icon: 'fa-calendar-alt',
-			badgeClass: 'bg-surface-muted text-brand'
-		}
+		{ key: 'projects', label: 'Projetos', icon: 'fa-folder-open', titleClass: 'text-brand' },
+		{ key: 'stages', label: 'Etapas', icon: 'fa-list-check', titleClass: 'text-warning' },
+		{ key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', titleClass: 'text-success' },
+		{ key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', titleClass: 'text-text-secondary' }
 	];
 
 	// SWR: hidrata o estado inicial a partir da URL (deep-link) + peek do cache
@@ -137,6 +117,7 @@
 		if (trimmed.length < MIN_TERM_LENGTH) {
 			cancelInFlight();
 			searchState = 'idle';
+			data = null;
 			errorMessage = '';
 			return;
 		}
@@ -164,7 +145,6 @@
 			data = cached;
 			searchState = 'ready';
 		} else {
-			data = null;
 			searchState = 'loading';
 		}
 
@@ -415,7 +395,7 @@
 						type="button"
 						aria-pressed={active}
 						onclick={() => toggleType(section.key)}
-						class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {active
+						class="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {active
 							? 'border-brand bg-wash-brand text-brand'
 							: 'border-border-subtle bg-surface text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'}"
 					>
@@ -490,9 +470,9 @@
 							>
 								<h2
 									id={`busca-sec-${section.key}`}
-									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
+									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold {section.titleClass}"
 								>
-									<i class="fas {section.icon} text-sm text-text-muted" aria-hidden="true"></i>
+									<i class="fas {section.icon} text-sm" aria-hidden="true"></i>
 									{section.label}
 								</h2>
 								<CountBadge>{data.meta.type_counts?.[section.key] ?? items.length}</CountBadge>
@@ -507,11 +487,6 @@
 										>
 											<span class="flex min-w-0 flex-1 flex-col gap-1">
 												<span class="flex min-w-0 items-center gap-1.5">
-													<span
-														class="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide {section.badgeClass}"
-													>
-														{item.type_label}
-													</span>
 													<span
 														class="truncate text-base font-medium text-brand group-hover:underline"
 													>

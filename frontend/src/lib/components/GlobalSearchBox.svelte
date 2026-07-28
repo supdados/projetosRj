@@ -39,17 +39,17 @@
 	/** Janela de debounce do campo (ms) — igual ao v4.5. */
 	const DEBOUNCE_MS = 250;
 
-	/** Grupos na ordem do v4.5, com rotulo, icone FA e classe de badge. */
+	/** Grupos na ordem do v4.5, com rotulo, icone FA e classe de cor do titulo. */
 	const GROUPS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
 		label: string;
 		icon: string;
-		badgeClass: 'type-project' | 'type-stage' | 'type-task' | 'type-event';
+		titleClass: 'type-project' | 'type-stage' | 'type-task' | 'type-event';
 	}> = [
-		{ key: 'projects', label: 'Projetos', icon: 'fa-folder-open', badgeClass: 'type-project' },
-		{ key: 'stages', label: 'Etapas', icon: 'fa-list-check', badgeClass: 'type-stage' },
-		{ key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', badgeClass: 'type-task' },
-		{ key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', badgeClass: 'type-event' }
+		{ key: 'projects', label: 'Projetos', icon: 'fa-folder-open', titleClass: 'type-project' },
+		{ key: 'stages', label: 'Etapas', icon: 'fa-list-check', titleClass: 'type-stage' },
+		{ key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', titleClass: 'type-task' },
+		{ key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', titleClass: 'type-event' }
 	];
 
 	let term = $state<string>('');
@@ -293,7 +293,7 @@
 						{@const items = data.results[group.key]}
 						{#if items && items.length}
 							<div class="app-global-search-group">
-								<div class="app-global-search-group-title">
+								<div class="app-global-search-group-title {group.titleClass}">
 									<i class="fas {group.icon}" aria-hidden="true"></i>
 									<span>{group.label}</span>
 									<span class="app-global-search-group-count">{items.length}</span>
@@ -315,9 +315,6 @@
 									>
 										<div class="app-global-search-item-main">
 											<div class="app-global-search-item-head">
-												<span class="app-global-search-item-type {group.badgeClass}"
-													>{item.type_label || group.label}</span
-												>
 												<span class="app-global-search-item-title"
 													>{item.display_title || item.title}</span
 												>
@@ -506,6 +503,22 @@
 		font-size: 0.6875rem;
 	}
 
+	.app-global-search-group-title.type-project {
+		color: var(--ds-color-text-brand);
+	}
+
+	.app-global-search-group-title.type-stage {
+		color: var(--ds-color-text-warning);
+	}
+
+	.app-global-search-group-title.type-task {
+		color: var(--ds-color-text-success);
+	}
+
+	.app-global-search-group-title.type-event {
+		color: var(--ds-color-text-secondary);
+	}
+
 	.app-global-search-group-count {
 		margin-left: auto;
 		border-radius: 999px;
@@ -549,36 +562,6 @@
 		align-items: center;
 		gap: 0.42rem;
 		min-width: 0;
-	}
-
-	.app-global-search-item-type {
-		border-radius: 999px;
-		padding: 0.14rem 0.48rem;
-		font-size: 0.65rem;
-		font-weight: 700;
-		letter-spacing: 0.02em;
-		text-transform: uppercase;
-		white-space: nowrap;
-	}
-
-	.app-global-search-item-type.type-project {
-		background: var(--ds-color-wash-brand);
-		color: var(--ds-color-text-brand);
-	}
-
-	.app-global-search-item-type.type-stage {
-		background: var(--ds-color-wash-warning);
-		color: var(--ds-color-text-warning);
-	}
-
-	.app-global-search-item-type.type-task {
-		background: var(--ds-color-wash-success);
-		color: var(--ds-color-text-success);
-	}
-
-	.app-global-search-item-type.type-event {
-		background: var(--ds-color-wash-neutral);
-		color: var(--ds-color-text-secondary);
 	}
 
 	.app-global-search-item-title {
