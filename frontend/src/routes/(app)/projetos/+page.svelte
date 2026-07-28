@@ -343,7 +343,6 @@
 			data = cached;
 			loadState = 'ready';
 		} else {
-			data = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -967,7 +966,7 @@
 	</form>
 	</div>
 
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' && !data}
 		<p role="status" aria-live="polite" class="sr-only">Carregando projetos…</p>
 		<ProjetosSkeleton />
 	{:else if loadState === 'error'}

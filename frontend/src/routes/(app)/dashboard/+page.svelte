@@ -57,7 +57,6 @@
 			data = cached;
 			loadState = 'ready';
 		} else {
-			data = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -361,7 +360,7 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' && !data}
 		<p role="status" aria-live="polite" class="sr-only">Carregando dados…</p>
 		<DashboardSkeleton />
 	{:else if loadState === 'error'}

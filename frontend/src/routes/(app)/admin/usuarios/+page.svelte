@@ -261,7 +261,7 @@
 
 	<GrantsOrfaosPanel />
 
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' && meta === null}
 		<p role="status" class="sr-only">Carregando usuários…</p>
 		<AdminUsuariosSkeleton />
 	{:else if loadState === 'error'}

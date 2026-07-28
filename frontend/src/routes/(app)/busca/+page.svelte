@@ -137,7 +137,6 @@
 		if (trimmed.length < MIN_TERM_LENGTH) {
 			cancelInFlight();
 			searchState = 'idle';
-			data = null;
 			errorMessage = '';
 			return;
 		}
@@ -364,7 +363,7 @@
 		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="busca-title">
 			{#snippet titleContent()}
 				<span class="align-middle">Busca Global</span>
-				{#if searchState === 'ready' && data && data.counts.total > 0}
+				{#if data && data.counts.total > 0}
 					<CountBadge class="ml-2"
 						>{data.counts.total} referência{data.counts.total === 1 ? '' : 's'}</CountBadge
 					>
@@ -411,8 +410,7 @@
 			>
 				{#each SECTIONS as section (section.key)}
 					{@const active = selectedTypes.includes(section.key)}
-					{@const typeCount =
-						searchState === 'ready' ? data?.meta.type_counts?.[section.key] : undefined}
+					{@const typeCount = data?.meta.type_counts?.[section.key]}
 					<button
 						type="button"
 						aria-pressed={active}

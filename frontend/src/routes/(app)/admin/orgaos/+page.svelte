@@ -77,7 +77,6 @@
 			data = cached;
 			loadState = 'ready';
 		} else {
-			data = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -322,7 +321,7 @@
 		</div>
 	{/if}
 
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' && !data}
 		<p role="status" class="sr-only">Carregando árvore de órgãos…</p>
 		<AdminOrgaosSkeleton />
 	{:else if loadState === 'error'}

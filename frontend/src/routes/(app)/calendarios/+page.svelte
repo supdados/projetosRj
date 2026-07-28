@@ -107,7 +107,6 @@
 			hub = cached;
 			loadState = 'ready';
 		} else {
-			hub = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -935,7 +934,7 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' && !hub}
 		<p role="status" aria-live="polite" class="sr-only">Carregando calendário…</p>
 		<CalendariosSkeleton />
 	{:else if loadState === 'error'}

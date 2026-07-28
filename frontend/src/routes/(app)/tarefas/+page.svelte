@@ -316,7 +316,6 @@
 			data = cached;
 			loadState = 'ready';
 		} else {
-			data = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -978,7 +977,7 @@
 				</KanbanBoard>
 			</div>
 		{/if}
-	{:else if loadState === 'loading'}
+	{:else if loadState === 'loading' && !data}
 		<p role="status" aria-live="polite" class="sr-only">Carregando tarefas…</p>
 		<TarefasSkeleton />
 	{:else if loadState === 'error'}

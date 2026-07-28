@@ -160,7 +160,6 @@
 			data = cached;
 			loadState = 'ready';
 		} else {
-			data = null;
 			loadState = 'loading';
 		}
 		errorMessage = '';
@@ -904,7 +903,7 @@
 			</form>
 		</Card>
 	{:else}
-		{#if loadState === 'loading'}
+		{#if loadState === 'loading' && !data}
 			<p role="status" aria-live="polite" class="sr-only">Carregando modelos…</p>
 			<AdminTemplatesSkeleton />
 		{:else if loadState === 'error'}
