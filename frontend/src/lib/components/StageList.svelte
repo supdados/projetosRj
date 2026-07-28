@@ -785,7 +785,7 @@
 		pointer-events: none;
 		overflow: hidden;
 		border-radius: 12px;
-		border: 1px solid var(--ds-color-primary-300, #9db8d2);
+		border: 1px solid var(--ds-color-border-brand, #9db8d2);
 		background: var(--color-surface);
 		box-shadow: 0 12px 36px rgba(0, 90, 146, 0.28);
 	}

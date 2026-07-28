@@ -31,6 +31,74 @@
 }
 
 :root {
+	/* ========================================================================
+	 * RÉGUA — --ds-color-<familia>-<degrau> (plano-regua-de-cor §2).
+	 * Nesta fase entram APENAS os degraus que não existiam; os já consumidos
+	 * (primary-100/500/600/700, success-100/200/600/700, warning-600,
+	 * danger-600/700) mantêm os valores antigos até o flip da régua.
+	 * ====================================================================== */
+	--ds-color-primary-50: #f0f8ff;
+	--ds-color-primary-200: #b7dfff;
+	--ds-color-primary-300: #8dc6f4;
+	--ds-color-primary-400: #60a7de;
+	--ds-color-primary-800: #003353;
+	--ds-color-primary-900: #012036;
+
+	--ds-color-success-50: #eefbf1;
+	--ds-color-success-300: #8dd29f;
+	--ds-color-success-400: #5eb679;
+	--ds-color-success-500: #299251;
+	--ds-color-success-800: #003c19;
+	--ds-color-success-900: #00260e;
+
+	--ds-color-warning-50: #fff5e7;
+	--ds-color-warning-100: #ffeac9;
+	--ds-color-warning-200: #ffd18a;
+	--ds-color-warning-300: #f2b240;
+	--ds-color-warning-400: #d29200;
+	--ds-color-warning-500: #a37100;
+	--ds-color-warning-700: #5d3e00;
+	--ds-color-warning-800: #432b00;
+	--ds-color-warning-900: #2c1a00;
+
+	--ds-color-danger-50: #fff4f2;
+	--ds-color-danger-100: #ffe6e3;
+	--ds-color-danger-200: #ffcac4;
+	--ds-color-danger-300: #fca59c;
+	--ds-color-danger-400: #e57e75;
+	--ds-color-danger-500: #c2554e;
+	--ds-color-danger-800: #551816;
+	--ds-color-danger-900: #370e0d;
+
+	/* attention (h 50) — 5ª família, aprovada pelo design em 2026-07-27. Ocupa o
+	   vão entre warning (h 78) e danger (h 26): status e prioridade precisavam de
+	   9 estados distinguíveis. Com ela, danger significa APENAS risco.
+	   600 = 6,9:1 no branco · 300 = 10,6:1 sobre neutral-1000. */
+	--ds-color-attention-50: #fff4ef;
+	--ds-color-attention-100: #ffe7db;
+	--ds-color-attention-200: #ffcdb2;
+	--ds-color-attention-300: #ffa775;
+	--ds-color-attention-400: #ea7f3c;
+	--ds-color-attention-500: #c25900;
+	--ds-color-attention-600: #944200;
+	--ds-color-attention-700: #703000;
+	--ds-color-attention-800: #512000;
+	--ds-color-attention-900: #361100;
+
+	--ds-color-neutral-50: #f6f7f8;
+	--ds-color-neutral-100: #ebedef;
+	--ds-color-neutral-200: #d5dade;
+	--ds-color-neutral-300: #bac0c6;
+	--ds-color-neutral-400: #9aa1a8;
+	--ds-color-neutral-500: #767d84;
+	--ds-color-neutral-600: #585e65;
+	--ds-color-neutral-700: #41464b;
+	--ds-color-neutral-800: #2d3135;
+	--ds-color-neutral-900: #1c1e21;
+	/* Extremos: só a neutral tem 0/1000 — branco e preto passam pela régua. */
+	--ds-color-neutral-0: #ffffff;
+	--ds-color-neutral-1000: #06070a;
+
 	/* --ds-color-primary-* (light) consumidos pelo tailwind.config (primary.*) */
 	--ds-color-primary-700: #004b79;
 	--ds-color-primary-600: #005a92;
