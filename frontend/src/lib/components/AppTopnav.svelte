@@ -281,7 +281,9 @@
 
 <svelte:window onclick={handleAnyOutside} onkeydown={handleWindowKeydown} />
 
-<header class="app-topnav sticky top-0 z-sticky border-b border-white/10 bg-topnav">
+<header
+	class="app-topnav sticky top-0 z-sticky border-b border-b-on-brand-divider bg-topnav"
+>
 	<div
 		class="relative mx-auto flex min-h-[48px] items-center justify-between gap-6 px-5"
 	>
@@ -290,7 +292,7 @@
 			<a
 				href={`${base}/dashboard`}
 				aria-label="ProjetosRJ"
-				class="inline-flex items-center font-heading text-lg font-bold leading-none text-white no-underline transition-opacity duration-fast hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+				class="inline-flex items-center font-heading text-lg font-bold leading-none text-on-topnav no-underline transition-opacity duration-fast hover:opacity-85 focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand"
 			>
 				ProjetosRJ
 			</a>
@@ -308,7 +310,7 @@
 			>
 				{#if pill.ready}
 					<span
-						class="nav-pill pointer-events-none absolute left-0 top-0 z-0 h-[1.95rem] rounded-md bg-white dark:bg-white/15 {pillSlides
+						class="nav-pill pointer-events-none absolute left-0 top-0 z-0 h-[1.95rem] rounded-md bg-surface-elevated dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] {pillSlides
 							? 'nav-pill--slide'
 							: ''}"
 						style="width: {pill.w}px; transform: translate3d({pill.x}px, 0, 0);"
@@ -337,9 +339,9 @@
 						onkeyup={(e) => {
 							if (e.key === 'Enter') pressedPath = null;
 						}}
-						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {active
+						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {active
 							? 'text-brand'
-							: 'text-white/[0.78] hover:text-white'}"
+							: 'text-on-brand-muted hover:text-on-topnav'}"
 					>
 						<Nav3dIcon
 							faIcon={link.icon}
@@ -371,14 +373,14 @@
 					aria-expanded={notifOpen}
 					title="Notificacoes"
 					aria-label="Notificacoes"
-					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {notifOpen
-						? 'border-white bg-white text-brand dark:border-white/10 dark:bg-white/15 dark:text-white'
-						: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
+					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
+						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
+						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 				>
 					<i class="fas fa-bell" aria-hidden="true"></i>
 					{#if notifUnread > 0}
 						<span
-							class="absolute -right-1 -top-1 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-danger px-1 text-[0.62rem] font-bold leading-[1.05rem] text-white ring-2 ring-white/90"
+							class="absolute -right-1 -top-1 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-danger px-1 text-[0.62rem] font-bold leading-[1.05rem] text-on-danger ring-2 ring-on-brand"
 							aria-label={`${notifUnread} nao lida(s)`}
 						>
 							{notifBadgeText}
@@ -478,10 +480,10 @@
 						aria-current={adminActive ? 'page' : undefined}
 						title="Conta e administracao"
 						aria-label="Conta e administracao"
-						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 {adminActive ||
+						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {adminActive ||
 						adminOpen
-							? 'border-white bg-white text-brand dark:border-white/10 dark:bg-white/15 dark:text-white'
-							: 'bg-transparent text-white/[0.78] hover:bg-white/10 hover:text-white'}"
+							? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
+							: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 					>
 						<i class="fas fa-user-circle" aria-hidden="true"></i>
 					</button>
@@ -762,7 +764,7 @@
 	}
 
 	.app-theme-switch__inner-icons .app-theme-switch__icon {
-		color: #1769a8;
+		color: var(--ds-color-text-brand);
 		top: 0.125em;
 		left: 0.125em;
 		transform: translateX(1.25em);

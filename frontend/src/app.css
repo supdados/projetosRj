@@ -151,7 +151,7 @@
 	/* Estado "pendente de sincronização" (calendários): é cinza, não é família */
 	--ds-color-fill-pending: var(--ds-color-neutral-400);
 
-	/* --- Branco sobre marca: 4 níveis fixos (§7.8) ---------------------------- */
+	/* --- Branco sobre marca: 5 níveis fixos (§7.8) ---------------------------- */
 	/* Substituem os rgba(255,255,255,α) do ProjectHeader (22 alphas distintos).
 	   Constantes nos dois temas: são tinta SOBRE o fill de marca, que também não
 	   desloca. */
@@ -159,6 +159,8 @@
 	--ds-color-on-brand-muted: color-mix(in srgb, var(--ds-color-neutral-0) 70%, transparent);
 	--ds-color-on-brand-divider: color-mix(in srgb, var(--ds-color-neutral-0) 18%, transparent);
 	--ds-color-on-brand-hover: color-mix(in srgb, var(--ds-color-neutral-0) 10%, transparent);
+	/* 5º nível: sem ele o hover de controle sobre marca vira no-op (repouso já é -hover). */
+	--ds-color-on-brand-hover-strong: color-mix(in srgb, var(--ds-color-neutral-0) 20%, transparent);
 
 	/* --- Bordas -------------------------------------------------------------- */
 	--ds-color-border-base: var(--ds-color-neutral-200);
@@ -228,10 +230,11 @@
 	   Forma: PONTO SÓLIDO (a pílula pertence ao status — §7.4).
 	   "baixa" é neutro de propósito: baixa prioridade é ausência de risco, não
 	   sucesso; o verde ali roubava o único sinal de "terminou e foi aceito".
-	   Sem token -wash: ponto sólido não tem fundo. */
-	--ds-color-priority-baixa: var(--ds-color-neutral-300);
-	--ds-color-priority-media: var(--ds-color-danger-300);
-	--ds-color-priority-alta: var(--ds-color-danger-500);
+	   Sem token -wash: ponto sólido não tem fundo.
+	   Piso em 500: 300 fica a 1,9:1 e 400 a 2,8:1 sobre branco — abaixo de 3:1. */
+	--ds-color-priority-baixa: var(--ds-color-neutral-500);
+	--ds-color-priority-media: var(--ds-color-danger-500);
+	--ds-color-priority-alta: var(--ds-color-danger-600);
 	--ds-color-priority-urgente: var(--ds-color-danger-700);
 
 	/* --- Status de tarefa/etapa: separa por MATIZ (§7.2) ---------------------
@@ -258,34 +261,6 @@
 	--ds-shadow-lg: 0 8px 24px color-mix(in srgb, var(--ds-color-neutral-900) 16%, transparent);
 	--ds-shadow-modal: 0 24px 64px color-mix(in srgb, var(--ds-color-neutral-900) 32%, transparent);
 	--ds-shadow-popover: 0 4px 16px color-mix(in srgb, var(--ds-color-neutral-900) 10%, transparent);
-
-	/* ==========================================================================
-	 * ALIASES DE COMPATIBILIDADE. Existem só para que tailwind.config.ts e os
-	 * consumidores ainda não migrados continuem resolvendo durante a migração.
-	 * Resolvem em cascata, então NÃO precisam ser repetidos no bloco dark.
-	 * Remover no commit final, junto com o replace de theme.colors.
-	 * ======================================================================== */
-	--color-canvas: var(--ds-color-surface-canvas);
-	--color-surface: var(--ds-color-surface-base);
-	--color-surface-elevated: var(--ds-color-surface-raised);
-	--color-surface-muted: var(--ds-color-surface-muted);
-	--color-surface-chip: var(--ds-color-surface-chip);
-	--color-progress-track: var(--ds-color-surface-track);
-	--color-border: var(--ds-color-border-base);
-	--color-border-strong: var(--ds-color-border-strong);
-	--color-border-faint: var(--ds-color-border-faint);
-	--color-border-hairline: var(--ds-color-border-hairline);
-	--color-text-primary: var(--ds-color-text-primary);
-	--color-text-secondary: var(--ds-color-text-secondary);
-	--color-text-muted: var(--ds-color-text-muted);
-	--color-text-label: var(--ds-color-text-label);
-	--color-text-faint: var(--ds-color-text-faint);
-	--color-icon-faint: var(--ds-color-icon-faint);
-	--color-overlay: var(--ds-color-overlay);
-	/* fg legados (tailwind primary/success/danger .fg) */
-	--ds-color-primary-fg: var(--ds-color-fill-brand-fg);
-	--ds-color-success-fg: var(--ds-color-fill-success-fg);
-	--ds-color-danger-fg: var(--ds-color-fill-danger-fg);
 
 	/* Altura de controles de formulário — escala única, em REM para escalar com
 	   o zoom de texto do usuário (WCAG 1.4.4). */
@@ -390,13 +365,15 @@
 	--ds-color-icon-faint: var(--ds-color-neutral-600);
 
 	/* --- Prioridade: a escala ESPELHA -----------------------------------------
-	   No claro a severidade cresce escurecendo (300→500→700); sobre o carvão
+	   No claro a severidade cresce escurecendo (500→600→700); sobre o carvão
 	   isso inverte, senão "urgente" fica invisível. Monotonicidade preservada,
-	   direção trocada. Confirmado pelo usuário em 2026-07-28 (proposta §7.3). */
-	--ds-color-priority-baixa: var(--ds-color-neutral-600);
-	--ds-color-priority-media: var(--ds-color-danger-600);
-	--ds-color-priority-alta: var(--ds-color-danger-400);
-	--ds-color-priority-urgente: var(--ds-color-danger-300);
+	   direção trocada. Teto em 400 por ordenação, não por limiar: sobre
+	   neutral-900 o 500 passaria (3,74:1) mas quebraria a monotonicidade
+	   invertida; o 600 reprova (2,4:1). Confirmado pelo usuário em 2026-07-28. */
+	--ds-color-priority-baixa: var(--ds-color-neutral-400);
+	--ds-color-priority-media: var(--ds-color-danger-400);
+	--ds-color-priority-alta: var(--ds-color-danger-300);
+	--ds-color-priority-urgente: var(--ds-color-danger-200);
 
 	/* --- Status ------------------------------------------------------------- */
 	--ds-color-status-nao-iniciada: var(--ds-color-neutral-400);
@@ -437,8 +414,8 @@
 	body {
 		font-size: 0.95rem;
 		line-height: 1.5;
-		color: var(--color-text-primary);
-		background: var(--color-canvas);
+		color: var(--ds-color-text-primary);
+		background: var(--ds-color-surface-canvas);
 	}
 
 	h1,

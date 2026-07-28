@@ -9,7 +9,8 @@
     {# Fonte do token CSRF para o client.ts (X-CSRFToken). Injetado server-side
        pelo Jinja ao servir o index do bundle SvelteKit via routes/spa.py. #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#005A92" id="appThemeColorMeta">
+    {# Valor inicial pre-hidratacao, sincronizado com --ds-color-surface-topnav (tema claro). #}
+    <meta name="theme-color" content="#004973" id="appThemeColorMeta">
 
     {# Anti-flash de tema: portado de templates/base.html:12-32. Roda ANTES do
        primeiro paint (sincrono, no head) e seta data-theme no <html>. Recebe o

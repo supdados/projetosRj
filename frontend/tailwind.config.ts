@@ -11,123 +11,131 @@ export default {
 	// Dark mode dirigido pelo atributo data-theme="dark" (igual base.html anti-flash).
 	darkMode: ['selector', '[data-theme="dark"]'],
 	theme: {
-		extend: {
-			colors: {
-				// Semanticas (trocam no dark via app.css)
-				canvas: 'var(--color-canvas)',
-				surface: 'var(--color-surface)',
-				'surface-elevated': 'var(--color-surface-elevated)',
-				'surface-muted': 'var(--color-surface-muted)',
-				'border-subtle': 'var(--color-border)',
-				'border-strong': 'var(--color-border-strong)',
-				'text-primary': 'var(--color-text-primary)',
-				'text-secondary': 'var(--color-text-secondary)',
-				'text-muted': 'var(--color-text-muted)',
-				'text-faint': 'var(--color-text-faint)',
-				'text-label': 'var(--color-text-label)',
-				'icon-faint': 'var(--color-icon-faint)',
-				'border-faint': 'var(--color-border-faint)',
-				'border-hairline': 'var(--color-border-hairline)',
-				'surface-chip': 'var(--color-surface-chip)',
-				'progress-track': 'var(--color-progress-track)',
-				// Régua completa: 10 degraus por família (plano-regua-de-cor §5.1)
-				primary: {
-					50: 'var(--ds-color-primary-50)',
-					100: 'var(--ds-color-primary-100)',
-					200: 'var(--ds-color-primary-200)',
-					300: 'var(--ds-color-primary-300)',
-					400: 'var(--ds-color-primary-400)',
-					500: 'var(--ds-color-primary-500)',
-					600: 'var(--ds-color-primary-600)',
-					700: 'var(--ds-color-primary-700)',
-					800: 'var(--ds-color-primary-800)',
-					900: 'var(--ds-color-primary-900)',
-					DEFAULT: 'var(--ds-color-primary-600)',
-					fg: 'var(--ds-color-primary-fg)'
-				},
-				success: {
-					50: 'var(--ds-color-success-50)',
-					100: 'var(--ds-color-success-100)',
-					200: 'var(--ds-color-success-200)',
-					300: 'var(--ds-color-success-300)',
-					400: 'var(--ds-color-success-400)',
-					500: 'var(--ds-color-success-500)',
-					600: 'var(--ds-color-success-600)',
-					700: 'var(--ds-color-success-700)',
-					800: 'var(--ds-color-success-800)',
-					900: 'var(--ds-color-success-900)',
-					DEFAULT: 'var(--ds-color-success-600)',
-					fg: 'var(--ds-color-success-fg)'
-				},
-				warning: {
-					50: 'var(--ds-color-warning-50)',
-					100: 'var(--ds-color-warning-100)',
-					200: 'var(--ds-color-warning-200)',
-					300: 'var(--ds-color-warning-300)',
-					400: 'var(--ds-color-warning-400)',
-					500: 'var(--ds-color-warning-500)',
-					600: 'var(--ds-color-warning-600)',
-					700: 'var(--ds-color-warning-700)',
-					800: 'var(--ds-color-warning-800)',
-					900: 'var(--ds-color-warning-900)',
-					DEFAULT: 'var(--ds-color-warning-600)'
-				},
-				attention: {
-					50: 'var(--ds-color-attention-50)',
-					100: 'var(--ds-color-attention-100)',
-					200: 'var(--ds-color-attention-200)',
-					300: 'var(--ds-color-attention-300)',
-					400: 'var(--ds-color-attention-400)',
-					500: 'var(--ds-color-attention-500)',
-					600: 'var(--ds-color-attention-600)',
-					700: 'var(--ds-color-attention-700)',
-					800: 'var(--ds-color-attention-800)',
-					900: 'var(--ds-color-attention-900)',
-					DEFAULT: 'var(--ds-color-attention-600)'
-				},
-				danger: {
-					50: 'var(--ds-color-danger-50)',
-					100: 'var(--ds-color-danger-100)',
-					200: 'var(--ds-color-danger-200)',
-					300: 'var(--ds-color-danger-300)',
-					400: 'var(--ds-color-danger-400)',
-					500: 'var(--ds-color-danger-500)',
-					600: 'var(--ds-color-danger-600)',
-					700: 'var(--ds-color-danger-700)',
-					800: 'var(--ds-color-danger-800)',
-					900: 'var(--ds-color-danger-900)',
-					DEFAULT: 'var(--ds-color-danger-600)',
-					fg: 'var(--ds-color-danger-fg)'
-				},
-				neutral: {
-					0: 'var(--ds-color-neutral-0)',
-					50: 'var(--ds-color-neutral-50)',
-					100: 'var(--ds-color-neutral-100)',
-					200: 'var(--ds-color-neutral-200)',
-					300: 'var(--ds-color-neutral-300)',
-					400: 'var(--ds-color-neutral-400)',
-					500: 'var(--ds-color-neutral-500)',
-					600: 'var(--ds-color-neutral-600)',
-					700: 'var(--ds-color-neutral-700)',
-					800: 'var(--ds-color-neutral-800)',
-					900: 'var(--ds-color-neutral-900)',
-					1000: 'var(--ds-color-neutral-1000)'
-				},
-				info: 'var(--ds-color-info-600)',
-				violet: 'var(--ds-color-violet-600)',
-				overlay: 'var(--color-overlay)',
-				pending: 'var(--ds-color-pending)',
-				// Cor da prioridade "alta" no original (#ea580c, laranja) — nao havia
-				// token semantico equivalente; mapeada para CSS var (ajusta no dark).
-				orange: 'var(--ds-color-orange-600)',
-				// Cores de prioridade (badges) — valores 1:1 de 00-foundation.css:1650.
-				priority: {
-					baixa: 'var(--ds-color-priority-baixa)',
-					media: 'var(--ds-color-priority-media)',
-					alta: 'var(--ds-color-priority-alta)',
-					urgente: 'var(--ds-color-priority-urgente)'
-				}
+		// SUBSTITUI a paleta default do Tailwind (não estende): cor crua deixa de
+		// compilar, virando erro de build em vez de achado de revisão (§5.2 do plano).
+		//
+		// ARMADILHA: como os valores abaixo são var(...) em vez de hex/rgb literais,
+		// o modificador de alpha do Tailwind (`bg-white/15`, `text-danger/60`,
+		// `bg-primary-600/50`) NÃO GERA CSS — a classe é descartada em silêncio, sem
+		// erro de build. Use o degrau nomeado da régua (ex.: --ds-color-*-wash) ou
+		// color-mix() explícito em vez de sufixo `/N`.
+		colors: {
+			inherit: 'inherit',
+			current: 'currentColor',
+			transparent: 'transparent',
+			// Ponte: os usos remanescentes de white/black resolvem pela régua neutra.
+			white: 'var(--ds-color-neutral-0)',
+			black: 'var(--ds-color-neutral-1000)',
+			// Semanticas (trocam no dark via app.css)
+			canvas: 'var(--ds-color-surface-canvas)',
+			surface: 'var(--ds-color-surface-base)',
+			'surface-elevated': 'var(--ds-color-surface-raised)',
+			'surface-muted': 'var(--ds-color-surface-muted)',
+			'border-subtle': 'var(--ds-color-border-base)',
+			'border-strong': 'var(--ds-color-border-strong)',
+			'text-primary': 'var(--ds-color-text-primary)',
+			'text-secondary': 'var(--ds-color-text-secondary)',
+			'text-muted': 'var(--ds-color-text-muted)',
+			'text-faint': 'var(--ds-color-text-faint)',
+			'text-label': 'var(--ds-color-text-label)',
+			'icon-faint': 'var(--ds-color-icon-faint)',
+			'border-faint': 'var(--ds-color-border-faint)',
+			'border-hairline': 'var(--ds-color-border-hairline)',
+			'surface-chip': 'var(--ds-color-surface-chip)',
+			'progress-track': 'var(--ds-color-surface-track)',
+			// Régua completa: 10 degraus por família (plano-regua-de-cor §5.1)
+			primary: {
+				50: 'var(--ds-color-primary-50)',
+				100: 'var(--ds-color-primary-100)',
+				200: 'var(--ds-color-primary-200)',
+				300: 'var(--ds-color-primary-300)',
+				400: 'var(--ds-color-primary-400)',
+				500: 'var(--ds-color-primary-500)',
+				600: 'var(--ds-color-primary-600)',
+				700: 'var(--ds-color-primary-700)',
+				800: 'var(--ds-color-primary-800)',
+				900: 'var(--ds-color-primary-900)',
+				DEFAULT: 'var(--ds-color-primary-600)',
+				fg: 'var(--ds-color-fill-brand-fg)'
 			},
+			success: {
+				50: 'var(--ds-color-success-50)',
+				100: 'var(--ds-color-success-100)',
+				200: 'var(--ds-color-success-200)',
+				300: 'var(--ds-color-success-300)',
+				400: 'var(--ds-color-success-400)',
+				500: 'var(--ds-color-success-500)',
+				600: 'var(--ds-color-success-600)',
+				700: 'var(--ds-color-success-700)',
+				800: 'var(--ds-color-success-800)',
+				900: 'var(--ds-color-success-900)',
+				DEFAULT: 'var(--ds-color-success-600)',
+				fg: 'var(--ds-color-fill-success-fg)'
+			},
+			warning: {
+				50: 'var(--ds-color-warning-50)',
+				100: 'var(--ds-color-warning-100)',
+				200: 'var(--ds-color-warning-200)',
+				300: 'var(--ds-color-warning-300)',
+				400: 'var(--ds-color-warning-400)',
+				500: 'var(--ds-color-warning-500)',
+				600: 'var(--ds-color-warning-600)',
+				700: 'var(--ds-color-warning-700)',
+				800: 'var(--ds-color-warning-800)',
+				900: 'var(--ds-color-warning-900)',
+				DEFAULT: 'var(--ds-color-warning-600)'
+			},
+			attention: {
+				50: 'var(--ds-color-attention-50)',
+				100: 'var(--ds-color-attention-100)',
+				200: 'var(--ds-color-attention-200)',
+				300: 'var(--ds-color-attention-300)',
+				400: 'var(--ds-color-attention-400)',
+				500: 'var(--ds-color-attention-500)',
+				600: 'var(--ds-color-attention-600)',
+				700: 'var(--ds-color-attention-700)',
+				800: 'var(--ds-color-attention-800)',
+				900: 'var(--ds-color-attention-900)',
+				DEFAULT: 'var(--ds-color-attention-600)'
+			},
+			danger: {
+				50: 'var(--ds-color-danger-50)',
+				100: 'var(--ds-color-danger-100)',
+				200: 'var(--ds-color-danger-200)',
+				300: 'var(--ds-color-danger-300)',
+				400: 'var(--ds-color-danger-400)',
+				500: 'var(--ds-color-danger-500)',
+				600: 'var(--ds-color-danger-600)',
+				700: 'var(--ds-color-danger-700)',
+				800: 'var(--ds-color-danger-800)',
+				900: 'var(--ds-color-danger-900)',
+				DEFAULT: 'var(--ds-color-danger-600)',
+				fg: 'var(--ds-color-fill-danger-fg)'
+			},
+			neutral: {
+				0: 'var(--ds-color-neutral-0)',
+				50: 'var(--ds-color-neutral-50)',
+				100: 'var(--ds-color-neutral-100)',
+				200: 'var(--ds-color-neutral-200)',
+				300: 'var(--ds-color-neutral-300)',
+				400: 'var(--ds-color-neutral-400)',
+				500: 'var(--ds-color-neutral-500)',
+				600: 'var(--ds-color-neutral-600)',
+				700: 'var(--ds-color-neutral-700)',
+				800: 'var(--ds-color-neutral-800)',
+				900: 'var(--ds-color-neutral-900)',
+				1000: 'var(--ds-color-neutral-1000)'
+			},
+			overlay: 'var(--ds-color-overlay)',
+			// Cores de prioridade (badges) — valores 1:1 de 00-foundation.css:1650.
+			priority: {
+				baixa: 'var(--ds-color-priority-baixa)',
+				media: 'var(--ds-color-priority-media)',
+				alta: 'var(--ds-color-priority-alta)',
+				urgente: 'var(--ds-color-priority-urgente)'
+			}
+		},
+		extend: {
 			// Camada de papel por UTILITÁRIO (plano-regua-de-cor §5.1b): text-danger
 			// e bg-danger são valores DIFERENTES (tinta × fill), então cada mapa
 			// declara o seu — uma chave em colors geraria os quatro com o mesmo valor.
@@ -140,7 +148,7 @@ export default {
 					300: 'var(--ds-color-success-300)',
 					600: 'var(--ds-color-success-600)',
 					700: 'var(--ds-color-success-700)',
-					fg: 'var(--ds-color-success-fg)'
+					fg: 'var(--ds-color-fill-success-fg)'
 				},
 				warning: {
 					DEFAULT: 'var(--ds-color-text-warning)',
@@ -159,14 +167,15 @@ export default {
 					300: 'var(--ds-color-danger-300)',
 					600: 'var(--ds-color-danger-600)',
 					700: 'var(--ds-color-danger-700)',
-					fg: 'var(--ds-color-danger-fg)'
+					fg: 'var(--ds-color-fill-danger-fg)'
 				},
 				'on-brand': 'var(--ds-color-fill-brand-fg)',
 				'on-success': 'var(--ds-color-fill-success-fg)',
 				'on-warning': 'var(--ds-color-fill-warning-fg)',
 				'on-attention': 'var(--ds-color-fill-attention-fg)',
 				'on-danger': 'var(--ds-color-fill-danger-fg)',
-				'on-topnav': 'var(--ds-color-surface-topnav-fg)'
+				'on-topnav': 'var(--ds-color-surface-topnav-fg)',
+				'on-brand-muted': 'var(--ds-color-on-brand-muted)'
 			},
 			backgroundColor: {
 				brand: 'var(--ds-color-fill-brand)',
@@ -179,7 +188,9 @@ export default {
 				'wash-warning': 'var(--ds-color-wash-warning)',
 				'wash-attention': 'var(--ds-color-wash-attention)',
 				'wash-danger': 'var(--ds-color-wash-danger)',
-				topnav: 'var(--ds-color-surface-topnav)'
+				topnav: 'var(--ds-color-surface-topnav)',
+				'on-brand-hover': 'var(--ds-color-on-brand-hover)',
+				'on-brand-hover-strong': 'var(--ds-color-on-brand-hover-strong)'
 			},
 			borderColor: {
 				DEFAULT: 'var(--ds-color-border-base)',
@@ -189,23 +200,21 @@ export default {
 				'warning-soft': 'var(--ds-color-border-warning-soft)',
 				'attention-soft': 'var(--ds-color-border-attention-soft)',
 				'danger-soft': 'var(--ds-color-border-danger-soft)',
-				danger: 'var(--ds-color-border-danger)'
+				danger: 'var(--ds-color-border-danger)',
+				'on-brand-divider': 'var(--ds-color-on-brand-divider)'
 			},
 			ringColor: {
 				DEFAULT: 'var(--ds-color-focus-ring)',
 				brand: 'var(--ds-color-focus-ring)',
-				'on-brand': 'var(--ds-color-focus-ring-onbrand)'
+				'on-brand': 'var(--ds-color-focus-ring-onbrand)',
+				// Anel de componente genérico: o contexto (ex.: header de marca) redefine
+				// --ds-color-focus-ring-context; sem contexto cai no anel padrão.
+				context: 'var(--ds-color-focus-ring-context, var(--ds-color-focus-ring))'
 			},
 			ringOffsetColor: {
 				DEFAULT: 'var(--ds-color-surface-base)'
 			},
 			backgroundImage: {
-				// Gradiente do topbar/brand do original (#1769a8). Util reutilizavel.
-				'topnav-gradient':
-					'linear-gradient(135deg, var(--ds-color-topnav-from) 0%, var(--ds-color-topnav-to) 100%)',
-				// Azul de marca dos botoes primarios: constante em light E dark.
-				'brand-gradient':
-					'linear-gradient(135deg, var(--ds-color-brand-from) 0%, var(--ds-color-brand-to) 100%)',
 				// Skeleton shimmer (90deg) — 10-skeleton.css:52.
 				'skeleton-shimmer':
 					'linear-gradient(90deg, var(--ds-color-surface-skeleton) 0%, var(--ds-color-surface-skeleton-hi) 50%, var(--ds-color-surface-skeleton) 100%)'
@@ -326,15 +335,15 @@ export default {
 				// 00-foundation.css:1402
 				'search-focus-pulse': {
 					'0%': {
-						boxShadow: '0 0 0 0 rgba(0, 90, 146, 0.36)',
-						backgroundColor: 'rgba(0, 90, 146, 0.12)'
+						boxShadow: '0 0 0 0 color-mix(in srgb, var(--ds-color-focus-ring) 36%, transparent)',
+						backgroundColor: 'color-mix(in srgb, var(--ds-color-focus-ring) 12%, transparent)'
 					},
 					'60%': {
-						boxShadow: '0 0 0 10px rgba(0, 90, 146, 0)',
-						backgroundColor: 'rgba(0, 90, 146, 0.08)'
+						boxShadow: '0 0 0 10px color-mix(in srgb, var(--ds-color-focus-ring) 0%, transparent)',
+						backgroundColor: 'color-mix(in srgb, var(--ds-color-focus-ring) 8%, transparent)'
 					},
 					'100%': {
-						boxShadow: '0 0 0 0 rgba(0, 90, 146, 0)',
+						boxShadow: '0 0 0 0 color-mix(in srgb, var(--ds-color-focus-ring) 0%, transparent)',
 						backgroundColor: 'transparent'
 					}
 				},

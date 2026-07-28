@@ -201,7 +201,7 @@
 		content: '';
 		flex: 1;
 		height: 1px;
-		background: var(--color-border);
+		background: var(--ds-color-border-base);
 	}
 
 	.skel-stage-table {

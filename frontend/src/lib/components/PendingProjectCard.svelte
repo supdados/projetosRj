@@ -33,6 +33,7 @@
 	} from '$lib/types/pendentes';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 
+	import '$lib/styles/stage-chips.css';
 	interface QuickAddRequest {
 		projectId: number;
 		projectTitulo: string;
@@ -374,8 +375,6 @@
 			</button>
 		</td>
 		<td class="px-2 py-2.5 text-center align-middle">
-			<!-- Status: réplica fiel do botão-ciclo da etapa dentro do projeto
-				 (StageRow `.etapa-status-toggle`) — mesmas cores, ícones e rótulos. -->
 			<button
 				type="button"
 				onclick={() => void toggleStatus(etapa)}
@@ -481,100 +480,3 @@
 	</div>
 </Card>
 
-<style>
-	/* Botão de status (ciclo) — PORTE 1:1 do `.etapa-status-toggle` da etapa dentro
-	   do projeto (StageRow.svelte), para a etapa em Pendentes ter a MESMA cor,
-	   borda e aparência: branco/azul-acinzentado (não iniciada), azul (iniciada),
-	   verde (concluída). */
-	.etapa-status-toggle {
-		height: 30px;
-		min-width: 124px;
-		border-radius: 7px;
-		border: 1px solid #cbdcf0;
-		padding: 0 0.58rem;
-		background: #fff;
-		color: #2b4d6f;
-		font-weight: 600;
-		font-size: 0.78rem;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.3rem;
-		cursor: pointer;
-		transition: all 0.16s ease;
-	}
-	.etapa-status-toggle i {
-		font-size: 0.875rem;
-	}
-	.etapa-status-toggle span {
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-		font-size: 0.7rem;
-	}
-	.etapa-status-toggle:hover:not(:disabled),
-	.etapa-status-toggle:focus-visible:not(:disabled) {
-		background: #f1f7ff;
-		border-color: #b7cee5;
-		color: #20486f;
-		outline: none;
-	}
-	.etapa-status-toggle:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
-	}
-	.etapa-status-toggle-done {
-		background: #eaf7f1;
-		border-color: #b9dfca;
-		color: #1d714e;
-	}
-	.etapa-status-toggle-done:hover:not(:disabled),
-	.etapa-status-toggle-done:focus-visible:not(:disabled) {
-		background: #e3f4eb;
-		border-color: #a8d5bd;
-		color: #175f41;
-	}
-	.etapa-status-toggle-started {
-		background: #edf5ff;
-		border-color: #c5d8ee;
-		color: #255585;
-	}
-	.etapa-status-toggle-started:hover:not(:disabled),
-	.etapa-status-toggle-started:focus-visible:not(:disabled) {
-		background: #e7f1fd;
-		border-color: #b8d0ea;
-		color: #214f7d;
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle {
-		background: var(--stage-chip-bg, #262626);
-		border-color: var(--ds-color-border-base);
-		color: var(--stage-chip-text, #e0e0e0);
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle:hover:not(:disabled),
-	:global(html[data-theme='dark']) .etapa-status-toggle:focus-visible:not(:disabled) {
-		background: var(--ds-color-surface-raised);
-		border-color: var(--ds-color-border-strong);
-		color: var(--ds-color-text-primary);
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle-done {
-		background: var(--ds-color-wash-success);
-		border-color: var(--ds-color-border-success);
-		color: var(--ds-color-text-success);
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle-done:hover:not(:disabled),
-	:global(html[data-theme='dark']) .etapa-status-toggle-done:focus-visible:not(:disabled) {
-		background: rgba(73, 185, 135, 0.22);
-		border-color: var(--ds-color-border-success);
-		color: var(--ds-color-text-success);
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle-started {
-		background: var(--ds-color-wash-brand);
-		border-color: var(--ds-color-border-brand);
-		color: var(--ds-color-text-brand);
-	}
-	:global(html[data-theme='dark']) .etapa-status-toggle-started:hover:not(:disabled),
-	:global(html[data-theme='dark']) .etapa-status-toggle-started:focus-visible:not(:disabled) {
-		background: rgba(78, 149, 204, 0.28);
-		border-color: var(--ds-color-border-brand);
-		color: var(--ds-color-text-brand);
-	}
-</style>

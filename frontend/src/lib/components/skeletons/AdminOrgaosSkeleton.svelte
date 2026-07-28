@@ -56,8 +56,8 @@
 <style>
 	/* Espelha .orgao-tree-card (chrome do card da arvore). */
 	.skel-tree-card {
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 16px;
 		box-shadow: var(--ds-shadow-sm);
 		overflow: hidden;
@@ -70,8 +70,8 @@
 		justify-content: space-between;
 		gap: 1rem;
 		padding: 0.875rem 1rem;
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 		flex-wrap: wrap;
 	}
 	.skel-toolbar-actions {
@@ -108,7 +108,7 @@
 		display: flex;
 		align-items: center;
 		padding: 0.625rem 1rem;
-		border-top: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-top: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 	}
 </style>

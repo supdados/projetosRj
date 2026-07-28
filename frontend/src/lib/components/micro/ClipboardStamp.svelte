@@ -57,8 +57,8 @@
 		width: 100%;
 		height: 100%;
 		border-radius: calc(var(--cs-size) * 0.1);
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		box-shadow: 0 3px 8px rgba(15, 42, 71, 0.16);
 		padding: calc(var(--cs-size) * 0.085);
 		transform-origin: bottom center;
@@ -89,7 +89,7 @@
 		width: 42%;
 		height: calc(var(--cs-size) * 0.13);
 		border-radius: calc(var(--cs-size) * 0.07);
-		background: linear-gradient(180deg, #cdd6e0 0%, #9aa7b4 100%);
+		background: linear-gradient(180deg, var(--ds-color-neutral-200) 0%, var(--ds-color-neutral-400) 100%);
 		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 	}
 

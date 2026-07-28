@@ -9,7 +9,8 @@
     <!-- Meta tag para evitar redimensionamento visual -->
     <meta name="format-detection" content="telephone=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#005A92" id="appThemeColorMeta">
+    <!-- Valor inicial pre-hidratacao, sincronizado com --ds-color-surface-topnav (tema claro). -->
+    <meta name="theme-color" content="#004973" id="appThemeColorMeta">
     <script nonce="{{ csp_nonce }}">
         (function() {
             var storageKey = 'projetosrj.theme';

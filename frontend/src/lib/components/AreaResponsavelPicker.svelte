@@ -215,7 +215,8 @@
 					flash.danger(
 						err instanceof ApiClientError
 							? err.message
-							: 'Não foi possível salvar as áreas responsáveis.'
+							: 'Não foi possível salvar as áreas responsáveis.',
+						{ key: 'etapa-areas-responsaveis' }
 					);
 					if (pendingAreas === null) {
 						lista = [...confirmed]; // reverte ao último confirmado pelo servidor
@@ -232,7 +233,9 @@
 	/** Aplica a nova seleção; o backend exige ≥1 área, então bloqueia esvaziar. */
 	function applySelection(next: EtapaResponsavelArea[]): void {
 		if (etapaId != null && next.length === 0) {
-			flash.warning('A etapa precisa de ao menos uma área responsável.');
+			flash.warning('A etapa precisa de ao menos uma área responsável.', {
+				key: 'etapa-areas-responsaveis'
+			});
 			return;
 		}
 		lista = next;

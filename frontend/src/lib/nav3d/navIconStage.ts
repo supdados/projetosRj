@@ -15,7 +15,13 @@
  */
 import { browser } from '$app/environment';
 import { buildIcon, disposeIcon, makeMats, type IconMaterials } from './iconModels';
-import { ACTIVE_PALETTES, IDLE_PALETTE, PALETTE_CHANNELS, type NavIconKind } from './palettes';
+import {
+	ACTIVE_PALETTES,
+	IDLE_PALETTE,
+	PALETTE_CHANNELS,
+	resolveActiveTokens,
+	type NavIconKind
+} from './palettes';
 import {
 	NAV3D_SPRING,
 	PRESS_SCALE,
@@ -317,6 +323,8 @@ async function ensureStage(): Promise<boolean> {
 				dead = true;
 				return resolve(false);
 			}
+			// Antes de qualquer material ser criado, para pegar o hex certo.
+			resolveActiveTokens();
 			dpr = Math.min(window.devicePixelRatio || 1, 2);
 			watchDevicePixelRatio();
 			watchReducedMotion();

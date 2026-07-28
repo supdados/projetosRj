@@ -139,7 +139,7 @@
 
 	/* Mesmo gradiente do .dashboard-tasks-hero da pagina (scoped la). */
 	.skel-tasks-hero {
-		background: linear-gradient(180deg, var(--color-surface-muted), var(--color-surface));
+		background: linear-gradient(180deg, var(--ds-color-surface-muted), var(--ds-color-surface-base));
 	}
 
 	/* Mesmo dimensionamento responsivo do .dashboard-tasks-ring. */

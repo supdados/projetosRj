@@ -16,9 +16,9 @@
 	}
 	let {
 		size = 46,
-		accent = '#6aa6db',
-		accentDark = '#3f7cb3',
-		accentLight = '#9bc6ec'
+		accent = 'var(--ds-color-icon-base)',
+		accentDark = 'var(--ds-color-icon-outline)',
+		accentLight = 'var(--ds-color-icon-light)'
 	}: Props = $props();
 </script>
 

@@ -7,7 +7,8 @@
 		<!-- Preenchido pelo Jinja em routes/spa.py ao servir este index via render_template.
 		     Em dev (vite), o placeholder permanece literal e o client.ts apenas nao injeta CSRFToken. -->
 		<meta name="csrf-token" content="%CSRF_TOKEN%" />
-		<meta name="theme-color" content="#005A92" id="appThemeColorMeta" />
+		<!-- Valor inicial pre-hidratacao, sincronizado com --ds-color-surface-topnav (tema claro). -->
+		<meta name="theme-color" content="#004973" id="appThemeColorMeta" />
 		<!-- Anti-flash de tema: portado de templates/base.html:12-32.
 		     Roda ANTES do primeiro paint (sincrono, no head). Seta data-theme no <html>.
 		     Em producao recebe o nonce do CSP via Jinja (%CSP_NONCE%); em dev o nonce e ignorado. -->

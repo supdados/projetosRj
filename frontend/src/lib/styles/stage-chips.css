@@ -1,53 +1,41 @@
 /* Paleta e chips de status da tabela de etapas, compartilhados por
-   StageList.svelte e StageRow.svelte (antes duplicados nos dois <style>). */
+   StageList.svelte, StageRow.svelte, AreaResponsavelPicker.svelte e
+   PendingProjectCard.svelte (antes duplicados nos <style> locais).
+   Receita de chip do §7.9: repouso 100/200/600 · hover 200/300/700. */
 :root {
-	--stage-chip-bg: #fff;
-	--stage-chip-border: #cbdcf0;
-	--stage-chip-text: #2b4d6f;
-	--stage-chip-bg-hover: #f1f7ff;
-	--stage-chip-border-hover: #b7cee5;
-	--stage-chip-text-hover: #20486f;
-	--stage-chip-done-bg: #eaf7f1;
-	--stage-chip-done-border: #b9dfca;
-	--stage-chip-done-text: #1d714e;
-	--stage-chip-done-bg-hover: #e3f4eb;
-	--stage-chip-done-border-hover: #a8d5bd;
-	--stage-chip-done-text-hover: #175f41;
-	--stage-chip-started-bg: #edf5ff;
-	--stage-chip-started-border: #c5d8ee;
-	--stage-chip-started-text: #255585;
-	--stage-chip-started-bg-hover: #e7f1fd;
-	--stage-chip-started-border-hover: #b8d0ea;
-	--stage-chip-started-text-hover: #214f7d;
-	--stage-input-border: #c4d5e7;
-	--stage-danger-text: #972d2d;
-	--stage-danger-bg-hover: rgba(169, 59, 59, 0.14);
-	--stage-danger-border-hover: rgba(184, 63, 63, 0.5);
+	--stage-chip-bg: var(--ds-color-wash-neutral);
+	--stage-chip-border: var(--ds-color-border-base);
+	--stage-chip-text: var(--ds-color-text-label);
+	--stage-chip-bg-hover: var(--ds-color-surface-track);
+	--stage-chip-border-hover: var(--ds-color-border-strong);
+	--stage-chip-text-hover: var(--ds-color-text-secondary);
+	--stage-chip-done-bg: var(--ds-color-wash-success);
+	--stage-chip-done-border: var(--ds-color-border-success-soft);
+	--stage-chip-done-text: var(--ds-color-text-success);
+	--stage-chip-done-bg-hover: var(--ds-color-wash-success-strong);
+	--stage-chip-done-border-hover: var(--ds-color-success-300);
+	--stage-chip-done-text-hover: var(--ds-color-success-700);
+	--stage-chip-started-bg: var(--ds-color-wash-brand);
+	--stage-chip-started-border: var(--ds-color-border-brand-soft);
+	--stage-chip-started-text: var(--ds-color-text-brand);
+	--stage-chip-started-bg-hover: var(--ds-color-primary-200);
+	--stage-chip-started-border-hover: var(--ds-color-primary-300);
+	--stage-chip-started-text-hover: var(--ds-color-primary-700);
+	--stage-input-border: var(--ds-color-border-strong);
+	--stage-danger-text: var(--ds-color-text-danger);
+	--stage-danger-bg-hover: var(--ds-color-wash-danger);
+	--stage-danger-border-hover: var(--ds-color-border-danger-soft);
 }
 
+/* Só o hover sobrevive aqui: a camada de papel não tem degrau de hover
+   (não existe wash-*-strong de marca nem border/text -hover), então esses
+   quatro pares seguem o mesmo deslocamento que `.chip--*:hover` faz no app.css. */
 [data-theme='dark'] {
-	--stage-chip-bg: #262626;
-	--stage-chip-border: var(--color-border);
-	--stage-chip-text: #e0e0e0;
-	--stage-chip-bg-hover: #303030;
-	--stage-chip-border-hover: var(--color-border-strong);
-	--stage-chip-text-hover: #fcfcfc;
-	--stage-chip-done-bg: #1a3328;
-	--stage-chip-done-border: #2f5a44;
-	--stage-chip-done-text: #49b987;
-	--stage-chip-done-bg-hover: #1f3d30;
-	--stage-chip-done-border-hover: #3a6b52;
-	--stage-chip-done-text-hover: #5fc79a;
-	--stage-chip-started-bg: #1a2f48;
-	--stage-chip-started-border: #2e4d6e;
-	--stage-chip-started-text: #c4d2de;
-	--stage-chip-started-bg-hover: #21374f;
-	--stage-chip-started-border-hover: #3a5d80;
-	--stage-chip-started-text-hover: #d8e2ec;
-	--stage-input-border: var(--color-border-strong);
-	--stage-danger-text: #d97a7a;
-	--stage-danger-bg-hover: rgba(217, 122, 122, 0.14);
-	--stage-danger-border-hover: rgba(217, 122, 122, 0.5);
+	--stage-chip-done-border-hover: var(--ds-color-success-600);
+	--stage-chip-done-text-hover: var(--ds-color-success-200);
+	--stage-chip-started-bg-hover: var(--ds-color-primary-700);
+	--stage-chip-started-border-hover: var(--ds-color-primary-600);
+	--stage-chip-started-text-hover: var(--ds-color-primary-200);
 }
 
 .etapa-status-toggle {

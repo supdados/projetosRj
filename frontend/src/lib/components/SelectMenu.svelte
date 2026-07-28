@@ -279,10 +279,10 @@
 
 	const triggerClass = $derived.by<string>(() => {
 		if (unstyled) {
-			return 'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50';
+			return 'focus:outline-none focus-visible:ring-2 focus-visible:ring-context disabled:cursor-not-allowed disabled:opacity-50';
 		}
 		const base =
-			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50';
+			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-context disabled:cursor-not-allowed disabled:opacity-50';
 		const sizeClass =
 			size === 'sm'
 				? 'h-[var(--control-h-sm)] px-2.5 text-[12.5px]'

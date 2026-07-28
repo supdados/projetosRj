@@ -695,9 +695,9 @@
 		height: 32px;
 		padding: 0 0.7rem;
 		border-radius: 8px;
-		border: 1px solid #cfe0f5;
-		background: #eef4ff;
-		color: #2856b6;
+		border: 1px solid var(--stage-chip-started-border);
+		background: var(--stage-chip-started-bg);
+		color: var(--stage-chip-started-text);
 		font-size: 0.78rem;
 		font-weight: 600;
 		line-height: 1;
@@ -709,16 +709,10 @@
 	}
 	.etapa-task-pill:hover,
 	.etapa-task-pill:focus-visible {
-		background: #e2ecff;
-		border-color: #b6cdf0;
-		color: #1d4ed8;
+		background: var(--stage-chip-started-bg-hover);
+		border-color: var(--stage-chip-started-border-hover);
+		color: var(--stage-chip-started-text-hover);
 		outline: none;
-	}
-	:global([data-theme='dark']) .etapa-task-pill:hover,
-	:global([data-theme='dark']) .etapa-task-pill:focus-visible {
-		background: rgba(78, 149, 204, 0.18);
-		border-color: rgba(196, 210, 222, 0.46);
-		color: var(--ds-color-text-brand);
 	}
 	.etapa-task-pill-has,
 	.etapa-task-pill-add {
@@ -739,23 +733,14 @@
 	.etapa-task-pill.is-empty {
 		background: transparent;
 		border-style: dashed;
-		border-color: #c3d3e8;
-		color: #5a7799;
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-muted);
 	}
 	.etapa-task-pill.is-empty:hover,
 	.etapa-task-pill.is-empty:focus-visible {
-		background: rgba(37, 99, 235, 0.07);
-		border-color: #9fc0e8;
-		color: #1d4ed8;
-	}
-	:global([data-theme='dark']) .etapa-task-pill.is-empty {
-		border-color: var(--ds-color-border-base);
-		color: var(--ds-color-text-secondary);
-	}
-	:global([data-theme='dark']) .etapa-task-pill.is-empty:hover,
-	:global([data-theme='dark']) .etapa-task-pill.is-empty:focus-visible {
-		background: rgba(78, 149, 204, 0.12);
-		border-color: var(--ds-color-border-strong);
+		background: var(--stage-chip-started-bg);
+		border-color: var(--stage-chip-started-border);
+		color: var(--stage-chip-started-text);
 	}
 	.etapa-task-pill.is-empty .etapa-task-pill-has {
 		display: none;
@@ -780,6 +765,8 @@
 	.btn-floating {
 		width: 32px;
 		height: 32px;
+	/* Erro de precondição fica ao lado do controle e sem timer: some quando a
+	   precondição deixa de valer ou quando o usuário dispensa. */
 		border-radius: 8px;
 		display: inline-flex;
 		align-items: center;
@@ -834,9 +821,4 @@
 		margin-top: 0.4rem;
 	}
 
-	:global([data-theme='dark']) .etapa-task-pill {
-		background: rgba(78, 149, 204, 0.18);
-		border-color: rgba(196, 210, 222, 0.46);
-		color: var(--ds-color-text-brand);
-	}
 </style>

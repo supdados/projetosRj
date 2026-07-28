@@ -98,8 +98,8 @@
 	}
 
 	:global([data-theme='dark']) .project-conclude-celebration__card {
-		border-color: var(--color-border-strong);
-		background: linear-gradient(155deg, var(--color-surface-elevated) 0%, var(--color-surface) 100%);
+		border-color: var(--ds-color-border-strong);
+		background: linear-gradient(155deg, var(--ds-color-surface-raised) 0%, var(--ds-color-surface-base) 100%);
 		box-shadow:
 			0 16px 34px rgba(0, 0, 0, 0.55),
 			inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -148,7 +148,7 @@
 
 	.project-conclude-celebration__title {
 		margin: 1rem 0 0.35rem;
-		color: var(--color-text-primary);
+		color: var(--ds-color-text-primary);
 		font-size: 1.25rem;
 		font-weight: 700;
 		line-height: 1.3;
@@ -156,7 +156,7 @@
 
 	.project-conclude-celebration__message {
 		margin: 0;
-		color: var(--color-text-secondary);
+		color: var(--ds-color-text-secondary);
 		font-size: 1rem;
 		line-height: 1.5;
 	}

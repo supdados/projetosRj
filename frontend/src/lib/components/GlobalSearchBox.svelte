@@ -406,7 +406,7 @@
 	}
 
 	.app-global-search-icon {
-		color: #1769a8;
+		color: var(--ds-color-text-brand);
 		font-size: 0.8125rem;
 	}
 

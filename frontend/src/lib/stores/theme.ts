@@ -26,12 +26,21 @@ function readDomTheme(): Theme {
 
 const store = writable<Theme>(readDomTheme());
 
+/** Le --ds-color-surface-topnav do tema ja aplicado; fallback so cobre SSR/token ausente. */
+function resolveThemeColorMeta(theme: Theme): string {
+	const fallback = theme === 'dark' ? '#1c1e21' : '#004973';
+	const resolved = getComputedStyle(document.documentElement)
+		.getPropertyValue('--ds-color-surface-topnav')
+		.trim();
+	return resolved || fallback;
+}
+
 /** Aplica o tema ao DOM e persiste no localStorage. */
 function applyTheme(theme: Theme): void {
 	if (typeof document !== 'undefined') {
 		document.documentElement.setAttribute('data-theme', theme);
 		const meta = document.querySelector<HTMLMetaElement>('#appThemeColorMeta');
-		if (meta) meta.content = theme === 'dark' ? '#000000' : '#005A92';
+		if (meta) meta.content = resolveThemeColorMeta(theme);
 	}
 	try {
 		window.localStorage.setItem(STORAGE_KEY, theme);

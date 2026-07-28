@@ -699,25 +699,25 @@
 		overflow: hidden;
 		border-radius: 12px;
 		padding: 1.25rem 1.5rem;
-		color: #fff;
+		color: var(--ds-color-on-brand-strong);
 		background: linear-gradient(
 			135deg,
-			rgba(0, 90, 146, 0.95) 0%,
-			rgba(0, 75, 121, 0.92) 50%,
-			rgba(0, 90, 146, 0.88) 100%
+			color-mix(in srgb, var(--ds-color-surface-topnav) 95%, transparent) 0%,
+			color-mix(in srgb, var(--ds-color-surface-topnav) 92%, transparent) 50%,
+			color-mix(in srgb, var(--ds-color-surface-topnav) 92%, transparent) 100%
 		);
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border: 1px solid var(--ds-color-on-brand-divider);
 		box-shadow:
-			0 8px 32px rgba(0, 90, 146, 0.15),
-			inset 0 1px 0 rgba(255, 255, 255, 0.2);
+			0 8px 32px color-mix(in srgb, var(--ds-color-surface-topnav) 15%, transparent),
+			inset 0 1px 0 var(--ds-color-on-brand-divider);
 	}
 	.project-header::before {
 		content: '';
 		position: absolute;
 		inset: 0;
 		background-image:
-			radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-			radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+			radial-gradient(circle at 20% 80%, var(--ds-color-on-brand-hover) 1px, transparent 1px),
+			radial-gradient(circle at 80% 20%, var(--ds-color-on-brand-hover) 1px, transparent 1px);
 		background-size:
 			50px 50px,
 			80px 80px;
@@ -745,7 +745,7 @@
 		font-weight: 600;
 		font-size: 1.5rem;
 		line-height: 1.2;
-		color: #ffffff;
+		color: var(--ds-color-on-brand-strong);
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 5;
@@ -755,7 +755,7 @@
 	}
 	.ph-description {
 		margin: 0;
-		opacity: 0.9;
+		color: var(--ds-color-on-brand-muted);
 		font-size: 0.875rem;
 		line-height: 1.5;
 		display: -webkit-box;
@@ -817,10 +817,12 @@
 		min-width: 0;
 		margin: 0;
 	}
-	/* Moldura (shell) ao editar: borda via box-shadow p/ NÃO empurrar nada. */
+	/* Moldura (shell) ao editar: borda via box-shadow p/ NÃO empurrar nada.
+	   Tinta -muted (não -divider): com .ph-text-editor:focus em outline:none esta moldura
+	   é o único indicador de foco, e precisa dos 3:1 de WCAG 1.4.11/2.4.11. */
 	.ph-edit-shell {
-		background: rgba(255, 255, 255, 0.08);
-		box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+		background: var(--ds-color-on-brand-hover);
+		box-shadow: 0 0 0 1px var(--ds-color-on-brand-muted);
 	}
 	/* Em EDIÇÃO o shell ganha respiro vertical; margem negativa compensa o
 	   padding p/ o texto não saltar em relação ao modo exibição. */
@@ -833,7 +835,7 @@
 	   do título. */
 	.ph-title-id-prefix {
 		flex-shrink: 0;
-		color: #fff;
+		color: var(--ds-color-on-brand-strong);
 		font-size: 1.5rem;
 		font-weight: 600;
 		line-height: 1.2;
@@ -868,7 +870,7 @@
 		border: 0;
 		border-radius: 5px;
 		background: transparent;
-		color: rgba(255, 255, 255, 0.82);
+		color: var(--ds-color-on-brand-muted);
 		font-size: 0.6rem;
 		line-height: 1;
 		cursor: pointer;
@@ -901,25 +903,29 @@
 	/* Fundo (badge) só no hover/foco — instrução do usuário. */
 	.ph-edit-pen:hover,
 	.ph-edit-pen:focus-visible {
-		background: rgba(255, 255, 255, 0.2);
-		color: #fff;
-		outline: none;
+		background: var(--ds-color-on-brand-hover-strong);
+		color: var(--ds-color-on-brand-strong);
+	}
+	/* O fundo sozinho fica em 1,60:1 sobre a marca; o anel é o que entrega os 3:1
+	   exigidos pelo WCAG 2.4.11 (e separa foco de hover). */
+	.ph-edit-pen:focus-visible {
+		outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring-onbrand);
+		outline-offset: var(--ds-focus-ring-offset);
 	}
 	/* Estado "confirmar" (editando): SEMPRE visível, leve — fundo translúcido
 	   discreto (sem badge branco/sombra/pop) e canto mais quadrado. */
 	.ph-edit-pen--confirm {
 		opacity: 1;
 		pointer-events: auto;
-		background: rgba(255, 255, 255, 0.16);
-		color: #fff;
+		background: var(--ds-color-on-brand-hover);
+		color: var(--ds-color-on-brand-strong);
 		border-radius: 5px;
 		box-shadow: none;
 		transform: none;
 	}
 	.ph-edit-pen--confirm:hover,
 	.ph-edit-pen--confirm:focus-visible {
-		background: rgba(255, 255, 255, 0.3);
-		color: #fff;
+		background: var(--ds-color-on-brand-hover-strong);
 	}
 	.ph-edit-pen:disabled {
 		cursor: default;
@@ -949,9 +955,9 @@
 		margin-top: 0.4rem;
 		padding: 0.18rem 0.55rem;
 		border-radius: 5px;
-		border: 1px dashed rgba(255, 255, 255, 0.32);
-		background: rgba(255, 255, 255, 0.06);
-		color: rgba(255, 255, 255, 0.82);
+		border: 1px dashed var(--ds-color-on-brand-divider);
+		background: var(--ds-color-on-brand-hover);
+		color: var(--ds-color-on-brand-muted);
 		font-size: 0.8rem;
 		font-weight: 600;
 		cursor: pointer;
@@ -961,9 +967,9 @@
 			color 0.16s ease;
 	}
 	.ph-add-description:hover {
-		background: rgba(255, 255, 255, 0.15);
-		border-color: rgba(255, 255, 255, 0.5);
-		color: #fff;
+		background: var(--ds-color-on-brand-hover-strong);
+		border-color: var(--ds-color-on-brand-muted);
+		color: var(--ds-color-on-brand-strong);
 	}
 
 	/* Editor: herda a tipografia do display; SEM moldura própria (o shell da linha é
@@ -972,7 +978,7 @@
 		display: block;
 		margin: 0;
 		padding: 0;
-		color: #fff;
+		color: var(--ds-color-on-brand-strong);
 		background: transparent;
 		border: 0;
 		font-family: inherit;
@@ -986,7 +992,7 @@
 		outline: none;
 	}
 	.ph-text-editor::placeholder {
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--ds-color-on-brand-muted);
 	}
 	.ph-text-editor--title {
 		max-width: 100%;
@@ -1006,7 +1012,7 @@
 		margin: 0.25rem 0 0;
 		font-size: 0.75rem;
 		font-weight: 600;
-		color: #fecaca;
+		color: var(--ds-color-danger-200);
 	}
 
 	/* Badge "Convidado": acesso por convite (access_via), sobre o header glass. */
@@ -1022,9 +1028,9 @@
 		font-weight: 700;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
-		color: #fff;
-		background: rgba(255, 255, 255, 0.16);
-		border: 1px solid rgba(255, 255, 255, 0.32);
+		color: var(--ds-color-on-brand-strong);
+		background: var(--ds-color-on-brand-hover);
+		border: 1px solid var(--ds-color-on-brand-divider);
 	}
 
 	.ph-header-actions {
@@ -1047,16 +1053,16 @@
 		font-size: 0.82rem;
 		font-weight: 600;
 		text-decoration: none;
-		color: #fff;
-		background: rgba(255, 255, 255, 0.12);
-		border: 1px solid rgba(255, 255, 255, 0.28);
+		color: var(--ds-color-on-brand-strong);
+		background: var(--ds-color-on-brand-hover);
+		border: 1px solid var(--ds-color-on-brand-divider);
 		transition:
 			background-color 0.16s ease,
 			border-color 0.16s ease;
 	}
 	.ph-back-button:hover {
-		background: rgba(255, 255, 255, 0.2);
-		border-color: rgba(255, 255, 255, 0.5);
+		background: var(--ds-color-on-brand-hover-strong);
+		border-color: var(--ds-color-on-brand-muted);
 	}
 
 	/* ----- Chips ----- */
@@ -1090,7 +1096,7 @@
 		letter-spacing: 0.07em;
 		text-transform: uppercase;
 		white-space: nowrap;
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--ds-color-on-brand-muted);
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 0.16s ease;
@@ -1104,15 +1110,31 @@
 			transition-duration: 1ms;
 		}
 	}
+	/* Só no CLARO: aqui o header é superfície invertida (azul primary-700) e a régua
+	   clara não serve — sobre o chip (#1c5779) ela mede 1,11:1 a 1,87:1. No escuro o
+	   header é carvão e a régua global já é dessa superfície (6,3:1 a 12:1), e
+	   sobrescrevê-la aqui dessincronizava o ícone do chip do ponto do dropdown.
+	   Escopo é .ph-chip e não .project-header de propósito: o painel do SelectMenu é
+	   descendente do header e herdaria estes valores sobre fundo claro. */
+	:global(:root:not([data-theme='dark'])) .ph-chip {
+		--ds-color-priority-baixa: var(--ds-color-neutral-400);
+		--ds-color-priority-media: var(--ds-color-danger-400);
+		--ds-color-priority-alta: var(--ds-color-danger-300);
+		--ds-color-priority-urgente: var(--ds-color-danger-200);
+		--ds-color-text-brand: var(--ds-color-primary-300);
+		--ds-color-text-warning: var(--ds-color-warning-300);
+		--ds-color-text-attention: var(--ds-color-attention-300);
+		--ds-color-fill-success: var(--ds-color-success-300);
+	}
 	.ph-chip {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.42rem;
 		padding: 0.36rem 0.7rem;
 		border-radius: 6px;
-		background: rgba(0, 0, 0, 0.08);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: #fff;
+		background: color-mix(in srgb, var(--ds-color-neutral-1000) 8%, transparent);
+		border: 1px solid var(--ds-color-on-brand-divider);
+		color: var(--ds-color-on-brand-strong);
 		font-size: 0.78rem;
 		font-weight: 600;
 		line-height: 1;
@@ -1122,6 +1144,8 @@
 	.ph-chip-wrap {
 		position: relative;
 		display: inline-flex;
+		/* Anel azul sobre header azul dá 1,87:1; o contexto de marca pede anel branco. */
+		--ds-color-focus-ring-context: var(--ds-color-focus-ring-onbrand);
 	}
 	.ph-chip-wrap--editable .ph-chip {
 		cursor: pointer;
@@ -1129,15 +1153,17 @@
 			background-color 0.16s ease,
 			border-color 0.16s ease;
 	}
+	/* O hover APROFUNDA o chip (8% → 16% de neutral-1000) em vez de clareá-lo: clarear
+	   derrubava a tinta dos ícones abaixo de 3:1 justamente sob o ponteiro. */
 	.ph-chip-wrap--editable:hover .ph-chip,
 	.ph-chip-wrap:focus-within .ph-chip {
-		background: rgba(255, 255, 255, 0.1);
-		border-color: rgba(255, 255, 255, 0.5);
+		background: color-mix(in srgb, var(--ds-color-neutral-1000) 16%, transparent);
+		border-color: var(--ds-color-on-brand-muted);
 	}
 	.ph-chip-caret {
 		margin-left: 0.05rem;
 		font-size: 0.55rem !important;
-		color: rgba(255, 255, 255, 0.7) !important;
+		color: var(--ds-color-on-brand-muted) !important;
 		opacity: 0;
 		transition: opacity 0.16s ease;
 	}
@@ -1147,36 +1173,36 @@
 	}
 	.ph-chip i {
 		font-size: 0.74rem;
-		opacity: 0.92;
 	}
 	.ph-chip-dot {
 		width: 7px;
 		height: 7px;
 		border-radius: 50%;
-		background: #10b981;
-		box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+		background: var(--ds-color-fill-success);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-color-fill-success) 35%, transparent);
 	}
 	.ph-chip--status-suspenso {
-		background: rgba(234, 88, 12, 0.32);
-		border-color: rgba(234, 88, 12, 0.65);
+		background: color-mix(in srgb, var(--ds-color-warning-500) 32%, transparent);
+		border-color: color-mix(in srgb, var(--ds-color-warning-500) 65%, transparent);
 	}
 	.ph-chip--prio-urgente i {
-		color: #ef4444;
+		color: var(--ds-color-priority-urgente);
 	}
 	.ph-chip--prio-alta i {
-		color: #f97316;
+		color: var(--ds-color-priority-alta);
 	}
 	.ph-chip--prio-media i {
-		color: #f59e0b;
+		color: var(--ds-color-priority-media);
 	}
 	.ph-chip--prio-baixa i {
-		color: #22c55e;
+		color: var(--ds-color-priority-baixa);
 	}
 	.ph-chip--delivery[data-value]:not([data-value='']) i {
-		color: #3b82f6;
+		color: var(--ds-color-text-brand);
 	}
+	/* attention (5ª família) e não warning: warning já é "suspenso" no mesmo par de chips. */
 	.ph-chip--special[data-value]:not([data-value='']) i {
-		color: #8b5cf6;
+		color: var(--ds-color-text-attention);
 	}
 
 	.ph-chip-dates {
@@ -1184,13 +1210,13 @@
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.35rem 0.18rem 0.35rem 0.4rem;
-		color: rgba(255, 255, 255, 0.92);
+		color: var(--ds-color-on-brand-strong);
 		font-size: 0.82rem;
 		line-height: 1;
 	}
 	.ph-chip-dates > i {
 		font-size: 0.92rem;
-		opacity: 0.85;
+		color: var(--ds-color-on-brand-muted);
 	}
 	.ph-date-range {
 		display: inline-flex;
@@ -1199,15 +1225,15 @@
 		font-variant-numeric: tabular-nums;
 	}
 	.ph-date-arrow {
-		color: rgba(255, 255, 255, 0.55);
+		color: var(--ds-color-on-brand-muted);
 		margin: 0 0.05rem;
 	}
 	.ph-date-sep {
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--ds-color-on-brand-muted);
 		user-select: none;
 	}
 	.ph-duration {
-		color: #fff;
+		color: var(--ds-color-on-brand-strong);
 		font-weight: 700;
 	}
 
@@ -1235,11 +1261,11 @@
 		width: min(1080px, calc((100vw - 2rem) * 0.85));
 		margin: 0 auto;
 		border-radius: 12px;
-		border: 1px solid rgba(183, 213, 242, 0.9);
-		background: rgba(233, 244, 255, 0.96);
+		border: 1px solid color-mix(in srgb, var(--ds-color-border-brand-soft) 90%, transparent);
+		background: color-mix(in srgb, var(--ds-color-wash-brand) 96%, transparent);
 		backdrop-filter: blur(14px);
 		-webkit-backdrop-filter: blur(14px);
-		box-shadow: 0 10px 24px rgba(37, 87, 138, 0.18);
+		box-shadow: 0 10px 24px color-mix(in srgb, var(--ds-color-surface-topnav) 18%, transparent);
 		padding: 0.55rem 0.8rem;
 		display: flex;
 		align-items: center;
@@ -1249,7 +1275,7 @@
 	:global([data-theme='dark']) .project-compact-inner {
 		background: var(--ds-color-surface-raised);
 		border-color: var(--ds-color-border-base);
-		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+		box-shadow: 0 10px 24px color-mix(in srgb, var(--ds-color-neutral-1000) 40%, transparent);
 	}
 	.project-compact-main {
 		min-width: 0;
@@ -1259,24 +1285,18 @@
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 700;
-		color: #1f2f45;
+		color: var(--ds-color-text-primary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-	:global([data-theme='dark']) .project-compact-title {
-		color: var(--ds-color-text-primary);
 	}
 	.project-compact-description {
 		margin: 0.3rem 0 0;
 		font-size: 0.875rem;
-		color: #4f6680;
+		color: var(--ds-color-text-secondary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-	}
-	:global([data-theme='dark']) .project-compact-description {
-		color: var(--ds-color-text-secondary);
 	}
 	.project-compact-meta {
 		margin-top: 0.6rem;
@@ -1289,9 +1309,9 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
-		border: 1px solid #d8e6f4;
-		background: #f4f9ff;
-		color: #45617f;
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-secondary);
 		border-radius: 999px;
 		padding: 0.18rem 0.55rem;
 		font-size: 0.72rem;
@@ -1299,14 +1319,8 @@
 		line-height: 1;
 		white-space: nowrap;
 	}
-	:global([data-theme='dark']) .pc-chip {
-		background: var(--ds-color-surface-muted);
-		color: var(--ds-color-text-secondary);
-		border-color: var(--ds-color-border-base);
-	}
 	.pc-chip i {
 		font-size: 0.62rem;
-		opacity: 0.92;
 	}
 	.pc-chip-dot {
 		width: 7px;
@@ -1315,46 +1329,26 @@
 		background: var(--ds-color-fill-success);
 	}
 	.pc-chip--status-suspenso i {
-		color: #9a6212;
-	}
-	.pc-chip--prio-urgente i {
-		color: #b42323;
-	}
-	.pc-chip--prio-alta i {
-		color: #b45309;
-	}
-	.pc-chip--prio-media i {
-		color: #8f6200;
-	}
-	.pc-chip--prio-baixa i {
-		color: #167a44;
-	}
-	.pc-chip--delivery i {
-		color: #1e40af;
-	}
-	.pc-chip--special i {
-		color: #6d28d9;
-	}
-	:global([data-theme='dark']) .pc-chip--status-suspenso i {
 		color: var(--ds-color-text-warning);
 	}
-	:global([data-theme='dark']) .pc-chip--prio-urgente i {
+	.pc-chip--prio-urgente i {
 		color: var(--ds-color-priority-urgente);
 	}
-	:global([data-theme='dark']) .pc-chip--prio-alta i {
+	.pc-chip--prio-alta i {
 		color: var(--ds-color-priority-alta);
 	}
-	:global([data-theme='dark']) .pc-chip--prio-media i {
+	.pc-chip--prio-media i {
 		color: var(--ds-color-priority-media);
 	}
-	:global([data-theme='dark']) .pc-chip--prio-baixa i {
+	.pc-chip--prio-baixa i {
 		color: var(--ds-color-priority-baixa);
 	}
-	:global([data-theme='dark']) .pc-chip--delivery i {
+	.pc-chip--delivery i {
 		color: var(--ds-color-text-brand);
 	}
-	:global([data-theme='dark']) .pc-chip--special i {
-		color: var(--ds-color-text-brand);
+	/* Mesma decisão do header expandido: attention separa "especial" de suspenso (warning). */
+	.pc-chip--special i {
+		color: var(--ds-color-text-attention);
 	}
 	.project-compact-back {
 		display: inline-flex;
@@ -1364,16 +1358,19 @@
 		padding: 0.38rem 0.74rem;
 		font-size: 0.72rem;
 		font-weight: 600;
-		border: 1px solid #d7e4f1;
-		background: #fff;
-		color: #415970;
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-base);
+		color: var(--ds-color-text-primary);
 		text-decoration: none;
 		white-space: nowrap;
-		transition: background 0.16s ease;
+		transition:
+			background 0.16s ease,
+			color 0.16s ease;
 	}
+	/* O fundo sozinho dá 1,07:1 no claro — é a troca de tinta que torna o hover visível. */
 	.project-compact-back:hover {
-		background: #f4f8fc;
-		color: #2f455d;
+		background: var(--ds-color-surface-muted);
+		color: var(--ds-color-text-brand);
 	}
 	:global([data-theme='dark']) .project-compact-back {
 		background: var(--ds-color-surface-muted);
@@ -1382,6 +1379,7 @@
 	}
 	:global([data-theme='dark']) .project-compact-back:hover {
 		background: var(--ds-color-surface-raised);
+		color: var(--ds-color-text-brand);
 	}
 
 	@media (max-width: 991.98px) {

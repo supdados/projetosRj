@@ -154,8 +154,8 @@
 		justify-content: center;
 		align-items: center;
 		padding: 0.5rem 0.75rem;
-		background: var(--color-surface);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-base);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 12px 12px 0 0;
 	}
 	.cal-skel-month-nav {
@@ -173,11 +173,11 @@
 
 	/* Espelha .cal-grid-wrap / .cal-grid-headers / .cal-week / .cal-cell. */
 	.cal-skel-grid-wrap {
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-top: none;
 		border-radius: 0 0 12px 12px;
 		overflow: hidden;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		min-height: clamp(30rem, calc(100vh - 17rem), 52rem);
 		display: flex;
 		flex-direction: column;
@@ -191,8 +191,8 @@
 		display: flex;
 		justify-content: center;
 		padding: 0.5rem 0.2rem;
-		border-bottom: 1px solid var(--color-border);
-		background: var(--color-surface-muted);
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
 	}
 	.cal-skel-week {
 		display: grid;
@@ -204,8 +204,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.3rem;
-		border-right: 1px solid var(--color-border);
-		border-bottom: 1px solid var(--color-border);
+		border-right: 1px solid var(--ds-color-border-base);
+		border-bottom: 1px solid var(--ds-color-border-base);
 		padding: 0.3rem 0.3rem 0.4rem;
 		min-height: 0;
 		overflow: hidden;
@@ -219,18 +219,18 @@
 		display: flex;
 		width: 100%;
 		gap: 1px;
-		border: 1px solid var(--color-border);
+		border: 1px solid var(--ds-color-border-base);
 		border-radius: 8px;
 		overflow: hidden;
-		background: var(--color-surface);
+		background: var(--ds-color-surface-base);
 		padding: 2px;
 	}
 
 	/* Espelha os 3 cards de CalendarRightPanel (rounded-xl border p-4 shadow-sm). */
 	.cal-skel-card {
 		border-radius: 12px;
-		border: 1px solid var(--color-border);
-		background: var(--color-surface);
+		border: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-base);
 		padding: 1rem;
 		box-shadow: var(--ds-shadow-sm);
 	}

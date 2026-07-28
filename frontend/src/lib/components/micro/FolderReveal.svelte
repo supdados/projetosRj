@@ -33,9 +33,9 @@
 	let {
 		size = 40,
 		images = [],
-		accent = '#6aa6db',
-		accentDark = '#3f7cb3',
-		accentLight = '#9bc6ec'
+		accent = 'var(--ds-color-icon-base)',
+		accentDark = 'var(--ds-color-icon-outline)',
+		accentLight = 'var(--ds-color-icon-light)'
 	}: Props = $props();
 
 	// Sempre 3 lugares; cada um recebe uma imagem (se houver) ou vira documento.
@@ -147,8 +147,8 @@
 		width: 92%;
 		height: 74%;
 		border-radius: calc(var(--fr-size) * 0.07);
-		background: var(--color-surface-elevated);
-		border: 1px solid var(--color-border);
+		background: var(--ds-color-surface-raised);
+		border: 1px solid var(--ds-color-border-base);
 		box-shadow: 0 6px 14px rgba(15, 42, 71, 0.18);
 		overflow: hidden;
 		transform-origin: bottom center;
