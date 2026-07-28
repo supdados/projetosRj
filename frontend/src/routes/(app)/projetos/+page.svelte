@@ -818,7 +818,7 @@
 					aria-controls="projetosAdvancedPanel"
 					title={advancedOpen ? 'Menos filtros' : 'Mais filtros'}
 					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {advancedOpen
-						? 'border-primary-500/50 bg-wash-brand text-brand'
+						? 'border-brand-soft bg-wash-brand text-brand'
 						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-brand'}"
 				>
 					<i class="fas fa-sliders-h" aria-hidden="true"></i>
@@ -985,10 +985,10 @@
 				quadro suave, título e texto centralizados.
 			-->
 			<div
-				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
+				class="rounded-lg border border-dashed border-border-strong bg-surface-muted px-4 py-8 text-center"
 			>
 				<div
-					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-wash-neutral text-xl text-brand"
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
 				>
 					<i class="fas fa-folder-open" aria-hidden="true"></i>
 				</div>
@@ -1102,7 +1102,7 @@
 							{#each data.projetos as project (project.id)}
 								<!-- Linha com hover suave + fade-out na remoção (260ms). -->
 								<tr
-									class="group transition-[background-color,opacity] duration-fast hover:bg-surface-muted/60 {removingIds.has(
+									class="group transition-[background-color,opacity] duration-fast hover:bg-surface-muted {removingIds.has(
 										project.id
 									)
 										? 'pointer-events-none opacity-0'
@@ -1321,7 +1321,7 @@
 				type="button"
 				onclick={confirmDelete}
 				disabled={deletingId !== null}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-on-danger transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger-soft bg-danger px-3 text-sm font-semibold text-on-danger transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if deletingId !== null}
 					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>

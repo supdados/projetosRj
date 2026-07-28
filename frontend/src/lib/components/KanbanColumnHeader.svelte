@@ -1,8 +1,7 @@
 <script lang="ts">
 	/**
-	 * Cabeçalho de coluna: faixa tingida com a cor do status. Tintas via
-	 * color-mix no bloco de estilo (Tailwind 3 não gera bg-info/10 de var sem
-	 * alpha-value).
+	 * Cabeçalho de coluna: faixa tingida com a cor do status. Fundo = wash da
+	 * família do status; tinta = token de texto da mesma família.
 	 */
 	import type { Snippet } from 'svelte';
 	import type { TaskStatus } from '$lib/utils/taskStatus';
@@ -37,25 +36,26 @@
 
 <style>
 	.kcol-head--nao_iniciada {
-		background-color: color-mix(in srgb, var(--color-text-muted) 8%, var(--color-surface));
+		background-color: var(--ds-color-wash-neutral);
 		color: var(--ds-color-text-secondary);
 	}
-	/* Tinta = token puro (sem color-mix escurecedor) e mapeamento arbitrado em
-	   plano-regua-de-cor §7.2: andamento=primary, ajustes=orange (vira attention). */
+	/* Tinta = token puro e mapeamento arbitrado em plano-regua-de-cor §7.2:
+	   andamento=primary, ajustes=orange (vira attention). O fundo é o wash da
+	   mesma família (degrau nomeado, desloca sozinho no dark). */
 	.kcol-head--em_andamento {
-		background-color: color-mix(in srgb, var(--ds-color-primary-600) 9%, var(--color-surface));
+		background-color: var(--ds-color-wash-brand);
 		color: var(--ds-color-text-brand);
 	}
 	.kcol-head--para_validacao {
-		background-color: color-mix(in srgb, var(--ds-color-warning-600) 10%, var(--color-surface));
+		background-color: var(--ds-color-wash-warning);
 		color: var(--ds-color-text-warning);
 	}
 	.kcol-head--para_ajustes {
-		background-color: color-mix(in srgb, var(--ds-color-attention-600) 8%, var(--color-surface));
+		background-color: var(--ds-color-wash-attention);
 		color: var(--ds-color-text-attention);
 	}
 	.kcol-head--finalizada {
-		background-color: color-mix(in srgb, var(--ds-color-success-600) 8%, var(--color-surface));
+		background-color: var(--ds-color-wash-success);
 		color: var(--ds-color-text-success);
 	}
 

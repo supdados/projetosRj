@@ -992,7 +992,7 @@
 	.cal-modal-sync-warn {
 		font-size: 0.8125rem;
 		color: var(--ds-color-text-warning);
-		border: 1px solid color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
+		border: 1px solid var(--ds-color-border-warning-soft);
 		background: var(--ds-color-surface-muted);
 		border-radius: 6px;
 		padding: 0.4rem 0.6rem;
@@ -1160,7 +1160,7 @@
 	}
 	.cal-meet-row.is-active {
 		border-color: var(--ds-color-border-brand);
-		background: color-mix(in srgb, var(--ds-color-primary-600) 10%, transparent);
+		background: var(--ds-color-wash-brand);
 	}
 	.cal-meet-icon-wrap {
 		width: 1.4rem;
@@ -1368,7 +1368,7 @@
 		transition: background 0.12s;
 	}
 	.cal-btn-delete:hover {
-		background: color-mix(in srgb, var(--ds-color-danger-600) 7%, transparent);
+		background: var(--ds-color-wash-danger);
 	}
 	.cal-btn-cancel {
 		padding: 0.4rem 0.85rem;
@@ -1548,7 +1548,7 @@
 		font-family: inherit;
 	}
 	.cdp-today-btn:hover {
-		background: color-mix(in srgb, var(--ds-color-primary-600) 7%, transparent);
+		background: var(--ds-color-wash-neutral);
 	}
 
 	.cdp-timelist {

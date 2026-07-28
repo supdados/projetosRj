@@ -17,22 +17,18 @@ export interface EventColorClasses {
  * Retorna as classes de cor Tailwind para um evento baseado em seu status de sync.
  *
  * Paleta:
- *   - app + ok   -> primary suave (azul)
- *   - google     -> verde suave
+ *   - app + ok   -> wash brand (azul)
+ *   - google     -> wash success (verde)
  *   - pending    -> cinza/muted
- *   - error      -> vermelho suave
+ *   - error      -> wash danger (vermelho)
  *
- * Usa bg translucido (/15) para dark-mode sem conflito com tokens de superficie.
+ * Usa degraus wash/soft nomeados — deslocam sozinhos no dark, sem variante dark:.
  */
 export function eventColorClasses(ev: CalendarEvent): EventColorClasses {
 	if (ev.sync_status === 'error') {
 		return {
-			block: [
-				'bg-red-500/15 dark:bg-red-500/20',
-				'text-red-700 dark:text-red-300',
-				'border border-red-300/60 dark:border-red-500/30',
-			].join(' '),
-			dot: 'bg-red-500',
+			block: ['bg-wash-danger', 'text-danger', 'border border-danger-soft'].join(' '),
+			dot: 'bg-danger',
 		};
 	}
 
@@ -48,24 +44,18 @@ export function eventColorClasses(ev: CalendarEvent): EventColorClasses {
 	}
 
 	if (ev.source === 'google') {
+		// Verde = "evento veio do Google": acoplar ao papel success e uma decisao
+		// consciente (plano §6 commit 7), nao um estado de sucesso do dominio.
 		return {
-			block: [
-				'bg-emerald-500/15 dark:bg-emerald-500/20',
-				'text-emerald-700 dark:text-emerald-300',
-				'border border-emerald-300/60 dark:border-emerald-500/30',
-			].join(' '),
-			dot: 'bg-emerald-500',
+			block: ['bg-wash-success', 'text-success', 'border border-success-soft'].join(' '),
+			dot: 'bg-success',
 		};
 	}
 
 	// app + ok (padrao)
 	return {
-		block: [
-			'bg-primary-500/15 dark:bg-primary-500/20',
-			'text-brand dark:text-primary-500',
-			'border border-primary-500/30',
-		].join(' '),
-		dot: 'bg-primary-500',
+		block: ['bg-wash-brand', 'text-brand', 'border border-brand-soft'].join(' '),
+		dot: 'bg-brand',
 	};
 }
 

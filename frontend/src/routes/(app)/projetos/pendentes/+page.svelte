@@ -515,10 +515,10 @@
 			<div
 				role="status"
 				aria-live="polite"
-				class="rounded-lg border border-dashed border-border-strong bg-surface-muted/40 px-4 py-8 text-center"
+				class="rounded-lg border border-dashed border-border-strong bg-surface-muted px-4 py-8 text-center"
 			>
 				<div
-					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-primary-500/25 bg-wash-neutral text-xl text-brand"
+					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
 				>
 					<i class="fas fa-check-circle" aria-hidden="true"></i>
 				</div>

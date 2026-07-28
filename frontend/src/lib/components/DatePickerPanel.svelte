@@ -370,12 +370,12 @@
 		font-family: inherit;
 	}
 	.dfp-footer-btn:hover {
-		background: color-mix(in srgb, var(--ds-color-primary-600) 7%, transparent);
+		background: var(--ds-color-wash-neutral);
 	}
 	.dfp-footer-btn--clear {
 		color: var(--ds-color-text-danger);
 	}
 	.dfp-footer-btn--clear:hover {
-		background: color-mix(in srgb, var(--ds-color-danger-600) 7%, transparent);
+		background: var(--ds-color-wash-danger);
 	}
 </style>

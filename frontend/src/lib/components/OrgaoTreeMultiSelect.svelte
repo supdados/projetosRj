@@ -75,7 +75,7 @@
 
 <div class="overflow-hidden rounded-lg border border-border-subtle">
 	<!-- Busca -->
-	<div class="relative border-b border-border-subtle bg-surface-muted/40">
+	<div class="relative border-b border-border-subtle bg-surface-muted">
 		<i
 			class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 			aria-hidden="true"

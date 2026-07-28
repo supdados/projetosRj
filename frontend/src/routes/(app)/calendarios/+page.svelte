@@ -1313,8 +1313,8 @@
 	}
 	.cal-google-badge--on {
 		color: var(--app-color-success);
-		background: color-mix(in srgb, var(--app-color-success) 10%, transparent);
-		border-color: color-mix(in srgb, var(--app-color-success) 22%, transparent);
+		background: var(--ds-color-wash-success);
+		border-color: var(--ds-color-border-success-soft);
 	}
 	.cal-google-badge--off {
 		color: var(--app-color-text-muted);
@@ -1480,8 +1480,8 @@
 		border-color: transparent;
 	}
 	.cal-btn-sm--danger:hover {
-		background: color-mix(in srgb, var(--app-color-danger) 7%, transparent);
-		border-color: color-mix(in srgb, var(--app-color-danger) 18%, transparent);
+		background: var(--ds-color-wash-danger);
+		border-color: var(--ds-color-border-danger-soft);
 	}
 
 	/* ── Alert / notice ─────────────────────────────────────────────── */
@@ -1490,19 +1490,19 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 8px;
 		border: 1px solid var(--app-color-border);
-		background: color-mix(in srgb, var(--ds-color-warning-600) 10%, transparent);
+		background: var(--ds-color-wash-warning);
 		color: var(--app-color-text-secondary);
 	}
 	.cal-action-notice {
 		font-size: 0.8125rem;
 		padding: 0.5rem 1rem;
 		border-radius: 8px;
-		border: 1px solid color-mix(in srgb, var(--app-color-success) 22%, transparent);
-		background: color-mix(in srgb, var(--app-color-success) 10%, transparent);
+		border: 1px solid var(--ds-color-border-success-soft);
+		background: var(--ds-color-wash-success);
 		color: var(--app-color-success);
 	}
 	.cal-action-notice--warning {
-		border-color: color-mix(in srgb, var(--ds-color-warning-600) 30%, transparent);
+		border-color: var(--ds-color-border-warning-soft);
 		background: var(--app-color-surface-muted);
 		color: var(--ds-color-text-warning);
 	}
@@ -1878,7 +1878,7 @@
 		line-height: 1;
 		font-weight: 500;
 		color: var(--ds-color-text-brand);
-		background: color-mix(in srgb, var(--ds-color-primary-600) 18%, transparent);
+		background: var(--ds-color-wash-brand);
 	}
 	.cal-popover-close {
 		position: absolute;
@@ -2143,12 +2143,12 @@
 		color: var(--ds-color-text-primary);
 	}
 	.cal-event-popover-action--danger {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 26%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
 		color: var(--ds-color-text-danger);
 	}
 	.cal-event-popover-action--danger:hover {
-		background: color-mix(in srgb, var(--ds-color-danger-600) 8%, transparent);
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 42%, transparent);
+		background: var(--ds-color-wash-danger);
+		border-color: var(--ds-color-border-danger-soft);
 		color: var(--ds-color-text-danger);
 	}
 

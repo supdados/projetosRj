@@ -76,7 +76,7 @@
 
 {#if value.length === 0}
 	<p
-		class="rounded-lg border border-dashed border-border-subtle bg-surface-muted/40 px-3 py-3 text-sm text-text-muted"
+		class="rounded-lg border border-dashed border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-muted"
 	>
 		Nenhuma área vinculada. Selecione as áreas na árvore abaixo.
 	</p>
@@ -86,7 +86,7 @@
 			{@const orgao = optionById.get(vinculo.orgao_id)}
 			{@const coveredBy = coveringById.get(vinculo.orgao_id) ?? null}
 			<li
-				class="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted/40 px-3 py-2"
+				class="flex flex-wrap items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted px-3 py-2"
 			>
 				<span class="flex min-w-0 flex-1 basis-48 flex-col">
 					<span class="truncate">
@@ -120,7 +120,7 @@
 					onclick={() => removeVinculo(vinculo.orgao_id)}
 					{disabled}
 					aria-label={`Remover vínculo com ${siglaOf(vinculo.orgao_id)}`}
-					class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+					class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 				>
 					<i class="fas fa-times text-xs" aria-hidden="true"></i>
 				</button>
@@ -132,7 +132,7 @@
 {#if descendentes.length > 0}
 	<p
 		role="status"
-		class="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-text-secondary"
+		class="flex items-start gap-2 rounded-lg border border-warning-soft bg-wash-warning px-3 py-2 text-xs text-text-secondary"
 	>
 		<i class="fas fa-circle-info mt-0.5 shrink-0 text-warning" aria-hidden="true"></i>
 		<span>{textoDescendencias}. Vale o papel mais alto entre os dois.</span>

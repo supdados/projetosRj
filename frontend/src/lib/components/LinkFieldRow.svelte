@@ -421,7 +421,7 @@
 	}
 	@keyframes cp-lrow-row-flash {
 		0% {
-			background-color: color-mix(in srgb, var(--ds-color-primary-600) 8%, transparent);
+			background-color: var(--ds-color-wash-brand);
 		}
 		100% {
 			background-color: transparent;

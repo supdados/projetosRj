@@ -374,7 +374,7 @@
 	class="stq-panel fixed right-0 top-0 z-modal flex h-full w-[min(880px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 >
 	<header
-		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
+		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated px-5 pb-3.5 pt-4"
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -551,7 +551,7 @@
 											disabled={addDraft.saving}
 											title="Salvar"
 											aria-label="Salvar tarefa"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-primary-100/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-sm border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 										>
 											<i class="fas fa-check text-xs" aria-hidden="true"></i>
 										</button>
@@ -575,7 +575,7 @@
 							<button
 								type="button"
 								onclick={openAddForm}
-								class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+								class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-wash-neutral hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<i class="fas fa-plus text-2xs text-brand" aria-hidden="true"></i>
 								Adicionar nova tarefa
@@ -589,7 +589,7 @@
 
 	{#if confirmingDiscard}
 		<!-- Rodapé transiente: confirma o descarte do rascunho antes de fechar. -->
-		<footer class="shrink-0 border-t border-border-subtle bg-surface-elevated/70 px-5 py-3.5">
+		<footer class="shrink-0 border-t border-border-subtle bg-surface-elevated px-5 py-3.5">
 			<div
 				role="alertdialog"
 				aria-label="Confirmar descarte do rascunho"
@@ -638,20 +638,19 @@
 		column-gap: 0.45rem;
 	}
 
-	/* Tintas via color-mix sobre tokens DS (o Tailwind 3 não gera `bg-x/10`
-	 * para cores definidas como var() sem alpha-value). */
+	/* Tintas em degraus nomeados do DS (wash/soft deslocam sozinhos no dark). */
 	:global([data-theme='dark']) .stq-panel {
 		box-shadow: -18px 0 44px rgba(0, 0, 0, 0.5);
 	}
 	.stq-discard-confirm {
-		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);
+		border-color: var(--ds-color-border-warning-soft);
+		background-color: var(--ds-color-wash-warning);
 	}
 	.stq-discard-btn {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 48%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
+		background-color: var(--ds-color-wash-danger);
 	}
 	.stq-discard-btn:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 18%, transparent);
+		background-color: var(--ds-color-wash-danger-strong);
 	}
 </style>

@@ -43,7 +43,7 @@
 {#if grants.length > 0}
 	<section
 		aria-labelledby="grants-orfaos-title"
-		class="overflow-hidden rounded-xl border border-warning/40 bg-surface"
+		class="overflow-hidden rounded-xl border border-warning-soft bg-surface"
 	>
 		<div class="flex items-center gap-2 border-b border-border-subtle bg-surface-muted px-4 py-2.5">
 			<i class="fas fa-triangle-exclamation text-warning" aria-hidden="true"></i>
@@ -77,7 +77,7 @@
 							</td>
 							<td class="px-3 py-2 align-middle">
 								<span
-									class="inline-flex items-center rounded-full border border-warning/40 bg-surface-muted px-2 py-0.5 text-xs font-bold text-warning"
+									class="inline-flex items-center rounded-full border border-warning-soft bg-surface-muted px-2 py-0.5 text-xs font-bold text-warning"
 								>
 									{MOTIVO_LABEL[grant.motivo]}
 								</span>

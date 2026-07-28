@@ -373,12 +373,12 @@
 										onclick={() => (confirmingId = comment.id)}
 										aria-label="Excluir comentário"
 										title="Excluir"
-										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 									><i class="fas fa-trash-can" aria-hidden="true"></i></button>{/if}</span>{/if}</p>
 						{/if}
 
 						{#if confirmingId === comment.id}
-							<div class="mt-1.5 flex items-center gap-2 rounded-md border border-danger/40 bg-danger/5 px-2.5 py-1.5">
+							<div class="mt-1.5 flex items-center gap-2 rounded-md border border-danger-soft bg-wash-danger px-2.5 py-1.5">
 								<span class="mr-auto text-2xs text-text-primary">Excluir este comentário?</span>
 								<button
 									type="button"
@@ -457,7 +457,7 @@
 								onmouseenter={() => (mentionActiveIndex = i)}
 								class="flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition-colors duration-fast {i ===
 								mentionActiveIndex
-									? 'bg-primary-100/50'
+									? 'bg-wash-neutral'
 									: 'hover:bg-surface-muted'}"
 							>
 								<AssigneeAvatar name={candidate.name} initials={candidate.initials} size="sm" />

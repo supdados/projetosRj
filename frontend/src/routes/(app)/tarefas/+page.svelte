@@ -1131,7 +1131,7 @@
 													<button
 														type="button"
 														onclick={() => openAddForm(group, stage)}
-														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-wash-neutral hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 													>
 														<i class="fas fa-plus text-2xs text-brand" aria-hidden="true"></i>
 														Adicionar nova tarefa

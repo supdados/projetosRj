@@ -1286,7 +1286,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex {outerAlignClass} bg-[rgba(7,20,33,0.34)] p-4 backdrop-blur-[1.5px]"
+		class="fixed inset-0 z-50 flex {outerAlignClass} bg-overlay p-4 backdrop-blur-[1.5px]"
 		role="presentation"
 		onclick={requestClose}
 		onkeydown={onModalKeydown}
@@ -1977,7 +1977,7 @@
 			<!-- Confirmação de descarte: cobre o modal ao fechar com dados preenchidos -->
 			{#if confirmDiscardOpen}
 				<div
-					class="absolute inset-0 z-10 flex items-center justify-center bg-black/30 p-6 backdrop-blur-[1px]"
+					class="absolute inset-0 z-10 flex items-center justify-center bg-overlay p-6 backdrop-blur-[1px]"
 					role="alertdialog"
 					aria-modal="true"
 					aria-labelledby="cp-discard-title"

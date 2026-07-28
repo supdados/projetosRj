@@ -487,7 +487,7 @@
 	   em vez de transform — scale em display:table-row é imprevisível). */
 	@keyframes stage-drop-settle {
 		0% {
-			background-color: color-mix(in srgb, var(--ds-color-primary-500) 14%, transparent);
+			background-color: var(--ds-color-wash-brand);
 		}
 		100% {
 			background-color: transparent;
@@ -507,7 +507,7 @@
 	@keyframes stage-focus-highlight {
 		0%,
 		62% {
-			background-color: color-mix(in srgb, var(--ds-color-primary-500) 16%, transparent);
+			background-color: var(--ds-color-wash-brand);
 		}
 		100% {
 			background-color: transparent;
@@ -519,7 +519,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		.etapa-row.is-focus-highlight :global(td) {
 			animation: none;
-			background-color: color-mix(in srgb, var(--ds-color-primary-500) 12%, transparent);
+			background-color: var(--ds-color-wash-brand);
 		}
 	}
 

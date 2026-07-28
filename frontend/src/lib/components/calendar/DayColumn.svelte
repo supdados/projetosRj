@@ -101,7 +101,7 @@
 >
 	{#if todayCol}
 		<div
-			class="pointer-events-none absolute inset-0 bg-primary-500/10 dark:bg-primary-500/20"
+			class="pointer-events-none absolute inset-0 bg-wash-brand"
 			aria-hidden="true"
 		></div>
 	{/if}
@@ -119,7 +119,7 @@
 	     o ponteiro, para nao interferir no clique/selecao. -->
 	{#if hoverHour !== null}
 		<div
-			class="pointer-events-none absolute inset-x-0 z-0 bg-primary-500/10 ring-1 ring-inset ring-primary-500/30"
+			class="pointer-events-none absolute inset-x-0 z-0 bg-wash-neutral ring-1 ring-inset ring-brand"
 			style="top: {(hoverHour - startHour) * pxPerHour}px; height: {pxPerHour}px;"
 			aria-hidden="true"
 		></div>

@@ -755,8 +755,8 @@
 	}
 	.stage-placeholder-fill {
 		border-radius: 10px;
-		border: 1.5px dashed color-mix(in srgb, var(--ds-color-primary-500) 45%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-primary-500) 8%, transparent);
+		border: 1.5px dashed var(--ds-color-border-brand-soft);
+		background-color: var(--ds-color-wash-brand);
 		pointer-events: none;
 		animation: stage-placeholder-in 0.14s ease;
 	}

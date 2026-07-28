@@ -495,7 +495,7 @@
 
 	/* Bolinha agregada de responsáveis ("+N", nível 2 do rodapé adaptativo). */
 	.kc-avatar-overflow {
-		background-color: color-mix(in srgb, var(--color-text-muted) 18%, var(--color-surface));
+		background-color: var(--ds-color-wash-neutral);
 		color: var(--ds-color-text-secondary);
 	}
 
@@ -504,30 +504,18 @@
 		color: var(--ds-color-text-danger);
 	}
 
-	/*
-	 * Tons de perigo do mini-confirm: o Tailwind 3 não gera `bg-danger/10`
-	 * (cor via var sem <alpha-value>) — as tintas vivem aqui via color-mix.
-	 */
+	/* Tons de perigo do mini-confirm: degraus nomeados do DS (deslocam sozinhos
+	 * no dark — sem bloco [data-theme='dark'] re-temperando). */
 	.kanban-delete-confirm {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 5%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
+		background-color: var(--ds-color-wash-danger);
 	}
 	.kc-confirm-delete-btn {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 48%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
+		background-color: var(--ds-color-wash-danger);
 	}
 	.kc-confirm-delete-btn:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 18%, transparent);
-	}
-	:global([data-theme='dark']) .kanban-delete-confirm {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 12%, transparent);
-	}
-	:global([data-theme='dark']) .kc-confirm-delete-btn {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 20%, transparent);
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 65%, transparent);
-	}
-	:global([data-theme='dark']) .kc-confirm-delete-btn:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 30%, transparent);
+		background-color: var(--ds-color-wash-danger-strong);
 	}
 
 	/*

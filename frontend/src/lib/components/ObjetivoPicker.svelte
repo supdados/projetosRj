@@ -294,7 +294,7 @@
 									aria-pressed={checked}
 									onclick={() => onToggleIndicador(ind.id)}
 									class="flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-[opacity,transform,color,background-color,border-color] duration-300 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {checked
-										? 'border-brand bg-[color-mix(in_srgb,var(--ds-color-primary-600)_4%,transparent)] font-medium text-brand'
+										? 'border-brand bg-wash-brand font-medium text-brand'
 										: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:text-text-primary'} {revealedIndicadores.has(
 										ind.id
 									)

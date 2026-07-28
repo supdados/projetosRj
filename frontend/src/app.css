@@ -186,6 +186,7 @@
 	--ds-color-wash-warning: var(--ds-color-warning-100);
 	--ds-color-wash-attention: var(--ds-color-attention-100);
 	--ds-color-wash-danger: var(--ds-color-danger-100);
+	--ds-color-wash-danger-strong: var(--ds-color-danger-200);
 
 	/* --- Foco (WCAG 1.4.11 / 2.4.11) ----------------------------------------- */
 	/* ÚNICO papel que NÃO desloca no dark: o anel precisa aparecer sobre
@@ -359,6 +360,7 @@
 	--ds-color-wash-warning: var(--ds-color-warning-800);
 	--ds-color-wash-attention: var(--ds-color-attention-800);
 	--ds-color-wash-danger: var(--ds-color-danger-800);
+	--ds-color-wash-danger-strong: var(--ds-color-danger-700);
 
 	/* --- Foco: NÃO desloca. Ausente de propósito ----------------------------
 	   O anel é o único papel idêntico nos dois temas — precisa aparecer sobre

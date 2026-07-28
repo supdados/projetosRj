@@ -45,7 +45,7 @@
 			<Skeleton class="h-3 w-72 rounded" />
 		</div>
 
-		<div class="flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-muted/40 px-4 py-3">
+		<div class="flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-muted px-4 py-3">
 			<Skeleton class="mt-0.5 h-4 w-4 rounded" />
 			<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 				<Skeleton class="h-3.5 w-32 rounded" />
@@ -59,7 +59,7 @@
 				<Skeleton class="h-3 w-24 rounded" />
 			</div>
 			<div class="overflow-hidden rounded-lg border border-border-subtle">
-				<div class="h-10 w-full border-b border-border-subtle bg-surface-muted/40"></div>
+				<div class="h-10 w-full border-b border-border-subtle bg-surface-muted"></div>
 				<div class="grid grid-cols-1 gap-1 p-2 sm:grid-cols-2 lg:grid-cols-3">
 					{#each { length: 9 } as _, i (i)}
 						<div class="flex items-center gap-2 rounded-md px-2.5 py-1.5">

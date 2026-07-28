@@ -131,7 +131,7 @@
 		<ul class="flex flex-col gap-1.5">
 			{#each anexos as anexo (anexo.id)}
 				<li
-					class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted/40 px-2 py-1.5"
+					class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-muted px-2 py-1.5"
 				>
 					{#if anexo.url}
 						<a
@@ -199,7 +199,7 @@
 				ondrop={onDrop}
 				class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-xs font-semibold transition-colors duration-fast focus-within:ring-2 focus-within:ring-brand {dragActive
 					? 'border-brand bg-wash-brand text-brand'
-					: 'border-border-strong bg-surface-muted/40 text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'} {uploading
+					: 'border-border-strong bg-surface-muted text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'} {uploading
 					? 'opacity-60'
 					: ''}"
 			>

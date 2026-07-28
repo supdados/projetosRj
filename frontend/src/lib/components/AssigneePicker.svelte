@@ -365,7 +365,7 @@
 							onmouseenter={() => (highlight = i)}
 							class="flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors duration-fast focus:outline-none {i ===
 							highlight
-								? 'bg-primary-100/50'
+								? 'bg-wash-neutral'
 								: 'hover:bg-surface-muted'}"
 						>
 							<AssigneeAvatar name={candidate.name} initials={candidate.initials} size="md" />

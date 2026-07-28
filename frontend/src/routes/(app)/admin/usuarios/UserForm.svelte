@@ -98,7 +98,7 @@
 	{#if errorMessage}
 		<div
 			role="alert"
-			class="rounded-lg border border-danger bg-danger/10 px-4 py-3 text-sm font-medium text-danger"
+			class="rounded-lg border border-danger bg-wash-danger px-4 py-3 text-sm font-medium text-danger"
 		>
 			{errorMessage}
 		</div>
@@ -178,7 +178,7 @@
 								type="button"
 								onclick={onRemoveCpf}
 								disabled={removingCpf || saving}
-								class="inline-flex h-10 items-center rounded-lg border border-danger/40 bg-surface px-3 text-xs font-semibold text-danger transition-colors duration-fast hover:bg-danger/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+								class="inline-flex h-10 items-center rounded-lg border border-danger-soft bg-surface px-3 text-xs font-semibold text-danger transition-colors duration-fast hover:bg-wash-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 							>
 								{removingCpf ? 'Retirando…' : 'Retirar CPF'}
 							</button>
@@ -202,7 +202,7 @@
 								type="button"
 								onclick={onRemoveCpf}
 								disabled={removingCpf || saving}
-								class="inline-flex h-10 shrink-0 items-center rounded-lg border border-danger/40 bg-surface px-3 text-xs font-semibold text-danger transition-colors duration-fast hover:bg-danger/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+								class="inline-flex h-10 shrink-0 items-center rounded-lg border border-danger-soft bg-surface px-3 text-xs font-semibold text-danger transition-colors duration-fast hover:bg-wash-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 							>
 								{removingCpf ? 'Retirando…' : 'Retirar CPF'}
 							</button>
@@ -263,8 +263,8 @@
 		<!-- Permissão de administrador como cartão de opção destacado. -->
 		<label
 			class="flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast {values.is_admin
-				? 'border-primary-500/50 bg-surface-elevated'
-				: 'border-border-subtle bg-surface-muted/40 hover:border-border-strong hover:bg-surface-muted'}"
+				? 'border-brand-soft bg-surface-elevated'
+				: 'border-border-subtle bg-surface-muted hover:border-border-strong hover:bg-surface-muted'}"
 		>
 			<input
 				type="checkbox"

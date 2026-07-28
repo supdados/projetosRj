@@ -53,7 +53,7 @@
 			'bg-brand text-on-brand shadow-sm hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md active:translate-y-0',
 		// Espelha .btn-glass-secondary: superficie clara, borda/texto primary.
 		secondary:
-			'border border-brand bg-surface text-brand shadow-sm hover:-translate-y-0.5 hover:bg-wash-brand hover:shadow-md active:translate-y-0',
+			'border border-brand bg-surface text-brand shadow-sm hover:-translate-y-0.5 hover:bg-surface-muted hover:shadow-md active:translate-y-0',
 		// Espelha .btn-glass-remove: superficie + danger.
 		danger:
 			'border border-danger bg-surface text-danger hover:-translate-y-0.5 hover:bg-surface-muted hover:shadow-md active:translate-y-0',

@@ -169,7 +169,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-modal bg-black/40"
+		class="fixed inset-0 z-modal bg-overlay"
 		role="presentation"
 		onclick={onClose}
 		transition:fade={{ duration: 200 }}

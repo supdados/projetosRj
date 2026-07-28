@@ -185,14 +185,14 @@
 <style>
 	/* Recolhida: verde bem fraquinho para sinalizar "finalizada" sem peso visual. */
 	.kdone-rail {
-		background-color: color-mix(in srgb, var(--ds-color-success-600) 6%, var(--color-surface));
+		background-color: var(--ds-color-wash-success);
 	}
 
 	/* Trilho realçado quando é alvo válido do drag em curso (eco do is-zone-over). */
 	.is-rail-over {
-		border-color: color-mix(in srgb, var(--ds-color-primary-500) 55%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-primary-500) 7%, var(--color-surface));
-		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-color-primary-500) 30%, transparent);
+		border-color: var(--ds-color-border-brand-soft);
+		background-color: var(--ds-color-wash-brand);
+		box-shadow: inset 0 0 0 1px var(--ds-color-border-brand-soft);
 	}
 
 	/* Pop da contagem do trilho quando o número muda (remontada via {#key}). */

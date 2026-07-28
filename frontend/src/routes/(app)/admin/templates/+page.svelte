@@ -683,7 +683,7 @@
 				{#if formError}
 					<p
 						role="alert"
-						class="rounded-md border border-danger bg-danger/10 px-3 py-2 text-sm font-medium text-danger"
+						class="rounded-md border border-danger bg-wash-danger px-3 py-2 text-sm font-medium text-danger"
 					>
 						{formError}
 					</p>
@@ -773,7 +773,7 @@
 										ondragstart={(e) => handleStageDragStart(e, index)}
 										ondragend={resetStageDrag}
 										role="presentation"
-										class="grid grid-cols-[22px_30px_1fr] items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 transition-all duration-fast hover:border-primary-500/40 hover:bg-surface-muted/40 group-focus-within:border-primary-500/40 group-focus-within:bg-surface-muted/40 {dragStageIndex ===
+										class="grid grid-cols-[22px_30px_1fr] items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 transition-all duration-fast hover:border-brand-soft hover:bg-surface-muted group-focus-within:border-brand-soft group-focus-within:bg-surface-muted {dragStageIndex ===
 										index
 											? 'scale-[0.99] border-dashed border-border-strong bg-surface-muted opacity-45'
 											: 'border-border-subtle'}"
@@ -910,7 +910,7 @@
 		{:else if loadState === 'error'}
 			<div
 				role="alert"
-				class="flex flex-col items-start gap-3 rounded-xl border border-danger bg-danger/5 px-5 py-4"
+				class="flex flex-col items-start gap-3 rounded-xl border border-danger bg-wash-danger px-5 py-4"
 			>
 				<p class="font-medium text-text-primary">{errorMessage}</p>
 				<button
@@ -925,7 +925,7 @@
 			{#if errorMessage}
 				<p
 					role="alert"
-					class="rounded-md border border-danger bg-danger/10 px-3 py-2 text-sm font-medium text-danger"
+					class="rounded-md border border-danger bg-wash-danger px-3 py-2 text-sm font-medium text-danger"
 				>
 					{errorMessage}
 				</p>
@@ -1040,7 +1040,7 @@
 										aria-label="Editar modelo {row.name}"
 										onclick={(e) => onRowActivate(e, row)}
 										onkeydown={(e) => onRowKeydown(e, row)}
-										class="group cursor-pointer border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:-ring-offset-2 focus-visible:ring-brand"
+										class="group cursor-pointer border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:-ring-offset-2 focus-visible:ring-brand"
 									>
 										<td class="min-w-[280px] px-4 py-3 align-middle">
 											<div class="flex items-center gap-3">
@@ -1142,7 +1142,7 @@
 													disabled={busyRowId === row.id}
 													title="Excluir modelo"
 													aria-label="Excluir modelo {row.name}"
-													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger/40 hover:bg-danger/10 hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger-soft hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 												>
 													<i class="far fa-trash-alt" aria-hidden="true"></i>
 												</button>
@@ -1208,7 +1208,7 @@
 	<Modal labelId="tpl-delete-title">
 			<div class="flex items-center gap-3">
 				<span
-					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger"
+					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wash-danger text-danger"
 					aria-hidden="true"
 				>
 					<i class="far fa-trash-alt"></i>

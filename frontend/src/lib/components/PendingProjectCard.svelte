@@ -362,8 +362,8 @@
 				aria-label="Ver e adicionar tarefas desta etapa"
 				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40
 					{isEmpty
-					? 'border-dashed border-primary-500/40 bg-transparent text-text-secondary hover:border-brand hover:bg-primary-100/40 hover:text-brand'
-					: 'border-primary-500/40 bg-wash-neutral text-brand hover:border-brand hover:bg-wash-brand'}"
+					? 'border-dashed border-brand-soft bg-transparent text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'
+					: 'border-brand-soft bg-wash-neutral text-brand hover:border-brand hover:bg-wash-neutral'}"
 			>
 				{#if isEmpty}
 					<i class="fas fa-plus" aria-hidden="true"></i>

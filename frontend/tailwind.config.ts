@@ -174,6 +174,8 @@ export default {
 				'wash-brand': 'var(--ds-color-wash-brand)',
 				'wash-neutral': 'var(--ds-color-wash-neutral)',
 				'wash-success': 'var(--ds-color-wash-success)',
+				'wash-success-strong': 'var(--ds-color-wash-success-strong)',
+				'wash-danger-strong': 'var(--ds-color-wash-danger-strong)',
 				'wash-warning': 'var(--ds-color-wash-warning)',
 				'wash-attention': 'var(--ds-color-wash-attention)',
 				'wash-danger': 'var(--ds-color-wash-danger)',

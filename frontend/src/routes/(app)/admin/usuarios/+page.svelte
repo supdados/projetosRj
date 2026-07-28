@@ -286,7 +286,7 @@
 		{#if usuarios.length === 0 && hasActiveFilters}
 			<!-- Vazio por filtro: mensagem dedicada (não é "primeiro cadastro"). -->
 			<div
-				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
+				class="mt-1 rounded-xl border border-dashed border-brand-soft bg-surface-muted px-4 py-8 text-center"
 			>
 				<p class="text-sm text-text-secondary">
 					Nenhum usuário encontrado para os filtros aplicados.
@@ -302,10 +302,10 @@
 		{:else if usuarios.length === 0}
 			<!-- Estado vazio (.admin-users-empty-state): cartão tracejado centralizado. -->
 			<div
-				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
+				class="mt-1 rounded-xl border border-dashed border-brand-soft bg-surface-muted px-4 py-8 text-center"
 			>
 				<span
-					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-surface-elevated text-brand"
+					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-brand-soft bg-surface-elevated text-brand"
 					aria-hidden="true"
 				>
 					<i class="fas fa-user-plus text-xl"></i>
@@ -357,7 +357,7 @@
 											<span class="font-semibold text-text-primary">{user.name}</span>
 											{#if isSelf}
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
+													class="inline-flex items-center rounded-full border border-brand-soft bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													Você
 												</span>
@@ -390,12 +390,12 @@
 										{#if user.cpf_govbr}
 											<div class="flex flex-wrap items-center gap-1.5">
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
+													class="inline-flex items-center rounded-full border border-brand-soft bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													CPF cadastrado
 												</span>
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
+													class="inline-flex items-center rounded-full border border-brand-soft bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													{user.has_govbr_link ? 'Vinculado' : 'Pendente'}
 												</span>
@@ -407,7 +407,7 @@
 									<td class="px-3 py-2.5 text-center align-middle">
 										{#if user.is_admin}
 											<span
-												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-success/40 bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-success"
+												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-success-soft bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-success"
 											>
 												<i class="fas fa-user-shield"></i>
 												Admin

@@ -240,7 +240,7 @@
 
 <!-- Backdrop: mesma tinta/blur dos demais drawers, fade 200ms. -->
 <div
-	class="fixed inset-0 z-modal bg-[rgba(7,20,33,0.34)] backdrop-blur-[1.2px]"
+	class="fixed inset-0 z-modal bg-overlay backdrop-blur-[1.2px]"
 	role="presentation"
 	transition:fade={{ duration: 200 }}
 	onclick={onClose}
@@ -258,7 +258,7 @@
 	class="history-drawer-panel fixed right-0 top-0 z-modal flex h-full w-[min(620px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 >
 	<header
-		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated/70 px-5 pb-3.5 pt-4"
+		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated px-5 pb-3.5 pt-4"
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
@@ -419,7 +419,7 @@
 									{#if entry.old_value || entry.new_value}
 										<div class="mt-1 grid gap-2 sm:grid-cols-2">
 											{#if entry.old_value}
-												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted/60 px-2.5 py-2">
+												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-2.5 py-2">
 													<h4 class="m-0 text-2xs font-bold uppercase tracking-wide text-text-muted">
 														Antes
 													</h4>
@@ -427,7 +427,7 @@
 												</div>
 											{/if}
 											{#if entry.new_value}
-												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted/60 px-2.5 py-2">
+												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-2.5 py-2">
 													<h4 class="m-0 text-2xs font-bold uppercase tracking-wide text-text-muted">
 														Depois
 													</h4>

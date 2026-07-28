@@ -21,9 +21,8 @@
 	 * avatares da lista). Mutações refletem no card do board via os
 	 * reconciliadores injetados na store. Foco preso no painel via `use:focusTrap`.
 	 *
-	 * As tintas de aviso/perigo usam color-mix sobre os tokens DS — o Tailwind
-	 * 3 NÃO gera modificadores de opacidade (`bg-x/10`) para cores definidas como
-	 * var() sem alpha-value, então elas vivem no bloco de estilo abaixo.
+	 * As tintas de aviso/perigo usam os degraus wash/border-soft do DS (o
+	 * Tailwind 3 não gera `bg-x/10` para cores em var() sem alpha-value).
 	 */
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
@@ -204,7 +203,7 @@
 {#if isOpen}
 	<!-- Backdrop: fade 0.2s ease. -->
 	<div
-		class="fixed inset-0 z-modal bg-black/40"
+		class="fixed inset-0 z-modal bg-overlay"
 		role="presentation"
 		onclick={() => void close()}
 		transition:fade={{ duration: 200 }}
@@ -549,36 +548,35 @@
 {/if}
 
 <style>
-	/* Chip "Arquivada" do header (tinta âmbar suave). color-mix sobre tokens DS
-	 * (dark-safe); o Tailwind 3 não gera `bg-x/10` p/ cores via var(). */
+	/* Chip "Arquivada" do header (tinta âmbar suave, degraus DS dark-safe). */
 	.td-archived-chip {
 		color: var(--ds-color-text-warning);
-		border-color: color-mix(in srgb, var(--ds-color-warning-600) 45%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-warning-600) 12%, transparent);
+		border-color: var(--ds-color-border-warning-soft);
+		background-color: var(--ds-color-wash-warning);
 	}
 
 	/* Aviso de tarefa sem etapa (tinta âmbar, mais visível que o muted). */
 	.td-no-etapa {
 		color: var(--ds-color-text-warning);
-		border-color: color-mix(in srgb, var(--ds-color-warning-600) 40%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-warning-600) 8%, transparent);
+		border-color: var(--ds-color-border-warning-soft);
+		background-color: var(--ds-color-wash-warning);
 	}
 
 	/* Lixeira do header: ghost (só ícone); hover abre a tinta de perigo. */
 	.td-danger-ghost:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+		background-color: var(--ds-color-wash-danger);
 	}
 
 	/* Mini-confirm de exclusão (mesma linguagem do confirm do card no board). */
 	.td-delete-confirm {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 38%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 5%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
+		background-color: var(--ds-color-wash-danger);
 	}
 	.td-delete-confirm-btn {
-		border-color: color-mix(in srgb, var(--ds-color-danger-600) 48%, transparent);
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 10%, transparent);
+		border-color: var(--ds-color-border-danger-soft);
+		background-color: var(--ds-color-wash-danger);
 	}
 	.td-delete-confirm-btn:hover:not(:disabled) {
-		background-color: color-mix(in srgb, var(--ds-color-danger-600) 18%, transparent);
+		background-color: var(--ds-color-wash-danger-strong);
 	}
 </style>
