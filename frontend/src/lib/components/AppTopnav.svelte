@@ -391,7 +391,7 @@
 						role="menu"
 						aria-label="Notificacoes"
 						class="app-notifications-dropdown absolute right-0 top-full z-dropdown mt-2 w-[min(360px,90vw)] origin-top-right animate-dropdown-in overflow-hidden rounded-xl border border-border-subtle bg-surface"
-						style="box-shadow: var(--ds-glass-shadow);"
+						style="box-shadow: var(--ds-shadow-popover);"
 					>
 						<div
 							class="app-notifications-dropdown-header flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3"
@@ -491,7 +491,7 @@
 							role="menu"
 							aria-label="Administracao"
 							class="absolute right-0 top-full z-dropdown mt-2 min-w-[14rem] origin-top-right animate-dropdown-in overflow-hidden rounded-lg border border-border-subtle bg-surface py-1"
-							style="box-shadow: var(--ds-glass-shadow);"
+							style="box-shadow: var(--ds-shadow-popover);"
 						>
 							<div class="px-4 py-2" aria-hidden="true">
 								<span class="block truncate text-sm font-semibold text-text-primary">

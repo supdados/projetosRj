@@ -363,7 +363,7 @@
 				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40
 					{isEmpty
 					? 'border-dashed border-primary-500/40 bg-transparent text-text-secondary hover:border-primary-500 hover:bg-primary-100/40 hover:text-primary-700'
-					: 'border-primary-500/40 bg-primary-100 text-primary-700 hover:border-primary-500 hover:bg-primary-200/60'}"
+					: 'border-primary-500/40 bg-primary-100 text-primary-700 hover:border-primary-500 hover:bg-wash-brand'}"
 			>
 				{#if isEmpty}
 					<i class="fas fa-plus" aria-hidden="true"></i>

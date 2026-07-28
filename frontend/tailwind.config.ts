@@ -38,7 +38,6 @@ export default {
 					DEFAULT: 'var(--ds-color-primary-600)',
 					fg: 'var(--ds-color-primary-fg)'
 				},
-				secondary: 'var(--ds-color-secondary-600)',
 				success: {
 					100: 'var(--ds-color-success-100)',
 					200: 'var(--ds-color-success-200)',
@@ -76,12 +75,7 @@ export default {
 					'linear-gradient(135deg, var(--ds-color-brand-from) 0%, var(--ds-color-brand-to) 100%)',
 				// Skeleton shimmer (90deg) — 10-skeleton.css:52.
 				'skeleton-shimmer':
-					'linear-gradient(90deg, var(--ds-color-skeleton-base) 0%, var(--ds-color-skeleton-highlight) 50%, var(--ds-color-skeleton-base) 100%)',
-				// Glass card (135deg) — 20-glass-forms-and-admin.css:162.
-				'glass-card':
-					'linear-gradient(135deg, var(--ds-glass-card-from) 0%, var(--ds-glass-card-to) 100%)',
-				'glass-card-header':
-					'linear-gradient(135deg, var(--ds-glass-header-from) 0%, var(--ds-glass-header-to) 100%)'
+					'linear-gradient(90deg, var(--ds-color-skeleton-base) 0%, var(--ds-color-skeleton-highlight) 50%, var(--ds-color-skeleton-base) 100%)'
 			},
 			fontFamily: {
 				body: [

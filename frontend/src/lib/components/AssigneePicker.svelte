@@ -302,7 +302,7 @@
 				{/if}
 				{#if hasMore}
 					<span
-						class="relative z-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border-subtle text-text-muted ring-2 ring-surface transition-colors duration-fast group-hover:border-primary-400 group-hover:text-primary-600"
+						class="relative z-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border-subtle text-text-muted ring-2 ring-surface transition-colors duration-fast group-hover:border-brand-soft group-hover:text-primary-600"
 					>
 						<i class="fas fa-plus text-2xs" aria-hidden="true"></i>
 					</span>
@@ -320,7 +320,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Atribuir responsável"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-primary-400 hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
 		>
 			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Atribuir
 		</button>
