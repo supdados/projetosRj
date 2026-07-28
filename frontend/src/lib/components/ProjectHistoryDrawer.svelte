@@ -373,7 +373,7 @@
 							typeFilter = 'all';
 							periodFilter = 'all';
 						}}
-						class="ml-1 rounded-sm font-semibold text-primary-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="ml-1 rounded-sm font-semibold text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Limpar filtros
 					</button>

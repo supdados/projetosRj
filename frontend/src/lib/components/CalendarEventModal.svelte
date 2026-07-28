@@ -1017,7 +1017,7 @@
 		font-family: inherit;
 	}
 	.cal-field-title input:focus {
-		border-bottom-color: var(--ds-color-primary-600);
+		border-bottom-color: var(--ds-color-border-brand);
 	}
 	.cal-field-title input::placeholder {
 		color: var(--ds-color-text-muted);
@@ -1096,7 +1096,7 @@
 		font-family: inherit;
 	}
 	.cal-field-input:focus {
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 	.cal-field-time {
@@ -1159,7 +1159,7 @@
 		background: var(--ds-color-surface-muted);
 	}
 	.cal-meet-row.is-active {
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 		background: color-mix(in srgb, var(--ds-color-primary-600) 10%, transparent);
 	}
 	.cal-meet-icon-wrap {
@@ -1338,7 +1338,7 @@
 		transition: border-color 0.14s;
 	}
 	.cal-field-textarea:focus {
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 
@@ -1510,7 +1510,7 @@
 	.cdp-day--today:not(.cdp-day--selected) {
 		font-weight: 600;
 		color: var(--ds-color-text-brand);
-		box-shadow: inset 0 0 0 1.5px var(--ds-color-primary-600);
+		box-shadow: inset 0 0 0 1.5px var(--ds-color-border-brand);
 	}
 	.cdp-day--selected {
 		background: var(--ds-color-fill-brand);
@@ -1596,7 +1596,7 @@
 		text-align: left;
 	}
 	.cdp-trigger.cdp-active {
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
 	}
 

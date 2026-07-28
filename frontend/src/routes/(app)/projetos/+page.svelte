@@ -278,7 +278,7 @@
 			case 'suspenso':
 				return 'var(--ds-color-fill-warning)';
 			case 'finalizado':
-				return 'var(--ds-color-primary-500)';
+				return 'var(--ds-color-status-finalizada)';
 			default:
 				return undefined;
 		}
@@ -682,7 +682,7 @@
 		success: 'text-success',
 		warning: 'text-warning',
 		danger: 'text-danger',
-		info: 'text-info'
+		info: 'text-brand'
 	};
 </script>
 
@@ -1321,7 +1321,7 @@
 				type="button"
 				onclick={confirmDelete}
 				disabled={deletingId !== null}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-danger-fg transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
+				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger/30 bg-danger px-3 text-sm font-semibold text-on-danger transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{#if deletingId !== null}
 					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>

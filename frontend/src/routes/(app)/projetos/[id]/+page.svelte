@@ -1172,7 +1172,7 @@
 					id="project-details-title"
 					class="flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
 				>
-					<i class="fas fa-circle-info text-primary-600" aria-hidden="true"></i>Detalhes do Projeto
+					<i class="fas fa-circle-info text-brand" aria-hidden="true"></i>Detalhes do Projeto
 				</h2>
 			{/snippet}
 
@@ -1303,7 +1303,7 @@
 				<!-- EEGG: cascata objetivo/resultado/indicadores editável inline. -->
 				<div class="flex flex-col gap-3">
 					<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
-						<i class="fas fa-sitemap text-primary-600" aria-hidden="true"></i>EEGD - Estratégia
+						<i class="fas fa-sitemap text-brand" aria-hidden="true"></i>EEGD - Estratégia
 						Estadual de Governo Digital
 					</h3>
 					<EeggInlineEditor
@@ -1326,7 +1326,7 @@
 			     espelhando a seção da tela antiga. -->
 			<div class="mt-6 flex flex-col gap-3">
 				<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
-					<i class="fas fa-circle-info text-primary-600" aria-hidden="true"></i>Informações Adicionais
+					<i class="fas fa-circle-info text-brand" aria-hidden="true"></i>Informações Adicionais
 				</h3>
 				<div class="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
 					<!-- Links compactos: ícone + rótulo + valor na MESMA linha (ref. tela antiga).
@@ -1334,7 +1334,7 @@
 					     na mesma coluna, independente do tamanho do nome. -->
 					<div class="flex flex-col gap-2.5">
 						<div class="flex items-center gap-2 text-sm">
-							<i class="fab fa-github w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<i class="fab fa-github w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Github:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
@@ -1353,7 +1353,7 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-2 text-sm">
-							<i class="fas fa-book w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<i class="fas fa-book w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Documentação:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
@@ -1372,7 +1372,7 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-2 text-sm">
-							<i class="fas fa-box w-4 shrink-0 text-center text-primary-600" aria-hidden="true"></i>
+							<i class="fas fa-box w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Produto:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
@@ -1396,7 +1396,7 @@
 						{#each data.project.custom_links ?? [] as link, i (i)}
 							<div class="flex items-center gap-2 text-sm">
 								<i
-									class="fas fa-link w-4 shrink-0 text-center text-primary-600"
+									class="fas fa-link w-4 shrink-0 text-center text-brand"
 									aria-hidden="true"
 								></i>
 								<div class="w-32 min-w-0 shrink-0 font-semibold text-text-primary" title={link.label}>
@@ -1448,7 +1448,7 @@
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div class="flex items-center gap-2 text-sm" onfocusout={onCustomLinkDraftFocusOut}>
 									<i
-										class="fas fa-link w-4 shrink-0 text-center text-primary-600"
+										class="fas fa-link w-4 shrink-0 text-center text-brand"
 										aria-hidden="true"
 									></i>
 									<!-- svelte-ignore a11y_autofocus -->
@@ -1479,7 +1479,7 @@
 											customLinkDraft.label.trim() === '' ||
 											customLinkDraft.url.trim() === ''}
 										onclick={() => void confirmCustomLinkDraft()}
-										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
 										<i class="fas fa-check text-xs" aria-hidden="true"></i>
 									</button>
@@ -1502,7 +1502,7 @@
 								<button
 									type="button"
 									onclick={() => (customLinkDraft = { label: '', url: '' })}
-									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-primary-600 transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-brand transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<i class="fas fa-plus text-xs" aria-hidden="true"></i>Adicionar link personalizado
 								</button>
@@ -1516,7 +1516,7 @@
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
 							<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
-								<i class="fas fa-note-sticky w-4 text-center text-primary-600" aria-hidden="true"></i
+								<i class="fas fa-note-sticky w-4 text-center text-brand" aria-hidden="true"></i
 								>Observação:
 							</span>
 							<InlineEditField

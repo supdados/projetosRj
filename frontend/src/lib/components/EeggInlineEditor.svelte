@@ -204,7 +204,7 @@
 		<ul class="flex flex-col gap-1">
 			{#each indicadoresDescricoes as desc, i (i)}
 				<li class="flex items-start gap-2 text-sm text-text-primary">
-					<i class="fas fa-check mt-0.5 shrink-0 text-xs text-primary-600" aria-hidden="true"></i>
+					<i class="fas fa-check mt-0.5 shrink-0 text-xs text-brand" aria-hidden="true"></i>
 					<span>{desc}</span>
 				</li>
 			{/each}
@@ -308,7 +308,7 @@
 							<span
 								aria-hidden="true"
 								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-fast {isSel
-									? 'border-brand bg-primary-500'
+									? 'border-brand bg-brand'
 									: 'border-border-strong bg-surface'}"
 							>
 								{#if isSel}

@@ -134,7 +134,7 @@
 						class={[
 							'relative flex h-6 w-6 flex-col items-center justify-center rounded-full text-2xs font-medium transition-colors',
 							today
-								? 'bg-primary-500 text-white dark:bg-brand-hover'
+								? 'bg-brand text-white dark:bg-brand-hover'
 								: highlighted
 									? 'font-semibold text-brand dark:text-text-primary'
 									: inMonth
@@ -150,7 +150,7 @@
 					<!-- Ponto indicador de evento (abaixo do numero) -->
 					{#if hasEvent && !today}
 						<span
-							class="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary-500"
+							class="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-brand"
 							aria-hidden="true"
 						></span>
 					{/if}

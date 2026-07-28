@@ -190,7 +190,7 @@
 
 	.orgao-row.is-selected {
 		background: var(--ds-color-wash-brand, rgba(0, 90, 146, 0.08));
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 	}
 
 	/* Realce de busca (espelha .orgao-node.is-match do v4.5). */
@@ -366,7 +366,8 @@
 		background: #6ea8fe;
 	}
 	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='autarquia'] {
-		background: var(--ds-color-violet-600);
+		/* paleta categórica de tipo de órgão — exceção declarada (plano-regua-de-cor §7.12) */
+		background: #7c3aed;
 	}
 	:global([data-theme='dark']) .orgao-tipo-dot[data-tipo='fundacao'] {
 		background: #f472b6;

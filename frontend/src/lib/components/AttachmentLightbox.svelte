@@ -150,7 +150,7 @@
 					target="_blank"
 					rel="noopener"
 					download={current.filename}
-					class="rounded-md bg-brand-gradient px-3 py-1.5 text-xs font-semibold text-on-brand no-underline shadow-sm transition-colors duration-fast hover:opacity-90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-on-brand no-underline shadow-sm transition-colors duration-fast hover:opacity-90 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Baixar
 				</a>

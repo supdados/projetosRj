@@ -79,7 +79,7 @@
 	const STATUS_DOT: Record<string, string> = {
 		nao_iniciada: 'var(--ds-color-text-muted)',
 		em_andamento: 'var(--ds-color-status-andamento)',
-		para_validacao: 'var(--ds-color-primary-500)',
+		para_validacao: 'var(--ds-color-status-validacao)',
 		para_ajustes: 'var(--ds-color-fill-warning)',
 		finalizada: 'var(--ds-color-fill-success)'
 	};
@@ -508,7 +508,7 @@
 						type="button"
 						onclick={() => void doDelete()}
 						disabled={deleting}
-						class="delete-confirm-btn rounded-md bg-danger px-4 py-2 text-sm font-semibold text-danger-fg hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+						class="delete-confirm-btn rounded-md bg-danger px-4 py-2 text-sm font-semibold text-on-danger hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
 					>
 						{deleting ? 'Excluindo…' : 'Excluir'}
 					</button>

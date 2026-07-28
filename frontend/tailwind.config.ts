@@ -162,6 +162,10 @@ export default {
 					fg: 'var(--ds-color-danger-fg)'
 				},
 				'on-brand': 'var(--ds-color-fill-brand-fg)',
+				'on-success': 'var(--ds-color-fill-success-fg)',
+				'on-warning': 'var(--ds-color-fill-warning-fg)',
+				'on-attention': 'var(--ds-color-fill-attention-fg)',
+				'on-danger': 'var(--ds-color-fill-danger-fg)',
 				'on-topnav': 'var(--ds-color-surface-topnav-fg)'
 			},
 			backgroundColor: {

@@ -246,7 +246,7 @@
 			class:is-empty={!hasValue}
 		>
 			{#if icon}
-				<i class="{icon} shrink-0 text-primary-600 {wrap ? 'mt-0.5' : ''}" aria-hidden="true"></i>
+				<i class="{icon} shrink-0 text-brand {wrap ? 'mt-0.5' : ''}" aria-hidden="true"></i>
 			{/if}
 			<span
 				class="ic-value min-w-0 flex-1 {wrap ? 'whitespace-normal break-words' : 'truncate'} {hasValue

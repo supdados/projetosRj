@@ -251,7 +251,7 @@
 							{#if detail.project}
 								<a
 									href={`/projetos/${detail.project.id}`}
-									class="truncate rounded-sm font-semibold text-primary-600 transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+									class="truncate rounded-sm font-semibold text-brand transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									title={detail.project.titulo}
 								>
 									{detail.project.titulo}

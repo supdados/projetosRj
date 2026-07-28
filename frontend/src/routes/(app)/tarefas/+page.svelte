@@ -445,7 +445,7 @@
 	const STATUS_DOT: Record<string, string> = {
 		nao_iniciada: 'var(--ds-color-text-muted)',
 		em_andamento: 'var(--ds-color-status-andamento)',
-		para_validacao: 'var(--ds-color-primary-500)',
+		para_validacao: 'var(--ds-color-status-validacao)',
 		para_ajustes: 'var(--ds-color-fill-warning)',
 		finalizada: 'var(--ds-color-fill-success)'
 	};
@@ -1133,7 +1133,7 @@
 														onclick={() => openAddForm(group, stage)}
 														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-primary-100/30 hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 													>
-														<i class="fas fa-plus text-2xs text-primary-500" aria-hidden="true"></i>
+														<i class="fas fa-plus text-2xs text-brand" aria-hidden="true"></i>
 														Adicionar nova tarefa
 													</button>
 											{/if}

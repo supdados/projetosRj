@@ -137,8 +137,8 @@
 	// Links do menu Admin (so renderizados quando user.is_admin === true).
 	// iconHover: cor do icone no hover do item — uma cor por item (tokens DS).
 	const adminLinks: (NavLink & { iconHover: string })[] = [
-		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog', iconHover: 'group-hover:text-info' },
-		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap', iconHover: 'group-hover:text-violet' },
+		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog', iconHover: 'group-hover:text-brand' },
+		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap', iconHover: 'group-hover:text-brand' },
 		{ label: 'Templates', path: '/admin/templates', icon: 'fa-clone', iconHover: 'group-hover:text-success' }
 	];
 
@@ -432,12 +432,12 @@
 										<span class="relative flex shrink-0 items-center justify-center">
 											{#if item.is_unread}
 												<span
-													class="absolute -left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-primary-500"
+													class="absolute -left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand"
 													aria-hidden="true"
 												></span>
 											{/if}
 											<span
-												class="flex h-8 w-8 items-center justify-center rounded-full bg-wash-neutral text-primary-600"
+												class="flex h-8 w-8 items-center justify-center rounded-full bg-wash-neutral text-brand"
 											>
 												<i class="fas {notifIcon(item.event_type)}" aria-hidden="true"></i>
 											</span>
@@ -534,7 +534,7 @@
 								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<i
-									class="fas fa-file-csv w-4 text-center text-text-muted transition-colors duration-fast group-hover:text-orange"
+									class="fas fa-file-csv w-4 text-center text-text-muted transition-colors duration-fast group-hover:text-attention"
 									aria-hidden="true"
 								></i>
 								<span>Exportar CSV de projetos</span>

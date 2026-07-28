@@ -464,7 +464,7 @@
 					>
 						<span class="mt-0.5 flex h-[16px] w-[18px] shrink-0 items-center justify-center">
 							{#if selected}
-								<i class="fas fa-check text-xs text-primary-600" aria-hidden="true"></i>
+								<i class="fas fa-check text-xs text-brand" aria-hidden="true"></i>
 							{/if}
 						</span>
 						<!-- Sem truncate: o caminho completo SEMPRE aparece, quebrando linha

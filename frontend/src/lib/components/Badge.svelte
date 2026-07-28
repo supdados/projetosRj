@@ -27,7 +27,7 @@
 		success: 'bg-surface-muted text-success',
 		warning: 'bg-surface-muted text-warning',
 		danger: 'bg-surface-muted text-danger',
-		info: 'bg-surface-muted text-info'
+		info: 'bg-surface-muted text-brand'
 	};
 </script>
 

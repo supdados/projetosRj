@@ -30,7 +30,7 @@
 	const STATUS_DOT: Record<string, string> = {
 		Vigente: 'var(--ds-color-fill-success)',
 		Suspenso: 'var(--ds-color-fill-warning)',
-		Finalizado: 'var(--ds-color-primary-500)'
+		Finalizado: 'var(--ds-color-status-finalizada)'
 	};
 
 	let file = $state<File | null>(null);

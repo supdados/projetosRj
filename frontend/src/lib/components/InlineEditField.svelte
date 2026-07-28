@@ -326,7 +326,7 @@
 						type="button"
 						onclick={commit}
 						disabled={pending}
-						class="rounded-md border border-brand bg-wash-brand px-3 py-1.5 text-sm font-medium text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="rounded-md border border-brand bg-wash-brand px-3 py-1.5 text-sm font-medium text-brand transition-colors duration-fast hover:bg-brand hover:text-white disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						{pending ? 'Salvando…' : 'Salvar'}
 					</button>
@@ -355,7 +355,7 @@
 						{@render display(shownValue)}
 					{:else if hasValue}
 						<span class="value-text"
-							>{#if icon}<i class="{icon} mr-1.5 text-primary-600" aria-hidden="true"></i
+							>{#if icon}<i class="{icon} mr-1.5 text-brand" aria-hidden="true"></i
 								>{/if}{shownValue}</span
 						>
 					{:else}
@@ -456,7 +456,7 @@
 		transition: color 0.16s ease;
 	}
 	.cell-link-open:hover {
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 	.editable-field-empty {
 		color: #6f859f;

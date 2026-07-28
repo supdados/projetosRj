@@ -446,7 +446,7 @@
 					onclick={toggleExpanded}
 					aria-expanded={isExpanded}
 					aria-controls={otherPanelId}
-					class="inline-flex w-fit items-center rounded-md text-sm font-semibold text-brand transition-colors duration-fast hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="inline-flex w-fit items-center rounded-md text-sm font-semibold text-brand transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<span>
 						{#if isExpanded}− Recolher{:else}+ {row.qtd_outras} {row.qtd_outras === 1 ? 'etapa fora do escopo' : 'etapas fora do escopo'}{/if}
@@ -569,12 +569,12 @@
 	:global(html[data-theme='dark']) .etapa-status-toggle-started {
 		background: var(--ds-color-wash-brand);
 		border-color: var(--ds-color-border-brand);
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 	:global(html[data-theme='dark']) .etapa-status-toggle-started:hover:not(:disabled),
 	:global(html[data-theme='dark']) .etapa-status-toggle-started:focus-visible:not(:disabled) {
 		background: rgba(78, 149, 204, 0.28);
 		border-color: var(--ds-color-border-brand);
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 </style>

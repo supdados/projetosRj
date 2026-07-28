@@ -423,7 +423,7 @@
 </div>
 
 {#snippet checkIcon()}
-	<svg width="12" height="12" viewBox="0 0 12 12" class="ml-1.5 shrink-0 text-primary-600" aria-hidden="true">
+	<svg width="12" height="12" viewBox="0 0 12 12" class="ml-1.5 shrink-0 text-brand" aria-hidden="true">
 		<path
 			d="M2 6.5 L4.8 9.2 L10 3"
 			fill="none"

@@ -305,12 +305,12 @@
 				class="mt-1 rounded-xl border border-dashed border-primary-500/40 bg-surface-muted px-4 py-8 text-center"
 			>
 				<span
-					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-surface-elevated text-primary-500"
+					class="mx-auto mb-2.5 inline-flex h-[52px] w-[52px] items-center justify-center rounded-xl border border-primary-500/25 bg-surface-elevated text-brand"
 					aria-hidden="true"
 				>
 					<i class="fas fa-user-plus text-xl"></i>
 				</span>
-				<h2 class="mb-1.5 font-heading text-xl font-bold text-primary-500">
+				<h2 class="mb-1.5 font-heading text-xl font-bold text-brand">
 					Nenhum usuário cadastrado
 				</h2>
 				<p class="mb-3.5 text-sm text-text-secondary">
@@ -357,7 +357,7 @@
 											<span class="font-semibold text-text-primary">{user.name}</span>
 											{#if isSelf}
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													Você
 												</span>
@@ -390,12 +390,12 @@
 										{#if user.cpf_govbr}
 											<div class="flex flex-wrap items-center gap-1.5">
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													CPF cadastrado
 												</span>
 												<span
-													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-primary-500"
+													class="inline-flex items-center rounded-full border border-primary-500/30 bg-surface-muted px-2 py-0.5 text-xs font-bold text-brand"
 												>
 													{user.has_govbr_link ? 'Vinculado' : 'Pendente'}
 												</span>

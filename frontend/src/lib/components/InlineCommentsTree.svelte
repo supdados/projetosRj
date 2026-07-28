@@ -345,7 +345,7 @@
 									onclick={() => saveEdit(comment.id)}
 									title="Salvar"
 									aria-label="Salvar"
-									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-brand hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 								>
 									<i class="fas fa-check text-xs" aria-hidden="true"></i>
 								</button>
@@ -430,7 +430,7 @@
 			>
 				<span>Faça o primeiro comentário</span>
 				<i
-					class="fas fa-arrow-right text-2xs text-text-muted transition-transform duration-fast group-hover/cta:translate-x-0.5 group-hover/cta:text-primary-600 motion-reduce:transition-none"
+					class="fas fa-arrow-right text-2xs text-text-muted transition-transform duration-fast group-hover/cta:translate-x-0.5 group-hover/cta:text-brand motion-reduce:transition-none"
 					aria-hidden="true"
 				></i>
 			</button>

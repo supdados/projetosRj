@@ -1877,7 +1877,7 @@
 		font-size: 1.9rem;
 		line-height: 1;
 		font-weight: 500;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		background: color-mix(in srgb, var(--ds-color-primary-600) 18%, transparent);
 	}
 	.cal-popover-close {
@@ -2086,12 +2086,12 @@
 	}
 	.cal-event-popover-gen-meet-btn {
 		background: transparent;
-		color: var(--ds-color-primary-600);
+		color: var(--ds-color-text-brand);
 		border: 1px solid var(--ds-color-border-base);
 	}
 	.cal-event-popover-gen-meet-btn:hover {
 		background: var(--ds-color-surface-muted);
-		border-color: var(--ds-color-primary-600);
+		border-color: var(--ds-color-border-brand);
 	}
 	.cal-event-popover-gen-meet-btn:disabled {
 		opacity: 0.6;

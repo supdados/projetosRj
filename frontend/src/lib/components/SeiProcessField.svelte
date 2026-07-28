@@ -240,9 +240,9 @@
 				aria-label={copiedIndex === -1 ? 'Número copiado' : `Copiar ${firstNumber}`}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={() => void copyNumber(firstNumber, -1)}
-				class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
+				class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
 				-1
-					? 'text-primary-600'
+					? 'text-brand'
 					: 'text-text-muted'}"
 			>
 				{#if copiedIndex === -1}
@@ -269,7 +269,7 @@
 				disabled={pending}
 				onmousedown={(e) => e.preventDefault()}
 				onclick={togglePopover}
-				class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				{#if pending}
 					<svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -312,9 +312,9 @@
 								aria-label={copiedIndex === index ? 'Número copiado' : `Copiar ${numero}`}
 								onmousedown={(e) => e.preventDefault()}
 								onclick={() => void copyNumber(numero, index)}
-								class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
+								class="grid h-7 w-7 flex-none place-items-center rounded-md transition-colors duration-fast hover:bg-surface hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {copiedIndex ===
 								index
-									? 'text-primary-600'
+									? 'text-brand'
 									: 'text-text-muted'}"
 							>
 								{#if copiedIndex === index}
@@ -380,7 +380,7 @@
 						disabled={!canAddDraft}
 						onmousedown={(e) => e.preventDefault()}
 						onclick={addDraft}
-						class="inline-flex h-7 shrink-0 items-center rounded-full border border-brand bg-surface px-3 text-xs font-medium text-brand transition-colors duration-fast hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="inline-flex h-7 shrink-0 items-center rounded-full border border-brand bg-surface px-3 text-xs font-medium text-brand transition-colors duration-fast hover:bg-brand hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Adicionar
 					</button>

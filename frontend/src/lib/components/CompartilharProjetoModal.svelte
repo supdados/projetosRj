@@ -821,7 +821,7 @@
 					{/if}
 				</span>
 
-				<span class="shrink-0 text-sm font-semibold text-primary-600">Gerenciar acesso →</span>
+				<span class="shrink-0 text-sm font-semibold text-brand">Gerenciar acesso →</span>
 			</button>
 		{:else}
 			<header class="flex items-start justify-between gap-3 px-5 pb-4 pt-5">

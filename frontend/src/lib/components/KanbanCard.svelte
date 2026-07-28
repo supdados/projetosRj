@@ -312,7 +312,7 @@
 		<a
 			href={`/projetos/${card.project_id}`}
 			draggable="false"
-			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-primary-600 transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-brand transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			title={card.project_titulo}
 		>
 			{card.project_titulo}
@@ -345,7 +345,7 @@
 		<span class="ml-auto flex shrink-0 items-center gap-2 text-xs tabular-nums">
 			{#if card.comments_count > 0}
 				<span
-					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
+					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-brand"
 					title={card.comments_count === 1 ? '1 comentário' : `${card.comments_count} comentários`}
 				>
 					<svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -356,7 +356,7 @@
 			{/if}
 			{#if card.anexos_count > 0}
 				<span
-					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-primary-600"
+					class="inline-flex items-center gap-1 font-semibold text-text-muted transition-colors duration-fast hover:text-brand"
 					title={card.anexos_count === 1 ? '1 anexo' : `${card.anexos_count} anexos`}
 				>
 					<svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

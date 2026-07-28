@@ -236,7 +236,8 @@
 	const TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
 		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-text-danger)' },
 		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-text-warning)' },
-		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: 'var(--ds-color-violet-600)' },
+		// paleta categórica de tipo de pedido — exceção declarada (plano-regua-de-cor §7.12)
+		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: '#7c3aed' },
 		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--ds-color-text-muted)' },
 		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-text-brand)' }
 	};
@@ -349,7 +350,7 @@
 		{#snippet actions()}
 			<div class="flex flex-col items-end gap-0.5 text-right">
 				<span class="text-2xs font-bold uppercase tracking-caps text-text-muted">Hoje</span>
-				<span class="text-sm font-semibold text-primary-600">{todayLabel}</span>
+				<span class="text-sm font-semibold text-brand">{todayLabel}</span>
 			</div>
 			<Button size="sm" onclick={openCreateModal} disabled={openingCreate}>
 				{#snippet icon()}
@@ -449,7 +450,7 @@
 					{#snippet header()}
 						<a
 							href={`${base}/tarefas`}
-							class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							class="inline-flex items-center gap-1 text-xs font-semibold text-brand no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							Ver todas
 							<i class="fas fa-arrow-right" aria-hidden="true"></i>

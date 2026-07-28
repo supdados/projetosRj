@@ -118,7 +118,7 @@
 
 	const microLabelClass = 'text-2xs font-semibold uppercase tracking-caps text-text-muted';
 	const pencilBtnClass =
-		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const removeBtnClass =
 		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const emptyBoxClass =
@@ -180,7 +180,7 @@
 
 			<div class="relative flex items-center gap-1.5">
 				<span class="flex min-w-0 flex-col gap-0.5" class:cp-op-dot-pop={celebrating}>
-					<span class="text-2xs font-semibold uppercase tracking-caps text-primary-600">
+					<span class="text-2xs font-semibold uppercase tracking-caps text-brand">
 						Objetivo {String(selectedObjIndex + 1).padStart(2, '0')}
 					</span>
 					<span class="text-sm font-medium leading-snug text-text-primary">
@@ -233,7 +233,7 @@
 								>
 									<span
 										class="w-6 flex-none text-xl font-light leading-none tabular-nums {selected
-											? 'text-primary-600'
+											? 'text-brand'
 											: 'text-text-muted opacity-60'}"
 										aria-hidden="true"
 									>
@@ -242,7 +242,7 @@
 									<span
 										class="text-sm font-medium leading-snug transition-colors duration-fast {selected
 											? 'text-brand'
-											: 'text-text-primary group-hover:text-primary-600'}"
+											: 'text-text-primary group-hover:text-brand'}"
 									>
 										{resultado.descricao}
 									</span>
@@ -266,7 +266,7 @@
 						bind:this={resPencilEl}
 						aria-expanded={editRes}
 						onclick={startEditResultado}
-						class="flex-none self-end whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-primary-600 transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="flex-none self-end whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-brand transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						Trocar
 					</button>
@@ -303,7 +303,7 @@
 								>
 									<span
 										class="grid h-4 w-4 flex-none place-items-center rounded border-[1.5px] transition-colors duration-fast {checked
-											? 'border-primary-600 bg-brand'
+											? 'border-brand bg-brand'
 											: 'border-border-strong bg-surface'}"
 										aria-hidden="true"
 									>
@@ -349,7 +349,7 @@
 							onclick={() => pickObjetivo(objetivo)}
 							style="animation-delay: {index * 30}ms"
 							class="cp-op-opt-in relative min-h-[90px] overflow-hidden rounded-lg border-[1.5px] px-4 py-4 pr-10 text-left transition-[border-color,box-shadow,transform] duration-fast hover:-translate-y-px hover:border-brand hover:shadow-md active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
-								? 'border-primary-600 bg-wash-brand'
+								? 'border-brand bg-wash-brand'
 								: 'border-border-subtle bg-surface'}"
 						>
 							<span

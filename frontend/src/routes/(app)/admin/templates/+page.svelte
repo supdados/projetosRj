@@ -870,7 +870,7 @@
 							<button
 								type="button"
 								onclick={() => addStage({ draft: true })}
-								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted px-4 py-2.5 text-sm font-semibold text-primary-500 transition-all duration-fast hover:border-brand hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+								class="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong bg-surface-muted px-4 py-2.5 text-sm font-semibold text-brand transition-all duration-fast hover:border-brand hover:bg-surface-elevated focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								<i class="fas fa-plus-circle" aria-hidden="true"></i>
 								<span>Adicionar nova etapa</span>
@@ -1045,7 +1045,7 @@
 										<td class="min-w-[280px] px-4 py-3 align-middle">
 											<div class="flex items-center gap-3">
 												<span
-													class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-xs font-bold tracking-wide text-primary-500"
+													class="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-lg bg-surface-elevated text-xs font-bold tracking-wide text-brand"
 													aria-hidden="true"
 												>
 													{row.initials}
@@ -1081,7 +1081,7 @@
 												     primary-500 com opacidade que sobe no hover da linha. -->
 												<svg
 													viewBox="0 0 {row.silhouette.length * 6 - 2} 28"
-													class="block h-7 w-auto text-primary-500 [&_rect]:fill-current [&_rect]:opacity-70 group-hover:[&_rect]:opacity-95"
+													class="block h-7 w-auto text-brand [&_rect]:fill-current [&_rect]:opacity-70 group-hover:[&_rect]:opacity-95"
 													role="img"
 													aria-label="Distribuição de duração das etapas"
 												>
@@ -1181,7 +1181,7 @@
 									aria-current={p === meta.page ? 'page' : undefined}
 									class="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-2 text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {p ===
 									meta.page
-										? 'border-primary-600 bg-brand font-semibold text-on-brand'
+										? 'border-brand bg-brand font-semibold text-on-brand'
 										: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-text-primary'}"
 								>
 									{p}
@@ -1250,7 +1250,7 @@
 					onclick={confirmDelete}
 					disabled={busyRowId === confirmDeleteRow.id ||
 						confirmPhrase.trim().toUpperCase() !== DELETE_PHRASE}
-					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-danger-fg transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-on-danger transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					{busyRowId === confirmDeleteRow.id ? 'Apagando…' : 'Apagar modelo'}
 				</button>

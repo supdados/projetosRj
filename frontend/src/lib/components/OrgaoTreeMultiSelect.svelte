@@ -163,13 +163,13 @@
 								</svg>
 							</button>
 						{:else}
-							<span class="h-[5px] w-[5px] rounded-full bg-primary-500" aria-hidden="true"></span>
+							<span class="h-[5px] w-[5px] rounded-full bg-brand" aria-hidden="true"></span>
 						{/if}
 					</div>
 					<!-- Checkbox visual: marcado (direto), marcado-herdado (cinza) ou vazio. -->
 					<span
 						class="mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded border {isSelected
-							? 'border-primary-600 bg-brand text-on-brand'
+							? 'border-brand bg-brand text-on-brand'
 							: isCovered
 								? 'border-border-strong bg-surface-muted text-text-muted'
 								: 'border-border-strong bg-surface'}"

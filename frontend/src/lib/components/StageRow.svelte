@@ -607,7 +607,7 @@
 	}
 	.etapa-comentario-display:hover,
 	.etapa-comentario-placeholder:hover {
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 	.etapa-comentario-display:disabled {
 		cursor: default;
@@ -718,7 +718,7 @@
 	:global([data-theme='dark']) .etapa-task-pill:focus-visible {
 		background: rgba(78, 149, 204, 0.18);
 		border-color: rgba(196, 210, 222, 0.46);
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 	.etapa-task-pill-has,
 	.etapa-task-pill-add {
@@ -837,6 +837,6 @@
 	:global([data-theme='dark']) .etapa-task-pill {
 		background: rgba(78, 149, 204, 0.18);
 		border-color: rgba(196, 210, 222, 0.46);
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 </style>

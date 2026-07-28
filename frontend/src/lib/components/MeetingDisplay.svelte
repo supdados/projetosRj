@@ -90,7 +90,7 @@
 				href={meeting.meet_link}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="inline-flex items-center gap-1.5 rounded-md border-none bg-success px-2.5 py-1 text-sm font-medium text-success-fg no-underline transition-colors duration-fast ease-out hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
+				class="inline-flex items-center gap-1.5 rounded-md border-none bg-success px-2.5 py-1 text-sm font-medium text-on-success no-underline transition-colors duration-fast ease-out hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
 			>
 				<i class="fab fa-google" aria-hidden="true"></i>
 				Abrir Meet
@@ -125,7 +125,7 @@
 				type="button"
 				onclick={onDelete}
 				disabled={busy}
-				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-danger-fg disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-on-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				<i class="fas {busy ? 'fa-spinner fa-spin' : 'fa-trash'}" aria-hidden="true"></i>
 				{busy ? 'Apagando…' : 'Apagar'}

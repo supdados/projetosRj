@@ -89,7 +89,7 @@
 			key: 'events',
 			label: 'Eventos',
 			icon: 'fa-calendar-alt',
-			badgeClass: 'bg-surface-muted text-info'
+			badgeClass: 'bg-surface-muted text-brand'
 		}
 	];
 

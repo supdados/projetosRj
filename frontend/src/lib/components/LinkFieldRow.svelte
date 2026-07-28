@@ -181,7 +181,7 @@
 	>
 		<span
 			class="cp-lrow-dot grid h-[22px] w-[22px] flex-none place-items-center rounded-full border-[1.5px] {isFilled
-				? 'border-primary-600 bg-brand'
+				? 'border-brand bg-brand'
 				: 'border-dashed border-border-strong bg-surface'}"
 			class:cp-lrow-dot-pop={celebrating}
 			aria-hidden="true"
@@ -231,7 +231,7 @@
 					aria-expanded={open}
 					aria-controls={editorId}
 					onclick={openEditor}
-					class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"
@@ -254,7 +254,7 @@
 					aria-expanded={open}
 					aria-controls={editorId}
 					onclick={openEditor}
-					class="flex h-8 flex-none items-center rounded-md border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-primary-600 transition-colors duration-fast hover:border-brand hover:bg-surface-muted active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="flex h-8 flex-none items-center rounded-md border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-brand transition-colors duration-fast hover:border-brand hover:bg-surface-muted active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					Adicionar
 				</button>
@@ -294,7 +294,7 @@
 						confirmRow(true);
 					}}
 					onclick={() => confirmRow(true)}
-					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<svg
 						viewBox="0 0 24 24"

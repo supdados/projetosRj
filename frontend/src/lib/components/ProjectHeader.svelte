@@ -274,7 +274,7 @@
 	const STATUS_DOT: Record<string, string> = {
 		Vigente: 'var(--ds-color-fill-success)',
 		Suspenso: 'var(--ds-color-fill-warning)',
-		Finalizado: 'var(--ds-color-primary-500)'
+		Finalizado: 'var(--ds-color-status-finalizada)'
 	};
 
 	// --- Opções dos 4 SelectMenu de chip (mapeadas das constantes existentes) --
@@ -1351,10 +1351,10 @@
 		color: var(--ds-color-priority-baixa);
 	}
 	:global([data-theme='dark']) .pc-chip--delivery i {
-		color: var(--ds-color-primary-500);
+		color: var(--ds-color-text-brand);
 	}
 	:global([data-theme='dark']) .pc-chip--special i {
-		color: var(--ds-color-violet-600);
+		color: var(--ds-color-text-brand);
 	}
 	.project-compact-back {
 		display: inline-flex;

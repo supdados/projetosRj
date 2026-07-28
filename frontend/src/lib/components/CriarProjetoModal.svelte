@@ -1119,13 +1119,13 @@
 	const labelClass = 'text-2xs font-bold uppercase tracking-[.08em] text-text-label';
 	const microLabelClass = 'text-2xs font-bold uppercase tracking-[.07em] text-text-faint';
 	const fieldBaseClass =
-		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none disabled:opacity-60';
+		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60';
 	const fieldClass = `h-11 text-base ${fieldBaseClass}`;
 	// Altura dos controles compostos (SelectMenu/SEI/OrgaoTreeSelect) — usada onde
 	// campos nativos dividem linha com eles.
 	const fieldMdClass = `h-[var(--control-h-md)] text-sm ${fieldBaseClass}`;
 	const areaClass =
-		'w-full rounded-control border border-border-strong bg-surface px-3.5 py-3 text-base text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none';
+		'w-full rounded-control border border-border-strong bg-surface px-3.5 py-3 text-base text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none';
 	const sectionTitleClass = 'font-heading text-2xl font-semibold text-text-primary';
 	const emptyBoxClass =
 		'rounded-control border border-dashed border-icon-faint bg-surface-muted px-4 py-3.5 text-sm text-text-faint';
@@ -1138,7 +1138,7 @@
 	const btnGhostClass =
 		'inline-flex h-10 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
 	const dashedAddClass =
-		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-primary-600 transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
+		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const bodyClass = 'max-h-[70vh] min-h-0 flex-1 overflow-y-auto px-10 pb-8 pt-9';
 	// Passos essenciais não rolam: o dropdown de área precisa escapar do card.
 	const bodyOpenClass = 'px-8 pb-6 pt-7';
@@ -1185,7 +1185,7 @@
 		type="button"
 		onclick={editarEssenciais}
 		aria-label="Editar informações essenciais"
-		class="grid h-9 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		class="grid h-9 w-9 flex-none place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		<svg
 			viewBox="0 0 24 24"
@@ -1343,7 +1343,7 @@
 								placeholder="Digite o nome do projeto…"
 								class="w-full border-0 border-b-2 bg-transparent px-0 py-1.5 text-xl text-text-primary placeholder:text-text-faint focus:outline-none {assistTituloError
 									? 'border-danger'
-									: 'border-primary-600'}"
+									: 'border-brand'}"
 							/>
 							{#if assistTituloError}
 								<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
@@ -1381,7 +1381,7 @@
 										irParaPasso3();
 									}
 								}}
-								class="w-full resize-none overflow-hidden border-0 border-b-2 border-border-strong bg-transparent px-0 py-1.5 text-lg text-text-primary placeholder:text-text-faint focus:border-primary-600 focus:outline-none"
+								class="w-full resize-none overflow-hidden border-0 border-b-2 border-border-strong bg-transparent px-0 py-1.5 text-lg text-text-primary placeholder:text-text-faint focus:border-brand focus:outline-none"
 							></textarea>
 						</div>
 					</div>
@@ -1694,8 +1694,8 @@
 													aria-pressed={selected}
 													onclick={() => (specialProject = selected ? '' : sp)}
 													class="inline-flex h-[var(--control-h-md)] flex-1 items-center justify-center rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
-														? 'border-primary-600 bg-brand text-on-brand'
-														: 'border-border-strong bg-surface text-text-secondary hover:border-primary-600'}"
+														? 'border-brand bg-brand text-on-brand'
+														: 'border-border-strong bg-surface text-text-secondary hover:border-brand'}"
 												>
 													{sp}
 												</button>
@@ -1780,7 +1780,7 @@
 																placeholder="Nome do link (ex.: Painel de BI)"
 																aria-label="Nome do link personalizado"
 																onkeydown={(e) => onCustomLabelKeydown(e, index)}
-																class="h-10 w-full rounded-control border border-border-strong bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none"
+																class="h-10 w-full rounded-control border border-border-strong bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none"
 															/>
 															<input
 																data-cp-custom-url
@@ -1790,7 +1790,7 @@
 																placeholder="https://..."
 																aria-label="URL do link personalizado"
 																onkeydown={(e) => onCustomUrlKeydown(e, index)}
-																class="h-10 w-full rounded-control border border-border-strong bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-primary-600 focus:outline-none"
+																class="h-10 w-full rounded-control border border-border-strong bg-surface px-3 text-sm leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none"
 															/>
 														</div>
 														<button
@@ -1912,7 +1912,7 @@
 										>
 											{#each previewStages as stage, index (index)}
 												<li class="flex items-center gap-3 px-3.5 py-2.5">
-													<span class="flex-none text-sm font-semibold tabular-nums text-primary-600">
+													<span class="flex-none text-sm font-semibold tabular-nums text-brand">
 														{index + 1} <span aria-hidden="true" class="text-icon-faint">-</span>
 													</span>
 													<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
@@ -2006,7 +2006,7 @@
 							<button
 								type="button"
 								onclick={discardAndClose}
-								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-danger-fg transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
+								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-on-danger transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
 							>
 								Descartar
 							</button>

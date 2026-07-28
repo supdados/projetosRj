@@ -277,7 +277,7 @@
 									</svg>
 								</button>
 							{:else}
-								<span class="h-[5px] w-[5px] rounded-full bg-primary-500" aria-hidden="true"></span>
+								<span class="h-[5px] w-[5px] rounded-full bg-brand" aria-hidden="true"></span>
 							{/if}
 						</div>
 						<span class="min-w-0 flex-1 truncate" title={row.option.nome ?? undefined}>
@@ -301,7 +301,7 @@
 		width="12"
 		height="12"
 		viewBox="0 0 12 12"
-		class="ml-1.5 shrink-0 text-primary-600"
+		class="ml-1.5 shrink-0 text-brand"
 		aria-hidden="true"
 	>
 		<path

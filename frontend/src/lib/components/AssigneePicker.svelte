@@ -302,7 +302,7 @@
 				{/if}
 				{#if hasMore}
 					<span
-						class="relative z-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border-subtle text-text-muted ring-2 ring-surface transition-colors duration-fast group-hover:border-brand-soft group-hover:text-primary-600"
+						class="relative z-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border-subtle text-text-muted ring-2 ring-surface transition-colors duration-fast group-hover:border-brand-soft group-hover:text-brand"
 					>
 						<i class="fas fa-plus text-2xs" aria-hidden="true"></i>
 					</span>
@@ -376,7 +376,7 @@
 								{/if}
 							</span>
 							{#if selected}
-								<i class="fas fa-check text-xs text-primary-600" aria-hidden="true"></i>
+								<i class="fas fa-check text-xs text-brand" aria-hidden="true"></i>
 							{/if}
 						</button>
 					</li>

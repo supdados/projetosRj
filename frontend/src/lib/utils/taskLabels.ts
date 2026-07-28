@@ -33,9 +33,9 @@ const STATUS_TONE: Record<string, BadgeTone> = {
 /** Classe de fundo da barra/realce vertical da linha, por status (tokens DS). */
 const STATUS_BAR_CLASS: Record<string, string> = {
 	nao_iniciada: 'bg-text-muted',
-	em_andamento: 'bg-primary-500',
+	em_andamento: 'bg-brand',
 	para_validacao: 'bg-warning',
-	para_ajustes: 'bg-orange',
+	para_ajustes: 'bg-attention',
 	finalizada: 'bg-success'
 };
 
