@@ -146,7 +146,7 @@
 	// Mede a largura do texto p/ o campo abraçar o conteúdo (canvas, fonte REAL do
 	// próprio textarea — adapta-se a título 1.5rem/bold e descrição 0.875rem).
 	let measureCanvas: HTMLCanvasElement | null = null;
-	function measureTextWidth(ta: HTMLTextAreaElement): number {
+	function measureTextWidth(ta: HTMLTextAreaElement, slack: number): number {
 		const style = window.getComputedStyle(ta);
 		measureCanvas ??= document.createElement('canvas');
 		const ctx = measureCanvas.getContext('2d');
@@ -156,8 +156,13 @@
 		const longest = text
 			.split(/\r?\n/)
 			.reduce((max, line) => Math.max(max, ctx.measureText(line || ' ').width), 0);
-		return Math.ceil(longest + 26);
+		return Math.ceil(longest + slack);
 	}
+
+	/* Folga à direita do texto (espaço do cursor). Na descrição ela é curta para o
+	   editor nascer do mesmo tamanho do chip "Adicionar descrição". */
+	const TITLE_WIDTH_SLACK = 26;
+	const DESCRIPTION_WIDTH_SLACK = 8;
 
 	// Título E descrição abraçam o conteúdo (paridade v4.5). A LARGURA é ajustada
 	// PRIMEIRO e só então a ALTURA — assim a caixa cresce/encolhe junto com o texto e
@@ -168,6 +173,8 @@
 	function autoSizeText(): void {
 		const ta = textEditorEl;
 		if (!ta) return;
+		const slack =
+			editingField === 'short_description' ? DESCRIPTION_WIDTH_SLACK : TITLE_WIDTH_SLACK;
 		const container = ta.closest('.ph-main-content');
 		if (container) {
 			const cRect = (container as HTMLElement).getBoundingClientRect();
@@ -175,10 +182,10 @@
 			// mede com segurança o que está à esquerda (prefixo + paddings da caixa).
 			const leftConsumed = ta.getBoundingClientRect().left - cRect.left;
 			const cap = Math.max(72, Math.floor(cRect.width - leftConsumed - 60));
-			const measured = measureTextWidth(ta);
+			const measured = measureTextWidth(ta, slack);
 			ta.style.width = `${Math.min(cap, Math.max(72, measured))}px`;
 		} else {
-			ta.style.width = `${Math.max(72, measureTextWidth(ta))}px`;
+			ta.style.width = `${Math.max(72, measureTextWidth(ta, slack))}px`;
 		}
 		ta.style.height = 'auto';
 		// border-box: soma a borda p/ não recortar a última linha (igual InlineEditField).
@@ -402,8 +409,11 @@
 			{/if}
 
 			<!-- Descrição: a linha PERSISTE entre exibir/editar (quando há descrição)
-			     p/ o botão morfar suave pen<->check; vazia => "Adicionar descrição". -->
-			{#if editingField === 'short_description' || shownDescription}
+			     p/ o botão morfar suave pen<->check; vazia => "Adicionar descrição".
+			     O slot reserva a altura de uma linha nos TRÊS estados (botão, exibição
+			     e edição) p/ o header não mudar de tamanho ao alternar entre eles. -->
+			<div class="ph-description-slot">
+				{#if editingField === 'short_description' || shownDescription}
 				<div class="ph-description-row">
 					<div
 						class="ph-description-field"
@@ -462,6 +472,7 @@
 					Adicionar descrição
 				</button>
 			{/if}
+			</div>
 			{#if fieldStates.short_description?.error}
 				<p id="project-desc-error" class="ph-text-error" role="alert">
 					{fieldStates.short_description.error}
@@ -695,6 +706,15 @@
 <style>
 	/* ----- Header glass ----- */
 	.project-header {
+		/* Caixa ÚNICA da descrição: chip "Adicionar descrição", texto exibido e editor
+		   compartilham linha, padding e borda — mesma geometria nos três estados. */
+		--ph-desc-line: 1.3125rem;
+		--ph-desc-pad-y: 0.25rem;
+		--ph-desc-pad-x: 0.45rem;
+		--ph-desc-border: 1px;
+		--ph-desc-box: calc(
+			var(--ph-desc-line) + 2 * var(--ph-desc-pad-y) + 2 * var(--ph-desc-border)
+		);
 		position: relative;
 		overflow: hidden;
 		border-radius: 12px;
@@ -780,8 +800,14 @@
 		width: fit-content;
 		max-width: 100%;
 	}
-	.ph-description-row {
+	/* Slot da descrição: reserva SEMPRE a caixa de uma linha, então botão "Adicionar
+	   descrição", texto exibido e editor ocupam o mesmo espaço — o header não muda de
+	   tamanho ao entrar/sair da edição. */
+	.ph-description-slot {
+		display: flex;
+		align-items: flex-start;
 		margin-top: 0.35rem;
+		min-height: var(--ph-desc-box);
 	}
 	/* Caixa do TÍTULO: só existe ao editar (envolve apenas o textarea), depois do
 	   prefixo fixo. Pequeno padding p/ folga dentro da moldura. */
@@ -794,8 +820,10 @@
 		border-radius: 5px;
 		padding: 0 0.3rem;
 	}
-	/* Caixa da DESCRIÇÃO: persiste exibir/editar; margem-esquerda negativa mantém o
-	   texto alinhado aos chips e a moldura aparece sem salto. */
+	/* Caixa da DESCRIÇÃO: a MESMA caixa sempre — exibir e editar só trocam as cores da
+	   borda/fundo, nunca a geometria. A borda é real (não box-shadow) para o chip vazio
+	   poder repetir exatamente estas medidas; a margem negativa compensa padding+borda
+	   e mantém o texto alinhado ao título e aos chips. */
 	.ph-description-field {
 		display: flex;
 		align-items: flex-start;
@@ -803,13 +831,13 @@
 		max-width: 100%;
 		box-sizing: border-box;
 		border-radius: 5px;
-		padding: 0 0.32rem;
-		margin-left: -0.32rem;
+		border: var(--ph-desc-border) solid transparent;
+		padding: var(--ph-desc-pad-y) var(--ph-desc-pad-x);
+		margin-left: calc(-1 * (var(--ph-desc-pad-x) + var(--ph-desc-border)));
 		background: transparent;
-		box-shadow: 0 0 0 1px transparent;
 		transition:
 			background-color 0.18s ease,
-			box-shadow 0.18s ease;
+			border-color 0.18s ease;
 	}
 	.ph-title-row > .ph-title,
 	.ph-description-field .ph-description {
@@ -824,12 +852,11 @@
 		background: var(--ds-color-on-brand-hover);
 		box-shadow: 0 0 0 1px var(--ds-color-on-brand-muted);
 	}
-	/* Em EDIÇÃO o shell ganha respiro vertical; margem negativa compensa o
-	   padding p/ o texto não saltar em relação ao modo exibição. */
+	/* Em EDIÇÃO só as CORES mudam: a borda transparente que já existia vira visível e o
+	   fundo acende. Zero mudança de padding/margem => zero salto de tamanho. */
 	.ph-description-field.ph-edit-shell {
-		margin-top: -0.2rem;
-		padding-top: 0.2rem;
-		padding-bottom: 0.2rem;
+		border-color: var(--ds-color-on-brand-muted);
+		box-shadow: none;
 	}
 	/* Prefixo "ID - " FIXO (não editável), FORA da caixa, na mesma posição/tipografia
 	   do título. */
@@ -952,14 +979,18 @@
 	.ph-add-description {
 		display: inline-flex;
 		align-items: center;
-		margin-top: 0.4rem;
-		padding: 0.18rem 0.55rem;
+		box-sizing: border-box;
+		/* MESMAS medidas de .ph-description-field (padding, borda, margem negativa e
+		   tipografia): o chip e o editor são a mesma caixa, só muda o traço da borda. */
+		padding: var(--ph-desc-pad-y) var(--ph-desc-pad-x);
+		margin-left: calc(-1 * (var(--ph-desc-pad-x) + var(--ph-desc-border)));
 		border-radius: 5px;
-		border: 1px dashed var(--ds-color-on-brand-divider);
+		border: var(--ph-desc-border) dashed var(--ds-color-on-brand-divider);
 		background: var(--ds-color-on-brand-hover);
 		color: var(--ds-color-on-brand-muted);
-		font-size: 0.8rem;
-		font-weight: 600;
+		font-size: 0.875rem;
+		line-height: var(--ph-desc-line);
+		font-weight: 500;
 		cursor: pointer;
 		transition:
 			background 0.16s ease,
