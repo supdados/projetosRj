@@ -388,7 +388,7 @@
 				<ul class="thin-scroll flex max-h-[140px] flex-col overflow-y-auto">
 					{#each lista as item (item.area_id ?? item.label)}
 						<li class="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-fast hover:bg-surface-muted">
-							<span class="shrink-0 font-mono text-[11.5px] font-bold text-text-primary">{item.label}</span>
+							<span class="shrink-0 text-[12.5px] font-semibold text-text-primary">{item.label}</span>
 							<span
 								class="min-w-0 flex-1 truncate text-2xs text-text-muted"
 								title={nomeByKey.get(item.area_id ?? -1) ?? undefined}
@@ -473,8 +473,8 @@
 						<!-- Sem truncate: o caminho completo SEMPRE aparece, quebrando linha
 						     quando não couber. -->
 						<span class="min-w-0 flex-1 whitespace-normal break-words leading-snug" title={row.option.nome}>
-							{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
-								>{/if}<span class="font-mono text-[11.5px] font-bold text-text-primary"
+							{#if row.path}<span class="text-[11.5px] text-text-muted">{row.path} › </span
+								>{/if}<span class="text-[12.5px] font-medium text-text-primary"
 								>{row.option.sigla}</span
 							>
 						</span>

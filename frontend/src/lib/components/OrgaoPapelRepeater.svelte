@@ -90,7 +90,7 @@
 			>
 				<span class="flex min-w-0 flex-1 basis-48 flex-col">
 					<span class="truncate">
-						<span class="font-mono text-[11.5px] font-bold text-text-primary">
+						<span class="text-[12.5px] font-semibold text-text-primary">
 							{orgao?.sigla ?? `#${vinculo.orgao_id}`}
 						</span>
 						{#if orgao?.nome && orgao.nome !== orgao.sigla}

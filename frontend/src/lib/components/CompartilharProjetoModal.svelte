@@ -670,9 +670,9 @@
 											: ''}"
 									>
 										<span class="shrink-0 truncate">
-											{#if linha.path}<span class="mr-1 font-mono text-[11px] text-text-muted"
+											{#if linha.path}<span class="mr-1 text-[11.5px] text-text-muted"
 													>{linha.path} ›</span
-												>{/if}<span class="font-mono text-xs font-semibold text-text-primary"
+												>{/if}<span class="text-xs font-semibold text-text-primary"
 												>{linha.option.sigla}</span
 											>
 										</span>

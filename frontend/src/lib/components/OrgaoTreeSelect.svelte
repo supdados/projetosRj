@@ -281,8 +281,8 @@
 							{/if}
 						</div>
 						<span class="min-w-0 flex-1 truncate" title={row.option.nome ?? undefined}>
-							{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
-								>{/if}<span class="font-mono text-[11.5px] font-medium text-text-primary"
+							{#if row.path}<span class="text-[11.5px] text-text-muted">{row.path} › </span
+								>{/if}<span class="text-[12.5px] font-medium text-text-primary"
 								>{row.option.sigla ?? row.option.nome ?? ''}</span
 							>
 						</span>

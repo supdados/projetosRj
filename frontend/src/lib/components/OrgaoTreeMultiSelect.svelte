@@ -189,9 +189,9 @@
 						{/if}
 					</span>
 					<span class="min-w-0 flex-1 truncate">
-						{#if row.path}<span class="font-mono text-[11px] text-text-muted">{row.path} › </span
+						{#if row.path}<span class="text-[11.5px] text-text-muted">{row.path} › </span
 							>{/if}<span
-							class="font-mono text-[11.5px] font-bold {isCovered
+							class="text-[12.5px] font-medium {isCovered
 								? 'text-text-muted'
 								: 'text-text-primary'}">{row.option.sigla}</span
 						>{#if row.option.nome && row.option.nome !== row.option.sigla}
