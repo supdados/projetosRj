@@ -1331,7 +1331,7 @@
 					<div class={bodyOpenClass}>
 						{@render segmentProgress(3, 1, 'Passo 1 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>
-							Como vai se chamar o projeto?
+							Nome do projeto
 						</h3>
 						<div class="mt-6 flex flex-col gap-1.5">
 							<input
@@ -1366,11 +1366,11 @@
 				>
 					<div class={bodyOpenClass}>
 						{@render segmentProgress(3, 2, 'Passo 2 de 3')}
-						<h3 id="criar-projeto-title" class={sectionTitleClass}>Descrição breve</h3>
+						<h3 id="criar-projeto-title" class={sectionTitleClass}>Descrição do projeto</h3>
 						<div class="mt-6 flex flex-col gap-1.5">
 							<textarea
 								id="cp-assist-desc"
-								aria-label="Descrição breve do projeto (opcional)"
+								aria-label="Descrição do projeto (opcional)"
 								bind:this={assistDescEl}
 								bind:value={shortDescription}
 								rows="1"
@@ -1981,7 +1981,7 @@
 			<!-- Confirmação de descarte: cobre o modal ao fechar com dados preenchidos -->
 			{#if confirmDiscardOpen}
 				<div
-					class="absolute inset-0 z-10 flex items-center justify-center bg-overlay p-6 backdrop-blur-[1px]"
+					class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--ds-color-surface-base)_55%,transparent)] p-6 backdrop-blur-[6px]"
 					role="alertdialog"
 					aria-modal="true"
 					aria-labelledby="cp-discard-title"
@@ -1989,7 +1989,7 @@
 					transition:fade={{ duration: 160 }}
 				>
 					<div
-						class="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-4 shadow-md"
+						class="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-4 shadow-modal"
 						transition:fly={{ y: 8, duration: 200, easing: cubicOut }}
 					>
 						<p id="cp-discard-title" class="text-sm font-semibold text-text-primary">
