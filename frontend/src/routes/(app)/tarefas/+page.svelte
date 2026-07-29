@@ -528,7 +528,9 @@
 	function autoResizeAdd(event: Event): void {
 		const el = event.currentTarget as HTMLTextAreaElement;
 		el.style.height = 'auto';
-		el.style.height = `${Math.max(34, el.scrollHeight)}px`;
+		// +2 = bordas (box-sizing: border-box): sem isso a caixa fica mais alta que o
+		// conteudo e a linha unica encosta no topo em vez de ficar centrada.
+		el.style.height = `${Math.max(32, el.scrollHeight + 2)}px`;
 	}
 
 	function onAddTextareaKeydown(event: KeyboardEvent): void {
@@ -1065,7 +1067,7 @@
 																autofocus
 																placeholder="Descreva a tarefa…"
 																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[34px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
+																class="max-h-[120px] min-h-[32px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
 															></textarea>
 															<SelectMenu
 																size="sm"
@@ -1106,7 +1108,7 @@
 																	disabled={addDraft.saving}
 																	title="Salvar"
 																	aria-label="Salvar tarefa"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md bg-brand text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-control bg-brand text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
 																>
 																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
 																</button>
@@ -1116,7 +1118,7 @@
 																	disabled={addDraft.saving}
 																	title="Cancelar"
 																	aria-label="Cancelar"
-																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+																	class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-control border border-border-subtle bg-surface text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
 																>
 																	<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 																</button>
