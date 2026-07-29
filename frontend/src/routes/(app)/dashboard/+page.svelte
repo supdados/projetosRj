@@ -459,9 +459,17 @@
 					<div class="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
 						<!-- Hero: anel de % concluido + total em aberto + legenda por status. -->
 						<section
-							class="dashboard-tasks-hero flex shrink-0 items-center gap-4 rounded-xl border border-border-subtle px-4 py-3"
+							class="dashboard-tasks-hero relative flex shrink-0 items-center gap-4 rounded-xl border border-border-subtle px-4 py-3 transition-colors duration-fast focus-within:border-brand hover:border-brand"
 							aria-label="Resumo de tarefas por status"
 						>
+							<!-- Link sobreposto: clicar em qualquer ponto do resumo leva a
+								 /tarefas, sem envolver o conteudo num <a> (o resumo tem lista e
+								 numeros, nao rotulo de link). -->
+							<a
+								href={`${base}/tarefas`}
+								aria-label="Ver todas as tarefas"
+								class="absolute inset-0 z-10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							></a>
 							<div class="dashboard-tasks-ring relative shrink-0">
 								<svg
 									viewBox="0 0 {RING_VIEW} {RING_VIEW}"
