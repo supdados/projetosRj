@@ -371,8 +371,8 @@
 					onclick={toggleNotif}
 					aria-haspopup="menu"
 					aria-expanded={notifOpen}
-					title="Notificacoes"
-					aria-label="Notificacoes"
+					title="Notificações"
+					aria-label="Notificações"
 					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
 						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
@@ -381,7 +381,7 @@
 					{#if notifUnread > 0}
 						<span
 							class="absolute -right-1 -top-1 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-danger px-1 text-[0.62rem] font-bold leading-[1.05rem] text-on-danger ring-2 ring-on-brand"
-							aria-label={`${notifUnread} nao lida(s)`}
+							aria-label={`${notifUnread} não lida(s)`}
 						>
 							{notifBadgeText}
 						</span>
@@ -391,7 +391,7 @@
 				{#if notifOpen}
 					<div
 						role="menu"
-						aria-label="Notificacoes"
+						aria-label="Notificações"
 						class="app-notifications-dropdown absolute right-0 top-full z-dropdown mt-2 w-[min(360px,90vw)] origin-top-right animate-dropdown-in overflow-hidden rounded-xl border border-border-subtle bg-surface"
 						style="box-shadow: var(--ds-shadow-popover);"
 					>
@@ -399,27 +399,27 @@
 							class="app-notifications-dropdown-header flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3"
 							aria-hidden="true"
 						>
-							<span class="text-sm font-semibold text-text-primary">Notificacoes</span>
-							<span class="text-xs text-text-secondary">{notifUnread} nao lida(s)</span>
+							<span class="text-sm font-semibold text-text-primary">Notificações</span>
+							<span class="text-xs text-text-secondary">{notifUnread} não lida(s)</span>
 						</div>
 						<div class="app-notifications-list max-h-[60vh] overflow-y-auto p-2">
 							{#if notifLoading && !notifLoadedOnce}
 								<div
 									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
 								>
-									Carregando notificacoes...
+									Carregando notificações…
 								</div>
 							{:else if notifError}
 								<div
 									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
 								>
-									Nao foi possivel carregar as notificacoes.
+									Não foi possível carregar as notificações.
 								</div>
 							{:else if notifItems.length === 0}
 								<div
 									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
 								>
-									Nenhuma notificacao no momento.
+									Nenhuma notificação no momento.
 								</div>
 							{:else}
 								{#each notifItems as item (item.id)}
@@ -438,16 +438,14 @@
 													aria-hidden="true"
 												></span>
 											{/if}
-											<span
-												class="flex h-8 w-8 items-center justify-center rounded-full bg-wash-neutral text-brand"
-											>
+											<span class="flex h-8 w-8 items-center justify-center text-brand">
 												<i class="fas {notifIcon(item.event_type)}" aria-hidden="true"></i>
 											</span>
 										</span>
 										<span class="min-w-0 flex-1">
 											<span class="flex items-baseline justify-between gap-2">
 												<span class="truncate text-sm font-semibold text-text-primary"
-													>{item.title || 'Atualizacao'}</span
+													>{item.title || 'Atualização'}</span
 												>
 												<span class="shrink-0 text-[0.68rem] text-text-muted"
 													>{relativeTime(item.created_at)}</span

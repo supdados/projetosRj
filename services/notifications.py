@@ -226,7 +226,7 @@ def notify_project_history_action(
     if not owner_ids:
         return 0
 
-    title = f'Atualizacao no projeto "{_truncate_text(project.titulo, 80)}"'
+    title = f'Atualização no projeto "{_truncate_text(project.titulo, 80)}"'
     message_parts = [_truncate_text(action_description, 220)]
     if old_value is not None or new_value is not None:
         old_text = _truncate_text(old_value or "vazio", 80)
@@ -255,8 +255,8 @@ def notify_project_invite(project, recipient_user_id, actor_user_id, papel):
         [recipient_user_id],
         actor_user_id=actor_user_id,
         event_type="projeto_convite",
-        title=f'Voce foi convidado para o projeto "{_truncate_text(project.titulo, 80)}"',
-        message=f"Seu acesso e de {papel}: voce vera todo o conteudo deste projeto.",
+        title=f'Você foi convidado para o projeto "{_truncate_text(project.titulo, 80)}"',
+        message=f"Seu acesso é de {papel}: você verá todo o conteúdo deste projeto.",
         target_url=url_for("main.project_detail", project_id=project.id),
     )
 
@@ -293,15 +293,15 @@ def notify_task_assignment_change(
         _resolve_user_ids_from_names(_split_responsavel_names(new_responsavel))
     )
 
-    old_text = _truncate_text(old_responsavel or "Sem responsavel", 70)
-    new_text = _truncate_text(new_responsavel or "Sem responsavel", 70)
+    old_text = _truncate_text(old_responsavel or "Sem responsável", 70)
+    new_text = _truncate_text(new_responsavel or "Sem responsável", 70)
     task_desc = _truncate_text(task_obj.descricao or f"Tarefa #{task_obj.id}", 90)
 
     return create_user_notifications(
         recipient_ids,
         actor_user_id=actor_user_id,
         event_type="task_assignment",
-        title="Responsavel atualizado na tarefa",
+        title="Responsável atualizado na tarefa",
         message=f'A tarefa "{task_desc}" mudou de "{old_text}" para "{new_text}".',
         target_url=url_for("main.task_detail", task_id=task.id),
     )
