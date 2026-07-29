@@ -73,13 +73,18 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(
     assert payload["meta"]["has_more"]["events"] is True
     assert payload["meta"]["has_more"]["any"] is True
 
+    # `counts` anuncia o TOTAL encontrado (3 por tipo), não a fatia devolvida (2).
     assert payload["counts"] == {
-        "projects": 2,
-        "stages": 2,
-        "tasks": 2,
-        "events": 2,
-        "total": 8,
+        "projects": 3,
+        "stages": 3,
+        "tasks": 3,
+        "events": 3,
+        "total": 12,
     }
+    assert all(
+        len(payload["results"][key]) == 2
+        for key in ("projects", "stages", "tasks", "events")
+    )
 
     assert payload["results"]["projects"][0]["type"] == "project"
     assert (

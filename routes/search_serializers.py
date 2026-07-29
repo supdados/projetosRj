@@ -135,21 +135,21 @@ def _serialize_project_rows(projects, term: str) -> list[dict]:
             "title": _truncate_text(project.titulo or f"Projeto #{project.id}", 120),
             "display_title": _build_project_display_title(project),
             "subtitle": (
-                f"Orgao: {_truncate_text(project.orgao, 90)}" if project.orgao else ""
+                f"Órgão: {_truncate_text(project.orgao, 90)}" if project.orgao else ""
             ),
             "meta": (
-                f"Orgao responsavel: {project.orgao_ref.sigla}"
+                f"Área responsável: {project.orgao_ref.sigla}"
                 if project.orgao_ref
-                else "Orgao responsavel nao informado"
+                else "Área responsável não informada"
             ),
             "url": url_for("main.project_detail", project_id=project.id),
             **_resolve_match_info(
                 term,
                 [
-                    ("titulo", "Titulo", project.titulo),
-                    ("orgao", "Orgao", project.orgao),
-                    ("short_description", "Descricao curta", project.short_description),
-                    ("observacao", "Observacao", project.observacao),
+                    ("titulo", "Título", project.titulo),
+                    ("orgao", "Órgão", project.orgao),
+                    ("short_description", "Descrição curta", project.short_description),
+                    ("observacao", "Observação", project.observacao),
                 ],
             ),
         }
@@ -164,9 +164,9 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
         stage_match = _resolve_match_info(
             term,
             [
-                ("descricao", "Descricao", stage.descricao),
-                ("comentarios", "Comentario", stage.comentarios),
-                ("responsavel", "Responsavel", stage.responsavel),
+                ("descricao", "Descrição", stage.descricao),
+                ("comentarios", "Comentário", stage.comentarios),
+                ("responsavel", "Responsável", stage.responsavel),
             ],
         )
         stage_results.append(
@@ -178,9 +178,9 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
                     f"Projeto: {_truncate_text(project.titulo, 95)}" if project else ""
                 ),
                 "meta": (
-                    f"Responsavel: {_truncate_text(stage.responsavel, 80)}"
+                    f"Responsável: {_truncate_text(stage.responsavel, 80)}"
                     if stage.responsavel
-                    else "Responsavel nao informado"
+                    else "Responsável não informado"
                 ),
                 "url": url_for(
                     "main.project_detail",
@@ -212,7 +212,7 @@ def _serialize_task_rows(tasks, term: str) -> list[dict]:
             task_meta_parts.append(f"Status: {status_label}")
         if task.responsavel:
             task_meta_parts.append(
-                f"Responsavel: {_truncate_text(task.responsavel, 80)}"
+                f"Responsável: {_truncate_text(task.responsavel, 80)}"
             )
         if task.prioridade:
             task_meta_parts.append(f"Prioridade: {task.prioridade}")
@@ -241,8 +241,8 @@ def _serialize_event_rows(events, term: str) -> list[dict]:
         event_match = _resolve_match_info(
             term,
             [
-                ("title", "Titulo", event.title),
-                ("description", "Descricao", event.description),
+                ("title", "Título", event.title),
+                ("description", "Descrição", event.description),
                 ("location", "Local", event.location),
             ],
         )

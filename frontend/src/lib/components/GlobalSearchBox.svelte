@@ -296,7 +296,10 @@
 								<div class="app-global-search-group-title {group.titleClass}">
 									<i class="fas {group.icon}" aria-hidden="true"></i>
 									<span>{group.label}</span>
-									<span class="app-global-search-group-count">{items.length}</span>
+									<!-- Total encontrado (pode ser maior que a fatia exibida). -->
+									<span class="app-global-search-group-count">
+										{data.counts?.[group.key] ?? items.length}
+									</span>
 								</div>
 								{#each items as item (item.url)}
 									{@const flatIndex = flatItems.indexOf(item)}

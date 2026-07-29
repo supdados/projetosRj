@@ -284,12 +284,18 @@ def build_global_search_results(
 
     results = {}
     has_more = {}
+    counts = {}
     for key in SEARCH_TYPE_KEYS:
         rows, rows_has_more = fetch_rows(queries[key])
         results[key] = _SEARCH_SERIALIZERS[key](rows, normalized_term)
         has_more[key] = rows_has_more
+        # O contador do dropdown anuncia o TOTAL encontrado, não a fatia exibida —
+        # é ele que diz ao usuário se vale abrir a página de busca. O COUNT extra só
+        # roda quando a fatia estourou o limite.
+        counts[key] = (
+            queries[key].order_by(None).count() if rows_has_more else len(results[key])
+        )
 
-    counts = {key: len(results[key]) for key in SEARCH_TYPE_KEYS}
     counts["total"] = sum(counts[key] for key in SEARCH_TYPE_KEYS)
 
     return {
