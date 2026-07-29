@@ -84,7 +84,7 @@
 	let tela = $state<Tela>('convite');
 
 	// Formulário de convite
-	let modo = $state<ConviteModo>('pessoa');
+	let modo = $state<ConviteModo>('area');
 	let termo = $state<string>('');
 	let resultados = $state<UsuarioConvidavel[]>([]);
 	let buscando = $state<boolean>(false);
@@ -125,13 +125,6 @@
 	}));
 	const alvoEscolhido = $derived(modo === 'pessoa' ? selecionado !== null : orgaoSelecionado !== null);
 	const podeConvidar = $derived(alvoEscolhido && !enviando);
-
-	const consequenciaPapel = $derived(
-		papel === 'editor'
-			? 'pode ver e editar etapas, tarefas e anexos deste projeto'
-			: 'visualiza todo o conteúdo deste projeto sem alterar nada'
-	);
-	const sujeitoPapel = $derived(modo === 'pessoa' ? 'A pessoa' : 'Cada pessoa da área');
 
 	/** Data em que o convite vai expirar com o período escolhido (null = nunca). */
 	const expiracaoPrevista = $derived(expiracaoDoPeriodo(periodoDias));
@@ -191,7 +184,7 @@
 
 	onMount(() => {
 		void carregar();
-		void tick().then(() => document.getElementById('compartilhar-busca')?.focus());
+		void focarCampoDoModo();
 	});
 
 	// Autocomplete: 250ms de folga e aborto da busca anterior a cada tecla.
@@ -533,12 +526,16 @@
 		class="flex w-full max-w-2xl flex-col rounded-xl border border-border-subtle bg-surface shadow-modal"
 	>
 		{#if tela === 'convite'}
-			<header class="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
-				<div class="flex min-w-0 flex-col gap-0.5">
-					<h2 id="compartilhar-titulo" class="font-heading text-base font-semibold text-text-primary">
-						Compartilhar projeto
+			<header class="flex items-center justify-between gap-3 px-5 py-3">
+				<div class="flex min-w-0 items-baseline gap-2">
+					<h2
+						id="compartilhar-titulo"
+						class="shrink-0 font-heading text-[15px] font-semibold text-text-primary"
+					>
+						Compartilhar
 					</h2>
-					<p class="line-clamp-1 text-sm text-text-secondary">{projectTitulo}</p>
+					<span class="shrink-0 text-text-faint" aria-hidden="true">·</span>
+					<p class="truncate text-sm text-text-secondary">{projectTitulo}</p>
 				</div>
 				{@render fecharBotao()}
 			</header>
@@ -546,7 +543,7 @@
 			<div class="h-px bg-border-subtle" aria-hidden="true"></div>
 
 			<!-- Tela 1: modo + busca + ação numa moldura só; papel/período embaixo -->
-			<section class="flex flex-col gap-3 px-5 py-4" aria-label="Convidar para o projeto">
+			<section class="flex flex-col gap-2.5 px-5 py-3.5" aria-label="Convidar para o projeto">
 				<div bind:this={campoConvite} class="relative">
 					<div
 						class="flex items-stretch overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm transition-colors duration-fast focus-within:border-brand"
@@ -556,8 +553,8 @@
 							role="group"
 							aria-label="Convidar por"
 						>
-							{@render modoBotao('pessoa', 'Usuário')}
 							{@render modoBotao('area', 'Área')}
+							{@render modoBotao('pessoa', 'Usuário')}
 						</div>
 
 						{#if modo === 'pessoa'}
@@ -757,19 +754,12 @@
 							{/snippet}
 						</SelectMenu>
 					</div>
-				</div>
-
-				<p class="rounded-lg bg-surface-muted px-3 py-3 text-[12.5px] leading-relaxed text-text-secondary">
-					{sujeitoPapel} {consequenciaPapel}.
 					{#if expiracaoPrevista}
-						O acesso expira em
-						<strong class="font-semibold tabular-nums text-text-primary"
-							>{formatarData(expiracaoPrevista)}</strong
-						>.
-					{:else}
-						O acesso não expira.
+						<span class="text-[12.5px] tabular-nums text-text-muted"
+							>· até {formatarData(expiracaoPrevista)}</span
+						>
 					{/if}
-				</p>
+				</div>
 
 				{#if formError}
 					<p role="alert" class="text-sm text-danger">{formError}</p>
@@ -789,13 +779,13 @@
 			<button
 				type="button"
 				onclick={abrirGerenciar}
-				class="group flex w-full items-center gap-3 rounded-b-xl border-t border-border-subtle bg-surface-muted px-5 py-3 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+				class="group flex w-full items-center gap-3 rounded-b-xl border-t border-border-subtle bg-surface-muted px-5 py-2.5 text-left transition-colors duration-fast hover:bg-surface-chip focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 			>
 				{#if pessoasComAcesso > 0}
 					<span class="flex shrink-0 items-center pl-2" aria-hidden="true">
 						{#each diretosComAcesso.slice(0, 5) as membro (membro.id)}
 							<span
-								class="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface-muted bg-wash-neutral text-[9px] font-bold text-brand transition-colors duration-fast group-hover:border-surface-chip"
+								class="-ml-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-surface-muted bg-wash-neutral text-[9px] font-bold text-brand transition-colors duration-fast group-hover:border-surface-chip"
 							>
 								{iniciais(membro.user_name)}
 							</span>
@@ -824,22 +814,24 @@
 				<span class="shrink-0 text-sm font-semibold text-brand">Gerenciar acesso →</span>
 			</button>
 		{:else}
-			<header class="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
-				<div class="flex min-w-0 items-start gap-3">
+			<header class="flex items-center justify-between gap-3 px-5 py-3">
+				<div class="flex min-w-0 items-center gap-2.5">
 					<button
 						type="button"
 						onclick={voltarParaConvite}
 						aria-label="Voltar para o convite"
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-xs text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-arrow-left" aria-hidden="true"></i>
 					</button>
-					<div class="flex min-w-0 flex-col gap-0.5">
-						<h2 id="compartilhar-titulo" class="font-heading text-base font-semibold text-text-primary">
-							Gerenciar acesso
-						</h2>
-						<p class="line-clamp-1 text-sm text-text-secondary">{subtituloGerenciar}</p>
-					</div>
+					<h2
+						id="compartilhar-titulo"
+						class="shrink-0 font-heading text-[15px] font-semibold text-text-primary"
+					>
+						Gerenciar acesso
+					</h2>
+					<span class="shrink-0 text-text-faint" aria-hidden="true">·</span>
+					<p class="truncate text-sm text-text-secondary">{subtituloGerenciar}</p>
 				</div>
 				{@render fecharBotao()}
 			</header>
@@ -847,7 +839,7 @@
 			<div class="h-px bg-border-subtle" aria-hidden="true"></div>
 
 			<!-- Filtros da lista (client-side; nada volta ao servidor) -->
-			<div class="flex flex-wrap items-center gap-2.5 px-5 py-4">
+			<div class="flex flex-wrap items-center gap-2.5 px-5 py-3">
 				<div
 					class="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 transition-colors duration-fast focus-within:border-brand"
 				>
@@ -946,7 +938,7 @@
 		type="button"
 		onclick={onClose}
 		aria-label="Fechar"
-		class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface text-xs text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		<i class="fas fa-times" aria-hidden="true"></i>
 	</button>
