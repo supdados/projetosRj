@@ -172,9 +172,9 @@ export function buildIcon(THREE: ThreeNS, kind: NavIconKind, M: IconMaterials): 
 		);
 		body.position.set(0, 0.36, -0.08);
 		g.add(body);
-		// Paleta única azul (2026-07-27): deep some no triângulo main; light dá contraste.
-		g.add(slab('exclamacao', M.light, 0.095, 0.26, 0.05, 0.045, 0, 0.44, 0.085));
-		const dot = mesh('ponto', new THREE.SphereGeometry(0.07, 24, 16), M.light);
+		// light sobre main quase sumia sob a luz da cena; deep (azul mais escuro) lê.
+		g.add(slab('exclamacao', M.deep, 0.095, 0.26, 0.05, 0.045, 0, 0.44, 0.085));
+		const dot = mesh('ponto', new THREE.SphereGeometry(0.07, 24, 16), M.deep);
 		dot.position.set(0, 0.23, 0.08);
 		dot.scale.set(1, 1, 0.55);
 		g.add(dot);
