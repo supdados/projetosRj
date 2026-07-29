@@ -1178,7 +1178,7 @@
 										{/if}
 									</td>
 									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-mono font-medium whitespace-nowrap text-text-secondary"
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-medium tabular-nums whitespace-nowrap text-text-secondary"
 									>
 										{#if project.data_inicio_projeto}
 											<time datetime={project.data_inicio_projeto}>
@@ -1189,7 +1189,7 @@
 										{/if}
 									</td>
 									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-mono font-medium whitespace-nowrap text-text-secondary"
+										class="border-t border-border-subtle px-2.5 py-2.5 align-middle font-medium tabular-nums whitespace-nowrap text-text-secondary"
 									>
 										{#if project.data_fim_projeto}
 											<time datetime={project.data_fim_projeto}>
@@ -1200,7 +1200,7 @@
 										{/if}
 									</td>
 									<td
-										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle font-mono whitespace-nowrap text-text-secondary"
+										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle tabular-nums whitespace-nowrap text-text-secondary"
 									>
 										{#if project.total_workflow_etapas > 0}
 											<span

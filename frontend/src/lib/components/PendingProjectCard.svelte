@@ -347,18 +347,19 @@
 	{@const isEmpty = progress.total === 0}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted">
 		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
-			<span class="font-mono font-normal text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
+			<span class="font-normal tabular-nums text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
 		</td>
 		<td class="truncate px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}" title={etapa.responsavel || 'Não informado'}>
 			{etapa.responsavel || 'Não informado'}
 		</td>
-		<!-- Datas em mono, como as colunas de datas da lista de Projetos. -->
-		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-mono font-medium {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<!-- Datas com `tabular-nums`, como as colunas de datas da lista de Projetos:
+			 alinha os digitos sem trocar a familia tipografica da aplicacao. -->
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-medium tabular-nums {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_inicio}
 				<time datetime={etapa.data_inicio}>{formatDateBr(etapa.data_inicio)}</time>
 			{:else}—{/if}
 		</td>
-		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-mono font-medium {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
+		<td class="whitespace-nowrap px-2 py-2.5 text-center align-middle font-medium tabular-nums {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}">
 			{#if etapa.data_fim}
 				<time datetime={etapa.data_fim}>{formatDateBr(etapa.data_fim)}</time>
 			{:else}—{/if}
