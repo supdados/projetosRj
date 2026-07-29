@@ -36,6 +36,20 @@ export interface TaskDrawerProject {
 }
 
 /** Comentário de tarefa (= `_serialize_task_comment`). */
+/**
+ * Menção resolvida no servidor (`services/comment_mentions`): `start`/`length`
+ * são deslocamentos em caracteres do próprio `content`, incluindo o `@`.
+ */
+export interface CommentMention {
+	user_id: number;
+	name: string;
+	/** Deslocamentos em unidades UTF-16 (mesma unidade de `String.slice`). */
+	start: number;
+	length: number;
+	/** `true` quando mais de uma pessoa responde pelo mesmo nome. */
+	ambiguous?: boolean;
+}
+
 export interface TaskComment {
 	id: number;
 	content: string;
@@ -43,6 +57,8 @@ export interface TaskComment {
 	author_name: string;
 	created_at: string | null; // ISO 8601
 	updated_at: string | null; // ISO 8601
+	/** `null` = comentário anterior ao recurso (render cai na heurística). */
+	mentions: CommentMention[] | null;
 	is_own: boolean;
 	can_edit: boolean;
 	can_delete: boolean;

@@ -46,6 +46,26 @@ def ensure_user_deleted_at_column():
     return True
 
 
+def ensure_task_comment_mentions_column():
+    """Garante ``task_comment.mentions`` (menções resolvidas) em bancos existentes.
+
+    Mesmo padrão aditivo das demais ``ensure_*``. NULL nas linhas antigas é o
+    sinal de "comentário anterior ao recurso" — o front cai no realce heurístico
+    nesses casos, sem precisar reprocessar histórico.
+    """
+    inspector = inspect(db.engine)
+    if "task_comment" not in inspector.get_table_names():
+        return False
+
+    column_names = {column["name"] for column in inspector.get_columns("task_comment")}
+    if "mentions" in column_names:
+        return False
+
+    db.session.execute(text("ALTER TABLE task_comment ADD COLUMN mentions JSON"))
+    db.session.commit()
+    return True
+
+
 def _rebuild_task_table_with_etapa_fk() -> None:
     """SQLite-only: recria task preservando dados e adicionando FK em etapa_id.
 
@@ -349,4 +369,5 @@ def initialize_database() -> dict:
     # Soft-delete C4: garante user.deleted_at no banco de dev no próximo boot,
     # sem migração manual (aditivo, mesmo padrão das demais ensure_*).
     ensure_user_deleted_at_column()
+    ensure_task_comment_mentions_column()
     return summary

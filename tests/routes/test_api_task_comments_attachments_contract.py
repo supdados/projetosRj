@@ -96,6 +96,47 @@ def test_api_comentario_add_unknown_task_is_404(client_user):
     _assert_fail_envelope(response.get_json(), code="not_found")
 
 
+def test_api_comentario_add_resolve_mencao_de_nome_composto(client_user, seed_data):
+    """Regressão: "@Usuario Auditoria" era destacado só até o primeiro nome.
+
+    O servidor resolve a menção na escrita e devolve o intervalo exato, então o
+    front não precisa adivinhar onde o nome termina.
+    """
+    task_id = seed_data["task_id"]
+    content = "@Usuario Auditoria faca X coisas"
+    response = client_user.post(
+        f"/api/tarefas/{task_id}/comentarios", json={"content": content}
+    )
+
+    assert response.status_code == 200
+    data = _assert_ok_envelope(response.get_json())
+    mentions = data["comment"]["mentions"]
+    assert len(mentions) == 1
+    span = mentions[0]
+    assert span["user_id"] == seed_data["user_id"]
+    assert (
+        content[span["start"] : span["start"] + span["length"]] == "@Usuario Auditoria"
+    )
+
+
+def test_api_comentario_edit_recalcula_mencoes(client_user, seed_data):
+    comment_id = seed_data["comment_id"]
+    response = client_user.post(
+        f"/api/comentarios/{comment_id}", json={"content": "sem ninguem marcado"}
+    )
+    assert response.status_code == 200
+    assert _assert_ok_envelope(response.get_json())["comment"]["mentions"] == []
+
+    response = client_user.post(
+        f"/api/comentarios/{comment_id}",
+        json={"content": "agora com @Usuario Auditoria"},
+    )
+    assert response.status_code == 200
+    mentions = _assert_ok_envelope(response.get_json())["comment"]["mentions"]
+    assert [m["user_id"] for m in mentions] == [seed_data["user_id"]]
+    assert mentions[0]["start"] == len("agora com ")
+
+
 def test_api_comentario_edit_own_succeeds(client_user, seed_data):
     comment_id = seed_data["comment_id"]
     response = client_user.post(

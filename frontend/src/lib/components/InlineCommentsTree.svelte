@@ -14,8 +14,14 @@
 	import { tick } from 'svelte';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { TaskAssignee } from '$lib/types/tasks';
+	import type { TaskComment } from '$lib/types/taskDrawer';
 	import { fetchTaskCandidates } from '$lib/api/tasks';
-	import { formatCommentDate, splitMentions } from '$lib/utils/commentPresentation';
+	import {
+		formatCommentDate,
+		segmentsFromMentions,
+		splitMentions,
+		type CommentSegment
+	} from '$lib/utils/commentPresentation';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 
 	interface Props {
@@ -96,6 +102,16 @@
 	});
 
 	const knownNames = $derived(candidates.map((c) => c.name));
+
+	/**
+	 * Segmentos do comentário: usa as menções RESOLVIDAS pelo servidor quando
+	 * existem (exato, nomes compostos inclusive) e só cai no realce heurístico em
+	 * comentários gravados antes do recurso (`mentions === null`).
+	 */
+	function commentSegments(comment: TaskComment): CommentSegment[] {
+		if (comment.mentions) return segmentsFromMentions(comment.content, comment.mentions);
+		return splitMentions(comment.content, knownNames);
+	}
 	const mentionMatches = $derived.by(() => {
 		if (!mentionOpen) return [] as TaskAssignee[];
 		const q = mentionQuery.trim().toLowerCase();
@@ -362,7 +378,7 @@
 						{:else}
 							<!-- Ícones de editar/excluir junto ao FIM do texto (igual à tarefa),
 							     revelados no hover da linha do comentário. -->
-							<p class="m-0 whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">{#each splitMentions(comment.content, knownNames) as seg}{#if seg.isMention}<span class="rounded bg-wash-neutral px-1 font-medium text-brand">{seg.text}</span>{:else}{seg.text}{/if}{/each}{#if (comment.can_edit || comment.can_delete) && confirmingId !== comment.id}<span class="ml-1.5 inline-flex translate-y-px items-center gap-0.5 align-middle opacity-0 transition-opacity duration-fast group-hover/cmt:opacity-100 group-focus-within/cmt:opacity-100">{#if comment.can_edit}<button
+							<p class="m-0 whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">{#each commentSegments(comment) as seg}{#if seg.isMention}<span class="rounded bg-wash-neutral px-1 font-medium text-brand">{seg.text}</span>{:else}{seg.text}{/if}{/each}{#if (comment.can_edit || comment.can_delete) && confirmingId !== comment.id}<span class="ml-1.5 inline-flex translate-y-px items-center gap-0.5 align-middle opacity-0 transition-opacity duration-fast group-hover/cmt:opacity-100 group-focus-within/cmt:opacity-100">{#if comment.can_edit}<button
 										type="button"
 										onclick={() => startEdit(comment.id, comment.content)}
 										aria-label="Editar comentário"

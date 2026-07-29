@@ -29,6 +29,9 @@ from time_utils import utc_now
 
 from ..blueprint import main_bp
 from ..tasks.constants import _preview_text
+from services.comment_mentions import normalize_comment_content
+
+from ..tasks.mentions import resolve_comment_mentions
 from ..tasks.permissions import api_task_denial
 from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
@@ -105,7 +108,9 @@ def _load_own_comment(comment_id: int) -> tuple[TaskComment | None, Any]:
 def _read_comment_content() -> tuple[str | None, Any]:
     """Lê e valida o conteúdo do comentário do corpo JSON.
 
-    Aceita ``{"content": <str>}``; conteúdo vazio (após strip) => 422.
+    Aceita ``{"content": <str>}``; conteúdo vazio (após strip) => 422. O texto sai
+    em NFC (``normalize_comment_content``) porque é sobre ESSA forma que os
+    deslocamentos das menções são calculados.
 
     Returns:
         ``(content, None)`` válido; ou ``(None, fail_response)`` (422).
@@ -113,7 +118,7 @@ def _read_comment_content() -> tuple[str | None, Any]:
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return None, fail("Corpo JSON inválido.", status=422, code="validation")
-    content = (payload.get("content") or "").strip()
+    content = normalize_comment_content(payload.get("content") or "").strip()
     if not content:
         return None, fail(
             "O comentário não pode estar vazio.", status=422, code="validation"
@@ -147,7 +152,12 @@ def api_tarefa_comentario_add(task_id: int) -> Response | tuple[Response, int]:
     if parse_error is not None:
         return parse_error
 
-    comment = TaskComment(content=content, user_id=g.user.id, task_id=task_id)
+    comment = TaskComment(
+        content=content,
+        user_id=g.user.id,
+        task_id=task_id,
+        mentions=resolve_comment_mentions(task, content),
+    )
     try:
         db.session.add(comment)
         db.session.flush()
@@ -198,6 +208,7 @@ def api_comentario_edit(comment_id: int) -> Response | tuple[Response, int]:
 
     old_content = comment.content
     comment.content = content
+    comment.mentions = resolve_comment_mentions(comment.task, content)
     comment.updated_at = utc_now()
 
     try:

@@ -26,17 +26,60 @@ export interface CommentSegment {
 	isMention: boolean;
 }
 
+/**
+ * Menção resolvida pelo servidor. `start`/`length` vêm em unidades UTF-16 — a
+ * mesma unidade de `String.slice` — justamente para que um emoji antes da
+ * menção (2 unidades, 1 code point em Python) não desloque o realce.
+ */
+export interface MentionSpan {
+	start: number;
+	length: number;
+}
+
 function escapeRegExp(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
+ * Segmentos a partir das menções RESOLVIDAS pelo servidor (`comment.mentions`).
+ *
+ * É o caminho exato: o backend gravou `start`/`length` na escrita, contra a
+ * lista real de pessoas do projeto, então nomes compostos ("@Ana Luiza
+ * Ribeiro") são destacados por inteiro sem nenhuma adivinhação no cliente.
+ * Intervalos fora do texto ou sobrepostos são descartados — defesa contra dado
+ * inconsistente, não regra de negócio.
+ */
+export function segmentsFromMentions(
+	text: string,
+	mentions: readonly MentionSpan[]
+): CommentSegment[] {
+	const content = text ?? '';
+	const ordered = [...mentions]
+		.filter((m) => Number.isInteger(m.start) && m.length > 0 && m.start >= 0)
+		.sort((a, b) => a.start - b.start);
+
+	const segments: CommentSegment[] = [];
+	let cursor = 0;
+	for (const mention of ordered) {
+		const end = mention.start + mention.length;
+		if (mention.start < cursor || end > content.length) continue;
+		if (mention.start > cursor) {
+			segments.push({ text: content.slice(cursor, mention.start), isMention: false });
+		}
+		segments.push({ text: content.slice(mention.start, end), isMention: true });
+		cursor = end;
+	}
+	if (cursor < content.length) segments.push({ text: content.slice(cursor), isMention: false });
+	return segments;
+}
+
+/**
  * Quebra o texto em segmentos, marcando menções `@...` para destaque visual.
  *
- * Quando `knownNames` é fornecido (autocomplete), casa nomes COM espaços
- * (ex.: "@Maria Silva") preferindo o mais longo; caso contrário, cai no padrão
- * de uma palavra `@\w+`. É apenas cosmético — não notifica ninguém (o backend
- * já notifica todos que veem a tarefa).
+ * LEGADO: só para comentários gravados ANTES de `comment.mentions` existir
+ * (`mentions === null`). Quando `knownNames` é fornecido, casa nomes COM
+ * espaços preferindo o mais longo; caso contrário, cai no padrão de uma palavra
+ * `@\w+` — que é justamente o que destacava só o primeiro nome.
  */
 export function splitMentions(text: string, knownNames?: readonly string[]): CommentSegment[] {
 	const names = (knownNames ?? [])

@@ -12,6 +12,8 @@ from routes.blueprint import main_bp
 from routes.decorators import login_required
 from routes.shared import format_local_time
 
+from routes.tasks.mentions import resolve_comment_mentions
+from services.comment_mentions import normalize_comment_content
 from routes.tasks.helpers import (
     _preview_text,
     legacy_not_found,
@@ -40,7 +42,7 @@ def add_task_comment(task_id):
         flash(NOT_FOUND_MESSAGE, "warning")
         return redirect(url_for("main.list_tasks"))
 
-    content = request.form.get("content", "").strip()
+    content = normalize_comment_content(request.form.get("content", "")).strip()
     if not content:
         if is_ajax:
             return (
@@ -52,7 +54,12 @@ def add_task_comment(task_id):
         flash("O comentário não pode estar vazio.", "warning")
         return redirect(url_for("main.list_tasks"))
 
-    comment = TaskComment(content=content, user_id=g.user.id, task_id=task_id)
+    comment = TaskComment(
+        content=content,
+        user_id=g.user.id,
+        task_id=task_id,
+        mentions=resolve_comment_mentions(task, content),
+    )
 
     try:
         db.session.add(comment)
@@ -77,6 +84,9 @@ def add_task_comment(task_id):
                         "user_id": g.user.id,
                         "created_at": format_local_time(comment.created_at),
                         "is_own": True,
+                        # Mesmo contrato do serializer da SPA: sem esta chave o
+                        # consumidor cairia no realce heurístico até recarregar.
+                        "mentions": comment.mentions,
                     },
                 }
             )
@@ -131,7 +141,7 @@ def edit_task_item_comment(comment_id):
         flash("Você só pode editar seus próprios comentários.", "danger")
         return redirect(url_for("main.list_tasks"))
 
-    content = request.form.get("content", "").strip()
+    content = normalize_comment_content(request.form.get("content", "")).strip()
     if not content:
         if is_ajax:
             return (
@@ -145,6 +155,7 @@ def edit_task_item_comment(comment_id):
 
     old_content = comment.content
     comment.content = content
+    comment.mentions = resolve_comment_mentions(comment.task, content)
     comment.updated_at = utc_now()
 
     try:

@@ -725,6 +725,10 @@ def _serialize_task_comment(
         ),
         "created_at": _iso_or_none(comment.created_at),
         "updated_at": _iso_or_none(comment.updated_at),
+        # Menções resolvidas na escrita; None em comentários anteriores ao
+        # recurso — o front distingue "sem menção" (lista vazia) de "não sei"
+        # (null) para escolher entre render exato e realce heurístico.
+        "mentions": getattr(comment, "mentions", None),
         "is_own": is_own,
         "can_edit": is_own,
         "can_delete": is_own,

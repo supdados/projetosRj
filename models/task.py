@@ -248,6 +248,9 @@ class TaskComment(db.Model):
     task_id = db.Column(db.Integer, db.ForeignKey("task.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
     updated_at = db.Column(db.DateTime, onupdate=utc_now, nullable=True)
+    # Menções resolvidas na ESCRITA (services/comment_mentions): lista de
+    # {user_id, name, start, length}. NULL = comentário anterior ao recurso.
+    mentions = db.Column(db.JSON, nullable=True)
 
     author = db.relationship("User", backref="task_comments")
 
