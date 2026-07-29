@@ -260,31 +260,9 @@
 				</button>
 			{/if}
 		{:else if !startOpen}
+			<!-- Par confirmar/cancelar: ✓ antes de ✕, ícones do FontAwesome e as MESMAS
+			     classes usadas nos demais pares da SPA (ghost 28px, rounded-md). -->
 			<span class="flex flex-none gap-1.5">
-				<button
-					type="button"
-					title="Cancelar (Esc)"
-					aria-label={`Cancelar edição de ${label}`}
-					onmousedown={(e) => {
-						e.preventDefault();
-						cancelRow(true);
-					}}
-					onclick={() => cancelRow(true)}
-					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<svg
-						viewBox="0 0 24 24"
-						class="h-3.5 w-3.5"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<path d="M6 6l12 12M18 6L6 18" />
-					</svg>
-				</button>
 				<button
 					type="button"
 					title={multiline ? 'Salvar (Ctrl+Enter)' : 'Salvar (Enter)'}
@@ -294,20 +272,22 @@
 						confirmRow(true);
 					}}
 					onclick={() => confirmRow(true)}
-					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
-					<svg
-						viewBox="0 0 24 24"
-						class="h-3.5 w-3.5"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-					>
-						<path d="M5 13l4.5 4.5L19 7" />
-					</svg>
+					<i class="fas fa-check text-xs" aria-hidden="true"></i>
+				</button>
+				<button
+					type="button"
+					title="Cancelar (Esc)"
+					aria-label={`Cancelar edição de ${label}`}
+					onmousedown={(e) => {
+						e.preventDefault();
+						cancelRow(true);
+					}}
+					onclick={() => cancelRow(true)}
+					class="cp-lrow-btn-in-delay grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				>
+					<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 				</button>
 			</span>
 		{/if}

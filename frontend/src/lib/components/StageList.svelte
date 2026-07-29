@@ -629,27 +629,27 @@
 							<td class="cell-actions composer-actions">
 								<button
 									type="button"
-									class="composer-icon-btn composer-confirm"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									title="Confirmar etapa"
 									aria-label="Confirmar etapa"
 									disabled={addingStage}
 									onclick={submitComposer}
 								>
 									{#if addingStage}
-										<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+										<i class="fas fa-spinner fa-spin text-xs" aria-hidden="true"></i>
 									{:else}
-										<i class="fas fa-check" aria-hidden="true"></i>
+										<i class="fas fa-check text-xs" aria-hidden="true"></i>
 									{/if}
 								</button>
 								<button
 									type="button"
-									class="composer-icon-btn composer-cancel"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									title="Cancelar adição"
 									aria-label="Cancelar adição"
 									disabled={addingStage}
 									onclick={closeComposer}
 								>
-									<i class="fas fa-times" aria-hidden="true"></i>
+									<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 								</button>
 							</td>
 						</tr>
@@ -908,37 +908,6 @@
 		display: flex;
 		gap: 0.3rem;
 		justify-content: center;
-	}
-	.composer-icon-btn {
-		width: 32px;
-		height: 32px;
-		border-radius: 8px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		border: 1px solid var(--stage-chip-border);
-		background: var(--ds-color-surface-base);
-		cursor: pointer;
-		transition: all 0.16s ease;
-	}
-	.composer-confirm {
-		color: var(--stage-chip-done-text);
-		border-color: var(--stage-chip-done-border);
-		background: var(--stage-chip-done-bg);
-	}
-	.composer-confirm:hover:not(:disabled) {
-		background: var(--stage-chip-done-bg-hover);
-	}
-	.composer-cancel {
-		color: var(--stage-danger-text);
-	}
-	.composer-cancel:hover:not(:disabled) {
-		background: var(--stage-danger-bg-hover);
-		border-color: var(--stage-danger-border-hover);
-	}
-	.composer-icon-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 	.composer-error,
 	.no-etapas-cell {

@@ -345,7 +345,7 @@
 									onclick={() => saveEdit(comment.id)}
 									title="Salvar"
 									aria-label="Salvar"
-									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-brand bg-wash-brand text-brand transition-colors duration-fast hover:bg-brand hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<i class="fas fa-check text-xs" aria-hidden="true"></i>
 								</button>
@@ -354,7 +354,7 @@
 									onclick={cancelEdit}
 									title="Cancelar"
 									aria-label="Cancelar"
-									class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+									class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 								>
 									<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 								</button>

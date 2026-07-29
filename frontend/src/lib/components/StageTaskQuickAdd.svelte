@@ -495,16 +495,19 @@
 							<!-- Form de adição: MESMO template do hub (grade + campos). -->
 							<form
 								use:closeOnClickOutside
-								class="border-t border-border-subtle bg-surface {addDraft.saving
-									? 'pointer-events-none opacity-[0.72]'
-									: ''}"
+								class="bg-surface {addDraft.saving ? 'pointer-events-none opacity-[0.72]' : ''}"
 								aria-label="Nova tarefa em {etapaDescricao}"
 								onsubmit={(e) => {
 									e.preventDefault();
 									void submitAddForm();
 								}}
 							>
-								<div class="task-hub-grid min-h-[44px] items-center px-3">
+								<!-- A borda mora na MESMA caixa do min-h (box-sizing: border-box) — no
+								     <form> ela ficaria fora dos 44px e a linha nasceria 1px mais alta
+								     que o botão "+ Adicionar nova tarefa" que ela substitui. -->
+								<div
+									class="task-hub-grid min-h-[44px] items-center border-t border-border-subtle px-3"
+								>
 									<textarea
 										bind:this={addTextareaEl}
 										bind:value={addDraft.descricao}
@@ -553,7 +556,7 @@
 											disabled={addDraft.saving}
 											title="Salvar"
 											aria-label="Salvar tarefa"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-control bg-brand text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
+											class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<i class="fas fa-check text-xs" aria-hidden="true"></i>
 										</button>
@@ -563,7 +566,7 @@
 											disabled={addDraft.saving}
 											title="Cancelar"
 											aria-label="Cancelar"
-											class="inline-flex h-[30px] w-[30px] items-center justify-center rounded-control border border-border-subtle bg-surface text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+											class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 										</button>
