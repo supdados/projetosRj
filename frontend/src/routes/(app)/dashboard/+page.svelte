@@ -558,7 +558,7 @@
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
-											class="recent-task-item flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+											class="recent-task-item flex items-center gap-2.5 rounded-md border border-border-faint px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<span
 												class="flex h-5 w-5 shrink-0 items-center justify-center"

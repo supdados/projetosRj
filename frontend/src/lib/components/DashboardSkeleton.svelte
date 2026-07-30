@@ -110,7 +110,7 @@
 							<div class="flex flex-col gap-1.5 overflow-hidden lg:min-h-0 lg:flex-1">
 								{#each { length: 4 } as _, i (i)}
 									<div
-										class="flex items-center gap-2.5 rounded-xl border border-border-subtle px-3 py-1.5"
+										class="flex items-center gap-2.5 rounded-md border border-border-faint px-3 py-1.5"
 									>
 										<Skeleton class="h-5 w-5 rounded-md" />
 										<span class="flex min-w-0 flex-1 flex-col gap-1">
