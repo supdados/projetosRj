@@ -201,6 +201,8 @@ export default {
 				'attention-soft': 'var(--ds-color-border-attention-soft)',
 				'danger-soft': 'var(--ds-color-border-danger-soft)',
 				danger: 'var(--ds-color-border-danger)',
+				success: 'var(--ds-color-border-success)',
+				warning: 'var(--ds-color-border-warning)',
 				'on-brand-divider': 'var(--ds-color-on-brand-divider)'
 			},
 			ringColor: {
@@ -308,7 +310,8 @@ export default {
 				sm: 'var(--ds-shadow-sm)',
 				md: 'var(--ds-shadow-md)',
 				lg: 'var(--ds-shadow-lg)',
-				modal: 'var(--ds-shadow-modal)'
+				modal: 'var(--ds-shadow-modal)',
+				popover: 'var(--ds-shadow-popover)'
 			},
 			transitionDuration: {
 				// --ds-transition-*

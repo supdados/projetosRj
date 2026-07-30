@@ -177,6 +177,7 @@
 	/* -danger sem sufixo = campo inválido, precisa gritar; -success = confirmação */
 	--ds-color-border-danger: var(--ds-color-danger-600);
 	--ds-color-border-success: var(--ds-color-success-600);
+	--ds-color-border-warning: var(--ds-color-warning-600);
 
 	/* --- Washes (fundo suave de chip/linha/estado) --------------------------- */
 	/* wash-neutral existe para separar "hover/faixa de seção" (que NÃO deve ser
@@ -266,6 +267,10 @@
 	   o zoom de texto do usuário (WCAG 1.4.4). */
 	--control-h-sm: 2.125rem; /* 34px — SelectMenu size="sm", forms compactos */
 	--control-h-md: 2.375rem; /* 38px — campos de detalhe (Área/Órgão/SEI) */
+
+	/* Altura da barra superior fixa. Fonte única: AppTopnav aplica, FlashToasts
+	   ancora abaixo (o toast tem z maior que o topnav e o cobriria). */
+	--app-topnav-height: 3rem; /* 48px */
 }
 
 /* ============================================================================
@@ -326,6 +331,7 @@
 	--ds-color-border-danger-soft: var(--ds-color-danger-700);
 	--ds-color-border-danger: var(--ds-color-danger-400);
 	--ds-color-border-success: var(--ds-color-success-400);
+	--ds-color-border-warning: var(--ds-color-warning-400);
 
 	/* --- Washes: interior 100 → 800 ----------------------------------------- */
 	--ds-color-wash-neutral: var(--ds-color-neutral-800);

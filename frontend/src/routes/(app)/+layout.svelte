@@ -51,6 +51,11 @@
 <div class="app-shell flex flex-col overflow-hidden bg-canvas text-text-primary">
 	<AppTopnav user={$auth.user} />
 
+	<!-- Antes do <main> no DOM: o toast e `fixed`, entao a posicao nao muda, mas o
+	     botao de fechar passa a ficar no inicio da ordem de tabulacao — pela ordem
+	     antiga (depois do rodape) o teclado nunca o alcancava dentro dos 4s de vida. -->
+	<FlashToasts />
+
 	<!-- Sem teto de largura: o conteudo (itens) cresce com a tela. O respiro lateral
 	     e um padding responsivo que escala em telas menores e TRAVA em ~7rem a partir
 	     do tamanho de notebook -> respiro constante em telas grandes, itens aumentam.
@@ -109,6 +114,4 @@
 		     entao ancora no fim da viewport, sem rolar com o conteudo. -->
 		<AppFooter />
 	{/if}
-
-	<FlashToasts />
 </div>

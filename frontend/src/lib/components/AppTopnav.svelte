@@ -285,7 +285,7 @@
 	class="app-topnav sticky top-0 z-sticky border-b border-b-on-brand-divider bg-topnav"
 >
 	<div
-		class="relative mx-auto flex min-h-[48px] items-center justify-between gap-6 px-5"
+		class="relative mx-auto flex min-h-[var(--app-topnav-height)] items-center justify-between gap-6 px-5"
 	>
 		<!-- Esquerda: brand + navegacao por icones -->
 		<div class="flex min-w-0 flex-[0_1_auto] items-center gap-[1.1rem]">
