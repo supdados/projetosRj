@@ -1118,7 +1118,6 @@
 
 	// --- Classes utilitárias (campos com visual unificado) -------------------
 	const labelClass = 'text-2xs font-bold uppercase tracking-[.08em] text-text-label';
-	const microLabelClass = 'text-2xs font-bold uppercase tracking-[.07em] text-text-faint';
 	const fieldBaseClass =
 		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60';
 	const fieldClass = `h-11 text-base ${fieldBaseClass}`;
@@ -1133,16 +1132,16 @@
 	// whitespace-nowrap: o rodapé tem 3 ações e o card do hub é estreito — sem
 	// isso os rótulos quebram em duas linhas.
 	const btnPrimaryClass =
-		'inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-control bg-brand px-5 text-[15px] font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-control bg-brand px-4 text-sm font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 	const btnSecondaryClass =
-		'inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-control border border-border-subtle bg-surface px-4 text-[15px] font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
+		'inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-control border border-border-subtle bg-surface px-3.5 text-sm font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
 	const btnGhostClass =
-		'inline-flex h-10 items-center whitespace-nowrap rounded-md px-2.5 text-[15px] font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
+		'inline-flex h-9 items-center whitespace-nowrap rounded-md px-2.5 text-sm font-semibold text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60';
 	const dashedAddClass =
 		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const bodyClass = 'max-h-[70vh] min-h-0 flex-1 overflow-y-auto px-10 pb-8 pt-9';
 	// Passos essenciais não rolam: o dropdown de área precisa escapar do card.
-	const bodyOpenClass = 'px-8 pb-6 pt-7';
+	const bodyOpenClass = 'px-8 pb-6 pt-5';
 </script>
 
 {#snippet spinner()}
@@ -1158,9 +1157,9 @@
 {/snippet}
 
 {#snippet segmentProgress(total: number, done: number, label: string)}
-	<div class="mb-5 flex flex-col gap-2">
+	<div class="mb-4 flex items-center gap-2.5">
 		<div
-			class="flex max-w-[220px] gap-1.5"
+			class="flex w-[84px] gap-1"
 			role="progressbar"
 			aria-valuemin={0}
 			aria-valuemax={total}
@@ -1169,14 +1168,16 @@
 		>
 			{#each Array.from({ length: total }) as _, i (i)}
 				<div
-					class="h-1.5 flex-1 rounded-full transition-colors duration-base {i < done
+					class="h-[3px] flex-1 rounded-full transition-colors duration-base {i < done
 						? 'bg-brand'
 						: 'bg-progress-track'}"
 				></div>
 			{/each}
 		</div>
 		{#if label}
-			<span class={microLabelClass}>{label}</span>
+			<span class="text-[10px] font-semibold uppercase tracking-[.06em] text-text-faint">
+				{label}
+			</span>
 		{/if}
 	</div>
 {/snippet}
@@ -1212,7 +1213,7 @@
 
 {#snippet footer()}
 	<footer
-		class="flex flex-none items-center justify-between gap-3 border-t border-border-faint px-6 py-3.5"
+		class="flex flex-none items-center justify-between gap-3 border-t border-border-faint px-6 py-2"
 	>
 		<div>
 			{#if isFaseEssencial}
