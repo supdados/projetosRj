@@ -56,7 +56,8 @@
 		StageTemplateOption,
 		ProjectInlinePayload,
 		ProjectGoalsSelection,
-		MeetingPayload
+		MeetingPayload,
+		ProjectDetailTab
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
@@ -165,6 +166,10 @@
 
 	// Offset do topnav fixo para o sticky do cabecalho (medido no mount).
 	let topOffset = $state<number>(0);
+
+	// Aba ativa do seletor Detalhes/Etapas do cabecalho. Deep-link ?focus_etapa
+	// abre direto em Etapas (ajustado no mount).
+	let activeTab = $state<ProjectDetailTab>('detalhes');
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
 
@@ -1142,6 +1147,8 @@
 		if (topnav) topOffset = Math.round(topnav.getBoundingClientRect().height);
 		// Deep-link do histórico (redirect da antiga página /historico).
 		if ($page.url.searchParams.has('historico')) historyOpen = true;
+		// Etapa vinda da busca global: a linha-alvo mora na aba Etapas.
+		if ($page.url.searchParams.has('focus_etapa')) activeTab = 'etapas';
 		void load();
 		return () => {
 			if (highlightTimer) clearTimeout(highlightTimer);
@@ -1183,29 +1190,25 @@
 			}}
 			onEditField={onHeaderEditField}
 			onShare={canShare ? () => (shareOpen = true) : undefined}
+			{activeTab}
+			onTabChange={(tab) => (activeTab = tab)}
 		/>
 
-		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
-		<Card labelId="project-details-title">
-			{#snippet header()}
-				<h2
-					id="project-details-title"
-					class="flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
-				>
-					<i class="fas fa-circle-info text-brand" aria-hidden="true"></i>Detalhes do Projeto
-				</h2>
-			{/snippet}
-
-			<!-- Ações no RODAPÉ do card (Ver Histórico + Concluir), à direita (ref. tela antiga). -->
-			{#snippet footer()}
+		{#if activeTab === 'detalhes'}
+		<!-- Mesmo padrão da aba Etapas: título + linha (termina antes das ações). -->
+		<div class="section-divider">
+			<h2 id="project-details-title" class="font-heading text-lg font-bold text-text-primary">
+				Detalhes do Projeto
+			</h2>
+			<div class="order-2 flex flex-wrap items-center gap-2">
 				<button
 					type="button"
 					onclick={() => (historyOpen = true)}
-					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
-					<i class="fas fa-history" aria-hidden="true"></i>Ver Histórico
+					<i class="fas fa-history" aria-hidden="true"></i>
+					Ver Histórico
 				</button>
-
 				{#if canEdit && isVigente}
 					<button
 						type="button"
@@ -1216,7 +1219,7 @@
 						title={canConclude
 							? 'Concluir o projeto'
 							: 'Todas as etapas devem estar iniciadas e concluídas'}
-						class="inline-flex items-center gap-1.5 rounded-md border border-success bg-success px-3 py-1.5 text-xs font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
+						class="inline-flex items-center gap-1 rounded-md border border-success bg-success px-3 py-2 text-sm font-medium text-white transition-colors duration-fast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-success"
 					>
 						{#if concludeInFlight}
 							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
@@ -1233,7 +1236,7 @@
 						onclick={onReopenProject}
 						disabled={reopenInFlight}
 						title="Voltar o projeto para o status Vigente e liberar a edição"
-						class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						{#if reopenInFlight}
 							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Reabrindo...
@@ -1242,7 +1245,12 @@
 						{/if}
 					</button>
 				{/if}
-			{/snippet}
+			</div>
+		</div>
+
+		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
+		<Card labelId="project-details-title">
+
 
 			<!-- Identidade + EEGG (editaveis inline, clicando direto no valor) —
 			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
@@ -1322,9 +1330,8 @@
 
 				<!-- EEGG: cascata objetivo/resultado/indicadores editável inline. -->
 				<div class="flex flex-col gap-3">
-					<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
-						<i class="fas fa-sitemap text-brand" aria-hidden="true"></i>EEGD - Estratégia
-						Estadual de Governo Digital
+					<h3 class="font-heading text-sm font-semibold text-text-primary">
+						EEGD - Estratégia Estadual de Governo Digital
 					</h3>
 					<EeggInlineEditor
 						fieldId="project-eegg"
@@ -1345,15 +1352,15 @@
 			<!-- Informações adicionais (editáveis) — agrupadas em um bloco com borda,
 			     espelhando a seção da tela antiga. -->
 			<div class="mt-6 flex flex-col gap-3">
-				<h3 class="flex items-center gap-2 font-heading text-sm font-semibold text-text-primary">
-					<i class="fas fa-circle-info text-brand" aria-hidden="true"></i>Informações Adicionais
+				<h3 class="font-heading text-sm font-semibold text-text-primary">
+					Informações Adicionais
 				</h3>
 				<div class="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
-					<!-- Links compactos: ícone + rótulo + valor na MESMA linha (ref. tela antiga).
-					     Rótulos com largura FIXA (w-32) para os campos começarem alinhados
-					     na mesma coluna, independente do tamanho do nome. -->
-					<div class="flex flex-col gap-2.5">
-						<div class="flex items-center gap-2 text-sm">
+					<!-- Duas colunas verticais de links: fixos (Github/Documentação/Produto)
+					     à esquerda; personalizados (até 3) à direita. -->
+					<div class="grid grid-cols-1 gap-x-8 gap-y-2.5 lg:grid-cols-2">
+						<div class="flex min-w-0 flex-col gap-2.5">
+						<div class="flex min-w-0 items-center gap-2 text-sm">
 							<i class="fab fa-github w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Github:</span>
 							<div class="min-w-0 flex-1">
@@ -1372,7 +1379,7 @@
 								/>
 							</div>
 						</div>
-						<div class="flex items-center gap-2 text-sm">
+						<div class="flex min-w-0 items-center gap-2 text-sm">
 							<i class="fas fa-book w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Documentação:</span>
 							<div class="min-w-0 flex-1">
@@ -1391,7 +1398,7 @@
 								/>
 							</div>
 						</div>
-						<div class="flex items-center gap-2 text-sm">
+						<div class="flex min-w-0 items-center gap-2 text-sm">
 							<i class="fas fa-box w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Produto:</span>
 							<div class="min-w-0 flex-1">
@@ -1410,11 +1417,13 @@
 								/>
 							</div>
 						</div>
+						</div>
 
-						<!-- Links personalizados (nomeados pelo usuario, ate 3). Nome tambem
-						     editavel inline; lixeira remove o item inteiro. -->
+						<!-- Coluna dos links personalizados (nomeados pelo usuario, ate 3).
+						     Nome tambem editavel inline; lixeira remove o item inteiro. -->
+						<div class="flex min-w-0 flex-col gap-2.5">
 						{#each data.project.custom_links ?? [] as link, i (i)}
-							<div class="flex items-center gap-2 text-sm">
+							<div class="flex min-w-0 items-center gap-2 text-sm">
 								<i
 									class="fas fa-link w-4 shrink-0 text-center text-brand"
 									aria-hidden="true"
@@ -1466,7 +1475,10 @@
 						{#if !fieldsLocked && (data.project.custom_links ?? []).length < 3}
 							{#if customLinkDraft}
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div class="flex items-center gap-2 text-sm" onfocusout={onCustomLinkDraftFocusOut}>
+								<div
+									class="flex items-center gap-2 text-sm"
+									onfocusout={onCustomLinkDraftFocusOut}
+								>
 									<i
 										class="fas fa-link w-4 shrink-0 text-center text-brand"
 										aria-hidden="true"
@@ -1528,70 +1540,62 @@
 								</button>
 							{/if}
 						{/if}
+						</div>
 					</div>
 
 					<div class="my-4 border-t border-border-subtle"></div>
 
-					<!-- Observação à esquerda; "Adicionar Tarefas" à direita (ref. tela antiga). -->
-					<div class="flex items-start justify-between gap-4">
-						<div class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
-							<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
-								<i class="fas fa-note-sticky w-4 text-center text-brand" aria-hidden="true"></i
-								>Observação:
-							</span>
-							<InlineEditField
-								fieldId="project-observacao"
-								label="Observação"
-								value={data.project.observacao}
-								kind="textarea"
-								variant="cell"
-								emptyLabel="Nenhuma observação registrada."
-								readonly={fieldsLocked}
-								pending={projectFieldStates.observacao?.pending}
-								error={projectFieldStates.observacao?.error}
-								onSave={(v) => saveProjectField('observacao', v)}
-							/>
-						</div>
-						<!-- Navega para o hub de tarefas filtrado por este projeto. A SPA NAO
-						     tem rota /projeto/<id>/tarefas: a pagina /tarefas le ?project= no
-						     mount (mesmo destino do 302 do KEEP-ENDPOINT main.project_tasks). -->
-						<a
-							href={`/tarefas?project=${data.project.id}`}
-							class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-brand no-underline shadow-sm transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-						>
-							<i class="fas fa-plus-circle" aria-hidden="true"></i>Adicionar tarefa
-						</a>
+					<div class="flex min-w-0 flex-col gap-1.5 text-sm">
+						<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
+							<i class="fas fa-note-sticky w-4 text-center text-brand" aria-hidden="true"></i
+							>Observação:
+						</span>
+						<InlineEditField
+							fieldId="project-observacao"
+							label="Observação"
+							value={data.project.observacao}
+							kind="textarea"
+							variant="cell"
+							emptyLabel="Nenhuma observação registrada."
+							readonly={fieldsLocked}
+							pending={projectFieldStates.observacao?.pending}
+							error={projectFieldStates.observacao?.error}
+							onSave={(v) => saveProjectField('observacao', v)}
+						/>
 					</div>
 				</div>
 			</div>
 		</Card>
+		{/if}
 
+		{#if activeTab === 'etapas'}
+		<!-- Título + linha + ações na MESMA linha: a linha (::after, order 1) termina
+		     antes dos botões (order 2). -->
 		<div class="section-divider">
 			<h2 id="project-stages-title" class="font-heading text-lg font-bold text-text-primary">
 				Etapas do Projeto
 			</h2>
+			{#if canEdit}
+				<div class="order-2 flex flex-wrap items-center gap-2">
+					<button
+						type="button"
+						onclick={openImport}
+						class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						<i class="fas fa-file-import" aria-hidden="true"></i>
+						Importar Modelo
+					</button>
+					<button
+						type="button"
+						onclick={openCreateMeeting}
+						class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						<i class="fab fa-google" aria-hidden="true"></i>
+						Adicionar reunião
+					</button>
+				</div>
+			{/if}
 		</div>
-
-		{#if canEdit}
-			<div class="flex flex-wrap items-center justify-end gap-2">
-				<button
-					type="button"
-					onclick={openImport}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<i class="fas fa-file-import" aria-hidden="true"></i>
-					Importar Modelo
-				</button>
-				<button
-					type="button"
-					onclick={openCreateMeeting}
-					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<i class="fab fa-google" aria-hidden="true"></i>
-					Adicionar reunião
-				</button>
-			</div>
-		{/if}
 
 		<StageList
 			etapas={data.etapas}
@@ -1624,6 +1628,7 @@
 				{/if}
 			{/snippet}
 		</StageList>
+		{/if}
 
 		<ImportModelModal
 			open={importOpen}
@@ -1752,10 +1757,13 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		margin-top: 0.5rem;
+		/* Margens negativas comem parte do gap-6 da section: a linha do título fica
+		   mais colada no header acima e no conteúdo abaixo. */
+		margin: -0.5rem 0;
 	}
 	.section-divider::after {
 		content: '';
+		order: 1;
 		flex: 1;
 		height: 1px;
 		background: var(--ds-color-border-base);

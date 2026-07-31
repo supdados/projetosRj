@@ -11,6 +11,8 @@
 	 *    fade + translateY/scale, com os mesmos campos em paleta clara (.pc-chip).
 	 *  - Edição INLINE dos chips de status/prioridade (clique-para-editar -> select),
 	 *    igual ao 09-project-inline-editor.js; emite onEditField (a página chama a API).
+	 *  - O SELETOR de abas Detalhes/Etapas na base do header (estado na página;
+	 *    emite onTabChange).
 	 *
 	 * CONTROLADO: recebe `project` + `options` + `permissions` + `derivedData`; emite
 	 * `onEditField(field, value)` — NÃO chama API.
@@ -23,7 +25,8 @@
 		ProjectDetail,
 		ProjectDetailOptions,
 		ProjectDetailPermissions,
-		ProjectDetailDerived
+		ProjectDetailDerived,
+		ProjectDetailTab
 	} from '$lib/types/projectDetail';
 	import { base } from '$app/paths';
 	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
@@ -54,6 +57,9 @@
 		onEditField: (field: HeaderField, value: string) => void;
 		/** Abre o modal "Compartilhar" (S4). Ausente = botão não aparece. */
 		onShare?: () => void;
+		/** Aba ativa do seletor Detalhes/Etapas (estado mora na página). */
+		activeTab: ProjectDetailTab;
+		onTabChange: (tab: ProjectDetailTab) => void;
 	}
 
 	let {
@@ -65,8 +71,15 @@
 		fieldStates = {},
 		locked = false,
 		onEditField,
-		onShare
+		onShare,
+		activeTab,
+		onTabChange
 	}: Props = $props();
+
+	const TABS: { id: ProjectDetailTab; label: string }[] = [
+		{ id: 'detalhes', label: 'Detalhes' },
+		{ id: 'etapas', label: 'Etapas' }
+	];
 
 	// Gate autoritativo do servidor; ausente (release anterior) = negado.
 	const canShare = $derived(Boolean(onShare && permissions.can_manage_members));
@@ -597,6 +610,21 @@
 		{/if}
 	</div>
 
+	<!-- Seletor Detalhes/Etapas: alterna as seções da página (estado na página). -->
+	<nav class="ph-tabs" aria-label="Seções do projeto">
+		{#each TABS as tab (tab.id)}
+			<button
+				type="button"
+				class="ph-tab"
+				class:ph-tab--active={activeTab === tab.id}
+				aria-current={activeTab === tab.id ? 'true' : undefined}
+				onclick={() => onTabChange(tab.id)}
+			>
+				{tab.label}
+			</button>
+		{/each}
+	</nav>
+
 	{#snippet statusChipContent()}
 		<span class="ph-chip ph-chip--status ph-chip--status-{statusKey}" data-value={project.status ?? ''}>
 			{#if project.status === 'Vigente'}
@@ -718,7 +746,9 @@
 		position: relative;
 		overflow: hidden;
 		border-radius: 12px;
-		padding: 1.25rem 1.5rem;
+		/* Sem padding-bottom: a régua de abas encosta na base do header (o header
+		   ganhou altura para comportar o seletor Detalhes/Etapas). */
+		padding: 1.25rem 1.5rem 0;
 		color: var(--ds-color-on-brand-strong);
 		background: linear-gradient(
 			135deg,
@@ -1266,6 +1296,57 @@
 	.ph-duration {
 		color: var(--ds-color-on-brand-strong);
 		font-weight: 700;
+	}
+
+	/* ----- Abas Detalhes/Etapas (base do header) ----- */
+	.ph-tabs {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		gap: 0.25rem;
+		margin-top: 1.1rem;
+		border-top: 1px solid var(--ds-color-on-brand-divider);
+	}
+	.ph-tab {
+		position: relative;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+		padding: 0.7rem 1rem 0.8rem;
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--ds-color-on-brand-muted);
+		transition:
+			color 0.16s ease,
+			background-color 0.16s ease;
+	}
+	.ph-tab:hover {
+		color: var(--ds-color-on-brand-strong);
+		background: var(--ds-color-on-brand-hover);
+	}
+	.ph-tab:focus-visible {
+		outline: var(--ds-focus-ring-width) solid var(--ds-color-focus-ring-onbrand);
+		outline-offset: calc(-1 * var(--ds-focus-ring-width));
+	}
+	.ph-tab--active {
+		color: var(--ds-color-on-brand-strong);
+	}
+	.ph-tab--active::after {
+		content: '';
+		position: absolute;
+		left: 0.55rem;
+		right: 0.55rem;
+		bottom: 0;
+		height: 2.5px;
+		border-radius: 999px 999px 0 0;
+		background: var(--ds-color-on-brand-strong);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ph-tab {
+			transition-duration: 1ms;
+		}
 	}
 
 	/* ----- Compact header ----- */
