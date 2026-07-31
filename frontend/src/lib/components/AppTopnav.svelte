@@ -164,6 +164,12 @@
 	/** Esc fecha o menu e devolve foco ao botao acionador. */
 	function handleWindowKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
+			if (adminOpen || notifOpen) {
+				// Consome o gesto: o FlashToasts (listener irmão no window) checa
+				// defaultPrevented para não dispensar um toast no MESMO Esc que
+				// fechou este dropdown.
+				event.preventDefault();
+			}
 			if (adminOpen) {
 				closeAdmin();
 				adminToggleEl?.focus();

@@ -85,9 +85,11 @@
 		reduceMotion ? { duration: 0 } : fly(node, { y: -16, duration: 180 });
 
 	// Esc dispensa o toast mais recente. Modais/dropdowns tratam Esc por conta
-	// própria e o gesto deles vem primeiro: dentro de um diálogo, não interceptar.
+	// própria e o gesto deles vem primeiro: dentro de um diálogo, não interceptar;
+	// quem consumir o Esc no window (ex.: dropdowns do topnav, que mantêm o foco
+	// no botão toggle) sinaliza via preventDefault e também não interceptamos.
 	function dismissarComEsc(event: KeyboardEvent): void {
-		if (event.key !== 'Escape') return;
+		if (event.key !== 'Escape' || event.defaultPrevented) return;
 		const vivos = get(flash);
 		if (vivos.length === 0) return;
 		const alvo = event.target as Element | null;
