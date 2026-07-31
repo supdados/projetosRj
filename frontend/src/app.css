@@ -697,15 +697,15 @@
 	overflow: hidden;
 }
 
-/* Barra de rolagem da pagina: fina e azul-clara (refinada), igual ao painel.
-   Cor via token primario -> adapta no dark mode. */
+/* Barra de rolagem da PÁGINA: não disputa espaço com o conteúdo. O trilho
+   nativo é ocultado (a rolagem segue normal via wheel/trackpad/teclado), então
+   a largura útil é IDÊNTICA com e sem scroll — telas curtas (projeto sem
+   etapas) e longas não mudam mais de largura entre si. */
 .app-shell > main {
-	/* Reserva SEMPRE o gutter da barra de rolagem vertical, role ou não. Sem isto,
-	   telas altas (Projetos, Tarefas-lista) rolam e consomem ~6px à direita,
-	   enquanto telas de altura limitada (Calendário, cujo grid é
-	   `clamp(30rem, calc(100vh-16rem), 52rem)`) NÃO rolam e ficam ~6px mais largas.
-	   `stable` iguala a largura útil em todas as telas. */
-	scrollbar-gutter: stable;
+	scrollbar-width: none;
+}
+.app-shell > main::-webkit-scrollbar {
+	width: 0;
 }
 
 /* Scrollbar do design system — UNIVERSAL (nenhuma classe necessária).
