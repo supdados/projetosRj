@@ -217,7 +217,12 @@
 		const wasDone = state.done;
 		// Gate cliente da conclusão: evita a rajada de 422 idênticos do clique repetido.
 		if (state.iniciada && !state.done) {
-			const { motivo } = podeConcluirEtapa(progressOf(etapa), etapa.data_inicio, etapa.data_fim);
+			const { motivo } = podeConcluirEtapa(
+				progressOf(etapa),
+				etapa.data_inicio,
+				etapa.data_fim,
+				etapa.tem_responsavel
+			);
 			if (motivo) {
 				flash.warning(motivo);
 				return;

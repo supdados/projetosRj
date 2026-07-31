@@ -34,6 +34,62 @@ def count_open_tasks_in_etapa(etapa_id: int) -> int:
     ).count()
 
 
+MOTIVO_DATAS_AUSENTES = (
+    "Defina as datas de início e de término da etapa antes de concluí-la."
+)
+MOTIVO_RESPONSAVEL_AUSENTE = (
+    "Defina ao menos uma área responsável pela etapa antes de concluí-la."
+)
+
+
+def motivo_tarefas_pendentes(abertas: int) -> str:
+    return (
+        f"Finalize as {abertas} tarefa(s) pendente(s) desta etapa antes de concluí-la."
+    )
+
+
+def etapa_tem_responsavel(etapa: Etapa) -> bool:
+    """Etapa nova usa a lista ``responsaveis``; a legada, o texto ``responsavel``."""
+    if etapa.responsaveis:
+        return True
+    return bool((etapa.responsavel or "").strip())
+
+
+def motivo_bloqueio_conclusao(
+    *,
+    data_inicio: datetime.date | None,
+    data_fim: datetime.date | None,
+    tem_responsavel: bool,
+    tarefas_abertas: int,
+) -> str | None:
+    """Primeira precondição violada para CONCLUIR uma etapa, ou ``None``.
+
+    Fonte única da regra, usada por TODOS os caminhos de conclusão (API toggle,
+    edição completa e rota legada) — etapas importadas de modelo chegam sem
+    responsável e não podem ser concluídas até ganharem um. A ordem (datas ->
+    responsável -> tarefas) e os textos são espelhados no cliente em
+    ``frontend/src/lib/utils/etapaPrecondicoes.ts``; manter idênticos.
+
+    Exemplo::
+
+        motivo = motivo_bloqueio_conclusao(
+            data_inicio=etapa.data_inicio,
+            data_fim=etapa.data_fim,
+            tem_responsavel=etapa_tem_responsavel(etapa),
+            tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
+        )
+        if motivo is not None:
+            ...  # 422 com o motivo
+    """
+    if data_inicio is None or data_fim is None:
+        return MOTIVO_DATAS_AUSENTES
+    if not tem_responsavel:
+        return MOTIVO_RESPONSAVEL_AUSENTE
+    if tarefas_abertas > 0:
+        return motivo_tarefas_pendentes(tarefas_abertas)
+    return None
+
+
 def _clear_tasks_from_etapa(etapa) -> None:
     Task.query.filter(Task.etapa_id == etapa.id).update(
         {Task.etapa_id: None}, synchronize_session=False

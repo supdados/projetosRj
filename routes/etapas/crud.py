@@ -9,6 +9,8 @@ from services.etapas_mutation import (
     create_etapa_record,
     delete_meeting_etapa,
     delete_regular_etapa,
+    etapa_tem_responsavel,
+    motivo_bloqueio_conclusao,
     save_etapa_comentario,
     update_meeting_dates,
     update_regular_field,
@@ -451,20 +453,26 @@ def toggle_etapa(etapa_id):
         )
 
     if not etapa.done:
+        # Mesma régua da API (motivo_bloqueio_conclusao): datas, responsável e
+        # tarefas — sem caminho legado que conclua etapa importada sem responsável.
         open_count = count_open_tasks_in_etapa(etapa.id)
-        if open_count:
-            return jsonify(
-                {
-                    "success": False,
-                    "etapa_id": etapa.id,
-                    "iniciada": etapa.iniciada,
-                    "done": etapa.done,
-                    "open_task_count": open_count,
-                    "message": (
-                        f"Finalize as {open_count} tarefa(s) pendente(s) desta etapa antes de concluí-la."
-                    ),
-                }
-            )
+        motivo = motivo_bloqueio_conclusao(
+            data_inicio=etapa.data_inicio,
+            data_fim=etapa.data_fim,
+            tem_responsavel=etapa_tem_responsavel(etapa),
+            tarefas_abertas=open_count,
+        )
+        if motivo is not None:
+            resposta = {
+                "success": False,
+                "etapa_id": etapa.id,
+                "iniciada": etapa.iniciada,
+                "done": etapa.done,
+                "message": motivo,
+            }
+            if open_count:
+                resposta["open_task_count"] = open_count
+            return jsonify(resposta)
 
     etapa.done = not etapa.done
 

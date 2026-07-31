@@ -19,6 +19,7 @@ from flask import g, has_request_context
 
 from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
+from services.etapas_mutation import etapa_tem_responsavel
 from services.project_membership import project_access_via, project_permission_flags
 from time_utils import iso_utc
 
@@ -421,6 +422,9 @@ def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
         "data_inicio": _iso_or_none(etapa.data_inicio),
         "data_fim": _iso_or_none(etapa.data_fim),
         "responsavel": etapa.responsavel,
+        # Precondição de conclusão computada no backend (lista nova OU texto
+        # legado) — o card não recebe a lista `responsaveis` completa.
+        "tem_responsavel": etapa_tem_responsavel(etapa),
         "ordem": etapa.ordem,
         "iniciada": bool(etapa.iniciada),
         "done": bool(etapa.done),

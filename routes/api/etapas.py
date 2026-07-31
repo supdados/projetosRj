@@ -46,6 +46,8 @@ from services.etapas_mutation import (
     count_open_tasks_in_etapa,
     create_etapa_record,
     delete_regular_etapa,
+    etapa_tem_responsavel,
+    motivo_bloqueio_conclusao,
     save_etapa_comentario,
     update_regular_field,
 )
@@ -273,13 +275,17 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
             code="validation",
         )
     if done_requested and not etapa.done:
-        open_count = count_open_tasks_in_etapa(etapa.id)
-        if open_count:
-            return fail(
-                f"Finalize as {open_count} tarefa(s) pendente(s) antes de concluir.",
-                status=422,
-                code="validation",
-            )
+        # Mesma régua do toggle, sobre os valores CANDIDATOS do request (datas e
+        # o texto legado de responsável mudam nesta mesma chamada).
+        motivo = motivo_bloqueio_conclusao(
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            tem_responsavel=bool(etapa.responsaveis)
+            or bool(str(data.get("responsavel") or "").strip()),
+            tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
+        )
+        if motivo is not None:
+            return fail(motivo, status=422, code="validation")
 
     old_descricao = etapa.descricao
     etapa.descricao = data.get("descricao")
@@ -545,9 +551,9 @@ def api_etapa_toggle_iniciada(etapa_id: int) -> Response | tuple[Response, int]:
 def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     """Alterna ``done`` da etapa (envelope), espelhando ``toggle_etapa``.
 
-    Bloqueia concluir etapa não iniciada (422), sem datas de início/término
-    definidas (422) e etapa com tarefas abertas (422, ``open_task_count``).
-    Reuniões Google são recusadas.
+    Bloqueia concluir etapa não iniciada, sem datas de início/término, sem área
+    responsável (etapas importadas de modelo nascem sem) ou com tarefas abertas
+    — todas 422 via ``motivo_bloqueio_conclusao``. Reuniões Google recusadas.
 
     Returns:
         Envelope com a etapa atualizada; 404/403; 422 com a regra violada.
@@ -571,20 +577,15 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
-    if not etapa.done and (etapa.data_inicio is None or etapa.data_fim is None):
-        return fail(
-            "Defina as datas de início e de término da etapa antes de concluí-la.",
-            status=422,
-            code="validation",
-        )
     if not etapa.done:
-        open_count = count_open_tasks_in_etapa(etapa.id)
-        if open_count:
-            return fail(
-                f"Finalize as {open_count} tarefa(s) pendente(s) desta etapa antes de concluí-la.",
-                status=422,
-                code="validation",
-            )
+        motivo = motivo_bloqueio_conclusao(
+            data_inicio=etapa.data_inicio,
+            data_fim=etapa.data_fim,
+            tem_responsavel=etapa_tem_responsavel(etapa),
+            tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
+        )
+        if motivo is not None:
+            return fail(motivo, status=422, code="validation")
 
     etapa.done = not etapa.done
     status_text = "concluída" if etapa.done else "não concluída"

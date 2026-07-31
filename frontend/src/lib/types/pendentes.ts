@@ -35,6 +35,8 @@ export interface PendingEtapa {
 	data_inicio: string | null; // ISO 8601
 	data_fim: string | null; // ISO 8601
 	responsavel: string | null;
+	/** Precondição de conclusão (lista nova OU texto legado), computada no backend. */
+	tem_responsavel: boolean;
 	ordem: number;
 	iniciada: boolean;
 	done: boolean;

@@ -21,7 +21,7 @@
 	import InlineEditField from './InlineEditField.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
-	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
+	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -180,7 +180,12 @@
 	// UX preventivo: a validação dura da conclusão é do backend.
 	const motivoBloqueio = $derived(
 		statusState === 'started'
-			? podeConcluirEtapa(etapa.task_count, etapa.data_inicio, etapa.data_fim).motivo
+			? podeConcluirEtapa(
+					etapa.task_count,
+					etapa.data_inicio,
+					etapa.data_fim,
+					etapaTemResponsavel(etapa.responsaveis, etapa.responsavel)
+				).motivo
 			: null
 	);
 	const statusTitle = $derived(

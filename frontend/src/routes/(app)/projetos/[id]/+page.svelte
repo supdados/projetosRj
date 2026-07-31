@@ -71,7 +71,7 @@
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import { resolveFocusEtapaId } from '$lib/utils/focusEtapa';
-	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
+	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import ConcludeCelebrationOverlay from '$lib/components/ConcludeCelebrationOverlay.svelte';
@@ -856,7 +856,12 @@
 		if (!etapa) return;
 		const state = etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle';
 		if (state === 'started') {
-			const precondicao = podeConcluirEtapa(etapa.task_count, etapa.data_inicio, etapa.data_fim);
+			const precondicao = podeConcluirEtapa(
+				etapa.task_count,
+				etapa.data_inicio,
+				etapa.data_fim,
+				etapaTemResponsavel(etapa.responsaveis, etapa.responsavel)
+			);
 			if (!precondicao.ok) {
 				flash.warning(precondicao.motivo);
 				return;
