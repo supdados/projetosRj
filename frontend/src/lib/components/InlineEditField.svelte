@@ -404,7 +404,7 @@
 		border-radius: 8px;
 		padding: 0.18rem 0.4rem;
 		font: inherit;
-		line-height: 1.45;
+		line-height: 1.4;
 		color: inherit;
 		text-align: left;
 		cursor: text;
@@ -450,7 +450,7 @@
 	.cell-link-open {
 		display: inline-block;
 		margin-left: 0.45rem;
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		color: #8aa2bc;
 		cursor: pointer;
 		transition: color 0.16s ease;
@@ -482,7 +482,7 @@
 		color: #3e556f;
 		background: #fff;
 		font-family: inherit;
-		line-height: 1.45;
+		line-height: 1.4;
 		box-sizing: border-box;
 	}
 	/* Input single-line: altura FIXA igual ao display (inputs de data podem
@@ -508,7 +508,7 @@
 	.cell-error {
 		display: block;
 		margin-top: 0.2rem;
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		color: var(--ds-color-text-danger);
 	}
 

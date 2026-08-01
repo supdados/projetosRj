@@ -1727,7 +1727,7 @@ footer p {
 }
 
 .loading-spinner i {
-    font-size: var(--ds-font-size-6xl);
+    font-size: 3rem;
     margin-bottom: 1rem;
 }
 

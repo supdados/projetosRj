@@ -709,9 +709,9 @@
 		border-bottom: 1px solid var(--ds-color-border-base);
 		background: var(--ds-color-surface-muted);
 		color: var(--ds-color-text-secondary);
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.06em;
 		font-weight: 700;
 		padding: 0.58rem 0.7rem;
 		white-space: nowrap;
@@ -822,7 +822,7 @@
 		border-radius: 8px;
 		padding: 0.6rem 0.9rem;
 		color: var(--ds-color-text-brand);
-		font-size: 0.82rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		cursor: pointer;
 		transition:
@@ -846,7 +846,7 @@
 		color: var(--ds-color-text-primary);
 		background: var(--ds-color-surface-base);
 		font-family: inherit;
-		line-height: 1.45;
+		line-height: 1.4;
 		box-sizing: border-box;
 	}
 	.composer-textarea {

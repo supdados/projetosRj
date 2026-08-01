@@ -262,7 +262,7 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="m-0 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+				<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
 					Histórico do projeto
 				</p>
 				<h2
@@ -383,7 +383,7 @@
 			<div class="flex flex-col gap-5">
 				{#each dayGroups as group (group.label)}
 					<section aria-label={group.label} class="flex flex-col gap-2">
-						<h3 class="m-0 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+						<h3 class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
 							{group.label}
 						</h3>
 						<ol class="m-0 flex list-none flex-col border-l border-border-subtle p-0">

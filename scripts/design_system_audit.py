@@ -34,9 +34,9 @@ EXPECTED_LINKS = {
 
 EXPECTED_FILES = [
     Path("static/design-system.css"),
-    Path("static/fonts/Inter-Variable.woff2"),
-    Path("static/fonts/Inter-Italic-Variable.woff2"),
-    Path("static/fonts/Manrope-Variable.woff2"),
+    Path("static/fonts/Chivo-Variable.woff2"),
+    Path("static/fonts/Chivo-Italic-Variable.woff2"),
+    Path("static/fonts/ChivoMono-Variable.woff2"),
     Path("static/pages/index.css"),
     Path("static/pages/projects-list.css"),
     Path("static/pages/project-detail.css"),
@@ -110,15 +110,15 @@ DESKTOP_ONLY_CSS_PATTERNS = [
 ]
 
 EXPECTED_BASE_PRELOADS = [
-    "fonts/Inter-Variable.woff2",
-    "fonts/Inter-Italic-Variable.woff2",
-    "fonts/Manrope-Variable.woff2",
+    "fonts/Chivo-Variable.woff2",
+    "fonts/Chivo-Italic-Variable.woff2",
+    "fonts/ChivoMono-Variable.woff2",
 ]
 
 EXPECTED_FONT_FACE_FRAGMENTS = [
-    "url('fonts/Inter-Variable.woff2') format('woff2')",
-    "url('fonts/Inter-Italic-Variable.woff2') format('woff2')",
-    "url('fonts/Manrope-Variable.woff2') format('woff2')",
+    "url('fonts/Chivo-Variable.woff2') format('woff2')",
+    "url('fonts/Chivo-Italic-Variable.woff2') format('woff2')",
+    "url('fonts/ChivoMono-Variable.woff2') format('woff2')",
 ]
 
 EXPECTED_WOFF2_MAGIC = b"wOF2"
@@ -287,9 +287,9 @@ def main() -> int:
 
     # Check local font assets are not empty
     for rel in [
-        Path("static/fonts/Inter-Variable.woff2"),
-        Path("static/fonts/Inter-Italic-Variable.woff2"),
-        Path("static/fonts/Manrope-Variable.woff2"),
+        Path("static/fonts/Chivo-Variable.woff2"),
+        Path("static/fonts/Chivo-Italic-Variable.woff2"),
+        Path("static/fonts/ChivoMono-Variable.woff2"),
     ]:
         full_path = ROOT / rel
         if not full_path.exists():

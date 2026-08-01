@@ -1274,7 +1274,7 @@
 							onSelect={saveOrgao}
 						/>
 						{#if projectFieldStates.orgao_id?.error}
-							<span role="alert" class="text-[0.72rem] text-danger"
+							<span role="alert" class="text-xs text-danger"
 								>{projectFieldStates.orgao_id.error}</span
 							>
 						{/if}

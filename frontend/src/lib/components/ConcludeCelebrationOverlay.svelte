@@ -151,7 +151,7 @@
 		color: var(--ds-color-text-primary);
 		font-size: 1.25rem;
 		font-weight: 700;
-		line-height: 1.3;
+		line-height: 1.25;
 	}
 
 	.project-conclude-celebration__message {

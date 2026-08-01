@@ -28,7 +28,7 @@
 		size === 'lg'
 			? 'h-8 w-8 text-xs'
 			: size === 'md'
-				? 'h-7 w-7 text-[11px]'
+				? 'h-7 w-7 text-2xs'
 				: size === 'xs'
 					? 'h-5 w-5 text-[9px]'
 					: 'h-6 w-6 text-[10px]'

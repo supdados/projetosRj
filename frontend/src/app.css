@@ -7,25 +7,25 @@
  */
 
 @font-face {
-	font-family: 'InterVariable';
-	src: url('/static/fonts/Inter-Variable.woff2') format('woff2');
+	font-family: 'ChivoVariable';
+	src: url('/static/fonts/Chivo-Variable.woff2') format('woff2');
 	font-weight: 100 900;
 	font-style: normal;
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'InterVariable';
-	src: url('/static/fonts/Inter-Italic-Variable.woff2') format('woff2');
+	font-family: 'ChivoVariable';
+	src: url('/static/fonts/Chivo-Italic-Variable.woff2') format('woff2');
 	font-weight: 100 900;
 	font-style: italic;
 	font-display: swap;
 }
 
 @font-face {
-	font-family: 'ManropeVariable';
-	src: url('/static/fonts/Manrope-Variable.woff2') format('woff2');
-	font-weight: 200 800;
+	font-family: 'ChivoMonoVariable';
+	src: url('/static/fonts/ChivoMono-Variable.woff2') format('woff2');
+	font-weight: 100 900;
 	font-style: normal;
 	font-display: swap;
 }
@@ -414,11 +414,11 @@
 
 @layer base {
 	html {
-		font-family: var(--ds-font-family-body, 'InterVariable', 'Inter', system-ui, sans-serif);
+		font-family: var(--ds-font-family-body, 'ChivoVariable', 'Chivo', system-ui, sans-serif);
 	}
 
 	body {
-		font-size: 0.95rem;
+		font-size: 1rem;
 		line-height: 1.5;
 		color: var(--ds-color-text-primary);
 		background: var(--ds-color-surface-canvas);
@@ -430,7 +430,7 @@
 	h4,
 	h5,
 	h6 {
-		font-family: 'ManropeVariable', 'Manrope', 'Inter', system-ui, sans-serif;
+		font-family: 'ChivoVariable', 'Chivo', system-ui, sans-serif;
 		line-height: 1.25;
 		letter-spacing: -0.01em;
 	}

@@ -225,7 +225,7 @@
 		>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				<div class="flex items-center gap-2">
-					<p class="m-0 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+					<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
 						Tarefa{#if detail}&nbsp;#{detail.id}{/if}
 					</p>
 					{#if detail?.is_archived}

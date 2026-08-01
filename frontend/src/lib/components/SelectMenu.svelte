@@ -120,7 +120,7 @@
 		return idx >= 0 ? idx : firstEnabledIndex();
 	}
 
-	// Altura estimada de uma linha do painel (py-1.5 + texto 12.5px).
+	// Altura estimada de uma linha do painel (py-1.5 + texto sm).
 	const ROW_H = 30;
 
 	// Painel promovido ao top layer via Popover API: por spec, ignora containing
@@ -285,7 +285,7 @@
 			'flex w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface text-left transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-context disabled:cursor-not-allowed disabled:opacity-50';
 		const sizeClass =
 			size === 'sm'
-				? 'h-[var(--control-h-sm)] px-2.5 text-[12.5px]'
+				? 'h-[var(--control-h-sm)] px-2.5 text-sm'
 				: 'h-[var(--control-h-md)] px-3 text-sm';
 		return `${base} ${sizeClass}`;
 	});
@@ -366,13 +366,13 @@
 						autocomplete="off"
 						placeholder="Buscar..."
 						aria-label="Buscar opção"
-						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 					/>
 				</div>
 			{/if}
 
 			{#if navItems.length === 0}
-				<div class="px-2.5 py-6 text-center text-[12.5px] text-text-muted">
+				<div class="px-2.5 py-6 text-center text-sm text-text-muted">
 					Nenhuma opção encontrada
 				</div>
 			{:else}
@@ -393,7 +393,7 @@
 								chooseItem(item);
 							}
 						}}
-						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors duration-fast {item
+						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-fast {item
 							.option?.disabled
 							? 'cursor-not-allowed opacity-50'
 							: 'cursor-pointer'} {isSelected ? 'bg-wash-brand' : isHighlighted ? 'bg-surface-muted' : ''}"

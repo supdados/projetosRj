@@ -315,7 +315,7 @@
 	.ic-error {
 		display: block;
 		margin-top: 0.2rem;
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		color: var(--ds-color-text-danger);
 	}
 

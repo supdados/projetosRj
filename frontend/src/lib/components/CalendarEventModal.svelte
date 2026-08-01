@@ -960,7 +960,7 @@
 	}
 	.cal-modal-title {
 		flex: 1;
-		font-size: 0.85rem;
+		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--ds-color-text-primary);
 		margin: 0;
@@ -1008,7 +1008,7 @@
 		border-bottom: 2px solid var(--ds-color-border-base);
 		border-radius: 0;
 		padding: 0.3rem 0;
-		font-size: 1.05rem;
+		font-size: 1.125rem;
 		font-weight: 500;
 		color: var(--ds-color-text-primary);
 		background: transparent;
@@ -1575,7 +1575,7 @@
 		text-align: left;
 		transition: background 0.1s;
 		font-family: inherit;
-		line-height: 1.3;
+		line-height: 1.25;
 	}
 	.cdp-time-option:hover:not(.cdp-time-option--selected):not(.cdp-time-option--disabled) {
 		background: var(--ds-color-surface-muted);

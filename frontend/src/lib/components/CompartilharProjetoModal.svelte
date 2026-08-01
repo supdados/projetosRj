@@ -530,7 +530,7 @@
 				<div class="flex min-w-0 items-baseline gap-2">
 					<h2
 						id="compartilhar-titulo"
-						class="shrink-0 font-heading text-[15px] font-semibold text-text-primary"
+						class="shrink-0 font-heading text-base font-semibold text-text-primary"
 					>
 						Compartilhar
 					</h2>
@@ -667,7 +667,7 @@
 											: ''}"
 									>
 										<span class="shrink-0 truncate">
-											{#if linha.path}<span class="mr-1 text-[11.5px] text-text-muted"
+											{#if linha.path}<span class="mr-1 text-xs text-text-muted"
 													>{linha.path} ›</span
 												>{/if}<span class="text-xs font-semibold text-text-primary"
 												>{linha.option.sigla}</span
@@ -755,7 +755,7 @@
 						</SelectMenu>
 					</div>
 					{#if expiracaoPrevista}
-						<span class="text-[12.5px] tabular-nums text-text-muted"
+						<span class="text-xs tabular-nums text-text-muted"
 							>· até {formatarData(expiracaoPrevista)}</span
 						>
 					{/if}
@@ -765,7 +765,7 @@
 					<p role="alert" class="text-sm text-danger">{formError}</p>
 				{:else if resumoAcao}
 					<p role="status" aria-live="polite" class="text-sm font-medium text-text-secondary">
-						<i class="fas fa-check text-[11px] text-success" aria-hidden="true"></i>
+						<i class="fas fa-check text-2xs text-success" aria-hidden="true"></i>
 						{resumoAcao}
 					</p>
 				{/if}
@@ -826,7 +826,7 @@
 					</button>
 					<h2
 						id="compartilhar-titulo"
-						class="shrink-0 font-heading text-[15px] font-semibold text-text-primary"
+						class="shrink-0 font-heading text-base font-semibold text-text-primary"
 					>
 						Gerenciar acesso
 					</h2>
@@ -844,7 +844,7 @@
 					class="flex h-[34px] min-w-0 flex-1 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 transition-colors duration-fast focus-within:border-brand"
 				>
 					<i
-						class="fas fa-magnifying-glass shrink-0 text-[11px] text-text-faint"
+						class="fas fa-magnifying-glass shrink-0 text-2xs text-text-faint"
 						aria-hidden="true"
 					></i>
 					<input
@@ -861,7 +861,7 @@
 							type="button"
 							onclick={() => (filtroTermo = '')}
 							aria-label="Limpar filtro"
-							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[11px] text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							<i class="fas fa-times" aria-hidden="true"></i>
 						</button>
@@ -950,7 +950,7 @@
 		type="button"
 		aria-pressed={modo === alvo}
 		onclick={() => trocarModo(alvo)}
-		class="grid w-[82px] place-items-center text-[12.5px] transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {modo ===
+		class="grid w-[82px] place-items-center text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {modo ===
 		alvo
 			? 'bg-brand font-semibold text-white'
 			: 'font-medium text-text-muted hover:text-text-primary'}"
@@ -981,7 +981,7 @@
 		class="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-2.5 transition-colors duration-fast last:border-b-0 hover:bg-surface-muted"
 	>
 		<span
-			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-[11px] font-bold text-brand {membro.status ===
+			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-2xs font-bold text-brand {membro.status ===
 			'revogado'
 				? 'opacity-60'
 				: ''}"
@@ -991,11 +991,11 @@
 		</span>
 
 		<div class="flex min-w-0 flex-1 flex-col {membro.status === 'revogado' ? 'opacity-60' : ''}">
-			<span class="truncate text-[13.5px] font-medium text-text-primary">
+			<span class="truncate text-md font-medium text-text-primary">
 				{membro.user_name}
 				<span class="font-normal text-text-muted">@{membro.user_username}</span>
 			</span>
-			<span class="truncate text-[11.5px] text-text-secondary">
+			<span class="truncate text-xs text-text-secondary">
 				{metaConvidado(membro)}
 			</span>
 		</div>

@@ -789,12 +789,12 @@
 		max-width: calc(100% - 120px);
 	}
 	/* Peso 600 e branco SÓLIDO (o degradê com clip de texto deixava o título
-	   pesado/borrado); a família vem do base layer (Manrope, como todo heading). */
+	   pesado/borrado); a família vem do base layer (Chivo, como todo heading). */
 	.ph-title {
 		margin: 0 0 0.12rem;
 		font-weight: 600;
 		font-size: 1.5rem;
-		line-height: 1.2;
+		line-height: 1.25;
 		color: var(--ds-color-on-brand-strong);
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
@@ -895,7 +895,7 @@
 		color: var(--ds-color-on-brand-strong);
 		font-size: 1.5rem;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 		white-space: pre;
 	}
 	/* Oculta o <h1> ao editar mantendo-o acessível (heading nível 1 + nome da
@@ -928,7 +928,7 @@
 		border-radius: 5px;
 		background: transparent;
 		color: var(--ds-color-on-brand-muted);
-		font-size: 0.6rem;
+		font-size: 0.6875rem;
 		line-height: 1;
 		cursor: pointer;
 		opacity: 0;
@@ -947,7 +947,7 @@
 		   usa align-items: flex-start; sem isto o botão ficava acima do campo). */
 		align-self: center;
 		margin-top: 0;
-		font-size: 0.54rem;
+		font-size: 0.6875rem;
 	}
 	/* Aparece só no hover/foco da linha. */
 	.ph-title-row:hover .ph-edit-pen,
@@ -1058,10 +1058,10 @@
 	.ph-text-editor--title {
 		max-width: 100%;
 		/* Mesma família dos headings (o inherit pegaria a fonte do corpo). */
-		font-family: 'ManropeVariable', 'Manrope', 'Inter', system-ui, sans-serif;
+		font-family: 'ChivoVariable', 'Chivo', system-ui, sans-serif;
 		font-size: 1.5rem;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 	}
 	.ph-text-editor--description {
 		max-width: 100%;
@@ -1085,9 +1085,9 @@
 		margin-bottom: 0.4rem;
 		padding: 0.15rem 0.6rem;
 		border-radius: 999px;
-		font-size: 0.68rem;
+		font-size: 0.6875rem;
 		font-weight: 700;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--ds-color-on-brand-strong);
 		background: var(--ds-color-on-brand-hover);
@@ -1111,7 +1111,7 @@
 		font-family: inherit;
 		cursor: pointer;
 		border-radius: 8px;
-		font-size: 0.82rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		text-decoration: none;
 		color: var(--ds-color-on-brand-strong);
@@ -1151,10 +1151,10 @@
 		left: 0;
 		margin-bottom: 0.2rem;
 		padding-left: 0.15rem;
-		font-size: 0.58rem;
+		font-size: 0.6875rem;
 		font-weight: 700;
 		line-height: 1;
-		letter-spacing: 0.07em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		white-space: nowrap;
 		color: var(--ds-color-on-brand-muted);
@@ -1196,7 +1196,7 @@
 		background: color-mix(in srgb, var(--ds-color-neutral-1000) 8%, transparent);
 		border: 1px solid var(--ds-color-on-brand-divider);
 		color: var(--ds-color-on-brand-strong);
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 		font-weight: 600;
 		line-height: 1;
 		white-space: nowrap;
@@ -1221,9 +1221,10 @@
 		background: color-mix(in srgb, var(--ds-color-neutral-1000) 16%, transparent);
 		border-color: var(--ds-color-on-brand-muted);
 	}
-	.ph-chip-caret {
+	/* .ph-chip .ph-chip-caret (0,2,0) vence .ph-chip i (0,1,1) sem !important. */
+	.ph-chip .ph-chip-caret {
 		margin-left: 0.05rem;
-		font-size: 0.55rem !important;
+		font-size: 0.6875rem;
 		color: var(--ds-color-on-brand-muted) !important;
 		opacity: 0;
 		transition: opacity 0.16s ease;
@@ -1233,7 +1234,7 @@
 		opacity: 1;
 	}
 	.ph-chip i {
-		font-size: 0.74rem;
+		font-size: 0.75rem;
 	}
 	.ph-chip-dot {
 		width: 7px;
@@ -1272,11 +1273,11 @@
 		gap: 0.5rem;
 		padding: 0.35rem 0.18rem 0.35rem 0.4rem;
 		color: var(--ds-color-on-brand-strong);
-		font-size: 0.82rem;
+		font-size: 0.8125rem;
 		line-height: 1;
 	}
 	.ph-chip-dates > i {
-		font-size: 0.92rem;
+		font-size: 0.875rem;
 		color: var(--ds-color-on-brand-muted);
 	}
 	.ph-date-range {
@@ -1426,13 +1427,13 @@
 		color: var(--ds-color-text-secondary);
 		border-radius: 6px;
 		padding: 0.18rem 0.55rem;
-		font-size: 0.72rem;
+		font-size: 0.6875rem;
 		font-weight: 600;
 		line-height: 1;
 		white-space: nowrap;
 	}
 	.pc-chip i {
-		font-size: 0.62rem;
+		font-size: 0.6875rem;
 	}
 	.pc-chip-dot {
 		width: 7px;
@@ -1468,7 +1469,7 @@
 		gap: 0.35rem;
 		border-radius: 8px;
 		padding: 0.38rem 0.74rem;
-		font-size: 0.72rem;
+		font-size: 0.6875rem;
 		font-weight: 600;
 		border: 1px solid var(--ds-color-border-base);
 		background: var(--ds-color-surface-base);

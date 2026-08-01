@@ -350,7 +350,7 @@
 	// Rótulos de coluna (mesmo token visual do StageGroupHeader do hub, um
 	// degrau menor — acompanha a variante compacta da grade).
 	const COL_LABEL =
-		'self-center text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
+		'self-center text-center text-2xs font-bold uppercase tracking-caps text-text-secondary';
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -380,7 +380,7 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="m-0 truncate text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+				<p class="m-0 truncate text-2xs font-bold uppercase tracking-caps text-text-muted">
 					{eyebrow}
 				</p>
 				<h2
@@ -457,7 +457,7 @@
 				     como no hub — colunas sempre alinhadas. -->
 				<div class="overflow-x-auto overflow-y-hidden">
 					<div class="task-hub-grid bg-wash-neutral px-3 py-2">
-						<span class="text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary">
+						<span class="text-2xs font-bold uppercase tracking-caps text-text-secondary">
 							Tarefa
 						</span>
 						<span class={COL_LABEL}>Prioridade</span>

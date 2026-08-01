@@ -1627,7 +1627,7 @@
 		font-weight: 600;
 		color: var(--app-color-text-muted);
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.06em;
 		border-bottom: 1px solid var(--app-color-border);
 		background: var(--app-color-surface-muted);
 	}
@@ -1863,7 +1863,7 @@
 	.cal-popover-weekday {
 		font-size: 0.75rem;
 		font-weight: 500;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 		color: var(--ds-color-text-muted);
 	}
@@ -1873,7 +1873,7 @@
 		border-radius: 50%;
 		display: grid;
 		place-items: center;
-		font-size: 1.9rem;
+		font-size: 1.75rem;
 		line-height: 1;
 		font-weight: 500;
 		color: var(--ds-color-text-brand);
@@ -1890,7 +1890,7 @@
 		background: none;
 		border: none;
 		border-radius: 999px;
-		font-size: 1.9rem;
+		font-size: 1.75rem;
 		line-height: 1;
 		cursor: pointer;
 		color: var(--ds-color-text-muted);
@@ -1913,7 +1913,7 @@
 		min-width: 0;
 		padding: 0.26rem 0.18rem;
 		font-size: 0.75rem;
-		line-height: 1.3;
+		line-height: 1.25;
 		cursor: pointer;
 		--cal-popover-dot: var(--ds-color-fill-brand);
 		color: var(--ds-color-text-secondary);
@@ -2007,14 +2007,14 @@
 		font-size: 0.875rem;
 		font-weight: 700;
 		color: var(--ds-color-text-primary);
-		line-height: 1.32;
+		line-height: 1.25;
 		word-break: break-word;
 	}
 	.cal-event-popover-close {
 		border: none;
 		background: none;
 		color: var(--ds-color-text-muted);
-		font-size: 1.05rem;
+		font-size: 1.125rem;
 		line-height: 1;
 		cursor: pointer;
 		padding: 0 0.18rem;
@@ -2035,7 +2035,7 @@
 		gap: 0.42rem;
 		font-size: 0.8125rem;
 		color: var(--ds-color-text-secondary);
-		line-height: 1.42;
+		line-height: 1.4;
 	}
 	.cal-event-popover-info i {
 		width: 0.9rem;
@@ -2048,7 +2048,7 @@
 		margin-top: 0.08rem;
 		font-size: 0.75rem;
 		color: var(--ds-color-text-secondary);
-		line-height: 1.45;
+		line-height: 1.4;
 		white-space: pre-wrap;
 		word-break: break-word;
 	}

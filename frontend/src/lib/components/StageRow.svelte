@@ -608,8 +608,8 @@
 		border: 1px solid transparent;
 		border-radius: 6px;
 		text-align: left;
-		font-size: 0.78rem;
-		line-height: 1.45;
+		font-size: 0.8125rem;
+		line-height: 1.4;
 		font-family: inherit;
 	}
 	.etapa-comentario-display,
@@ -711,7 +711,7 @@
 		border: 1px solid var(--stage-chip-started-border);
 		background: var(--stage-chip-started-bg);
 		color: var(--stage-chip-started-text);
-		font-size: 0.78rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
 		line-height: 1;
 		cursor: pointer;
@@ -738,7 +738,7 @@
 		font-weight: 700;
 	}
 	.etapa-task-pill i {
-		font-size: 0.9rem;
+		font-size: 0.875rem;
 	}
 	.etapa-task-pill-add {
 		display: none;
@@ -807,7 +807,7 @@
 
 	.text-muted-small {
 		color: var(--ds-color-text-muted);
-		font-size: 0.78rem;
+		font-size: 0.75rem;
 	}
 
 	.etapa-meeting-drag-icon {
@@ -826,7 +826,7 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		color: var(--ds-color-text-secondary);
-		font-size: 0.72rem;
+		font-size: 0.75rem;
 		font-weight: 500;
 		margin-top: 0.15rem;
 	}

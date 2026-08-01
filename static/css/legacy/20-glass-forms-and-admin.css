@@ -933,7 +933,7 @@
 }
 
 .stages-empty-state i {
-    font-size: var(--ds-font-size-6xl);
+    font-size: 3rem;
     color: rgba(0, 90, 146, 0.3);
     margin-bottom: 1rem;
 }

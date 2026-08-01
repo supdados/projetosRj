@@ -106,7 +106,7 @@
 				></iframe>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-12 text-center text-text-secondary">
-					<i class="fas fa-file text-5xl text-text-muted" aria-hidden="true"></i>
+					<i class="fas fa-file text-[2.5rem] text-text-muted" aria-hidden="true"></i>
 					<p class="m-0 text-sm">Preview não disponível para este tipo de arquivo.</p>
 					<span class="text-xs text-text-muted">{current.filename}</span>
 				</div>

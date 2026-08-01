@@ -418,7 +418,7 @@
 		background: transparent;
 		color: #14304d;
 		font-size: 0.875rem;
-		line-height: 1.3;
+		line-height: 1.25;
 	}
 
 	.app-global-search-input::placeholder {
@@ -497,7 +497,7 @@
 		border-bottom: 1px solid var(--ds-color-border-base);
 		font-size: 0.6875rem;
 		text-transform: uppercase;
-		letter-spacing: 0.04em;
+		letter-spacing: 0.06em;
 		font-weight: 700;
 		color: var(--ds-color-text-muted);
 	}
@@ -580,7 +580,7 @@
 	.app-global-search-item-meta {
 		font-size: 0.6875rem;
 		color: var(--ds-color-text-muted);
-		line-height: 1.3;
+		line-height: 1.25;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -609,7 +609,7 @@
 	.app-global-search-match-text {
 		font-size: 0.6875rem;
 		color: var(--ds-color-text-muted);
-		line-height: 1.3;
+		line-height: 1.25;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -639,7 +639,7 @@
 		color: var(--ds-color-text-brand);
 		font-size: 0.8125rem;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.25;
 		padding: 0.48rem 0.62rem;
 		transition:
 			background 0.16s ease,

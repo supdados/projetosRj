@@ -290,7 +290,7 @@
 	}
 
 	.orgao-sigla {
-		font-family: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+		font-family: 'ChivoMonoVariable', 'Chivo Mono', 'SFMono-Regular', ui-monospace, monospace;
 		font-weight: 700;
 		font-size: 0.8125rem;
 		color: var(--ds-color-text-primary);

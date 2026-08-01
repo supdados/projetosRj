@@ -223,8 +223,8 @@ export default {
 			},
 			fontFamily: {
 				body: [
-					'InterVariable',
-					'Inter',
+					'ChivoVariable',
+					'Chivo',
 					'-apple-system',
 					'Segoe UI',
 					'Roboto',
@@ -232,8 +232,8 @@ export default {
 					'sans-serif'
 				],
 				sans: [
-					'InterVariable',
-					'Inter',
+					'ChivoVariable',
+					'Chivo',
 					'-apple-system',
 					'Segoe UI',
 					'Roboto',
@@ -241,32 +241,46 @@ export default {
 					'sans-serif'
 				],
 				heading: [
-					'ManropeVariable',
-					'Manrope',
-					'Inter',
+					'ChivoVariable',
+					'Chivo',
 					'-apple-system',
 					'Segoe UI',
 					'Roboto',
 					'Arial',
 					'sans-serif'
 				],
-				mono: ['SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', 'monospace']
+				mono: [
+					'ChivoMonoVariable',
+					'Chivo Mono',
+					'SFMono-Regular',
+					'Consolas',
+					'Liberation Mono',
+					'Menlo',
+					'monospace'
+				]
 			},
 			fontSize: {
-				// --ds-font-size-* (base = 0.95rem, NAO 1rem)
-				'2xs': '0.6875rem',
-				xs: '0.75rem',
-				sm: '0.8125rem',
-				// md (0.875rem) aposentado no contrato de estilo — usar sm ou base
-				base: '0.95rem',
-				lg: '1.05rem',
-				xl: '1.2rem',
-				'2xl': '1.4rem',
-				'3xl': '1.6rem',
-				'4xl': '2rem',
-				'5xl': '2.5rem',
-				'6xl': '3rem',
-				'7xl': '3.5rem'
+				// --ds-font-size-*: cada degrau carrega o line-height do seu papel.
+				// 11px — só labels/badges/meta de 1 linha, nunca texto corrido
+				'2xs': ['0.6875rem', { lineHeight: '1rem' }],
+				// 12px — legendas, hints e rodapés de campo
+				xs: ['0.75rem', { lineHeight: '1rem' }],
+				// 13px — corpo padrão de UI/tabelas
+				sm: ['0.8125rem', { lineHeight: '1.25rem' }],
+				// 14px — corpo confortável/descrições
+				md: ['0.875rem', { lineHeight: '1.25rem' }],
+				// 16px — texto longo de leitura e títulos de card
+				base: ['1rem', { lineHeight: '1.5rem' }],
+				// 18px — subtítulo de seção
+				lg: ['1.125rem', { lineHeight: '1.5rem' }],
+				// 20px — título de seção
+				xl: ['1.25rem', { lineHeight: '1.75rem' }],
+				// 24px — título de página
+				'2xl': ['1.5rem', { lineHeight: '2rem' }],
+				// 28px — display curto (hero de tela)
+				'3xl': ['1.75rem', { lineHeight: '2.25rem' }],
+				// 32px — maior degrau da escala; acima disso é ilustração, não texto
+				'4xl': ['2rem', { lineHeight: '2.5rem' }]
 			},
 			lineHeight: {
 				tight: '1.15',
@@ -278,7 +292,8 @@ export default {
 				tight: '-0.01em',
 				normal: '0',
 				wide: '0.02em',
-				caps: '0.04em'
+				// único tracking de eyebrow uppercase
+				caps: '0.06em'
 			},
 			fontWeight: {
 				regular: '400',

@@ -345,7 +345,7 @@
 						onkeyup={(e) => {
 							if (e.key === 'Enter') pressedPath = null;
 						}}
-						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-[0.85rem] font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {active
+						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-md font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {active
 							? 'text-brand'
 							: 'text-on-brand-muted hover:text-on-topnav'}"
 					>
@@ -379,7 +379,7 @@
 					aria-expanded={notifOpen}
 					title="Notificações"
 					aria-label="Notificações"
-					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
+					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
 						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 				>
@@ -453,7 +453,7 @@
 												<span class="truncate text-sm font-semibold text-text-primary"
 													>{item.title || 'Atualização'}</span
 												>
-												<span class="shrink-0 text-[0.68rem] text-text-muted"
+												<span class="shrink-0 text-2xs text-text-muted"
 													>{relativeTime(item.created_at)}</span
 												>
 											</span>
@@ -484,7 +484,7 @@
 						aria-current={adminActive ? 'page' : undefined}
 						title="Conta e administracao"
 						aria-label="Conta e administracao"
-						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-[0.9rem] transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {adminActive ||
+						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {adminActive ||
 						adminOpen
 							? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 							: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"

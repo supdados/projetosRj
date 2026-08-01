@@ -190,7 +190,7 @@
 		>
 			<div class="flex items-start justify-between gap-3">
 				<div class="flex min-w-0 flex-col gap-1">
-					<p class="m-0 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+					<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
 						Histórico
 					</p>
 					<h2

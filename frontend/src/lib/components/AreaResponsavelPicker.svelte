@@ -382,13 +382,13 @@
 	>
 		{#if lista.length > 0}
 			<div class="shrink-0 border-b border-border-subtle px-2 pb-1.5 pt-2">
-				<div class="px-1 pb-1 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+				<div class="px-1 pb-1 text-2xs font-bold uppercase tracking-caps text-text-muted">
 					Selecionadas
 				</div>
 				<ul class="thin-scroll flex max-h-[140px] flex-col overflow-y-auto">
 					{#each lista as item (item.area_id ?? item.label)}
 						<li class="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-fast hover:bg-surface-muted">
-							<span class="shrink-0 text-[12.5px] font-semibold text-text-primary">{item.label}</span>
+							<span class="shrink-0 text-sm font-semibold text-text-primary">{item.label}</span>
 							<span
 								class="min-w-0 flex-1 truncate text-2xs text-text-muted"
 								title={nomeByKey.get(item.area_id ?? -1) ?? undefined}
@@ -473,8 +473,8 @@
 						<!-- Sem truncate: o caminho completo SEMPRE aparece, quebrando linha
 						     quando não couber. -->
 						<span class="min-w-0 flex-1 whitespace-normal break-words leading-snug" title={row.option.nome}>
-							{#if row.path}<span class="text-[11.5px] text-text-muted">{row.path} › </span
-								>{/if}<span class="text-[12.5px] font-medium text-text-primary"
+							{#if row.path}<span class="text-xs text-text-muted">{row.path} › </span
+								>{/if}<span class="text-sm font-medium text-text-primary"
 								>{row.option.sigla}</span
 							>
 						</span>

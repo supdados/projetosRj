@@ -17,7 +17,7 @@
 
 	// Rótulos de coluna: token de texto neutro (contraste garantido em light E dark;
 	// `primary-700/60` falhava no dark sobre o header translúcido).
-	const LABEL = 'self-center text-center text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
+	const LABEL = 'self-center text-center text-2xs font-bold uppercase tracking-caps text-text-secondary';
 </script>
 
 <div class="task-hub-grid w-full bg-wash-neutral px-3 py-2 text-left">

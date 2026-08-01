@@ -361,7 +361,7 @@
 								{String(index + 1).padStart(2, '0')}
 							</span>
 							<span
-								class="relative block max-w-[86%] text-[13.5px] font-semibold leading-snug text-text-primary"
+								class="relative block max-w-[86%] text-md font-semibold leading-snug text-text-primary"
 							>
 								<span class="sr-only">Objetivo {index + 1}:</span>
 								{semNumeroInicial(objetivo.descricao)}

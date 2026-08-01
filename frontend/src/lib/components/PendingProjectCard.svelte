@@ -313,7 +313,7 @@
 	}
 
 	// Rótulo de coluna: mesmo estilo do StageGroupHeader do hub de Tarefas.
-	const TH = 'px-2 py-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-secondary';
+	const TH = 'px-2 py-2 text-2xs font-bold uppercase tracking-caps text-text-secondary';
 </script>
 
 {#snippet stageColumns()}
@@ -473,7 +473,7 @@
 						class="overflow-hidden border-t border-dashed border-border-subtle pt-3"
 						transition:slide={{ duration: 340, easing: cubicOut }}
 					>
-						<div class="pb-2 text-2xs font-bold uppercase tracking-[0.08em] text-text-muted">
+						<div class="pb-2 text-2xs font-bold uppercase tracking-caps text-text-muted">
 							Outras etapas
 						</div>
 						<div class="overflow-x-auto rounded-lg border border-border-subtle">

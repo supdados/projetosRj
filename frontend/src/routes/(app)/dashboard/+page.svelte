@@ -638,7 +638,7 @@
 	.ring-label {
 		margin-top: 3cqw;
 		font-size: 8cqw;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.06em;
 	}
 
 	/* Itens de tarefas recentes que nao cabem inteiros na altura da lista sao

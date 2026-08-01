@@ -1117,7 +1117,7 @@
 	}
 
 	// --- Classes utilitárias (campos com visual unificado) -------------------
-	const labelClass = 'text-2xs font-bold uppercase tracking-[.08em] text-text-label';
+	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-label';
 	const fieldBaseClass =
 		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60';
 	const fieldClass = `h-11 text-base ${fieldBaseClass}`;
@@ -1175,7 +1175,7 @@
 			{/each}
 		</div>
 		{#if label}
-			<span class="text-[10px] font-semibold uppercase tracking-[.06em] text-text-faint">
+			<span class="text-2xs font-semibold uppercase tracking-caps text-text-faint">
 				{label}
 			</span>
 		{/if}
@@ -1487,7 +1487,7 @@
 								</span>
 								<h2
 									id="criar-projeto-title"
-									class="font-heading text-[24px] font-bold text-text-primary"
+									class="font-heading text-2xl font-bold text-text-primary"
 								>
 									Projeto criado!
 								</h2>
@@ -1501,7 +1501,7 @@
 								<div class="min-w-0 flex-1">
 									<h2
 										id="criar-projeto-title"
-										class="font-heading text-[24px] font-bold text-text-primary"
+										class="font-heading text-2xl font-bold text-text-primary"
 									>
 										{createdTitulo}
 									</h2>
@@ -1529,7 +1529,7 @@
 									class="flex w-full items-center gap-3 border-t border-border-hairline px-1.5 py-2 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 								>
 									<span
-										class="grid h-5 w-5 flex-none place-items-center text-[11px] font-bold tabular-nums {feita
+										class="grid h-5 w-5 flex-none place-items-center text-2xs font-bold tabular-nums {feita
 											? 'text-success'
 											: 'text-text-faint'}"
 										aria-hidden="true"
@@ -1968,7 +1968,7 @@
 							class="cp-success-icon h-28 w-28"
 							aria-hidden="true"
 						/>
-						<h2 id="criar-projeto-title" class="font-heading text-[24px] font-bold text-text-primary">
+						<h2 id="criar-projeto-title" class="font-heading text-2xl font-bold text-text-primary">
 							Cadastro concluído
 						</h2>
 						<p class="max-w-md text-center text-sm text-text-faint">
