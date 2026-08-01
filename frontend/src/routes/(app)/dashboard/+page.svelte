@@ -15,7 +15,7 @@
 	import StatCard from '$lib/components/StatCard.svelte';
 	import FolderReveal from '$lib/components/micro/FolderReveal.svelte';
 	import ClipboardStamp from '$lib/components/micro/ClipboardStamp.svelte';
-	import FolderFlip from '$lib/components/micro/FolderFlip.svelte';
+	import FolderPeek from '$lib/components/micro/FolderPeek.svelte';
 	import AlertHourglass from '$lib/components/micro/AlertHourglass.svelte';
 	import RecentProjectsPanel from '$lib/components/RecentProjectsPanel.svelte';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
@@ -414,8 +414,15 @@
 					linkLabel="Ver projetos vigentes"
 				>
 					{#snippet icon()}
-						<!-- Micro-interacao: pilha de 3 pastas que folheia uma a uma no hover. -->
-						<FolderFlip size={46} />
+						<!-- Micro-interacao: capa da pasta abre em 3D e duas folhas sobem em leque
+							 no hover (mesmos prints do card "Projetos", servidos pelo Flask). -->
+						<FolderPeek
+							size={52}
+							images={[
+								'/static/img/dashboard/folder/3.webp',
+								'/static/img/dashboard/folder/1.webp'
+							]}
+						/>
 					{/snippet}
 				</StatCard>
 
