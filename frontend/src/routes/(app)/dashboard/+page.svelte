@@ -400,8 +400,8 @@
 					linkLabel="Ver projetos finalizados"
 				>
 					{#snippet icon()}
-						<!-- Micro-interacao: prancheta com foto; no hover levanta e estampa "OK". -->
-						<ClipboardStamp size={52} image="/static/img/dashboard/folder/2.webp" />
+						<!-- Micro-interacao: carimbo desce e sela o termo com lacre de cera "OK". -->
+						<ClipboardStamp size={52} />
 					{/snippet}
 				</StatCard>
 
