@@ -858,7 +858,8 @@
 	.composer-input:focus {
 		outline: none;
 		border-color: var(--ds-color-border-brand);
-		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
+		/* Mesmo anel fino dos editores inline (InlineEditField). */
+		box-shadow: 0 0 0 3px var(--ds-color-wash-brand);
 	}
 	.composer-date-trigger {
 		cursor: pointer;
@@ -880,6 +881,7 @@
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
 		color: var(--ds-color-text-secondary);
 		font-weight: 500;
+		font-size: 0.75rem;
 	}
 	.cell-desc {
 		width: 306px;

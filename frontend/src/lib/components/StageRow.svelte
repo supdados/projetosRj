@@ -553,11 +553,14 @@
 		cursor: grabbing;
 	}
 
-	.cell-number {
+	/* td.cell-number: empata especificidade com `.etapa-row :global(td)` e vence
+	   por ordem — sem isso o td genérico impõe 0.875rem/text-primary. */
+	td.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);
 		color: var(--ds-color-text-secondary);
 		font-weight: 500;
+		font-size: 0.75rem;
 		white-space: nowrap;
 		text-align: center;
 	}
@@ -577,9 +580,10 @@
 		align-items: center;
 		min-height: 1.75rem;
 	}
+	/* Mesmo tom das datas (.cell-date): secondary/500, sem negrito pesado. */
 	.etapa-descricao {
-		font-weight: 600;
-		color: var(--ds-color-text-primary);
+		font-weight: 500;
+		color: var(--ds-color-text-secondary);
 	}
 	.etapa-done .etapa-descricao,
 	.etapa-done-text {
@@ -646,10 +650,11 @@
 	.etapa-comment-editor:focus {
 		outline: none;
 		border-color: var(--ds-color-border-brand);
-		box-shadow: 0 0 0 var(--ds-focus-halo-width) var(--ds-color-focus-halo);
+		/* Mesmo anel fino dos editores inline (InlineEditField). */
+		box-shadow: 0 0 0 3px var(--ds-color-wash-brand);
 	}
 
-	.cell-date {
+	td.cell-date {
 		width: 130px;
 		text-align: center;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);

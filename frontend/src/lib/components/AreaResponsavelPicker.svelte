@@ -361,9 +361,9 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Selecionar áreas responsáveis"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+			class="inline-flex h-8 w-[116px] items-center justify-center gap-[0.34rem] whitespace-nowrap rounded-md border border-dashed border-border-strong px-2 text-sm font-semibold text-text-muted transition-colors duration-fast hover:border-[var(--stage-chip-started-border)] hover:bg-[var(--stage-chip-started-bg)] hover:text-[var(--stage-chip-started-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
-			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Áreas
+			<i class="fas fa-plus text-md" aria-hidden="true"></i>Responsável
 		</button>
 	{/if}
 </div>
