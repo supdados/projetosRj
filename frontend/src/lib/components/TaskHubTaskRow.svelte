@@ -39,6 +39,7 @@
 	import InlineCommentsTree from '$lib/components/InlineCommentsTree.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import StateIcon from '$lib/components/StateIcon.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -554,6 +555,7 @@
      prioridade sobrevive só nas opções do dropdown. -->
 {#snippet prioridadeTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
 	<span class="{prioridadeChipClass(task.prioridade)} {CHIP_TRIGGER} justify-center gap-1">
+		{#if task.prioridade}<StateIcon id={priorityIconId(task.prioridade)} size={13} />{/if}
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
@@ -565,6 +567,7 @@
 
 {#snippet tipoTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
 	<span class="{tipoChipClass(task.tipo_pedido)} {CHIP_TRIGGER} justify-center gap-1">
+		{#if task.tipo_pedido}<TaskTipoIcon tipo={task.tipo_pedido} size={14} />{/if}
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
@@ -575,6 +578,7 @@
 		bind:this={statusChipEl}
 		class="{chipClass(statusTone(task.status))} {CHIP_TRIGGER} justify-center gap-1"
 	>
+		<StateIcon id={statusIconId(task.status)} size={13} />
 		{selected?.label ?? statusLabel(task.status)}
 		{@render chipCaret(open)}
 	</span>

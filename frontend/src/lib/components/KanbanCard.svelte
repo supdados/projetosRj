@@ -442,8 +442,8 @@
 	{/if}
 
 	{#if confirmingDelete}
-		<!-- A faixa COBRE o card (absolute inset-0): confirmar não muda a altura da coluna. -->
-		<div class="kanban-delete-confirm absolute inset-0">
+		<!-- Abaixo do conteúdo, em fluxo: o card cresce e nada fica encoberto. -->
+		<div class="kanban-delete-confirm mt-2">
 			<InlineConfirm
 				question="Excluir esta tarefa? Comentários e anexos serão apagados."
 				tone="danger"
