@@ -35,6 +35,7 @@
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	interface Props {
@@ -385,6 +386,7 @@
 				size="sm"
 				unstyled
 				trigger={tipoTrigger}
+				optionIcon={tipoOptionIcon}
 			/>
 		</div>
 
@@ -548,6 +550,10 @@
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
+{/snippet}
+
+{#snippet tipoOptionIcon(opt: SelectMenuOption)}
+	{#if opt.value}<TaskTipoIcon tipo={opt.value} size={14} />{/if}
 {/snippet}
 
 {#snippet tipoTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}

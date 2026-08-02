@@ -4,7 +4,7 @@
 	 *
 	 * Anatomia (Variação B da referência de design, jun/2026): título da tarefa
 	 * em primeiro, link azul para o projeto, e rodapé com prioridade em ponto
-	 * colorido + rótulo, tipo em pílula neutra, contadores de comentários
+	 * colorido + rótulo, tipo como ícone (bloco T-A), contadores de comentários
 	 * (balão) e anexos (clipe) e avatares dos responsáveis.
 	 *
 	 * Interações:
@@ -26,6 +26,7 @@
 	import type { BoardCard } from '$lib/types/board';
 	import { priorityDotColor } from '$lib/utils/taskLabels';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import {
 		KANBAN_COLUMN_MOTION,
 		type KanbanColumnMotionSignal
@@ -321,9 +322,10 @@
 
 	<!--
 		Rodapé (Variação B): prioridade vira PONTO colorido + rótulo e o tipo vira
-		pílula neutra, à esquerda; contadores (só quando > 0) e avatares dos
-		responsáveis, à direita. Quando falta largura, degrada por medição:
-		nível 1 suprime o tipo, nível 2 agrega os avatares (ver `refitFooter`).
+		ícone (TaskTipoIcon, rótulo no title/sr-only), à esquerda; contadores (só
+		quando > 0) e avatares dos responsáveis, à direita. Quando falta largura,
+		degrada por medição: nível 1 suprime o tipo, nível 2 agrega os avatares
+		(ver `refitFooter`).
 	-->
 	<div bind:this={footerEl} class="mt-auto flex min-w-0 items-center gap-1.5 pt-0.5">
 		{#if prioridadeLabel}
@@ -339,7 +341,10 @@
 			>
 		{/if}
 		{#if tipoLabel && fitLevel < 1}
-			<span class="kc-chip kc-chip--tipo">{tipoLabel}</span>
+			<span class="inline-flex flex-none items-center" title={tipoLabel}>
+				<TaskTipoIcon tipo={card.tipo_pedido} size={14} />
+				<span class="sr-only">{tipoLabel}</span>
+			</span>
 		{/if}
 
 		<span class="ml-auto flex shrink-0 items-center gap-2 text-xs tabular-nums">
@@ -486,13 +491,6 @@
 		border-radius: 50%;
 		flex: none;
 	}
-	/* Tipo de pedido: texto puro apagado (separado da prioridade por "·").
-	 * `flex: none` de propósito: o rótulo não trunca no meio — quando não cabe,
-	 * o rodapé adaptativo o SUPRIME inteiro (nível 1 do `refitFooter`). */
-	.kc-chip--tipo {
-		color: var(--ds-color-text-secondary);
-	}
-
 	/* Bolinha agregada de responsáveis ("+N", nível 2 do rodapé adaptativo). */
 	.kc-avatar-overflow {
 		background-color: var(--ds-color-wash-neutral);

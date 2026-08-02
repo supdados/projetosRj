@@ -23,6 +23,8 @@
 		/** Esconde o ✓ da opção selecionada (o realce de fundo/peso permanece). */
 		hideCheck?: boolean;
 		trigger?: Snippet<[{ open: boolean; label: string; selected: SelectMenuOption | null }]>;
+		/** Ícone renderizado antes do rótulo de cada opção do painel. */
+		optionIcon?: Snippet<[SelectMenuOption]>;
 	}
 
 	let {
@@ -40,7 +42,8 @@
 		align = 'left',
 		unstyled = false,
 		hideCheck = false,
-		trigger
+		trigger,
+		optionIcon
 	}: Props = $props();
 
 	interface NavItem {
@@ -401,6 +404,9 @@
 						{#if item.option?.dot}
 							<span class="h-2 w-2 shrink-0 rounded-full" style:background={item.option.dot}
 							></span>
+						{/if}
+						{#if item.option && optionIcon}
+							{@render optionIcon(item.option)}
 						{/if}
 						<span
 							class="min-w-0 flex-1 truncate {item.isAll
