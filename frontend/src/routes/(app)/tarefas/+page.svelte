@@ -430,12 +430,7 @@
 		{ value: 'duvida', label: 'Dúvida' },
 		{ value: 'outros', label: 'Outros' }
 	];
-	// O FILTRO inclui o legado: tarefas antigas ainda carregam "implementacao"
-	// e o Dashboard faz deep-link /tarefas?tipo=implementacao.
-	const FILTER_TIPO_OPTIONS: { value: string; label: string }[] = [
-		...ADD_TIPO_OPTIONS.slice(1),
-		{ value: 'implementacao', label: 'Implementação' }
-	];
+	const FILTER_TIPO_OPTIONS: { value: string; label: string }[] = ADD_TIPO_OPTIONS.slice(1);
 
 	// Dots dos SelectMenu: prioridade via priorityDotColor (taskLabels.ts);
 	// status com as mesmas cores da barra da lista (STATUS_TONE/STATUS_BAR_CLASS),
@@ -449,8 +444,7 @@
 	};
 
 	// Opções dos SelectMenu — derivadas das constantes acima (sem duplicar dados).
-	// Prioridade e Status são compartilhadas entre o filtro (allowAll) e o form
-	// inline; Tipo difere (filtro inclui o legado "implementacao").
+	// Prioridade e Status são compartilhadas entre o filtro (allowAll) e o form inline.
 	const prioridadeSelectOptions = $derived<SelectMenuOption[]>(
 		ADD_PRIORIDADE_OPTIONS.slice(1).map((o) => ({
 			value: o.value,
