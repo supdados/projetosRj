@@ -1141,7 +1141,8 @@
 		'inline-flex h-10 w-fit items-center gap-1.5 rounded-control border border-dashed border-icon-faint bg-surface px-4 text-sm font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const bodyClass = 'max-h-[70vh] min-h-0 flex-1 overflow-y-auto px-10 pb-8 pt-9';
 	// Passos essenciais não rolam: o dropdown de área precisa escapar do card.
-	const bodyOpenClass = 'px-8 pb-6 pt-5';
+	// min-h iguala a altura dos 3 passos ao mais alto (passo 3).
+	const bodyOpenClass = 'min-h-[190px] px-8 pb-6 pt-5';
 </script>
 
 {#snippet spinner()}
@@ -1401,7 +1402,7 @@
 					<div class={bodyOpenClass}>
 						{@render segmentProgress(3, 3, 'Passo 3 de 3')}
 						<h3 id="criar-projeto-title" class={sectionTitleClass}>Prioridade e responsável</h3>
-						<div class="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-6">
+						<div class="mt-4 flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-6">
 							<div class="flex flex-col gap-2">
 								<span class={labelClass} id="cp-prioridade-label">Prioridade</span>
 								<div
