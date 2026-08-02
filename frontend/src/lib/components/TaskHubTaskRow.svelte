@@ -22,7 +22,9 @@
 		statusLabel,
 		statusTone,
 		priorityDotColor,
-		chipClass
+		chipClass,
+		tipoChipClass,
+		prioridadeChipClass
 	} from '$lib/utils/taskLabels';
 	import { saveFields } from '$lib/api/taskDrawer';
 	import { updateTaskStatus } from '$lib/api/board';
@@ -539,26 +541,17 @@
 	</svg>
 {/snippet}
 
-<!-- Inversão de forma (plano-regua-de-cor §7.4): prioridade = ponto sólido +
-     rótulo em texto normal; a pílula (.chip) pertence ao status e ao tipo. -->
+<!-- Prioridade e tipo são chips coloridos como o status; o ponto sólido de
+     prioridade sobrevive só nas opções do dropdown. -->
 {#snippet prioridadeTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
-	<span
-		class="inline-flex h-[22px] {CHIP_TRIGGER} items-center justify-center gap-1.5 whitespace-nowrap text-xs text-text-primary"
-	>
-		{#if priorityDotColor(task.prioridade)}
-			<span
-				aria-hidden="true"
-				class="h-2 w-2 shrink-0 rounded-full"
-				style:background={priorityDotColor(task.prioridade)}
-			></span>
-		{/if}
+	<span class="{prioridadeChipClass(task.prioridade)} {CHIP_TRIGGER} justify-center gap-1">
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>
 {/snippet}
 
 {#snippet tipoTrigger({ open, selected }: { open: boolean; selected: SelectMenuOption | null })}
-	<span class="{chipClass('neutral')} {CHIP_TRIGGER} justify-center gap-1">
+	<span class="{tipoChipClass(task.tipo_pedido)} {CHIP_TRIGGER} justify-center gap-1">
 		{selected?.label ?? '—'}
 		{@render chipCaret(open)}
 	</span>

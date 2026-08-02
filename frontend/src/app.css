@@ -228,7 +228,8 @@
 	--ds-color-icon-faint: var(--ds-color-neutral-300);
 
 	/* --- Prioridade: separa por DEGRAU, não por matiz -----------------------
-	   Forma: PONTO SÓLIDO (a pílula pertence ao status — §7.4).
+	   Forma: ponto sólido nos menus; na lista de tarefas vira chip
+	   (.chip--prio-*) com esta mesma tinta.
 	   "baixa" é neutro de propósito: baixa prioridade é ausência de risco, não
 	   sucesso; o verde ali roubava o único sinal de "terminou e foi aceito".
 	   Sem token -wash: ponto sólido não tem fundo.
@@ -446,8 +447,8 @@
 	/* Chip canônico (plano-regua-de-cor §2.1/§7.9): 22px de altura, raio 6px,
 	   12px/500. SEM uppercase e SEM letter-spacing — a 12px isso custa
 	   legibilidade e não compra hierarquia que a cor já não dê. A pílula
-	   pertence ao STATUS (§7.4); prioridade é ponto sólido
-	   (--ds-color-priority-*) e nunca usa esta classe. */
+	   serve a status, tipo e prioridade (famílias .chip--* abaixo); o ponto
+	   sólido de prioridade sobrevive só nos dots dos menus. */
 	.chip {
 		display: inline-flex;
 		align-items: center;
@@ -559,6 +560,104 @@
 		--chip-fg: var(--ds-color-neutral-800);
 	}
 
+	/* Tipo de pedido: hex literal das cores aprovadas dos ícones T-A (fora da
+	   régua — mesmo critério do TaskTipoIcon); sem escada de tokens, a receita
+	   100/200/600 é emulada por color-mix sobre os extremos da régua. */
+	.chip--tipo-bug {
+		--chip-hue: #9a4f42;
+	}
+	.chip--tipo-melhoria {
+		--chip-hue: #1e6b5c;
+	}
+	.chip--tipo-duvida {
+		--chip-hue: #6a5490;
+	}
+	.chip--tipo-bug,
+	.chip--tipo-melhoria,
+	.chip--tipo-duvida {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 12%, var(--ds-color-neutral-0));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 24%, var(--ds-color-neutral-0));
+		--chip-fg: var(--chip-hue);
+	}
+	.chip--tipo-bug:hover,
+	.chip--tipo-melhoria:hover,
+	.chip--tipo-duvida:hover {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 20%, var(--ds-color-neutral-0));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 32%, var(--ds-color-neutral-0));
+		--chip-fg: color-mix(in srgb, var(--chip-hue) 85%, var(--ds-color-neutral-1000));
+	}
+	.chip--tipo-bug:active,
+	.chip--tipo-melhoria:active,
+	.chip--tipo-duvida:active {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 28%, var(--ds-color-neutral-0));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 40%, var(--ds-color-neutral-0));
+		--chip-fg: color-mix(in srgb, var(--chip-hue) 70%, var(--ds-color-neutral-1000));
+	}
+
+	/* Prioridade: mesma família danger separada por DEGRAU — bg 50/100/200,
+	   borda 200/300/400 e tinta de repouso = token --ds-color-priority-*;
+	   "baixa" fica na receita neutra. */
+	.chip--prio-baixa {
+		--chip-bg: var(--ds-color-neutral-100);
+		--chip-border: var(--ds-color-neutral-200);
+		--chip-fg: var(--ds-color-priority-baixa);
+	}
+	.chip--prio-baixa:hover {
+		--chip-bg: var(--ds-color-neutral-200);
+		--chip-border: var(--ds-color-neutral-300);
+		--chip-fg: var(--ds-color-neutral-600);
+	}
+	.chip--prio-baixa:active {
+		--chip-bg: var(--ds-color-neutral-300);
+		--chip-border: var(--ds-color-neutral-400);
+		--chip-fg: var(--ds-color-neutral-700);
+	}
+	.chip--prio-media {
+		--chip-bg: var(--ds-color-danger-50);
+		--chip-border: var(--ds-color-danger-200);
+		--chip-fg: var(--ds-color-priority-media);
+	}
+	.chip--prio-media:hover {
+		--chip-bg: var(--ds-color-danger-100);
+		--chip-border: var(--ds-color-danger-300);
+		--chip-fg: var(--ds-color-danger-600);
+	}
+	.chip--prio-media:active {
+		--chip-bg: var(--ds-color-danger-200);
+		--chip-border: var(--ds-color-danger-400);
+		--chip-fg: var(--ds-color-danger-700);
+	}
+	.chip--prio-alta {
+		--chip-bg: var(--ds-color-danger-100);
+		--chip-border: var(--ds-color-danger-300);
+		--chip-fg: var(--ds-color-priority-alta);
+	}
+	.chip--prio-alta:hover {
+		--chip-bg: var(--ds-color-danger-200);
+		--chip-border: var(--ds-color-danger-400);
+		--chip-fg: var(--ds-color-danger-700);
+	}
+	.chip--prio-alta:active {
+		--chip-bg: var(--ds-color-danger-300);
+		--chip-border: var(--ds-color-danger-500);
+		--chip-fg: var(--ds-color-danger-800);
+	}
+	.chip--prio-urgente {
+		--chip-bg: var(--ds-color-danger-200);
+		--chip-border: var(--ds-color-danger-400);
+		--chip-fg: var(--ds-color-priority-urgente);
+	}
+	.chip--prio-urgente:hover {
+		--chip-bg: var(--ds-color-danger-300);
+		--chip-border: var(--ds-color-danger-500);
+		--chip-fg: var(--ds-color-danger-800);
+	}
+	.chip--prio-urgente:active {
+		--chip-bg: var(--ds-color-danger-400);
+		--chip-border: var(--ds-color-danger-600);
+		--chip-fg: var(--ds-color-danger-900);
+	}
+
 	/* Desabilitado SEMPRE perde o matiz — é a única regra que ignora a família. */
 	.chip:disabled,
 	.chip[aria-disabled='true'] {
@@ -656,6 +755,85 @@
 		--chip-bg: var(--ds-color-neutral-600);
 		--chip-border: var(--ds-color-neutral-500);
 		--chip-fg: var(--ds-color-neutral-100);
+	}
+	[data-theme='dark'] .chip--tipo-bug,
+	[data-theme='dark'] .chip--tipo-melhoria,
+	[data-theme='dark'] .chip--tipo-duvida {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 28%, var(--ds-color-neutral-900));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 38%, var(--ds-color-neutral-900));
+		--chip-fg: color-mix(in srgb, var(--chip-hue) 38%, var(--ds-color-neutral-0));
+	}
+	[data-theme='dark'] .chip--tipo-bug:hover,
+	[data-theme='dark'] .chip--tipo-melhoria:hover,
+	[data-theme='dark'] .chip--tipo-duvida:hover {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 36%, var(--ds-color-neutral-900));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 46%, var(--ds-color-neutral-900));
+		--chip-fg: color-mix(in srgb, var(--chip-hue) 30%, var(--ds-color-neutral-0));
+	}
+	[data-theme='dark'] .chip--tipo-bug:active,
+	[data-theme='dark'] .chip--tipo-melhoria:active,
+	[data-theme='dark'] .chip--tipo-duvida:active {
+		--chip-bg: color-mix(in srgb, var(--chip-hue) 44%, var(--ds-color-neutral-900));
+		--chip-border: color-mix(in srgb, var(--chip-hue) 54%, var(--ds-color-neutral-900));
+		--chip-fg: color-mix(in srgb, var(--chip-hue) 24%, var(--ds-color-neutral-0));
+	}
+	/* Prioridade no dark: a tinta de repouso vem do token (que já espelha);
+	   bg/borda clareiam junto com a severidade. */
+	[data-theme='dark'] .chip--prio-baixa {
+		--chip-bg: var(--ds-color-neutral-800);
+		--chip-border: var(--ds-color-neutral-700);
+	}
+	[data-theme='dark'] .chip--prio-baixa:hover {
+		--chip-bg: var(--ds-color-neutral-700);
+		--chip-border: var(--ds-color-neutral-600);
+		--chip-fg: var(--ds-color-neutral-300);
+	}
+	[data-theme='dark'] .chip--prio-baixa:active {
+		--chip-bg: var(--ds-color-neutral-600);
+		--chip-border: var(--ds-color-neutral-500);
+		--chip-fg: var(--ds-color-neutral-200);
+	}
+	[data-theme='dark'] .chip--prio-media {
+		--chip-bg: var(--ds-color-danger-900);
+		--chip-border: var(--ds-color-danger-700);
+	}
+	[data-theme='dark'] .chip--prio-media:hover {
+		--chip-bg: var(--ds-color-danger-800);
+		--chip-border: var(--ds-color-danger-600);
+		--chip-fg: var(--ds-color-danger-300);
+	}
+	[data-theme='dark'] .chip--prio-media:active {
+		--chip-bg: var(--ds-color-danger-700);
+		--chip-border: var(--ds-color-danger-500);
+		--chip-fg: var(--ds-color-danger-200);
+	}
+	[data-theme='dark'] .chip--prio-alta {
+		--chip-bg: var(--ds-color-danger-800);
+		--chip-border: var(--ds-color-danger-600);
+	}
+	[data-theme='dark'] .chip--prio-alta:hover {
+		--chip-bg: var(--ds-color-danger-700);
+		--chip-border: var(--ds-color-danger-500);
+		--chip-fg: var(--ds-color-danger-200);
+	}
+	[data-theme='dark'] .chip--prio-alta:active {
+		--chip-bg: var(--ds-color-danger-600);
+		--chip-border: var(--ds-color-danger-400);
+		--chip-fg: var(--ds-color-danger-100);
+	}
+	[data-theme='dark'] .chip--prio-urgente {
+		--chip-bg: var(--ds-color-danger-700);
+		--chip-border: var(--ds-color-danger-500);
+	}
+	[data-theme='dark'] .chip--prio-urgente:hover {
+		--chip-bg: var(--ds-color-danger-600);
+		--chip-border: var(--ds-color-danger-400);
+		--chip-fg: var(--ds-color-danger-100);
+	}
+	[data-theme='dark'] .chip--prio-urgente:active {
+		--chip-bg: var(--ds-color-danger-500);
+		--chip-border: var(--ds-color-danger-300);
+		--chip-fg: var(--ds-color-danger-50);
 	}
 	[data-theme='dark'] .chip:disabled,
 	[data-theme='dark'] .chip[aria-disabled='true'] {
