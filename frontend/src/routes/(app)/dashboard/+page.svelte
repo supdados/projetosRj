@@ -330,7 +330,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard — ProjetosRJ</title>
+	<title>ProjetosRJ — Início</title>
 </svelte:head>
 
 <!-- lg:h-full + min-h-0 ancoram o layout viewport-fit adaptativo da v4.5: a

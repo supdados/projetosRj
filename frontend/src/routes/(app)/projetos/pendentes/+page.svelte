@@ -381,7 +381,7 @@
 </script>
 
 <svelte:head>
-	<title>Projetos Pendentes — ProjetosRJ</title>
+	<title>ProjetosRJ — Projetos Pendentes</title>
 </svelte:head>
 
 <section aria-labelledby="pendentes-title" class="flex flex-col gap-4">

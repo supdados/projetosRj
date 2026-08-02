@@ -126,7 +126,7 @@
 </script>
 
 <svelte:head>
-	<title>Novo Usuário — ProjetosRJ</title>
+	<title>ProjetosRJ — Novo Usuário</title>
 </svelte:head>
 
 <section aria-labelledby="novo-usuario-title" class="mx-auto flex w-full max-w-[1220px] flex-col gap-4">

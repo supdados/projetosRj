@@ -194,7 +194,7 @@
 </script>
 
 <svelte:head>
-	<title>Editar Usuário — ProjetosRJ</title>
+	<title>ProjetosRJ — Editar Usuário</title>
 </svelte:head>
 
 <section aria-labelledby="editar-usuario-title" class="mx-auto flex w-full max-w-[1220px] flex-col gap-4">

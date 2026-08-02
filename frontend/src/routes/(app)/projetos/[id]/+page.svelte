@@ -1157,7 +1157,7 @@
 </script>
 
 <svelte:head>
-	<title>Detalhe do projeto — ProjetosRJ</title>
+	<title>ProjetosRJ — Detalhe do projeto</title>
 </svelte:head>
 
 <section aria-labelledby="project-detail-title" class="flex flex-col gap-6">

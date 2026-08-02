@@ -579,7 +579,7 @@
 </script>
 
 <svelte:head>
-	<title>Modelos de Etapas — Administração — ProjetosRJ</title>
+	<title>ProjetosRJ — Modelos de Etapas</title>
 </svelte:head>
 
 <section aria-labelledby="tpl-title" class="flex flex-col gap-4">

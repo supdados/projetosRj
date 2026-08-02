@@ -324,7 +324,7 @@
 </script>
 
 <svelte:head>
-	<title>Busca Global — ProjetosRJ</title>
+	<title>ProjetosRJ — Busca Global</title>
 </svelte:head>
 
 <!-- Meta no padrao "Rotulo: valor" da referencia (PendingProjectCard.svelte:430). -->

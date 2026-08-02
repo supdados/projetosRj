@@ -859,7 +859,7 @@
 </script>
 
 <svelte:head>
-	<title>Calendário — ProjetosRJ</title>
+	<title>ProjetosRJ — Calendário</title>
 </svelte:head>
 
 <svelte:window onkeydown={onWindowKeydown} onclick={onWindowClickGoogle} />

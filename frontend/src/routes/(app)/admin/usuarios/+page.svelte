@@ -187,7 +187,7 @@
 </script>
 
 <svelte:head>
-	<title>Gerenciar Usuários — ProjetosRJ</title>
+	<title>ProjetosRJ — Gerenciar Usuários</title>
 </svelte:head>
 
 <section aria-labelledby="admin-usuarios-title" class="mx-auto flex w-full max-w-[1400px] flex-col gap-4">

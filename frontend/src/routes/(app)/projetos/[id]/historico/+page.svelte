@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>Histórico do projeto — ProjetosRJ</title>
+	<title>ProjetosRJ — Histórico do projeto</title>
 </svelte:head>
 
 <p role="status" aria-live="polite" class="text-text-secondary">Abrindo histórico…</p>

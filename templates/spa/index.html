@@ -6,6 +6,11 @@
     <meta name="description" content="Sistema de gerenciamento de projetos - Controle e acompanhe seus projetos de forma eficiente">
     <title>ProjetosRJ</title>
 
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='20260801c') }}" sizes="any">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/brand/favicon.svg', v='20260801c') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/brand/favicon-32.png', v='20260801c') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/brand/favicon-16.png', v='20260801c') }}">
+
     {# Fonte do token CSRF para o client.ts (X-CSRFToken). Injetado server-side
        pelo Jinja ao servir o index do bundle SvelteKit via routes/spa.py. #}
     <meta name="csrf-token" content="{{ csrf_token() }}">

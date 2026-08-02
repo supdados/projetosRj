@@ -246,7 +246,7 @@
 </script>
 
 <svelte:head>
-	<title>Órgãos — ProjetosRJ</title>
+	<title>ProjetosRJ — Órgãos</title>
 </svelte:head>
 
 <section aria-labelledby="orgaos-title" class="flex flex-col gap-4">
