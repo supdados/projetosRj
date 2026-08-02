@@ -5,6 +5,7 @@
 	 */
 	import { tick, type Snippet } from 'svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
+	import StateIcon from '$lib/components/StateIcon.svelte';
 
 	interface Props {
 		options: SelectMenuOption[];
@@ -312,7 +313,11 @@
 			{@render trigger({ open, label: triggerLabel, selected })}
 		{:else}
 			<span class="flex min-w-0 items-center gap-2">
-				{#if selected?.dot}
+				{#if selected?.icon}
+					<span class="flex shrink-0" style:color={selected.dot}>
+						<StateIcon id={selected.icon} />
+					</span>
+				{:else if selected?.dot}
 					<span class="h-2 w-2 shrink-0 rounded-full" style:background={selected.dot}></span>
 				{/if}
 				<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
@@ -401,7 +406,11 @@
 							? 'cursor-not-allowed opacity-50'
 							: 'cursor-pointer'} {isSelected ? 'bg-wash-brand' : isHighlighted ? 'bg-surface-muted' : ''}"
 					>
-						{#if item.option?.dot}
+						{#if item.option?.icon}
+							<span class="flex shrink-0" style:color={item.option.dot}>
+								<StateIcon id={item.option.icon} />
+							</span>
+						{:else if item.option?.dot}
 							<span class="h-2 w-2 shrink-0 rounded-full" style:background={item.option.dot}
 							></span>
 						{/if}

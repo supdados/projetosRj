@@ -9,6 +9,8 @@
  * hardcoded por tema aqui.
  */
 
+import type { StateIconId } from '$lib/icons/stateIcons';
+
 /** Tons do `Badge` (= união aceita por `Badge.svelte`). */
 export type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'orange' | 'danger' | 'info';
 
@@ -86,6 +88,33 @@ export function prioridadeLabel(value: string | null): string | null {
 export function priorityDotColor(value: string | null | undefined): string | undefined {
 	if (!value) return undefined;
 	return PRIORIDADE_DOT_VAR[value];
+}
+
+const PRIORIDADE_ICON_ID: Record<string, StateIconId> = {
+	baixa: 'prio-baixa',
+	media: 'prio-media',
+	alta: 'prio-alta',
+	urgente: 'prio-urgente'
+};
+
+const STATUS_ICON_ID: Record<string, StateIconId> = {
+	nao_iniciada: 'status-nao-iniciada',
+	em_andamento: 'status-em-andamento',
+	para_validacao: 'status-para-validacao',
+	para_ajustes: 'status-para-ajustes',
+	finalizada: 'status-finalizada'
+};
+
+/** Ícone do anel de prioridade; sem valor cai no anel todo apagado. */
+export function priorityIconId(value: string | null | undefined): StateIconId {
+	if (!value) return 'prio-sem';
+	return PRIORIDADE_ICON_ID[value] ?? 'prio-sem';
+}
+
+/** Ícone do estágio de status; valor desconhecido cai em "não iniciada". */
+export function statusIconId(value: string | null | undefined): StateIconId {
+	if (!value) return 'status-nao-iniciada';
+	return STATUS_ICON_ID[value] ?? 'status-nao-iniciada';
 }
 
 export function tipoLabel(value: string | null): string | null {
