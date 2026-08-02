@@ -31,6 +31,16 @@ describe('flash store — inserção e auto-dismiss', () => {
 		expect(items[1]).toMatchObject({ message: 'Falhou.', category: 'danger', count: 1 });
 	});
 
+	it('options.description vira o texto secundário do cartão', () => {
+		const flash = createFlashStore();
+		flash.success('Projeto criado', { description: 'Já está na sua lista.' });
+		flash.success('Tarefa criada');
+
+		const items = get(flash);
+		expect(items[0].description).toBe('Já está na sua lista.');
+		expect(items[1].description).toBeUndefined();
+	});
+
 	it('cada instância numera os ids do zero (sem contador compartilhado)', () => {
 		const primeira = createFlashStore();
 		const segunda = createFlashStore();
@@ -63,6 +73,42 @@ describe('flash store — duração', () => {
 
 	it('mensagem de 30 palavras satura em 10000', () => {
 		expect(flashDurationMs(palavras(30), 'success')).toBe(10000);
+	});
+
+	it('danger não expira sozinho: duração infinita e nenhum timer o derruba', () => {
+		expect(flashDurationMs('Erro ao salvar', 'danger')).toBe(Number.POSITIVE_INFINITY);
+
+		const flash = createFlashStore();
+		const id = flash.show('Erro ao salvar', 'danger');
+
+		vi.advanceTimersByTime(600000);
+		expect(get(flash)).toHaveLength(1);
+
+		flash.dismiss(id);
+		expect(get(flash)).toHaveLength(0);
+	});
+
+	it('danger sobrevive a pausa, retomada e repetição (sem teto de vida)', () => {
+		const flash = createFlashStore();
+		const id = flash.show('Erro ao salvar', 'danger');
+
+		flash.pause(id);
+		vi.advanceTimersByTime(30000);
+		flash.resume(id);
+		vi.advanceTimersByTime(30000);
+		flash.show('Erro ao salvar', 'danger');
+		vi.advanceTimersByTime(30000);
+
+		expect(get(flash)).toHaveLength(1);
+		expect(get(flash)[0].count).toBe(2);
+	});
+
+	it('options.durationMs não devolve auto-dismiss ao danger', () => {
+		const flash = createFlashStore();
+		flash.danger('Erro ao salvar', { durationMs: 5000 });
+
+		vi.advanceTimersByTime(600000);
+		expect(get(flash)).toHaveLength(1);
 	});
 
 	it('options.durationMs é clampado em 10000', () => {

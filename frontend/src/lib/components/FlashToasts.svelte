@@ -1,9 +1,9 @@
 <script lang="ts">
 	/**
-	 * Pilha de toasts (FLASH) da SPA: cartões fixos abaixo do topnav, com ícone por
-	 * categoria, auto-dismiss (no store), Esc e fechamento manual. O visual segue a
-	 * receita de aviso do design system (wash + borda suave), não mais o
-	 * `app-flash-alert` do Jinja legado.
+	 * Pilha de toasts (FLASH) da SPA: cartões no canto superior direito, abaixo do
+	 * topnav, com ícone na tinta da severidade sobre superfície NEUTRA, título e
+	 * descrição opcional. Auto-dismiss vem do store (`danger` não expira), além de
+	 * Esc e fechamento manual.
 	 *
 	 * Montado UMA vez por tela. O anúncio para leitor de tela sai de UMA região
 	 * `aria-live` persistente (fora da lista), escrita só no NASCIMENTO do toast:
@@ -12,28 +12,31 @@
 	 */
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
-	import { flash, type FlashCategory } from '$lib/stores/flash';
+	import { flash, type FlashCategory, type FlashMessage } from '$lib/stores/flash';
+	import FeedbackIcon from '$lib/components/FeedbackIcon.svelte';
+	import type { FeedbackIconId } from '$lib/icons/feedbackIcons';
 	import { fly, type TransitionConfig } from 'svelte/transition';
 
-	/** Ícone FontAwesome por categoria (paridade com o flash legado). */
-	const ICON: Record<FlashCategory, string> = {
-		success: 'fa-check-circle',
-		info: 'fa-info-circle',
-		warning: 'fa-exclamation-triangle',
-		danger: 'fa-exclamation-circle'
+	const ICON: Record<FlashCategory, FeedbackIconId> = {
+		success: 'check',
+		info: 'info',
+		warning: 'alert',
+		danger: 'x'
 	};
 
-	/**
-	 * Cor por categoria: interior tingido (wash, degrau 100/800) + contorno suave
-	 * (degrau 200/700) — mesma receita dos avisos do resto do app. A tinta forte
-	 * fica só no ícone.
-	 */
-	const TONE: Record<FlashCategory, string> = {
-		success: 'border-success-soft bg-wash-success text-success',
-		info: 'border-brand-soft bg-wash-brand text-brand',
-		warning: 'border-warning-soft bg-wash-warning text-warning',
-		danger: 'border-danger-soft bg-wash-danger text-danger'
+	/** A tinta da severidade fica só no ícone; o cartão é neutro. */
+	const TINTA: Record<FlashCategory, string> = {
+		success: 'text-success',
+		info: 'text-brand',
+		warning: 'text-warning',
+		danger: 'text-danger'
 	};
+
+	/** Recuo por posição na pilha: o mais antigo (último) é o mais apagado. */
+	const OPACIDADE = [1, 0.82, 0.62];
+
+	// Mais recente no topo — é ele que recebe o Esc e a opacidade cheia.
+	const pilha = $derived([...$flash].reverse());
 
 	let reduceMotion = $state(false);
 
@@ -48,6 +51,10 @@
 	// `await` e o primeiro texto sairia do nó antes de ser lido.
 	let filaDeAnuncio: Promise<void> = Promise.resolve();
 	let limparAnuncio: ReturnType<typeof setTimeout> | null = null;
+
+	function textoCompleto(item: FlashMessage): string {
+		return item.description ? `${item.message} ${item.description}` : item.message;
+	}
 
 	// Zera antes de escrever: reescrever o MESMO texto não muta o nó e não é anunciado.
 	async function announceBirth(texto: string): Promise<void> {
@@ -64,7 +71,7 @@
 		const nascidos = $flash.filter((item) => item.id > lastAnnouncedId);
 		if (nascidos.length === 0) return;
 		lastAnnouncedId = nascidos[nascidos.length - 1].id;
-		const texto = nascidos.map((item) => item.message).join(' ');
+		const texto = nascidos.map(textoCompleto).join(' ');
 		filaDeAnuncio = filaDeAnuncio.then(() => announceBirth(texto));
 	});
 
@@ -82,10 +89,11 @@
 	});
 
 	const toastTransition = (node: Element): TransitionConfig =>
-		reduceMotion ? { duration: 0 } : fly(node, { y: -16, duration: 180 });
+		reduceMotion ? { duration: 0 } : fly(node, { x: 16, duration: 180 });
 
 	// Esc dispensa o toast mais recente. Modais/dropdowns tratam Esc por conta
-	// própria e o gesto deles vem primeiro: dentro de um diálogo, não interceptar;
+	// própria e o gesto deles vem primeiro: dentro de um diálogo (inclusive
+	// `alertdialog`, que é o ConfirmDialog/InlineConfirm), não interceptar;
 	// quem consumir o Esc no window (ex.: dropdowns do topnav, que mantêm o foco
 	// no botão toggle) sinaliza via preventDefault e também não interceptamos.
 	function dismissarComEsc(event: KeyboardEvent): void {
@@ -93,7 +101,7 @@
 		const vivos = get(flash);
 		if (vivos.length === 0) return;
 		const alvo = event.target as Element | null;
-		if (alvo?.closest?.('[role="dialog"], dialog')) return;
+		if (alvo?.closest?.('[role="dialog"], [role="alertdialog"], dialog')) return;
 		flash.dismiss(vivos[vivos.length - 1].id);
 	}
 </script>
@@ -103,11 +111,11 @@
 <!-- z-toast (1080) > z-sticky (1020): sem ancorar abaixo da altura real do topnav
 	 o toast nasce por cima da barra superior. -->
 <div
-	class="pointer-events-none fixed inset-x-0 z-toast flex flex-col items-center gap-2 px-4"
-	style="top: calc(var(--app-topnav-height) + 0.75rem);"
+	class="pointer-events-none fixed z-toast flex flex-col items-end gap-2.5"
+	style="top: calc(var(--app-topnav-height) + 0.75rem); right: 1rem;"
 >
 	<div class="sr-only" aria-live="polite">{announcement}</div>
-	{#each $flash as item (item.id)}
+	{#each pilha as item, posicao (item.id)}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			transition:toastTransition
@@ -115,31 +123,30 @@
 			onmouseleave={() => flash.resume(item.id)}
 			onfocusin={() => flash.pause(item.id)}
 			onfocusout={() => flash.resume(item.id)}
-			class="pointer-events-auto flex w-full max-w-md items-start gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-popover {TONE[
-				item.category
-			]}"
+			style="opacity: {OPACIDADE[posicao] ?? OPACIDADE[OPACIDADE.length - 1]};"
+			class="pointer-events-auto flex w-96 max-w-[calc(100vw-2rem)] gap-3 rounded-md border border-border-subtle bg-surface px-4 py-3.5 shadow-popover {item.description
+				? 'items-start'
+				: 'items-center'}"
 		>
-			<span class="sr-only">{item.message}</span>
-			<div class="flex min-w-0 flex-1 items-start gap-2.5" aria-hidden="true">
-				<i class="fas {ICON[item.category]} mt-px text-base leading-5"></i>
-				<span class="min-w-0 flex-1 text-sm leading-5 text-text-primary">{item.message}</span>
+			<span class="sr-only">{textoCompleto(item)}</span>
+			<div class="flex min-w-0 flex-1 gap-3 {item.description ? 'items-start' : 'items-center'}">
+				<span class="shrink-0 {TINTA[item.category]} {item.description ? 'mt-px' : ''}">
+					<FeedbackIcon id={ICON[item.category]} size={21} />
+				</span>
+				<span class="flex min-w-0 flex-1 flex-col gap-0.5" aria-hidden="true">
+					<span class="text-md font-semibold text-text-primary">{item.message}</span>
+					{#if item.description}
+						<span class="text-md text-text-secondary">{item.description}</span>
+					{/if}
+				</span>
 			</div>
 			<button
 				type="button"
 				onclick={() => flash.dismiss(item.id)}
 				aria-label="Fechar aviso"
-				class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				class="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-sm text-text-muted transition-colors duration-fast hover:bg-wash-neutral hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
-				<svg
-					viewBox="0 0 20 20"
-					class="h-3.5 w-3.5"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-					aria-hidden="true"
-				>
-					<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
-				</svg>
+				<FeedbackIcon id="close" size={17} />
 			</button>
 		</div>
 	{/each}

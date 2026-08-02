@@ -15,6 +15,7 @@
 	import AppTopnav from '$lib/components/AppTopnav.svelte';
 	import AppFooter from '$lib/components/AppFooter.svelte';
 	import FlashToasts from '$lib/components/FlashToasts.svelte';
+	import ConfirmHost from '$lib/components/ConfirmHost.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -114,4 +115,10 @@
 		     entao ancora no fim da viewport, sem rolar com o conteudo. -->
 		<AppFooter />
 	{/if}
+
+	<!-- Anfitrião único de `confirmAction()`: nenhuma tela monta o diálogo. Fica no
+	     FIM do shell porque empata em z-index com os modais abertos dentro de
+	     <main> (ambos 1050) — no empate quem decide é a ordem no DOM, e o diálogo
+	     precisa cobrir o modal que o disparou. -->
+	<ConfirmHost />
 </div>

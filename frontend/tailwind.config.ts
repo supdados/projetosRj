@@ -180,6 +180,12 @@ export default {
 			backgroundColor: {
 				brand: 'var(--ds-color-fill-brand)',
 				'brand-hover': 'var(--ds-color-fill-brand-hover)',
+				'danger-hover': 'var(--ds-color-fill-danger-hover)',
+				// Par correto de `text-on-danger`/`text-on-warning`: no dark a tinta
+				// inverte para o degrau 900 e só casa com o fill claro (400). `bg-danger`
+				// aponta para a escala fixa 600 e deixaria o rótulo ilegível.
+				'fill-danger': 'var(--ds-color-fill-danger)',
+				'fill-warning': 'var(--ds-color-fill-warning)',
 				'wash-brand': 'var(--ds-color-wash-brand)',
 				'wash-neutral': 'var(--ds-color-wash-neutral)',
 				'wash-success': 'var(--ds-color-wash-success)',
@@ -188,6 +194,11 @@ export default {
 				'wash-warning': 'var(--ds-color-wash-warning)',
 				'wash-attention': 'var(--ds-color-wash-attention)',
 				'wash-danger': 'var(--ds-color-wash-danger)',
+				// Reaproveita os mesmos vars de border-*-soft como fundo (hover de botão
+				// outline em StateBanner — spec Grupo 5: "degrau 200 do wash forte").
+				'brand-soft': 'var(--ds-color-border-brand-soft)',
+				'warning-soft': 'var(--ds-color-border-warning-soft)',
+				'danger-soft': 'var(--ds-color-border-danger-soft)',
 				topnav: 'var(--ds-color-surface-topnav)',
 				'on-brand-hover': 'var(--ds-color-on-brand-hover)',
 				'on-brand-hover-strong': 'var(--ds-color-on-brand-hover-strong)'

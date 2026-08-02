@@ -2,13 +2,16 @@
  * Sistema de FLASH/TOAST da SPA (equivalente a `window.showFlash` +
  * `static/js/app-shell/flash.js` do Jinja).
  *
- * Toasts no topo da tela com auto-dismiss por categoria, teto de 5 na pilha,
- * deduplicação por chave (repetição vira contador `×N`, não empilha) e pausa
- * em hover/foco. Consumido pelo `<FlashToasts>` montado uma vez por tela.
+ * Toasts no canto superior direito com auto-dismiss por categoria, teto de 3 na
+ * pilha, deduplicação por chave (repetição só reinicia o timer e incrementa
+ * `count`, não empilha cartão novo) e pausa em hover/foco. `danger` não expira
+ * sozinho — só sai por X, Esc ou evicção. Consumido pelo `<FlashToasts>`
+ * montado uma vez por tela.
  *
  * Exemplo:
  *   import { flash } from '$lib/stores/flash';
  *   flash.success('Tarefa criada com sucesso.');
+ *   flash.success('Projeto criado', { description: 'Já está na sua lista.' });
  *   flash.warning('Finalize as tarefas pendentes.', { key: 'etapa-tarefas-pendentes' });
  */
 
@@ -20,7 +23,9 @@ export type FlashCategory = 'success' | 'info' | 'warning' | 'danger';
 export interface FlashOptions {
 	/** Agrupa repetições cujo texto varia mas o evento é o mesmo. */
 	key?: string;
-	/** Override de duração (ms); ainda sujeito ao teto de 10000. */
+	/** Segunda linha do cartão: consequência ou detalhe do que aconteceu. */
+	description?: string;
+	/** Override de duração (ms), com teto de 10000. IGNORADO em `danger`. */
 	durationMs?: number;
 }
 
@@ -29,11 +34,13 @@ export interface FlashMessage {
 	id: number;
 	message: string;
 	category: FlashCategory;
+	/** Texto secundário opcional (o título é `message`). */
+	description?: string;
 	/** Chave de dedupe (explícita ou `${category}|${message}`). */
 	key: string;
 	/** 1 na primeira exibição; incrementa a cada repetição coalescida. */
 	count: number;
-	/** Epoch ms da primeira exibição — base do teto de 10 s. */
+	/** Epoch ms da primeira exibição — base do teto de vida (não se aplica a `danger`). */
 	firstShownAt: number;
 }
 
@@ -66,16 +73,36 @@ const SEVERITY: Record<FlashCategory, number> = {
 
 const BASE_MS: Record<FlashCategory, number> = {
 	success: 4000,
-	info: 5000,
-	warning: 6000,
-	danger: 7000
+	info: 4000,
+	warning: 7000,
+	danger: Number.POSITIVE_INFINITY
 };
 
-/** Duração calculada; exportada para teste. */
+/** `danger` não tem teto: erro sem leitura vira trabalho perdido. */
+function lifetimeCapMs(category: FlashCategory): number {
+	return category === 'danger' ? Number.POSITIVE_INFINITY : MAX_LIFETIME_MS;
+}
+
+/** Duração calculada; `Infinity` em `danger` (só sai por X, Esc ou evicção). */
 export function flashDurationMs(message: string, category: FlashCategory): number {
+	if (category === 'danger') return Number.POSITIVE_INFINITY;
 	const palavras = message.trim().split(/\s+/).filter(Boolean).length;
 	const minimo = 3000 + 1000 * Math.ceil(palavras / 3);
 	return Math.min(MAX_LIFETIME_MS, Math.max(BASE_MS[category], minimo));
+}
+
+/**
+ * Duração efetiva do toast. O override do chamador NÃO vale para `danger`:
+ * `Math.min` contra um teto infinito deixaria o valor passar e devolveria o
+ * auto-dismiss que o erro não pode ter.
+ */
+function resolveDurationMs(
+	message: string,
+	category: FlashCategory,
+	override: number | undefined
+): number {
+	if (category === 'danger') return Number.POSITIVE_INFINITY;
+	return Math.min(MAX_LIFETIME_MS, override ?? flashDurationMs(message, category));
 }
 
 interface FlashTimer {
@@ -114,6 +141,8 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 		timer.pausedAt = null;
 		timer.remainingMs = null;
 		timer.expiresAt = now() + delayMs;
+		// Prazo infinito (danger): fica na tela sem timer até fechamento manual.
+		if (!Number.isFinite(delayMs)) return;
 		timer.handle = setTimeout(() => drop(id, true), delayMs);
 	}
 
@@ -181,15 +210,13 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 
 		if (items.length >= MAX_TOASTS) evict(category);
 
-		const durationMs = Math.min(
-			MAX_LIFETIME_MS,
-			options.durationMs ?? flashDurationMs(message, category)
-		);
+		const cap = lifetimeCapMs(category);
+		const durationMs = resolveDurationMs(message, category, options.durationMs);
 		const id = nextId++;
 		const timer: FlashTimer = {
 			key,
 			durationMs,
-			lifetimeEndsAt: at + MAX_LIFETIME_MS,
+			lifetimeEndsAt: at + cap,
 			handle: null,
 			expiresAt: at + durationMs,
 			remainingMs: null,
@@ -197,7 +224,18 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 			pauseCount: 0
 		};
 		timers.set(id, timer);
-		items = [...items, { id, message, category, key, count: 1, firstShownAt: at }];
+		items = [
+			...items,
+			{
+				id,
+				message,
+				category,
+				description: options.description,
+				key,
+				count: 1,
+				firstShownAt: at
+			}
+		];
 		commit();
 		schedule(id, timer, durationMs);
 		return id;
