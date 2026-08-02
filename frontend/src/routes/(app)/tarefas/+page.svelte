@@ -3,8 +3,8 @@
 	 * Tela "Hub de Tarefas" em MODO LISTA (sem Kanban). Consome
 	 * `GET /api/tarefas` via `$lib/api/tasks` e renderiza a hierarquia
 	 * PROJETO → ETAPA → TAREFA (redesign variation-d): cada projeto é uma
-	 * `<section>` com `ProjectGroupHeader` (código #id, contagens, donut %) e
-	 * colapso próprio; dentro, as tarefas são sub-agrupadas por etapa (a partir de
+	 * `<section>` com `ProjectGroupHeader` (código #id, contagens);
+	 * dentro, as tarefas são sub-agrupadas por etapa (a partir de
 	 * `etapa_titulo`/`is_first_of_stage`, já calculados no backend) sob um
 	 * `StageGroupHeader` (barra azul que embute os rótulos de coluna). Cada tarefa
 	 * vira uma `TaskHubTaskRow` (chips de prioridade/tipo/status/responsável
@@ -15,13 +15,12 @@
 	 * Os filtros de projeto e órgão re-buscam server-side (o `orgao_scope` é
 	 * aplicado no backend); arquivadas vivem no ArchivedTasksDrawer (painel
 	 * lateral com `?modo=arquivadas` próprio). Estados de loading/erro/
-	 * vazio são anunciados via aria-live. Colapso de projeto/etapa em localStorage.
+	 * vazio são anunciados via aria-live.
 	 */
 	import { onMount, setContext } from 'svelte';
 	import { base } from '$app/paths';
 	import { slide, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { SvelteSet } from 'svelte/reactivity';
 	import { get as readStore } from 'svelte/store';
 	import {
 		fetchTarefas,
@@ -722,41 +721,17 @@
 		return `${group.key}::${sub}`;
 	}
 
-	// Colapso de PROJETOS, persistido em localStorage (default: tudo expandido).
-	// Etapas não colapsam — só o projeto expande/retrai.
-	const COLLAPSE_PROJECTS_KEY = 'tarefas:list:collapsed:projects';
-	let collapsedProjects = $state(new SvelteSet<string>());
-
-	function toggleSet(set: SvelteSet<string>, key: string): void {
-		if (set.has(key)) set.delete(key);
-		else set.add(key);
+	// Limpa chaves órfãs dos colapsos removidos (etapa e projeto).
+	try {
+		localStorage.removeItem('tarefas:list:collapsed:stages');
+		localStorage.removeItem('tarefas:list:collapsed:projects');
+	} catch {
+		// storage indisponível: ignora.
 	}
-
-	// Hidrata SÍNCRONO (SPA é CSR-only): garante que o $effect de persistência não
-	// sobrescreva o armazenado com vazio antes da hidratação.
-	function hydrateSet(key: string, set: SvelteSet<string>): void {
-		if (typeof localStorage === 'undefined') return;
-		try {
-			const raw = localStorage.getItem(key);
-			if (raw) for (const k of JSON.parse(raw) as string[]) set.add(k);
-		} catch {
-			// JSON corrompido / storage indisponível: começa tudo expandido.
-		}
-	}
-	hydrateSet(COLLAPSE_PROJECTS_KEY, collapsedProjects);
-
-	$effect(() => {
-		// Persiste o conjunto de projetos recolhidos (best-effort).
-		try {
-			localStorage.setItem(COLLAPSE_PROJECTS_KEY, JSON.stringify([...collapsedProjects]));
-		} catch {
-			// storage indisponível/cota: ignora.
-		}
-	});
 </script>
 
 <svelte:head>
-	<title>Tarefas — ProjetosRJ</title>
+	<title>ProjetosRJ — Tarefas</title>
 </svelte:head>
 
 <section
@@ -998,10 +973,8 @@
 			<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-5" aria-busy={loadState !== 'ready'}>
 				{#each data.groups as group (group.key)}
-					{@const pKey = group.key}
-					{@const pCollapsed = collapsedProjects.has(pKey)}
 					{@const groupStages = stagesOf(group.tasks)}
-					<!-- Nivel 1 - PROJETO: header rico (codigo #id, contagens, donut) + colapso. -->
+					<!-- Nivel 1 - PROJETO: header rico (codigo #id, contagens). -->
 					<section
 						aria-label={group.project_titulo}
 						class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
@@ -1012,15 +985,11 @@
 							orgaoSigla={group.project_orgao_sigla}
 							taskCount={group.tasks.length}
 							stagesCount={groupStages.length}
-							open={!pCollapsed}
-							onToggle={() => toggleSet(collapsedProjects, pKey)}
-							controlsId={`project-${pKey}`}
 							href={group.project_id != null ? `${base}/projetos/${group.project_id}` : null}
 						/>
 
-						<div class="task-collapse border-t border-border-subtle" data-collapsed={pCollapsed} id={`project-${pKey}`}>
-							<div>
-								<div class="flex flex-col gap-3 p-3">
+						<div class="border-t border-border-subtle">
+							<div class="flex flex-col gap-3 p-3">
 								{#each groupStages as stage (stageKey(group, stage))}
 									{@const sKey = stageKey(group, stage)}
 									<div class="overflow-hidden rounded-lg border border-border-subtle">
@@ -1033,120 +1002,119 @@
 											/>
 
 											{#each stage.tasks as task (task.id)}
-													<TaskHubTaskRow
-														{task}
-														onOpen={(id) => openTask(id, 'list')}
-														nestedInDrawer={false}
-														onDelete={deleteCard}
-														onChanged={() => void load()}
-													/>
-												{/each}
-												{#if addOpenKey === sKey}
-													<!-- Aparece INSTANTÂNEO e no MESMO lugar (sem slide/fade) — paridade
-													     com a main (display swap), focando a descrição. Fecha ao clicar
-													     fora se estiver vazio. -->
-													<form
-														use:closeOnClickOutside
-														class="bg-surface {addDraft.saving
-															? 'pointer-events-none opacity-[0.72]'
-															: ''}"
-														aria-label="Nova tarefa em {stage.titulo ?? 'Sem etapa'}"
-														onsubmit={(e) => {
-															e.preventDefault();
-															void submitAddForm();
-														}}
+												<TaskHubTaskRow
+													{task}
+													onOpen={(id) => openTask(id, 'list')}
+													nestedInDrawer={false}
+													onDelete={deleteCard}
+													onChanged={() => void load()}
+												/>
+											{/each}
+											{#if addOpenKey === sKey}
+												<!-- Aparece INSTANTÂNEO e no MESMO lugar (sem slide/fade) — paridade
+												     com a main (display swap), focando a descrição. Fecha ao clicar
+												     fora se estiver vazio. -->
+												<form
+													use:closeOnClickOutside
+													class="bg-surface {addDraft.saving
+														? 'pointer-events-none opacity-[0.72]'
+														: ''}"
+													aria-label="Nova tarefa em {stage.titulo ?? 'Sem etapa'}"
+													onsubmit={(e) => {
+														e.preventDefault();
+														void submitAddForm();
+													}}
+												>
+													<!-- A borda mora na MESMA caixa do min-h (box-sizing: border-box) — no
+													     <form> ela ficaria fora dos 44px e a linha nasceria 1px mais alta
+													     que o botão "+ Adicionar nova tarefa" que ela substitui. -->
+													<div
+														class="task-hub-grid min-h-[44px] items-center border-t border-border-subtle px-3"
 													>
-														<!-- A borda mora na MESMA caixa do min-h (box-sizing: border-box) — no
-														     <form> ela ficaria fora dos 44px e a linha nasceria 1px mais alta
-														     que o botão "+ Adicionar nova tarefa" que ela substitui. -->
-														<div
-															class="task-hub-grid min-h-[44px] items-center border-t border-border-subtle px-3"
-														>
-															<!-- svelte-ignore a11y_autofocus -->
-															<textarea
-																bind:value={addDraft.descricao}
-																onkeydown={onAddTextareaKeydown}
-																oninput={autoResizeAdd}
+														<!-- svelte-ignore a11y_autofocus -->
+														<textarea
+															bind:value={addDraft.descricao}
+															onkeydown={onAddTextareaKeydown}
+															oninput={autoResizeAdd}
+															disabled={addDraft.saving}
+															rows="1"
+															autofocus
+															placeholder="Descreva a tarefa…"
+															aria-label="Descrição da tarefa"
+															class="max-h-[120px] min-h-[32px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
+														></textarea>
+														<SelectMenu
+															size="sm"
+															options={prioridadeSelectOptions}
+															value={addDraft.prioridade || null}
+															onSelect={(v) => (addDraft.prioridade = v ?? '')}
+															disabled={addDraft.saving}
+															placeholder="Prioridade"
+															ariaLabel="Prioridade"
+														/>
+														<SelectMenu
+															size="sm"
+															options={tipoFormSelectOptions}
+															value={addDraft.tipo || null}
+															onSelect={(v) => (addDraft.tipo = v ?? '')}
+															disabled={addDraft.saving}
+															placeholder="Tipo"
+															ariaLabel="Tipo de pedido"
+														/>
+														<SelectMenu
+															size="sm"
+															options={statusSelectOptions}
+															value={addDraft.status}
+															onSelect={(v) => {
+																if (v) addDraft.status = v;
+															}}
+															disabled={addDraft.saving}
+															ariaLabel="Status"
+														/>
+														<AssigneePicker
+															projectValue={addTarget?.projectValue}
+															bind:assignees={addDraft.assignees}
+															disabled={addDraft.saving}
+														/>
+														<div class="flex items-center justify-center gap-1">
+															<button
+																type="submit"
 																disabled={addDraft.saving}
-																rows="1"
-																autofocus
-																placeholder="Descreva a tarefa…"
-																aria-label="Descrição da tarefa"
-																class="max-h-[120px] min-h-[32px] w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-xs leading-normal text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60 2xl:text-sm"
-															></textarea>
-															<SelectMenu
-																size="sm"
-																options={prioridadeSelectOptions}
-																value={addDraft.prioridade || null}
-																onSelect={(v) => (addDraft.prioridade = v ?? '')}
+																title="Salvar"
+																aria-label="Salvar tarefa"
+																class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+															>
+																<i class="fas fa-check text-xs" aria-hidden="true"></i>
+															</button>
+															<button
+																type="button"
+																onclick={cancelAddForm}
 																disabled={addDraft.saving}
-																placeholder="Prioridade"
-																ariaLabel="Prioridade"
-															/>
-															<SelectMenu
-																size="sm"
-																options={tipoFormSelectOptions}
-																value={addDraft.tipo || null}
-																onSelect={(v) => (addDraft.tipo = v ?? '')}
-																disabled={addDraft.saving}
-																placeholder="Tipo"
-																ariaLabel="Tipo de pedido"
-															/>
-															<SelectMenu
-																size="sm"
-																options={statusSelectOptions}
-																value={addDraft.status}
-																onSelect={(v) => {
-																	if (v) addDraft.status = v;
-																}}
-																disabled={addDraft.saving}
-																ariaLabel="Status"
-															/>
-															<AssigneePicker
-																projectValue={addTarget?.projectValue}
-																bind:assignees={addDraft.assignees}
-																disabled={addDraft.saving}
-															/>
-															<div class="flex items-center justify-center gap-1">
-																<button
-																	type="submit"
-																	disabled={addDraft.saving}
-																	title="Salvar"
-																	aria-label="Salvar tarefa"
-																	class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-																>
-																	<i class="fas fa-check text-xs" aria-hidden="true"></i>
-																</button>
-																<button
-																	type="button"
-																	onclick={cancelAddForm}
-																	disabled={addDraft.saving}
-																	title="Cancelar"
-																	aria-label="Cancelar"
-																	class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-																>
-																	<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
-																</button>
-															</div>
+																title="Cancelar"
+																aria-label="Cancelar"
+																class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+															>
+																<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
+															</button>
 														</div>
-														{#if addDraft.error}
-															<p role="alert" class="px-3 pb-2 text-xs text-danger">{addDraft.error}</p>
-														{/if}
-													</form>
-												{:else}
-													<button
-														type="button"
-														onclick={() => openAddForm(group, stage)}
-														class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-wash-neutral hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-													>
-														<i class="fas fa-plus text-2xs text-brand" aria-hidden="true"></i>
-														Adicionar nova tarefa
-													</button>
+													</div>
+													{#if addDraft.error}
+														<p role="alert" class="px-3 pb-2 text-xs text-danger">{addDraft.error}</p>
+													{/if}
+												</form>
+											{:else}
+												<button
+													type="button"
+													onclick={() => openAddForm(group, stage)}
+													class="flex min-h-[44px] w-full items-center gap-2 border-t border-border-subtle px-3 text-left text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-wash-neutral hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+												>
+													<i class="fas fa-plus text-2xs text-brand" aria-hidden="true"></i>
+													Adicionar nova tarefa
+												</button>
 											{/if}
 										</div>
 									</div>
 								{/each}
-								</div>
 							</div>
 						</div>
 					</section>

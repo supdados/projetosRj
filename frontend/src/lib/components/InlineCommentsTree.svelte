@@ -94,7 +94,7 @@
 	let mentionStart = $state(-1);
 	let mentionActiveIndex = $state(0);
 	// Posição FIXED do dropdown de menção (escapa do overflow:hidden dos ancestrais
-	// — o painel vive dentro de .task-collapse/scroller que clipariam um absolute).
+	// — section do projeto e scroller da etapa clipariam um absolute).
 	let mentionPos = $state<{ left: number; bottom: number; width: number }>({
 		left: 0,
 		bottom: 0,

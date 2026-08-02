@@ -1,10 +1,9 @@
 <script lang="ts">
 	/**
-	 * Header do card de PROJETO: chevron que COLAPSA o card + código (id) integrado
-	 * ao nome ("42 - Nome do Projeto"), sigla do órgão e, à direita, as contagens de
-	 * tarefas e etapas. O nome LINKA para a página do projeto; a expansão acontece
-	 * só ao clicar no chevron (setinha). Tipografia/cores de id/título/órgão seguem
-	 * o padrão de Projetos e Projetos Pendentes.
+	 * Header estático do card de PROJETO: código (id) integrado ao nome
+	 * ("42 - Nome do Projeto"), sigla do órgão e, à direita, as contagens de
+	 * tarefas e etapas. O nome LINKA para a página do projeto. Tipografia/cores
+	 * de id/título/órgão seguem o padrão de Projetos e Projetos Pendentes.
 	 */
 	interface Props {
 		titulo: string;
@@ -13,44 +12,14 @@
 		orgaoSigla: string | null;
 		taskCount: number;
 		stagesCount: number;
-		open: boolean;
-		onToggle: () => void;
-		/** id do corpo colapsável, para `aria-controls`. */
-		controlsId?: string;
 		/** Link para a página do projeto; `null` quando o grupo não tem projeto. */
 		href?: string | null;
 	}
 
-	let {
-		titulo,
-		code,
-		orgaoSigla,
-		taskCount,
-		stagesCount,
-		open,
-		onToggle,
-		controlsId,
-		href = null
-	}: Props = $props();
+	let { titulo, code, orgaoSigla, taskCount, stagesCount, href = null }: Props = $props();
 </script>
 
 <div class="flex w-full items-center gap-1.5 px-5 py-4">
-	<button
-		type="button"
-		onclick={onToggle}
-		aria-expanded={open}
-		aria-controls={controlsId}
-		aria-label={open ? 'Recolher projeto' : 'Expandir projeto'}
-		class="-ml-1 inline-flex shrink-0 items-center rounded-md p-1 text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-	>
-		<i
-			class="fas fa-chevron-right text-xs transition-transform duration-fast motion-reduce:transition-none {open
-				? 'rotate-90'
-				: ''}"
-			aria-hidden="true"
-		></i>
-	</button>
-
 	<!-- Tipografia/cor do "ID - Nome" espelham a coluna Título da lista de
 		 Projetos e o card de Pendentes (link text-base medium primary-700 + hover
 		 underline; ID em xs bold muted). -->

@@ -3,8 +3,7 @@
 	 * Header estático de ETAPA: barra azul que usa a MESMA `.task-hub-grid`
 	 * das linhas, de modo que os rótulos de coluna (Prioridade/Tipo/Status/
 	 * Responsável/Ações) fiquem embutidos no header e alinhados com os chips
-	 * abaixo — substituindo o cabeçalho de colunas separado. Etapas não
-	 * colapsam (só o projeto expande/retrai).
+	 * abaixo — substituindo o cabeçalho de colunas separado.
 	 */
 	interface Props {
 		/** Código exibível da etapa (ex.: "42.1"); `null` para "Sem etapa". */

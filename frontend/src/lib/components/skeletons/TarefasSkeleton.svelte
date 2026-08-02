@@ -15,7 +15,6 @@
 			<!-- Grupo de projeto 1: 2 etapas (3 + 2 tarefas). -->
 			<section class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm">
 				<div class="flex w-full items-center gap-1.5 px-5 py-4">
-					<Skeleton class="h-4 w-4 rounded" />
 					<Skeleton class="h-4 w-8 rounded" />
 					<Skeleton class="h-4 w-64 rounded" />
 					<span class="ml-auto flex shrink-0 items-center gap-2">
@@ -28,9 +27,9 @@
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
 							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
-									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />
 									<Skeleton class="h-3 w-32 rounded" />
+									<Skeleton class="h-3.5 w-7 rounded-full" />
 								</span>
 								<Skeleton class="h-2.5 w-12 justify-self-center rounded" />
 								<Skeleton class="h-2.5 w-8 justify-self-center rounded" />
@@ -56,9 +55,9 @@
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
 							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
-									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />
 									<Skeleton class="h-3 w-24 rounded" />
+									<Skeleton class="h-3.5 w-7 rounded-full" />
 								</span>
 								<Skeleton class="h-2.5 w-12 justify-self-center rounded" />
 								<Skeleton class="h-2.5 w-8 justify-self-center rounded" />
@@ -88,7 +87,6 @@
 			<!-- Grupo de projeto 2: 1 etapa (2 tarefas). -->
 			<section class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm">
 				<div class="flex w-full items-center gap-1.5 px-5 py-4">
-					<Skeleton class="h-4 w-4 rounded" />
 					<Skeleton class="h-4 w-8 rounded" />
 					<Skeleton class="h-4 w-48 rounded" />
 					<span class="ml-auto flex shrink-0 items-center gap-2">
@@ -101,9 +99,9 @@
 						<div class="overflow-hidden rounded-lg border border-border-subtle">
 							<div class="task-hub-grid w-full items-center bg-wash-neutral px-3 py-2">
 								<span class="flex min-w-0 items-center gap-2">
-									<Skeleton class="h-2.5 w-2.5 rounded" />
 									<Skeleton class="h-3 w-10 rounded" />
 									<Skeleton class="h-3 w-28 rounded" />
+									<Skeleton class="h-3.5 w-7 rounded-full" />
 								</span>
 								<Skeleton class="h-2.5 w-12 justify-self-center rounded" />
 								<Skeleton class="h-2.5 w-8 justify-self-center rounded" />

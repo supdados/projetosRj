@@ -745,7 +745,7 @@
 .thin-scroll {
 }
 
-/* === Lista de tarefas (hub) — grade compartilhada e colapso ===
+/* === Lista de tarefas (hub) — grade compartilhada ===
    Grade unica reusada pelo cabecalho de colunas e pelas linhas de tarefa, para
    as colunas alinharem perfeitamente. Colunas: Descricao (1fr) | Prioridade |
    Tipo | Status | Responsavel | Acoes. min-width forca scroll horizontal (dentro
@@ -762,24 +762,4 @@
 	align-items: center;
 	gap: 0.4rem 0.6rem;
 	min-width: 760px;
-}
-
-/* Colapso de secao (projeto/etapa) via grid-template-rows 0fr<->1fr — o filho
-   precisa de overflow:hidden/min-height:0 para clipar enquanto recolhe. */
-.task-collapse {
-	display: grid;
-	grid-template-rows: 1fr;
-	transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-.task-collapse[data-collapsed='true'] {
-	grid-template-rows: 0fr;
-}
-.task-collapse > * {
-	overflow: hidden;
-	min-height: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-	.task-collapse {
-		transition: none;
-	}
 }
