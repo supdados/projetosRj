@@ -22,17 +22,13 @@
 	} from '$lib/api/adminOrgaos';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
-	import type {
-		OrgaoNode,
-		OrgaoTreeData,
-		SiorgStatusData,
-		SiorgSyncResult
-	} from '$lib/types/adminOrgaos';
+	import type { OrgaoNode, OrgaoTreeData, SiorgStatusData } from '$lib/types/adminOrgaos';
 	import OrgaoTreeNode from '$lib/components/OrgaoTreeNode.svelte';
 	import AdminOrgaosSkeleton from '$lib/components/skeletons/AdminOrgaosSkeleton.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -46,8 +42,9 @@
 	let errorKind = $state<'forbidden' | 'generic'>('generic');
 
 	let siorg = $state<SiorgStatusData | null>(null);
+	/** `null` também é o estado ANTES da 1ª consulta — só a falha acende o aviso. */
+	let siorgStatusFailed = $state(false);
 	let syncing = $state(false);
-	let syncResult = $state<SiorgSyncResult | null>(null);
 	/** Mensagem de erro do sync (409/502/rede). */
 	let syncError = $state<string>('');
 
@@ -116,10 +113,12 @@
 	async function loadSiorgStatus(): Promise<void> {
 		try {
 			siorg = await siorgStatus();
+			siorgStatusFailed = false;
 		} catch (err) {
 			// Status indisponível não bloqueia a árvore nem o botão; o POST de sync resolve.
 			console.warn('Falha ao consultar status do SIORG', err);
 			siorg = null;
+			siorgStatusFailed = true;
 		}
 	}
 
@@ -127,10 +126,12 @@
 		if (syncDisabled) return;
 		syncing = true;
 		syncError = '';
-		syncResult = null;
 		try {
-			syncResult = await siorgSync();
+			const result = await siorgSync();
 			await Promise.all([load(), loadSiorgStatus()]);
+			flash.success(
+				`Estrutura atualizada: ${result.criadas} criada${result.criadas === 1 ? '' : 's'}, ${result.atualizadas} atualizada${result.atualizadas === 1 ? '' : 's'}, ${result.desativadas} desativada${result.desativadas === 1 ? '' : 's'}.`
+			);
 		} catch (err) {
 			syncError = syncErrorMessage(err);
 			await loadSiorgStatus();
@@ -268,57 +269,64 @@
 		{/snippet}
 	</PageHeader>
 
-	<div class="siorg-card" aria-live="polite">
-		<div class="siorg-card-main">
-			<span class="siorg-card-icon" aria-hidden="true">
-				<i class="fas fa-satellite-dish"></i>
-			</span>
-			<div class="siorg-card-body">
-				<span class="siorg-card-title">Última sincronização com o SIORG</span>
-				{#if siorg && !siorg.configurado}
-					<span class="siorg-warn">
-						<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-						Integração SIORG não configurada
-					</span>
-				{:else if ultimaSync}
-					<span class="siorg-card-line">
-						<span class="siorg-status" data-status={ultimaSync.status}>{ultimaSync.status}</span>
-						em {formatDateTime(ultimaSync.finalizado_em ?? ultimaSync.iniciado_em)}
-						{#if ultimaSync.disparado_por_nome}
-							por {ultimaSync.disparado_por_nome}
-						{/if}
-						— {ultimaSync.criadas} criada{ultimaSync.criadas === 1 ? '' : 's'},
-						{ultimaSync.atualizadas} atualizada{ultimaSync.atualizadas === 1 ? '' : 's'},
-						{ultimaSync.desativadas} desativada{ultimaSync.desativadas === 1 ? '' : 's'}
-					</span>
-					{#if ultimaSync.erro}
+	{#if siorgStatusFailed}
+		<StateBanner
+			tone="warning"
+			icon="plug"
+			title="Status da integração indisponível"
+			description="Não foi possível consultar a última sincronização com o SIORG."
+			actionLabel="Tentar novamente"
+			onAction={loadSiorgStatus}
+		/>
+	{:else}
+		<div class="siorg-card" aria-live="polite">
+			<div class="siorg-card-main">
+				<span class="siorg-card-icon" aria-hidden="true">
+					<i class="fas fa-satellite-dish"></i>
+				</span>
+				<div class="siorg-card-body">
+					<span class="siorg-card-title">Última sincronização com o SIORG</span>
+					{#if !siorg}
+						<!-- Antes da 1ª resposta: linha neutra, não aviso — o card já ocupa
+						     o lugar dele e não empurra nada quando o status chega. -->
+						<span class="siorg-card-line">Consultando status…</span>
+					{:else if !siorg.configurado}
 						<span class="siorg-warn">
 							<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-							{ultimaSync.erro}
+							Integração SIORG não configurada
 						</span>
+					{:else if ultimaSync}
+						<span class="siorg-card-line">
+							<span class="siorg-status" data-status={ultimaSync.status}>{ultimaSync.status}</span>
+							em {formatDateTime(ultimaSync.finalizado_em ?? ultimaSync.iniciado_em)}
+							{#if ultimaSync.disparado_por_nome}
+								por {ultimaSync.disparado_por_nome}
+							{/if}
+							— {ultimaSync.criadas} criada{ultimaSync.criadas === 1 ? '' : 's'},
+							{ultimaSync.atualizadas} atualizada{ultimaSync.atualizadas === 1 ? '' : 's'},
+							{ultimaSync.desativadas} desativada{ultimaSync.desativadas === 1 ? '' : 's'}
+						</span>
+						{#if ultimaSync.erro}
+							<span class="siorg-warn">
+								<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+								{ultimaSync.erro}
+							</span>
+						{/if}
+					{:else}
+						<span class="siorg-card-line">Nenhuma sincronização registrada ainda.</span>
 					{/if}
-				{:else if siorg}
-					<span class="siorg-card-line">Nenhuma sincronização registrada ainda.</span>
-				{:else}
-					<span class="siorg-card-line">Status da integração indisponível.</span>
-				{/if}
+				</div>
 			</div>
 		</div>
-	</div>
-
-	{#if syncResult}
-		<div role="status" class="siorg-feedback is-success">
-			<i class="fas fa-check-circle" aria-hidden="true"></i>
-			Estrutura atualizada: {syncResult.criadas} criada{syncResult.criadas === 1 ? '' : 's'},
-			{syncResult.atualizadas} atualizada{syncResult.atualizadas === 1 ? '' : 's'},
-			{syncResult.desativadas} desativada{syncResult.desativadas === 1 ? '' : 's'}.
-		</div>
 	{/if}
+
 	{#if syncError}
-		<div role="alert" class="siorg-feedback is-error">
-			<i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-			{syncError}
-		</div>
+		<StateBanner
+			tone="danger"
+			title={syncError}
+			actionLabel="Tentar novamente"
+			onAction={handleSync}
+		/>
 	{/if}
 
 	{#if loadState === 'loading' && !data}
@@ -581,26 +589,5 @@
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--ds-color-text-warning, #b45309);
-	}
-
-	.siorg-feedback {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		border-radius: 10px;
-		padding: 0.625rem 1rem;
-		font-size: 0.875rem;
-		border: 1px solid transparent;
-		background: var(--ds-color-surface-base);
-	}
-	.siorg-feedback.is-success {
-		border-color: var(--ds-color-border-success, #15803d);
-		color: var(--ds-color-text-success, #15803d);
-		background: var(--ds-color-wash-success, rgba(21, 128, 61, 0.08));
-	}
-	.siorg-feedback.is-error {
-		border-color: var(--ds-color-border-danger, #b91c1c);
-		color: var(--ds-color-text-danger, #b91c1c);
-		background: var(--ds-color-wash-danger, rgba(185, 28, 28, 0.08));
 	}
 </style>

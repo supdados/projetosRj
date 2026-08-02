@@ -31,6 +31,7 @@
 	} from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type {
 		TaskAssignee,
 		TaskCard,
@@ -56,7 +57,7 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import ArchivedTasksDrawer from '$lib/components/ArchivedTasksDrawer.svelte';
-	import Modal from '$lib/components/Modal.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import TarefasSkeleton from '$lib/components/skeletons/TarefasSkeleton.svelte';
 	import { createBoardStore } from '$lib/stores/board';
@@ -64,7 +65,7 @@
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import type { BoardCard, BoardQuery } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId, statusIconId } from '$lib/utils/taskLabels';
 	import {
 		triggerTaskFinalizeConfetti,
 		type CelebrationOriginLike
@@ -143,9 +144,12 @@
 	// No kanban os filtros somem e o quadro toma toda a vertical.
 	const boardExpanded = $derived(view === 'kanban');
 
-	const PREFERS_REDUCED_MOTION =
-		typeof window !== 'undefined' &&
-		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	function reducedMotion(): boolean {
+		if (typeof window === 'undefined') return false;
+		return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+	}
+
+	const PREFERS_REDUCED_MOTION = reducedMotion();
 	const EXPAND_IN_MS = PREFERS_REDUCED_MOTION ? 0 : 420;
 	const EXPAND_OUT_MS = PREFERS_REDUCED_MOTION ? 0 : 300;
 
@@ -171,6 +175,8 @@
 	 */
 	function celebrateFinalize(origin?: CelebrationOriginLike): void {
 		triggerTaskFinalizeConfetti(origin);
+		// Com reduced-motion o confete é no-op: sem este toast o feedback ficaria zero.
+		if (reducedMotion()) flash.success('Tarefa finalizada.', { key: 'tarefa-finalizada' });
 	}
 	// KanbanBoard dispara a celebração via contexto ao mover um card p/ Finalizada.
 	setContext('celebrateFinalize', celebrateFinalize);
@@ -348,46 +354,71 @@
 		}
 	}
 
-	// ARQUIVAR FINALIZADAS em lote (modo lista). Confirmação via modal SPA com o
-	// MESMO texto do legado; sucesso remove as rows pelos ids e re-busca; sem ids
-	// mostra o aviso 'Nenhuma tarefa…'. SEM toast/som/confete (paridade).
-	let confirmingArchive = $state(false);
+	// ARQUIVAR FINALIZADAS em lote (modo lista). Confirmação com a CONTAGEM do que
+	// sai da lista; o lote não tem efeito visível imediato, então o sucesso é
+	// confirmado por toast e o desfecho sem/com erro por banner ancorado na tela.
 	let archiving = $state(false);
-	let archiveNotice = $state<string | null>(null);
+	let archiveNotice = $state<{ tone: 'danger' | 'info'; title: string } | null>(null);
 
-	function openArchiveConfirm(): void {
+	/** Finalizadas já carregadas na visão ativa — base honesta da contagem. */
+	function finalizadasVisiveis(): number {
+		if (view === 'kanban') {
+			return readStore(board).columns.find((c) => c.status === 'finalizada')?.tasks.length ?? 0;
+		}
+		return (data?.groups ?? []).reduce(
+			(total, group) =>
+				total + group.tasks.filter((t) => normalizeStatus(t.status) === 'finalizada').length,
+			0
+		);
+	}
+
+	function archiveDescription(): string {
+		const visiveis = finalizadasVisiveis();
+		const contagem = visiveis === 1 ? '1 tarefa finalizada' : `${visiveis} tarefas finalizadas`;
+		// A lista é paginada por projeto: fora da 1ª página pode haver mais.
+		const parcial = view === 'list' && (data?.pagination.total_pages ?? 1) > 1;
+		const alvo = parcial ? `ao menos ${contagem} (as desta página)` : contagem;
+		return `Arquivar move ${alvo} do escopo atual para o histórico de arquivadas; dá para restaurar depois.`;
+	}
+
+	async function requestArchive(): Promise<void> {
 		archiveNotice = null;
-		confirmingArchive = true;
-	}
-	setContext('requestArchiveFinalizadas', openArchiveConfirm);
-	function cancelArchiveConfirm(): void {
-		confirmingArchive = false;
-	}
-	async function confirmArchive(): Promise<void> {
+		const ok = await confirmAction({
+			title: 'Arquivar tarefas finalizadas?',
+			description: archiveDescription(),
+			tone: 'brand',
+			icon: 'archive',
+			confirmLabel: 'Arquivar finalizadas'
+		});
+		if (!ok) return;
+
 		archiving = true;
-		archiveNotice = null;
 		try {
 			const result = await archiveFinalizadas({
 				project: project || undefined,
 				orgao: orgao || undefined
 			});
-			confirmingArchive = false;
 			if (result.archived_count === 0) {
-				// Paridade: aviso quando não há nada a arquivar no escopo.
-				archiveNotice = result.message;
-			} else {
-				// Remove os cards do board (se carregado) e re-busca a lista.
-				for (const id of result.archived_task_ids) board.removeCard(Number(id));
-				void load();
+				archiveNotice = { tone: 'info', title: result.message };
+				return;
 			}
+			// Remove os cards do board (se carregado) e re-busca a lista.
+			for (const id of result.archived_task_ids) board.removeCard(Number(id));
+			flash.success(
+				result.archived_count === 1 ? '1 tarefa arquivada.' : `${result.archived_count} tarefas arquivadas.`,
+				{ description: 'Elas ficam no histórico de arquivadas.' }
+			);
+			void load();
 		} catch (err) {
-			archiveNotice =
-				err instanceof ApiClientError ? err.message : 'Erro ao arquivar tarefas.';
-			confirmingArchive = false;
+			archiveNotice = {
+				tone: 'danger',
+				title: err instanceof ApiClientError ? err.message : 'Erro ao arquivar tarefas.'
+			};
 		} finally {
 			archiving = false;
 		}
 	}
+	setContext('requestArchiveFinalizadas', () => void requestArchive());
 
 	// EXCLUIR na LISTA: a confirmação inline (mini-confirm, paridade com o kanban)
 	// agora vive em TaskHubTaskRow, que chama `deleteCard` via a prop `onDelete`.
@@ -449,11 +480,17 @@
 		ADD_PRIORIDADE_OPTIONS.slice(1).map((o) => ({
 			value: o.value,
 			label: o.label,
-			dot: priorityDotColor(o.value)
+			dot: priorityDotColor(o.value),
+			icon: priorityIconId(o.value)
 		}))
 	);
 	const statusSelectOptions = $derived<SelectMenuOption[]>(
-		ADD_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, dot: STATUS_DOT[o.value] }))
+		ADD_STATUS_OPTIONS.map((o) => ({
+			value: o.value,
+			label: o.label,
+			dot: STATUS_DOT[o.value],
+			icon: statusIconId(o.value)
+		}))
 	);
 	const tipoFilterSelectOptions = $derived<SelectMenuOption[]>(
 		FILTER_TIPO_OPTIONS.map((o) => ({ value: o.value, label: o.label }))
@@ -500,14 +537,38 @@
 		addDraft = emptyAddDraft();
 	}
 
+	// Fechar com texto digitado pede confirmação (Esc, clique fora e botão X).
+	let discardPromptOpen = false;
+
+	async function requestDiscardAddForm(): Promise<void> {
+		if (!addDraft.descricao.trim()) {
+			cancelAddForm();
+			return;
+		}
+		if (discardPromptOpen) return;
+		discardPromptOpen = true;
+		const ok = await confirmAction({
+			title: 'Descartar esta tarefa?',
+			description: 'O texto digitado será perdido.',
+			tone: 'warning',
+			icon: 'draft',
+			confirmLabel: 'Descartar',
+			cancelLabel: 'Continuar editando'
+		});
+		discardPromptOpen = false;
+		if (ok) cancelAddForm();
+	}
+
 	/**
-	 * Action: fecha o form de "+ Nova tarefa" ao clicar FORA dele — só se nada foi
-	 * digitado (não descarta texto em andamento). Captura no `pointerdown`.
+	 * Action: fecha o form de "+ Nova tarefa" ao clicar FORA dele — com texto
+	 * digitado, pergunta antes de descartar. Captura no `pointerdown`.
 	 */
 	function closeOnClickOutside(node: HTMLElement) {
 		function handle(event: PointerEvent): void {
 			if (node.contains(event.target as Node)) return;
-			if (!addDraft.descricao.trim()) cancelAddForm();
+			// Clique no próprio diálogo de descarte não reabre a pergunta.
+			if (discardPromptOpen) return;
+			void requestDiscardAddForm();
 		}
 		document.addEventListener('pointerdown', handle, true);
 		return {
@@ -529,7 +590,7 @@
 	function onAddTextareaKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') {
 			event.preventDefault();
-			cancelAddForm();
+			void requestDiscardAddForm();
 			return;
 		}
 		if (event.key === 'Enter' && !event.shiftKey) {
@@ -772,7 +833,7 @@
 			{#if view === 'list'}
 				<button
 					type="button"
-					onclick={openArchiveConfirm}
+					onclick={() => void requestArchive()}
 					disabled={archiving || loadState !== 'ready'}
 					class="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 					title="Arquivar tarefas finalizadas do escopo atual"
@@ -901,14 +962,12 @@
 	</div>
 
 	{#if archiveNotice}
-		<!-- Aviso pós-arquivamento (paridade com o alert legado: sem ids / erro) -->
-		<div
-			role="status"
-			aria-live="polite"
-			class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm text-text-secondary"
-		>
-			{archiveNotice}
-		</div>
+		<StateBanner
+			tone={archiveNotice.tone}
+			title={archiveNotice.title}
+			icon={archiveNotice.tone === 'info' ? 'archive' : undefined}
+			onDismiss={() => (archiveNotice = null)}
+		/>
 	{/if}
 
 	{#if view === 'kanban'}
@@ -1082,7 +1141,7 @@
 															</button>
 															<button
 																type="button"
-																onclick={cancelAddForm}
+																onclick={() => void requestDiscardAddForm()}
 																disabled={addDraft.saving}
 																title="Cancelar"
 																aria-label="Cancelar"
@@ -1129,38 +1188,6 @@
 		{/if}
 	{/if}
 </section>
-
-{#if confirmingArchive}
-	<!-- Confirmação de arquivamento no chrome compartilhado (Modal centraliza por
-	     flex; o bespoke anterior perdia o translate de centralização para o
-	     fill-mode da animação e abria deslocado). -->
-	<Modal labelId="archive-confirm-title" onBackdrop={cancelArchiveConfirm}>
-		<div class="flex flex-col gap-4">
-			<h2 id="archive-confirm-title" class="font-heading text-lg font-bold text-text-primary">
-				Arquivar finalizados
-			</h2>
-			<p class="text-sm text-text-secondary">Arquivar tarefas finalizadas do escopo atual?</p>
-			<div class="flex justify-end gap-2">
-				<button
-					type="button"
-					onclick={cancelArchiveConfirm}
-					disabled={archiving}
-					class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					onclick={() => void confirmArchive()}
-					disabled={archiving}
-					class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-sm hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-				>
-					{archiving ? 'Arquivando…' : 'Arquivar'}
-				</button>
-			</div>
-		</div>
-	</Modal>
-{/if}
 
 <TaskDrawer store={drawer} />
 

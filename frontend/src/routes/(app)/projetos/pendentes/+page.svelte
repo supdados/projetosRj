@@ -34,6 +34,7 @@
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
 	import PendentesSkeleton from '$lib/components/skeletons/PendentesSkeleton.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -80,12 +81,19 @@
 	const DEBOUNCE_MS = 300;
 
 	/** Opções de prioridade (lista canônica; o backend filtra por igualdade). */
-	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
-		{ value: 'baixa', label: 'Baixa', dot: 'var(--ds-color-priority-baixa)' },
-		{ value: 'media', label: 'Média', dot: 'var(--ds-color-priority-media)' },
-		{ value: 'alta', label: 'Alta', dot: 'var(--ds-color-priority-alta)' },
-		{ value: 'urgente', label: 'Urgente', dot: 'var(--ds-color-priority-urgente)' }
-	];
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = (
+		[
+			['baixa', 'Baixa'],
+			['media', 'Média'],
+			['alta', 'Alta'],
+			['urgente', 'Urgente']
+		] as const
+	).map(([value, label]) => ({
+		value,
+		label,
+		dot: priorityDotColor(value),
+		icon: priorityIconId(value)
+	}));
 
 	// Filtros controlados pela UI; a busca acontece server-side.
 	let periodo = $state<PendingPeriodo>('atrasados');
@@ -399,12 +407,17 @@
 			{/if}
 		{/snippet}
 		{#snippet actions()}
-			<!-- Mesmo botão "Novo Projeto" de Home e Projetos (Button size="sm"). -->
-			<Button size="sm" onclick={openCreateModal} disabled={openingCreate}>
+			<!-- Mesmo botão "Novo Projeto" de Home e Projetos (Button size="sm"). O
+				 pré-fetch das opções do formulário mostra progresso no próprio botão:
+				 sem isso o clique parece morto até o modal abrir (ou o toast de erro). -->
+			<Button size="sm" onclick={openCreateModal} disabled={openingCreate} aria-busy={openingCreate}>
 				{#snippet icon()}
-					<i class="fas fa-plus" aria-hidden="true"></i>
+					<i
+						class="fas {openingCreate ? 'fa-spinner fa-spin' : 'fa-plus'}"
+						aria-hidden="true"
+					></i>
 				{/snippet}
-				Novo Projeto
+				{openingCreate ? 'Abrindo…' : 'Novo Projeto'}
 			</Button>
 		{/snippet}
 	</PageHeader>

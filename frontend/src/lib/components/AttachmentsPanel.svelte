@@ -13,6 +13,9 @@
 	 *   - drag-and-drop de arquivo na zona de upload (drop → mesmo fluxo do input).
 	 */
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import FeedbackIcon from '$lib/components/FeedbackIcon.svelte';
+	import Modal from '$lib/components/Modal.svelte';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { TaskAttachment } from '$lib/types/taskDrawer';
 
@@ -98,14 +101,21 @@
 		preview = null;
 	}
 
-	function onPreviewKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') closePreview();
-	}
-
-	async function remove(anexoId: number): Promise<void> {
+	async function remove(anexo: TaskAttachment): Promise<void> {
 		if (uploading) return;
-		if (!window.confirm('Excluir este anexo?')) return;
-		await store.deleteAttachment(anexoId);
+		await confirmAction({
+			title: 'Excluir anexo?',
+			description: `"${anexo.filename}" será removido desta tarefa. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir anexo',
+			busyLabel: 'Excluindo…',
+			// `run` mantém o diálogo aberto e mostra a mensagem do servidor na falha.
+			run: async () => {
+				const ok = await store.deleteAttachment(anexo.id);
+				if (!ok) throw new Error($store.error ?? 'Não foi possível excluir o anexo.');
+			}
+		});
 	}
 </script>
 
@@ -179,7 +189,7 @@
 					{#if canManage}
 						<button
 							type="button"
-							onclick={() => remove(anexo.id)}
+							onclick={() => void remove(anexo)}
 							aria-label={`Excluir anexo ${anexo.filename}`}
 							class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 						>
@@ -226,44 +236,41 @@
 </section>
 
 {#if preview && preview.url}
-	<!-- Preview modal — paridade com openAnexoPreviewModal do legado. -->
-	<div
-		class="fixed inset-0 z-[1000] bg-overlay"
-		onclick={closePreview}
-		role="presentation"
-	></div>
-	<div
-		role="dialog"
-		aria-modal="true"
-		aria-label={`Preview de ${preview.filename}`}
-		tabindex="-1"
-		onkeydown={onPreviewKeydown}
-		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+	<!-- Preview no chrome único de modal (z-modal, Esc e foco preso vêm dele). -->
+	<Modal
+		labelId={`${idPrefix}-anexo-preview-title`}
+		maxWidth="max-w-[52rem]"
+		onBackdrop={closePreview}
 	>
-		<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">
-			<h6 class="m-0 truncate text-sm font-semibold text-text-primary">{preview.filename}</h6>
+		<header class="flex items-center justify-between gap-2 border-b border-border-subtle pb-3">
+			<h6
+				id={`${idPrefix}-anexo-preview-title`}
+				class="m-0 truncate text-sm font-semibold text-text-primary"
+			>
+				{preview.filename}
+			</h6>
 			<button
 				type="button"
 				onclick={closePreview}
 				aria-label="Fechar preview"
-				class="flex h-7 w-7 items-center justify-center rounded-md text-lg leading-none text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				class="flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
-				&times;
+				<FeedbackIcon id="close" size={16} />
 			</button>
 		</header>
-		<div class="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-surface-muted p-3">
+		<div class="mt-3 flex max-h-[60vh] min-h-0 items-center justify-center overflow-auto rounded-md bg-surface-muted p-3">
 			{#if preview.is_image}
 				<img
 					src={preview.url}
 					alt={preview.filename}
 					loading="lazy"
-					class="max-h-[68vh] max-w-full rounded-md object-contain"
+					class="max-h-[56vh] max-w-full rounded-md object-contain"
 				/>
 			{:else if previewIsPdf}
 				<iframe
 					src={preview.url}
 					title={preview.filename}
-					class="h-[68vh] w-full rounded-md border-none bg-surface"
+					class="h-[56vh] w-full rounded-md border-none bg-surface"
 				></iframe>
 			{:else}
 				<div class="flex flex-col items-center gap-2 py-10 text-center text-text-secondary">
@@ -273,7 +280,7 @@
 				</div>
 			{/if}
 		</div>
-		<footer class="flex items-center justify-end gap-2 border-t border-border-subtle px-4 py-2.5">
+		<footer class="mt-3 flex items-center justify-end gap-2 border-t border-border-subtle pt-3">
 			<a
 				href={preview.url}
 				target="_blank"
@@ -292,5 +299,5 @@
 				Baixar
 			</a>
 		</footer>
-	</div>
+	</Modal>
 {/if}

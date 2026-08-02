@@ -20,6 +20,8 @@
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import DatePickerPanel from './DatePickerPanel.svelte';
+	import StateBanner from './StateBanner.svelte';
+	import { flash } from '$lib/stores/flash';
 	import type {
 		EtapaDetail,
 		EtapaInlineField,
@@ -59,7 +61,8 @@
 				busy?: boolean;
 			}
 		>;
-		onReorder: (orderedIds: number[]) => void;
+		/** Persiste a ordem; resolve `false` quando o servidor recusou. */
+		onReorder: (orderedIds: number[]) => Promise<boolean>;
 		onUpdateField: (etapaId: number, field: EtapaInlineField, value: string) => void;
 		onCycleStatus: (etapaId: number) => void;
 		/** Dispensa manual do aviso inline de uma linha. */
@@ -268,9 +271,21 @@
 			return;
 		}
 		const movedId = draggedId;
-		onReorder(ids);
+		void commitReorder(ids);
 		resetDrag();
 		markSettled(movedId);
+	}
+
+	/**
+	 * Reordenar dispara a cascata de recálculo de datas no servidor (sem outro
+	 * aviso). O recibo só sai com a ordem GRAVADA — na falha quem fala é o
+	 * `reorderError`, e anunciar recálculo aqui seria mentira.
+	 */
+	async function commitReorder(ids: number[]): Promise<void> {
+		if (!(await onReorder(ids))) return;
+		flash.info('Datas subsequentes recalculadas conforme a nova ordem das etapas.', {
+			key: 'stage-reorder-cascade'
+		});
 	}
 
 	function resetDrag(): void {
@@ -286,8 +301,12 @@
 
 	/** Fallback por teclado: move a etapa uma posição pulando reuniões (paridade DnD). */
 	function moveByKeyboard(index: number, delta: number): void {
+		const movedId = etapas[index]?.id;
 		const ids = moveStageSkippingMeetings(etapas, index, delta);
-		if (ids) onReorder(ids);
+		if (!ids) return;
+		void commitReorder(ids);
+		// Mesmo pulso de assentamento do drop de mouse — teclado não ficava mudo.
+		if (movedId !== undefined) markSettled(movedId);
 	}
 
 	function handleHandleKeydown(event: KeyboardEvent, index: number): void {
@@ -459,7 +478,9 @@
 </script>
 
 {#if reorderError}
-	<p role="alert" class="mb-2 text-sm text-danger">{reorderError}</p>
+	<div class="mb-2">
+		<StateBanner tone="danger" title={reorderError} />
+	</div>
 {/if}
 
 <div class="etapa-table-card">
@@ -655,7 +676,11 @@
 							</td>
 						</tr>
 						{#if addStageError}
-							<tr><td colspan="9" class="composer-error"><span role="alert">{addStageError}</span></td></tr>
+							<tr>
+								<td colspan="9" class="stage-inline-banner-cell">
+									<StateBanner tone="danger" title={addStageError} />
+								</td>
+							</tr>
 						{/if}
 					{/if}
 				{/if}
@@ -912,14 +937,13 @@
 		gap: 0.3rem;
 		justify-content: center;
 	}
-	.composer-error,
 	.no-etapas-cell {
 		padding: 0.7rem;
 		text-align: center;
 		color: var(--ds-color-text-secondary);
 	}
-	.composer-error {
-		color: var(--ds-color-text-danger);
+	.stage-inline-banner-cell {
+		padding: 0.5rem 0.7rem;
 	}
 	.no-etapas-cell i {
 		font-size: 1.5rem;

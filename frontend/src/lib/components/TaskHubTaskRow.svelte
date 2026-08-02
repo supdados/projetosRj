@@ -22,15 +22,20 @@
 		statusLabel,
 		statusTone,
 		priorityDotColor,
+		priorityIconId,
+		statusIconId,
 		chipClass,
 		tipoChipClass,
 		prioridadeChipClass
 	} from '$lib/utils/taskLabels';
 	import { saveFields } from '$lib/api/taskDrawer';
 	import { updateTaskStatus } from '$lib/api/board';
+	import { ApiClientError } from '$lib/api/client';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
+	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
-	import Modal from '$lib/components/Modal.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import InlineCommentsTree from '$lib/components/InlineCommentsTree.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -91,7 +96,8 @@
 	const prioridadeMenuOptions: SelectMenuOption[] = PRIORIDADE_OPTS.map((opt) => ({
 		value: opt.value,
 		label: opt.label,
-		dot: priorityDotColor(opt.value)
+		dot: priorityDotColor(opt.value),
+		icon: priorityIconId(opt.value)
 	}));
 	const tipoMenuOptions: SelectMenuOption[] = TIPO_OPTS.map((opt) => ({
 		value: opt.value,
@@ -100,7 +106,8 @@
 	const statusMenuOptions: SelectMenuOption[] = STATUS_OPTS.map((opt) => ({
 		value: opt.value,
 		label: statusLabel(opt.value),
-		dot: STATUS_DOT[opt.value]
+		dot: STATUS_DOT[opt.value],
+		icon: statusIconId(opt.value)
 	}));
 
 	// Referência do chip de status: origem do confete de finalização.
@@ -113,13 +120,21 @@
 	const celebrateFinalize =
 		getContext<((origin?: unknown) => void) | undefined>('celebrateFinalize');
 
+	/** Motivo da falha vindo do backend (403/422 trazem texto útil). */
+	function failureReason(err: unknown, fallback: string): string {
+		return err instanceof ApiClientError ? err.message : fallback;
+	}
+
 	/** Salva campos (descricao/prioridade/tipo_pedido/responsavel) e revalida. */
 	async function saveField(fields: TaskFieldEdits): Promise<void> {
 		savingField = true;
 		try {
 			await saveFields(task.id, fields);
-		} catch {
-			// erro fica visível ao revalidar (o valor volta ao do servidor)
+		} catch (err) {
+			// A revalidação reverte o chip/texto; sem isto a reversão não se explica.
+			flash.danger(failureReason(err, 'Não foi possível salvar a alteração.'), {
+				key: `tarefa-${task.id}-salvar`
+			});
 		} finally {
 			savingField = false;
 			onChanged();
@@ -137,8 +152,10 @@
 			if (value === 'finalizada' && !wasFinalized) {
 				celebrateFinalize?.(origin);
 			}
-		} catch {
-			// 403 ao finalizar sem permissão etc. — revalida e reverte
+		} catch (err) {
+			flash.danger(failureReason(err, 'Não foi possível alterar o status desta tarefa.'), {
+				key: `tarefa-${task.id}-status`
+			});
 		} finally {
 			savingField = false;
 			onChanged();
@@ -202,21 +219,22 @@
 		assignees = task.assignees ?? [];
 	});
 
-	// --- Exclusão (mini-confirm inline) ---
-	let confirming = $state(false);
-	let deleting = $state(false);
-	let deleteError = $state<string | null>(null);
-	function askDelete(): void {
-		deleteError = null;
-		confirming = true;
-	}
-	async function doDelete(): Promise<void> {
-		deleting = true;
-		deleteError = null;
-		const ok = await onDelete(task.id);
-		deleting = false;
-		if (ok) confirming = false;
-		else deleteError = 'Não foi possível excluir a tarefa.';
+	// --- Exclusão (mesmo texto e mesmo chassi de confirmação do kanban/drawer) ---
+	async function askDelete(): Promise<void> {
+		await confirmAction({
+			title: 'Excluir esta tarefa?',
+			description: `“${task.descricao}” e seus comentários e anexos serão apagados. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir tarefa',
+			busyLabel: 'Excluindo…',
+			// `run` mantém o diálogo aberto durante a exclusão: o backdrop não fecha
+			// mais com a chamada em voo e a falha vira banner dentro do diálogo.
+			run: async () => {
+				const ok = await onDelete(task.id);
+				if (!ok) throw new Error('Não foi possível excluir a tarefa.');
+			}
+		});
 	}
 
 	// --- Comentários inline (store por linha, lazy) e ANEXO direto ---
@@ -301,15 +319,34 @@
 	function pickAttachment(): void {
 		fileInput?.click();
 	}
+
+	// Mesmo teto do backend (MAX_CONTENT_LENGTH=10MB): sem a checagem no cliente o
+	// 413 voltava sem corpo e o upload falhava em silêncio.
+	const MAX_ANEXO_BYTES = 10 * 1024 * 1024;
+	function anexoSizeLabel(bytes: number): string {
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	}
+
 	async function onAnexoChange(event: Event): Promise<void> {
 		const input = event.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		input.value = '';
 		if (!file) return;
+		if (file.size > MAX_ANEXO_BYTES) {
+			flash.danger(`O arquivo tem ${anexoSizeLabel(file.size)}; o limite é 10 MB.`, {
+				key: `tarefa-${task.id}-anexo`
+			});
+			return;
+		}
 		uploading = true;
 		await ensureDetail();
-		await inlineStore.uploadAttachment(file);
+		const ok = await inlineStore.uploadAttachment(file);
 		uploading = false;
+		if (ok) return;
+		flash.danger(get(inlineStore).error ?? 'Não foi possível enviar o anexo.', {
+			key: `tarefa-${task.id}-anexo`
+		});
 	}
 
 	const slideParams = $derived({
@@ -446,7 +483,7 @@
 			/>
 			<button
 				type="button"
-				onclick={askDelete}
+				onclick={() => void askDelete()}
 				aria-label="Excluir tarefa"
 				title="Excluir tarefa"
 				class="inline-flex h-7 w-7 items-center justify-center text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
@@ -472,6 +509,12 @@
 			{:else if commentsError}
 				<p role="alert" class="text-xs text-danger">{commentsError}</p>
 			{:else}
+				{#if $inlineStore.error}
+					<!-- Erro de comentário/anexo do painel inline: era gravado e nunca exibido. -->
+					<div class="mb-2">
+						<StateBanner tone="danger" title={$inlineStore.error} />
+					</div>
+				{/if}
 				<InlineCommentsTree store={inlineStore} idPrefix={panelId} bind:dirty={commentsDirty} />
 			{/if}
 		</div>
@@ -485,42 +528,6 @@
 		/>
 	{/if}
 
-	{#if confirming}
-		<!-- Confirmação centralizada (modal SPA), no mesmo padrão do "Arquivar finalizados". -->
-		<Modal labelId={`${panelId}-delete-title`} onBackdrop={() => (confirming = false)}>
-			<div class="flex flex-col gap-4">
-				<h2 id={`${panelId}-delete-title`} class="font-heading text-lg font-bold text-text-primary">
-					Excluir tarefa
-				</h2>
-				{#if deleteError}
-					<p role="alert" class="text-sm text-danger">{deleteError}</p>
-				{:else}
-					<p class="text-sm text-text-secondary">
-						Excluir a tarefa <b class="font-semibold text-text-primary">“{task.descricao}”</b>? Esta
-						ação não pode ser desfeita.
-					</p>
-				{/if}
-				<div class="flex justify-end gap-2">
-					<button
-						type="button"
-						onclick={() => (confirming = false)}
-						disabled={deleting}
-						class="rounded-md border border-border-subtle px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-					>
-						Cancelar
-					</button>
-					<button
-						type="button"
-						onclick={() => void doDelete()}
-						disabled={deleting}
-						class="delete-confirm-btn rounded-md bg-danger px-4 py-2 text-sm font-semibold text-on-danger hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-					>
-						{deleting ? 'Excluindo…' : 'Excluir'}
-					</button>
-				</div>
-			</div>
-		</Modal>
-	{/if}
 </div>
 
 {#snippet chipCaret(open: boolean)}

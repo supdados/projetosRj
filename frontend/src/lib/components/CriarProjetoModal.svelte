@@ -58,13 +58,15 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { triggerTaskFinalizeConfetti } from '$lib/celebration/confettiEpic';
 	import '$lib/celebration/confetti.css';
+	import FeedbackIcon from '$lib/components/FeedbackIcon.svelte';
 	import SeiProcessField from '$lib/components/SeiProcessField.svelte';
 	import LinkFieldRow from '$lib/components/LinkFieldRow.svelte';
 	import ObjetivoPicker from '$lib/components/ObjetivoPicker.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
+	import StateIcon from '$lib/components/StateIcon.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { AbepIndicadorOption, ProjectsListOptions } from '$lib/types/projects';
@@ -1289,7 +1291,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex {outerAlignClass} bg-overlay p-4 backdrop-blur-[1.5px]"
+		class="fixed inset-0 z-modal flex {outerAlignClass} bg-overlay p-4 backdrop-blur-[1.5px]"
 		role="presentation"
 		onclick={requestClose}
 		onkeydown={onModalKeydown}
@@ -1422,11 +1424,9 @@
 												? 'border-brand bg-wash-brand font-bold text-text-primary'
 												: 'border-border-subtle bg-surface font-semibold text-text-secondary hover:bg-surface-muted'}"
 										>
-											<span
-												aria-hidden="true"
-												class="h-2 w-2 shrink-0 rounded-full"
-												style:background={priorityDotColor(p.value)}
-											></span>
+											<span class="flex shrink-0" style:color={priorityDotColor(p.value)}>
+												<StateIcon id={priorityIconId(p.value)} size={14} />
+											</span>
 											{p.label}
 										</button>
 									{/each}
@@ -1990,31 +1990,41 @@
 					aria-describedby="cp-discard-desc"
 					transition:fade={{ duration: 160 }}
 				>
+					<!-- Chassi do ConfirmDialog repintado aqui: o diálogo é INTERNO ao
+					     modal, então o componente (que traz backdrop fixo próprio) não serve. -->
 					<div
-						class="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-4 shadow-modal"
+						class="flex w-full max-w-[27.5rem] flex-col gap-4 rounded-control border border-border-subtle bg-surface p-6 shadow-modal"
 						transition:fly={{ y: 8, duration: 200, easing: cubicOut }}
 					>
-						<p id="cp-discard-title" class="text-sm font-semibold text-text-primary">
-							Descartar projeto?
-						</p>
-						<p id="cp-discard-desc" class="mt-1 text-xs text-text-faint">
-							As informações preenchidas serão perdidas.
-						</p>
-						<div class="mt-4 flex items-center justify-end gap-2">
+						<div class="flex items-start gap-3.5">
+							<FeedbackIcon id="draft" size={24} class="mt-0.5 text-warning" />
+							<div class="flex flex-col gap-1.5">
+								<h3
+									id="cp-discard-title"
+									class="text-xl font-semibold tracking-tight text-text-primary"
+								>
+									Descartar o cadastro?
+								</h3>
+								<p id="cp-discard-desc" class="text-md text-text-secondary">
+									As informações preenchidas serão perdidas e o projeto não será criado.
+								</p>
+							</div>
+						</div>
+						<div class="mt-0.5 flex justify-end gap-2.5">
 							<button
 								type="button"
 								bind:this={discardCancelBtn}
 								onclick={closeDiscardConfirm}
-								class="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+								class="rounded-sm border border-border-strong bg-surface px-4 py-2.5 text-md font-semibold text-text-secondary transition-colors duration-fast hover:border-text-muted hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Continuar editando
 							</button>
 							<button
 								type="button"
 								onclick={discardAndClose}
-								class="inline-flex h-8 items-center rounded-md bg-danger px-3 text-xs font-semibold text-on-danger transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-1"
+								class="rounded-sm bg-fill-warning px-4 py-2.5 text-md font-semibold text-on-warning transition-opacity duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning"
 							>
-								Descartar
+								Descartar cadastro
 							</button>
 						</div>
 					</div>

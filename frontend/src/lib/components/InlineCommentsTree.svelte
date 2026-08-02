@@ -24,6 +24,8 @@
 	} from '$lib/utils/commentPresentation';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import FeedbackIcon from '$lib/components/FeedbackIcon.svelte';
+	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 
 	interface Props {
 		store: TaskDrawerStore;
@@ -56,6 +58,16 @@
 
 	const showComposer = $derived(comments.length > 0 || composing);
 
+	// Erro da última ação (comentar/editar/excluir/anexar). Na LISTA o painel não
+	// renderiza `$store.error` — sem este canal a falha ficaria invisível.
+	let actionError = $state<string | null>(null);
+
+	/** Traduz o resultado booleano da store em mensagem visível (ou limpa). */
+	function reportResult(ok: boolean, fallback: string): boolean {
+		actionError = ok ? null : ($store.error ?? fallback);
+		return ok;
+	}
+
 	// ── Anexo no composer (réplica do botão de anexo da linha) ───────────────────
 	let fileInput = $state<HTMLInputElement | null>(null);
 	let uploading = $state(false);
@@ -69,8 +81,10 @@
 		input.value = '';
 		if (!file) return;
 		uploading = true;
-		await store.uploadAttachment(file);
+		actionError = null;
+		const ok = await store.uploadAttachment(file);
 		uploading = false;
+		reportResult(ok, 'Não foi possível enviar o anexo.');
 	}
 
 	// ── Edição inline ──────────────────────────────────────────────────────────
@@ -248,7 +262,11 @@
 		const content = draft.trim();
 		if (!content || busy) return;
 		busy = true;
-		const ok = await store.addComment(content);
+		actionError = null;
+		const ok = reportResult(
+			await store.addComment(content),
+			'Não foi possível adicionar o comentário.'
+		);
 		busy = false;
 		if (ok) {
 			draft = '';
@@ -268,11 +286,13 @@
 		draft = '';
 		composing = false;
 		mentionOpen = false;
+		actionError = null;
 	}
 
 	// ── Edição ───────────────────────────────────────────────────────────────────
 	function startEdit(id: number, content: string): void {
 		confirmingId = null;
+		actionError = null;
 		editingId = id;
 		editText = content;
 	}
@@ -284,7 +304,11 @@
 		const content = editText.trim();
 		if (!content || busy) return;
 		busy = true;
-		const ok = await store.editComment(id, content);
+		actionError = null;
+		const ok = reportResult(
+			await store.editComment(id, content),
+			'Não foi possível editar o comentário.'
+		);
 		busy = false;
 		if (ok) cancelEdit();
 	}
@@ -312,9 +336,18 @@
 	async function confirmDelete(id: number): Promise<void> {
 		if (busy) return;
 		busy = true;
-		await store.deleteComment(id);
+		actionError = null;
+		const ok = reportResult(
+			await store.deleteComment(id),
+			'Não foi possível excluir o comentário.'
+		);
 		busy = false;
-		confirmingId = null;
+		if (ok) confirmingId = null;
+	}
+
+	function askDelete(id: number): void {
+		actionError = null;
+		confirmingId = id;
 	}
 </script>
 
@@ -387,7 +420,7 @@
 										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									><AppIcon id="edicao" size={14} /></button>{/if}{#if comment.can_delete}<button
 										type="button"
-										onclick={() => (confirmingId = comment.id)}
+										onclick={() => askDelete(comment.id)}
 										aria-label="Excluir comentário"
 										title="Excluir"
 										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
@@ -395,24 +428,17 @@
 						{/if}
 
 						{#if confirmingId === comment.id}
-							<div class="mt-1.5 flex items-center gap-2 rounded-md border border-danger-soft bg-wash-danger px-2.5 py-1.5">
-								<span class="mr-auto text-2xs text-text-primary">Excluir este comentário?</span>
-								<button
-									type="button"
-									onclick={() => (confirmingId = null)}
-									disabled={busy}
-									class="rounded border border-border-subtle px-2 py-0.5 text-2xs font-medium text-text-secondary hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-								>
-									Cancelar
-								</button>
-								<button
-									type="button"
-									onclick={() => confirmDelete(comment.id)}
-									disabled={busy}
-									class="rounded bg-danger px-2 py-0.5 text-2xs font-medium text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-								>
-									Excluir
-								</button>
+							<div class="mt-1.5 max-w-[18rem]">
+								<InlineConfirm
+									question="Excluir este comentário?"
+									tone="danger"
+									icon="trash"
+									confirmLabel="Excluir comentário"
+									cancelLabel="Cancelar"
+									{busy}
+									onConfirm={() => void confirmDelete(comment.id)}
+									onCancel={() => (confirmingId = null)}
+								/>
 							</div>
 						{/if}
 					</div>
@@ -559,7 +585,7 @@
 						<button
 							type="submit"
 							disabled={busy || draft.trim() === ''}
-							class="inline-flex items-center rounded-md bg-brand px-3 py-1 text-2xs font-semibold text-white transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex items-center rounded-md bg-brand px-3 py-1 text-2xs font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Comentar
 						</button>
@@ -567,6 +593,13 @@
 				</div>
 			</form>
 		</div>
+	{/if}
+
+	{#if actionError}
+		<p role="alert" class="m-0 mt-1.5 flex items-start gap-1.5 px-1 text-xs text-danger">
+			<FeedbackIcon id="x" size={14} class="mt-px shrink-0" />
+			{actionError}
+		</p>
 	{/if}
 </section>
 

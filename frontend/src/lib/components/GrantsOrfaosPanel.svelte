@@ -7,8 +7,10 @@
 	import { onMount } from 'svelte';
 	import { fetchGrantsOrfaos } from '$lib/api/adminReports';
 	import type { GrantOrfao, GrantOrfaoMotivo } from '$lib/types/adminReports';
+	import StateBanner from './StateBanner.svelte';
 
 	let grants = $state<GrantOrfao[]>([]);
+	let loadError = $state(false);
 
 	const MOTIVO_LABEL: Record<GrantOrfaoMotivo, string> = {
 		concedente_removido: 'Concedente removido',
@@ -34,13 +36,21 @@
 				grants = result;
 			})
 			.catch(() => {
-				// Relatório de housekeeping: falha silenciosa não bloqueia a tela.
+				// Relatório de housekeeping: não bloqueia a tela, mas avisa (StateBanner abaixo).
+				loadError = true;
 			});
 		return () => controller.abort();
 	});
 </script>
 
-{#if grants.length > 0}
+{#if loadError}
+	<StateBanner
+		tone="warning"
+		icon="alert"
+		title="Não foi possível carregar os convites órfãos"
+		description="O relatório de housekeeping não respondeu. Recarregue a página para tentar de novo."
+	/>
+{:else if grants.length > 0}
 	<section
 		aria-labelledby="grants-orfaos-title"
 		class="overflow-hidden rounded-xl border border-warning-soft bg-surface"

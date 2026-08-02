@@ -179,7 +179,7 @@
 			next = selected.filter((x) => x !== id);
 		} else {
 			if (selected.length >= MAX_INDICADORES) {
-				flash.warning('Você pode selecionar no máximo 4 indicadores');
+				flash.warning('Você pode selecionar no máximo 4 indicadores.');
 				return;
 			}
 			next = [...selected, id];

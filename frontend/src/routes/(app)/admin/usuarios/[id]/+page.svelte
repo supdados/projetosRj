@@ -23,6 +23,7 @@
 	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type {
 		AdminOrgaoOption,
 		AdminUser,
@@ -159,6 +160,7 @@
 			hydrate(result.usuario);
 			saving = false;
 			await goto(listHref);
+			flash.success('Usuário atualizado.');
 		} catch (err) {
 			saving = false;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
@@ -168,9 +170,13 @@
 
 	async function removeCpf(): Promise<void> {
 		if (removingCpf) return;
-		const ok = window.confirm(
-			'Tem certeza que deseja retirar o CPF e o vínculo gov.br deste usuário? Esta ação não pode ser desfeita.'
-		);
+		const ok = await confirmAction({
+			title: 'Retirar CPF e vínculo gov.br?',
+			description: `O CPF e o vínculo gov.br de "${usuario?.name ?? 'este usuário'}" serão removidos.`,
+			tone: 'brand',
+			icon: 'unlink',
+			confirmLabel: 'Retirar CPF'
+		});
 		if (!ok) return;
 		removingCpf = true;
 		formError = '';
@@ -178,6 +184,7 @@
 			const result = await removeAdminUserCpf(userId);
 			hydrate(result.usuario);
 			removingCpf = false;
+			flash.success('CPF e vínculo gov.br removidos.');
 		} catch (err) {
 			removingCpf = false;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;

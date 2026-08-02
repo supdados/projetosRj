@@ -1,3 +1,57 @@
+<script module lang="ts">
+	import { confirmAction } from '$lib/stores/confirm';
+	import { flash } from '$lib/stores/flash';
+
+	/**
+	 * Pergunta ÚNICA de exclusão de evento — o modal e o popover da grade
+	 * compartilham título e consequência (antes havia dois textos divergentes).
+	 */
+	export function confirmDeleteEvent(eventTitle: string): Promise<boolean> {
+		const nome = eventTitle.trim() || 'Sem título';
+		return confirmAction({
+			title: 'Excluir evento?',
+			description: `"${nome}" sai do calendário e também do Google, se estiver sincronizado. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir evento'
+		});
+	}
+
+	/** Escreve no clipboard sem emitir feedback; `false` quando nenhum caminho funciona. */
+	export async function writeToClipboard(text: string): Promise<boolean> {
+		try {
+			await navigator.clipboard.writeText(text);
+			return true;
+		} catch {
+			return legacyCopy(text);
+		}
+	}
+
+	function legacyCopy(text: string): boolean {
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.style.cssText = 'position:fixed;opacity:0;';
+		document.body.appendChild(ta);
+		ta.select();
+		let copiado = false;
+		try {
+			copiado = document.execCommand('copy');
+		} catch {
+			copiado = false;
+		}
+		ta.remove();
+		return copiado;
+	}
+
+	/** Copia o link do Meet e reporta o desfecho no toast global (canal único). */
+	export async function copyMeetLink(link: string): Promise<boolean> {
+		const copiado = await writeToClipboard(link);
+		if (copiado) flash.success('Link do Meet copiado.');
+		else flash.danger('Não foi possível copiar o link do Meet.');
+		return copiado;
+	}
+</script>
+
 <script lang="ts">
 	/**
 	 * Modal de criacao/edicao de evento do calendario (paridade v4.5:
@@ -18,14 +72,16 @@
 	 *   - Sincronizacao inicio->fim: ao mover o inicio, o fim acompanha mantendo a
 	 *     duracao; o fim nunca fica antes do inicio.
 	 *   - Bloco Google Meet: toggle (criar) ou bloco "existente" com link, copiar
-	 *     e "Gerar novo link" / cancelar (regen). Toast "Link copiado!".
+	 *     e "Gerar novo link" / cancelar (regen). Copiar reporta no toast global.
 	 *
 	 * Acessibilidade: dialogo modal (`role="dialog"`, `aria-modal`, `tabindex=-1`),
 	 * titulo rotulando o dialogo, Escape fecha, fundo clicavel fecha, foco preso
 	 * via `use:focusTrap`. Os pickers tem fallback de digitacao (input de texto).
+	 * Fechar com o formulario sujo pede confirmacao de descarte.
 	 */
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import { focusTrap } from '$lib/actions/focusTrap';
+	import StateBanner from './StateBanner.svelte';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -89,6 +145,20 @@
 		return `${year}-${pad(mon)}-${pad(day)}`;
 	}
 
+	/** Campos comparáveis do formulário — base do "sujo?" ao fechar. */
+	interface EventFormValues {
+		title: string;
+		description: string;
+		location: string;
+		allDay: boolean;
+		startDate: string;
+		startTime: string;
+		endDate: string;
+		endTime: string;
+		allDayStartDate: string;
+		allDayEndDate: string;
+	}
+
 	// Estado do formulario. Datas e horas separadas (ISO interno).
 	let title = $state('');
 	let description = $state('');
@@ -105,7 +175,8 @@
 	let clientError = $state<string | null>(null);
 
 	let regenMeet = $state(false);
-	let copied = $state(false);
+	/** Valores com que o formulário abriu; `dirty` compara contra eles. */
+	let pristine = $state<EventFormValues | null>(null);
 
 	const isEdit = $derived(event !== null);
 	const meetLink = $derived(event?.meet_link ?? '');
@@ -129,6 +200,83 @@
 		};
 	}
 
+	function editValues(source: CalendarEvent): EventFormValues {
+		const base = {
+			title: source.title ?? '',
+			description: source.description ?? '',
+			location: source.location ?? '',
+			allDay: source.is_all_day ?? false
+		};
+		if (source.is_all_day) {
+			const sd = (source.starts_at || '').slice(0, 10);
+			const ed = (source.ends_at || '').slice(0, 10) || sd;
+			return {
+				...base,
+				startDate: sd,
+				startTime: '09:00',
+				endDate: ed,
+				endTime: '10:00',
+				allDayStartDate: sd,
+				allDayEndDate: ed
+			};
+		}
+		const sv = (source.starts_at || '').slice(0, 16);
+		const ev = (source.ends_at || '').slice(0, 16);
+		const startDay = sv.slice(0, 10);
+		const endDay = ev.slice(0, 10);
+		return {
+			...base,
+			startDate: startDay,
+			startTime: sv.slice(11, 16) || '09:00',
+			endDate: endDay,
+			endTime: ev.slice(11, 16) || '10:00',
+			allDayStartDate: startDay,
+			allDayEndDate: endDay
+		};
+	}
+
+	function createValues(): EventFormValues {
+		const empty = { title: '', description: '', location: '', allDay: false };
+		if (createStart) {
+			// Prefill a partir do clique no time-grid; fim = inicio + 1h.
+			const parsed = new Date(createStart);
+			const startParts = toLocalParts(parsed);
+			const endParts = toLocalParts(new Date(parsed.getTime() + 3600000));
+			return {
+				...empty,
+				startDate: startParts.date,
+				startTime: startParts.time,
+				endDate: endParts.date,
+				endTime: endParts.time,
+				allDayStartDate: startParts.date,
+				allDayEndDate: endParts.date
+			};
+		}
+		const base = createDate || todayStr();
+		return {
+			...empty,
+			startDate: base,
+			startTime: '09:00',
+			endDate: base,
+			endTime: '10:00',
+			allDayStartDate: base,
+			allDayEndDate: base
+		};
+	}
+
+	function applyValues(values: EventFormValues): void {
+		title = values.title;
+		description = values.description;
+		location = values.location;
+		allDay = values.allDay;
+		startDate = values.startDate;
+		startTime = values.startTime;
+		endDate = values.endDate;
+		endTime = values.endTime;
+		allDayStartDate = values.allDayStartDate;
+		allDayEndDate = values.allDayEndDate;
+	}
+
 	// Ao abrir, preenche a partir do evento (ou reseta para criar).
 	$effect(() => {
 		if (!open) {
@@ -136,58 +284,51 @@
 			closeTimePicker();
 			return;
 		}
-		title = event?.title ?? '';
-		description = event?.description ?? '';
-		location = event?.location ?? '';
-		allDay = event?.is_all_day ?? false;
+		const values = event ? editValues(event) : createValues();
+		applyValues(values);
+		pristine = values;
 		createConference = false;
 		clientError = null;
 		regenMeet = false;
-		copied = false;
-
-		if (event) {
-			if (event.is_all_day) {
-				const sd = (event.starts_at || '').slice(0, 10);
-				const ed = (event.ends_at || '').slice(0, 10);
-				allDayStartDate = sd;
-				allDayEndDate = ed || sd;
-				startDate = sd;
-				startTime = '09:00';
-				endDate = ed || sd;
-				endTime = '10:00';
-			} else {
-				const sv = (event.starts_at || '').slice(0, 16);
-				const ev = (event.ends_at || '').slice(0, 16);
-				startDate = sv.slice(0, 10);
-				startTime = sv.slice(11, 16) || '09:00';
-				endDate = ev.slice(0, 10);
-				endTime = ev.slice(11, 16) || '10:00';
-				allDayStartDate = startDate;
-				allDayEndDate = endDate;
-			}
-		} else {
-			if (createStart) {
-				// Prefill a partir do clique no time-grid; fim = inicio + 1h.
-				const parsed = new Date(createStart);
-				const startParts = toLocalParts(parsed);
-				const endParts = toLocalParts(new Date(parsed.getTime() + 3600000));
-				startDate = startParts.date;
-				startTime = startParts.time;
-				endDate = endParts.date;
-				endTime = endParts.time;
-				allDayStartDate = startParts.date;
-				allDayEndDate = endParts.date;
-			} else {
-				const base = createDate || todayStr();
-				startDate = base;
-				startTime = '09:00';
-				endDate = base;
-				endTime = '10:00';
-				allDayStartDate = base;
-				allDayEndDate = base;
-			}
-		}
 	});
+
+	const dirty = $derived.by(() => {
+		if (!pristine) return false;
+		if (createConference || regenMeet) return true;
+		if (title !== pristine.title) return true;
+		if (description !== pristine.description) return true;
+		if (location !== pristine.location) return true;
+		if (allDay !== pristine.allDay) return true;
+		if (allDay) {
+			return (
+				allDayStartDate !== pristine.allDayStartDate || allDayEndDate !== pristine.allDayEndDate
+			);
+		}
+		return (
+			startDate !== pristine.startDate ||
+			startTime !== pristine.startTime ||
+			endDate !== pristine.endDate ||
+			endTime !== pristine.endTime
+		);
+	});
+
+	/** Fechar com rascunho pede confirmação; sem alteração fecha direto. */
+	async function requestClose(): Promise<void> {
+		if (busy) return;
+		if (!dirty) {
+			onClose();
+			return;
+		}
+		const ok = await confirmAction({
+			title: 'Descartar alterações?',
+			description: 'O que você preencheu neste evento será perdido.',
+			tone: 'warning',
+			icon: 'draft',
+			confirmLabel: 'Descartar alterações',
+			cancelLabel: 'Continuar editando'
+		});
+		if (ok) onClose();
+	}
 
 	// Sincroniza fim->inicio mantendo duracao (par com hora).
 	function onStartChanged(): void {
@@ -268,30 +409,20 @@
 		});
 	}
 
-	function remove(): void {
-		if (busy || !event || !onDelete) return;
-		if (!confirm('Excluir este evento? Esta ação não pode ser desfeita.')) return;
-		onDelete(event.id);
+	async function remove(): Promise<void> {
+		const target = event;
+		if (busy || !target || !onDelete) return;
+		const ok = await confirmDeleteEvent(target.title);
+		if (!ok) return;
+		onDelete(target.id);
 	}
 	function generateMeet(): void {
 		if (busy || !event || !onGenerateMeet) return;
 		onGenerateMeet(event.id);
 	}
 
-	async function copyMeet(): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(meetLink);
-		} catch {
-			const ta = document.createElement('textarea');
-			ta.value = meetLink;
-			ta.style.cssText = 'position:fixed;opacity:0;';
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand('copy');
-			ta.remove();
-		}
-		copied = true;
-		setTimeout(() => (copied = false), 1700);
+	function copyMeet(): void {
+		void copyMeetLink(meetLink);
 	}
 
 	const meetUrlDisplay = $derived.by(() => {
@@ -312,7 +443,7 @@
 				closeTimePicker();
 				return;
 			}
-			onClose();
+			void requestClose();
 		}
 	}
 
@@ -535,7 +666,7 @@
 	<div
 		class="cal-modal-overlay"
 		role="presentation"
-		onclick={onClose}
+		onclick={() => void requestClose()}
 		onkeydown={onKeydown}
 	>
 		<!-- Dialogo: para o clique de borbulhar. Slide/scale-in do original. -->
@@ -553,7 +684,7 @@
 				<h2 id="calendar-event-title" class="cal-modal-title">
 					{isEdit ? 'Editar evento' : 'Novo evento'}
 				</h2>
-				<button type="button" class="cal-modal-close" aria-label="Fechar" onclick={onClose}>
+				<button type="button" class="cal-modal-close" aria-label="Fechar" onclick={() => void requestClose()}>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
 				</button>
 			</header>
@@ -797,10 +928,8 @@
 					</div>
 				</div>
 
-				{#if clientError}
-					<p role="alert" class="cal-modal-error">{clientError}</p>
-				{:else if error}
-					<p role="alert" class="cal-modal-error">{error}</p>
+				{#if clientError || error}
+					<StateBanner tone="danger" title={clientError ?? error ?? ''} />
 				{/if}
 			</div>
 
@@ -819,17 +948,12 @@
 							Gerar Meet
 						</button>
 					{/if}
-					<button type="button" class="cal-btn-cancel" disabled={busy} onclick={onClose}>Cancelar</button>
+					<button type="button" class="cal-btn-cancel" disabled={busy} onclick={() => void requestClose()}>Cancelar</button>
 					<button type="button" class="cal-btn-save" disabled={busy} onclick={save}>
 						{busy ? 'Salvando…' : 'Salvar'}
 					</button>
 				</div>
 			</footer>
-
-			<!-- Toast "Link copiado!" (cal-meet-toast). -->
-			{#if copied}
-				<div class="cal-meet-toast" role="status" aria-live="polite">Link copiado!</div>
-			{/if}
 		</div>
 	</div>
 
@@ -997,11 +1121,6 @@
 		border-radius: 6px;
 		padding: 0.4rem 0.6rem;
 	}
-	.cal-modal-error {
-		font-size: 0.8125rem;
-		color: var(--ds-color-text-danger);
-	}
-
 	.cal-field-title input {
 		width: 100%;
 		border: none;
@@ -1300,29 +1419,6 @@
 		color: var(--ds-color-text-primary);
 	}
 
-	.cal-meet-toast {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		background: var(--ds-color-text-primary);
-		color: var(--ds-color-surface-base);
-		padding: 0.45rem 1rem;
-		border-radius: 8px;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		pointer-events: none;
-		z-index: 10;
-		white-space: nowrap;
-		animation: cal-meet-toast-in 1.6s ease forwards;
-	}
-	@keyframes cal-meet-toast-in {
-		0% { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
-		15% { opacity: 1; transform: translate(-50%, -50%); }
-		70% { opacity: 1; transform: translate(-50%, -50%); }
-		100% { opacity: 0; transform: translate(-50%, -50%); }
-	}
-
 	.cal-field-textarea {
 		width: 100%;
 		border: 1px solid var(--ds-color-border-base);
@@ -1619,8 +1715,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		.cal-modal-overlay,
 		.cal-modal,
-		.cdp-popover.is-open,
-		.cal-meet-toast {
+		.cdp-popover.is-open {
 			animation: none;
 		}
 		.cal-switch-track::before {

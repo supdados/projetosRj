@@ -30,12 +30,14 @@
 	import { fetchStageTasks } from '$lib/api/pendentesMutations';
 	import { createTarefa, deleteTarefa } from '$lib/api/tasks';
 	import { focusTrap } from '$lib/actions/focusTrap';
+	import { flash } from '$lib/stores/flash';
 	import type { StageTaskCard } from '$lib/types/pendentes';
 	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { normalizeStatus } from '$lib/utils/taskStatus';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId, statusIconId } from '$lib/utils/taskLabels';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
+	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -138,7 +140,12 @@
 	async function deleteCard(taskId: number): Promise<boolean> {
 		try {
 			await deleteTarefa(taskId);
-		} catch {
+		} catch (err) {
+			// A linha só sabe dizer "falhou"; o motivo do servidor (403 etc.) só
+			// chega ao usuário por aqui.
+			flash.danger(
+				err instanceof ApiClientError ? err.message : 'Não foi possível excluir a tarefa.'
+			);
 			return false;
 		}
 		await loadTasks();
@@ -198,14 +205,20 @@
 	// Placeholder "" vira `SelectMenu` sem opção (value null = mostra o placeholder).
 	const PRIORIDADE_MENU_OPTIONS: SelectMenuOption[] = ADD_PRIORIDADE_OPTIONS.filter(
 		(opt) => opt.value
-	).map((opt) => ({ value: opt.value, label: opt.label, dot: priorityDotColor(opt.value) }));
+	).map((opt) => ({
+		value: opt.value,
+		label: opt.label,
+		dot: priorityDotColor(opt.value),
+		icon: priorityIconId(opt.value)
+	}));
 	const TIPO_MENU_OPTIONS: SelectMenuOption[] = ADD_TIPO_OPTIONS.filter((opt) => opt.value).map(
 		(opt) => ({ value: opt.value, label: opt.label })
 	);
 	const STATUS_MENU_OPTIONS: SelectMenuOption[] = ADD_STATUS_OPTIONS.map((opt) => ({
 		value: opt.value,
 		label: opt.label,
-		dot: STATUS_DOT[opt.value]
+		dot: STATUS_DOT[opt.value],
+		icon: statusIconId(opt.value)
 	}));
 
 	let addOpen = $state(false);
@@ -265,7 +278,7 @@
 			// stopPropagation: o Esc aqui só fecha o FORM (não o drawer inteiro).
 			event.preventDefault();
 			event.stopPropagation();
-			cancelAddForm();
+			attemptCancelAddForm();
 			return;
 		}
 		if (event.key === 'Enter' && !event.shiftKey) {
@@ -307,21 +320,42 @@
 
 	// --- Fechamento do drawer ---------------------------------------------------
 
-	// Descarte de rascunho ao fechar (confirm inline no rodapé, sem window.confirm).
-	let confirmingDiscard = $state(false);
+	// Descarte de rascunho (confirm inline no rodapé, sem window.confirm). O alvo
+	// diz o que será descartado: o drawer inteiro ou só o form de adição.
+	type DiscardTarget = 'drawer' | 'form';
+	let discardTarget = $state<DiscardTarget | null>(null);
 
 	/** Fecha o drawer; com rascunho não salvo no form, pede confirmação inline. */
 	function attemptClose(): void {
-		if (addDraft.descricao.trim() && !confirmingDiscard) {
-			confirmingDiscard = true;
+		if (addDraft.descricao.trim() && discardTarget === null) {
+			discardTarget = 'drawer';
 			return;
 		}
 		onClose();
 	}
 
+	/** Fecha o form de adição; com rascunho digitado, pede confirmação inline. */
+	function attemptCancelAddForm(): void {
+		if (addDraft.descricao.trim() && discardTarget === null) {
+			discardTarget = 'form';
+			return;
+		}
+		cancelAddForm();
+	}
+
 	function keepEditing(): void {
-		confirmingDiscard = false;
+		discardTarget = null;
 		addTextareaEl?.focus();
+	}
+
+	function confirmDiscard(): void {
+		const target = discardTarget;
+		discardTarget = null;
+		if (target === 'form') {
+			cancelAddForm();
+			return;
+		}
+		onClose();
 	}
 
 	/**
@@ -340,7 +374,7 @@
 		const target = event.target instanceof HTMLElement ? event.target : null;
 		if (target?.closest('[id$="-comments-region"]')) return;
 		if (panelEl?.querySelector('[aria-modal="true"]')) return;
-		if (confirmingDiscard) {
+		if (discardTarget !== null) {
 			keepEditing();
 			return;
 		}
@@ -592,33 +626,21 @@
 		{/if}
 	</div>
 
-	{#if confirmingDiscard}
+	{#if discardTarget !== null}
 		<!-- Rodapé transiente: confirma o descarte do rascunho antes de fechar. -->
-		<footer class="shrink-0 border-t border-border-subtle bg-surface-elevated px-5 py-3.5">
-			<div
-				role="alertdialog"
-				aria-label="Confirmar descarte do rascunho"
-				class="stq-discard-confirm flex flex-col gap-2 rounded-lg border px-3 py-2.5"
-				transition:fade={{ duration: 100 }}
-			>
-				<p class="m-0 text-sm font-semibold text-text-primary">Descartar o que foi digitado?</p>
-				<div class="flex justify-end gap-2">
-					<button
-						type="button"
-						onclick={keepEditing}
-						class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						Continuar editando
-					</button>
-					<button
-						type="button"
-						onclick={onClose}
-						class="stq-discard-btn rounded-md border px-3 py-1.5 text-xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-					>
-						Descartar
-					</button>
-				</div>
-			</div>
+		<footer
+			class="shrink-0 border-t border-border-subtle bg-surface-elevated px-5 py-3.5"
+			transition:fade={{ duration: 100 }}
+		>
+			<InlineConfirm
+				question="Descartar o que foi digitado?"
+				tone="warning"
+				icon="draft"
+				confirmLabel="Descartar"
+				cancelLabel="Continuar editando"
+				onConfirm={confirmDiscard}
+				onCancel={keepEditing}
+			/>
 		</footer>
 	{/if}
 </div>
@@ -646,16 +668,5 @@
 	/* Tintas em degraus nomeados do DS (wash/soft deslocam sozinhos no dark). */
 	:global([data-theme='dark']) .stq-panel {
 		box-shadow: -18px 0 44px rgba(0, 0, 0, 0.5);
-	}
-	.stq-discard-confirm {
-		border-color: var(--ds-color-border-warning-soft);
-		background-color: var(--ds-color-wash-warning);
-	}
-	.stq-discard-btn {
-		border-color: var(--ds-color-border-danger-soft);
-		background-color: var(--ds-color-wash-danger);
-	}
-	.stq-discard-btn:hover:not(:disabled) {
-		background-color: var(--ds-color-wash-danger-strong);
 	}
 </style>

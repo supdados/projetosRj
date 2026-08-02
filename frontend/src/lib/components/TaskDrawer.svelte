@@ -28,17 +28,21 @@
 	import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
 	import type { TaskAssignee } from '$lib/types/tasks';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import { focusTrap } from '$lib/actions/focusTrap';
+	import { flash } from '$lib/stores/flash';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import AssigneePicker from './AssigneePicker.svelte';
 	import InlineCommentsTree from './InlineCommentsTree.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
 	import SelectMenu from './SelectMenu.svelte';
+	import InlineConfirm from './InlineConfirm.svelte';
+	import StateBanner from './StateBanner.svelte';
+	import FeedbackIcon from './FeedbackIcon.svelte';
 
 	interface Props {
 		store: TaskDrawerStore;
@@ -46,12 +50,19 @@
 
 	let { store }: Props = $props();
 
-	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
-		{ value: 'baixa', label: 'Baixa', dot: priorityDotColor('baixa') },
-		{ value: 'media', label: 'Média', dot: priorityDotColor('media') },
-		{ value: 'alta', label: 'Alta', dot: priorityDotColor('alta') },
-		{ value: 'urgente', label: 'Urgente', dot: priorityDotColor('urgente') }
-	];
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = (
+		[
+			['baixa', 'Baixa'],
+			['media', 'Média'],
+			['alta', 'Alta'],
+			['urgente', 'Urgente']
+		] as const
+	).map(([value, label]) => ({
+		value,
+		label,
+		dot: priorityDotColor(value),
+		icon: priorityIconId(value)
+	}));
 
 	// Sem "implementacao" por padrão: é tipo LEGADO (`LEGACY_TIPOS`) e o save
 	// rejeita com 422 ("Tipo inválido."). A opção entra SÓ quando a tarefa já
@@ -81,6 +92,7 @@
 					? 'Erro ao salvar'
 					: ''
 	);
+	const autosaveFailed = $derived($store.autosave === 'error');
 
 	const DATE_FMT = new Intl.DateTimeFormat('pt-BR', {
 		day: '2-digit',
@@ -109,6 +121,8 @@
 	// EXCLUIR: mini-confirm inline (paridade com o board — NÃO usa window.confirm).
 	// Escape fecha primeiro o confirm e só depois o drawer.
 	let confirmingDelete = $state(false);
+
+	let panelEl = $state<HTMLDivElement | null>(null);
 
 	function openDeleteConfirm(): void {
 		confirmingDelete = true;
@@ -174,22 +188,37 @@
 		if (!etapaWarning) choosingEtapa = false;
 	}
 
+	/**
+	 * Fecha o drawer. O flush do autosave resolve DEPOIS de a store zerar: sem
+	 * capturar o erro aqui, a falha do "Salvar" morreria com o drawer desmontado.
+	 */
 	async function close(): Promise<void> {
 		confirmingDelete = false;
 		choosingEtapa = false;
-		await store.close();
+		const known = $store.error;
+		const arrived: string[] = [];
+		const unsubscribe = store.subscribe((state) => {
+			if (state.error && state.error !== known) arrived.push(state.error);
+		});
+		try {
+			await store.close();
+		} finally {
+			unsubscribe();
+		}
+		if (arrived.length > 0) flash.danger(arrived[arrived.length - 1]);
 	}
 
 	function onKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') {
-			event.stopPropagation();
-			// Escape fecha primeiro o confirm de exclusão (paridade com o legado).
-			if (confirmingDelete) {
-				confirmingDelete = false;
-				return;
-			}
-			void close();
+		if (event.key !== 'Escape' || event.defaultPrevented) return;
+		// Diálogo aninhado (preview de anexo) trata o próprio Esc.
+		if (panelEl?.querySelector('[aria-modal="true"]')) return;
+		event.stopPropagation();
+		// Escape fecha primeiro o confirm de exclusão (paridade com o legado).
+		if (confirmingDelete) {
+			confirmingDelete = false;
+			return;
 		}
+		void close();
 	}
 
 	function onDescricao(event: Event): void {
@@ -211,6 +240,7 @@
 
 	<!-- Painel lateral: 645px, header e rodapé fixos, corpo rolável no meio. -->
 	<div
+		bind:this={panelEl}
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="task-drawer-title"
@@ -235,7 +265,18 @@
 							Arquivada
 						</span>
 					{/if}
-					<span aria-live="polite" class="text-2xs text-text-muted">{autosaveLabel}</span>
+					<!-- Erro nunca em tinta neutra: falha do autosave vira text-danger + ícone. -->
+					<span
+						aria-live="polite"
+						class="inline-flex items-center gap-1 text-2xs {autosaveFailed
+							? 'font-semibold text-danger'
+							: 'text-text-muted'}"
+					>
+						{#if autosaveFailed}
+							<FeedbackIcon id="x" size={12} />
+						{/if}
+						{autosaveLabel}
+					</span>
 				</div>
 				{#if detail}
 					<!-- Título = nome (descrição) da tarefa; reflete edições ao vivo. -->
@@ -304,34 +345,19 @@
 		<!-- Corpo rolável (barra fina padrão via .thin-scroll do app.css) -->
 		<div class="thin-scroll flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-4">
 			{#if confirmingDelete}
-				<!-- Mini-confirm inline (mesma linguagem visual do confirm do board). -->
-				<div
-					role="alertdialog"
-					aria-label="Confirmar exclusão da tarefa"
-					class="td-delete-confirm flex flex-col gap-2 rounded-md border px-3 py-2.5"
-				>
-					<p class="m-0 text-sm font-semibold text-danger">Excluir esta tarefa?</p>
-					<p class="m-0 text-xs text-text-secondary">
-						A exclusão é permanente e remove comentários e anexos.
-					</p>
-					<div class="flex justify-end gap-2">
-						<button
-							type="button"
-							onclick={cancelDeleteConfirm}
-							disabled={$store.acting}
-							class="rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-						>
-							Cancelar
-						</button>
-						<button
-							type="button"
-							onclick={() => void confirmDelete()}
-							disabled={$store.acting}
-							class="td-delete-confirm-btn rounded-md border px-3 py-1.5 text-xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-						>
-							{$store.acting ? 'Excluindo…' : 'Excluir tarefa'}
-						</button>
-					</div>
+				<!-- Wrapper de altura automática: a faixa é `h-full` e, como filha
+				     direta do corpo rolável (altura definida), esticaria até o fim dele. -->
+				<div class="shrink-0">
+					<InlineConfirm
+						question="Excluir esta tarefa? Comentários e anexos serão apagados."
+						tone="danger"
+						icon="trash"
+						confirmLabel="Excluir tarefa"
+						cancelLabel="Cancelar"
+						busy={$store.acting}
+						onConfirm={() => void confirmDelete()}
+						onCancel={cancelDeleteConfirm}
+					/>
 				</div>
 			{/if}
 
@@ -344,14 +370,10 @@
 					Carregando tarefa…
 				</div>
 			{:else if $store.status === 'error'}
-				<div role="alert" class="rounded-md border border-danger bg-surface px-4 py-3 text-sm text-text-primary">
-					{$store.error}
-				</div>
+				<StateBanner tone="danger" title={$store.error ?? 'Não foi possível carregar a tarefa.'} />
 			{:else if detail}
 				{#if $store.error}
-					<div role="alert" class="rounded-md border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
-						{$store.error}
-					</div>
+					<StateBanner tone="danger" title={$store.error} />
 				{/if}
 
 				{#if !detail.etapa}
@@ -567,16 +589,4 @@
 		background-color: var(--ds-color-wash-danger);
 	}
 
-	/* Mini-confirm de exclusão (mesma linguagem do confirm do card no board). */
-	.td-delete-confirm {
-		border-color: var(--ds-color-border-danger-soft);
-		background-color: var(--ds-color-wash-danger);
-	}
-	.td-delete-confirm-btn {
-		border-color: var(--ds-color-border-danger-soft);
-		background-color: var(--ds-color-wash-danger);
-	}
-	.td-delete-confirm-btn:hover:not(:disabled) {
-		background-color: var(--ds-color-wash-danger-strong);
-	}
 </style>

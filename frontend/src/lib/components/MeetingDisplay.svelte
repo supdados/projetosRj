@@ -16,6 +16,8 @@
 	import type { EtapaMeeting } from '$lib/types/projectDetail';
 	import Badge from './Badge.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import StateBanner from './StateBanner.svelte';
+	import { flash } from '$lib/stores/flash';
 
 	interface Props {
 		meeting: EtapaMeeting;
@@ -45,8 +47,7 @@
 				copied = false;
 			}, 1700);
 		} catch {
-			// Clipboard indisponível: silencioso (paridade com o legado, que só
-			// mostra o toast em sucesso).
+			flash.danger('Não foi possível copiar o link do Meet.', { key: 'meeting-copy-link' });
 		}
 	}
 </script>
@@ -76,13 +77,12 @@
 	{/if}
 
 	{#if hasSyncError}
-		<p
-			role="status"
-			class="flex items-center gap-2 rounded-md border border-warning bg-surface px-2 py-1 text-sm text-warning"
-		>
-			<i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-			{meeting.sync_error || 'Evento indisponível no Google Calendar.'}
-		</p>
+		<StateBanner
+			tone="warning"
+			icon="sync"
+			title="Sincronização com o Google pendente"
+			description={meeting.sync_error || 'Evento indisponível no Google Calendar.'}
+		/>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-2">
@@ -126,7 +126,7 @@
 				type="button"
 				onclick={onDelete}
 				disabled={busy}
-				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-on-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-fill-danger hover:text-on-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
 				{#if busy}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon
 						id="exclusao"

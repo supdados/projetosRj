@@ -19,11 +19,14 @@
 	import type { AdminUser, AdminUsersPageMeta, AdminOrgaoOption } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
 	import { papelLabel } from '$lib/utils/orgaoPapel';
+	import { confirmAction } from '$lib/stores/confirm';
+	import { flash } from '$lib/stores/flash';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import AdminUsuariosSkeleton from '$lib/components/skeletons/AdminUsuariosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import GrantsOrfaosPanel from '$lib/components/GrantsOrfaosPanel.svelte';
@@ -109,8 +112,15 @@
 		} catch (err) {
 			if (controller.signal.aborted) return;
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage =
-				err instanceof Error ? err.message : 'Falha ao carregar os usuários.';
+			const message = err instanceof Error ? err.message : 'Falha ao carregar os usuários.';
+			// Revalidacao falhou com dado stale na tela: mantem a tabela e avisa via
+			// flash, em vez de trocar a lista inteira pelo painel de erro (alinhado
+			// com o padrao das demais telas SWR).
+			if (cached) {
+				flash.danger(message);
+				return;
+			}
+			errorMessage = message;
 			loadState = 'error';
 		}
 	}
@@ -144,9 +154,13 @@
 	}
 
 	async function confirmDelete(user: AdminUser): Promise<void> {
-		const ok = window.confirm(
-			`Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.`
-		);
+		const ok = await confirmAction({
+			title: `Excluir usuário ${user.name}?`,
+			description: `O usuário "${user.name}" será excluído do sistema. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir usuário'
+		});
 		if (!ok) return;
 		actionError = '';
 		deletingId = user.id;
@@ -255,9 +269,7 @@
 	</div>
 
 	{#if actionError}
-		<div role="alert" class="rounded-lg border border-danger bg-surface px-5 py-3 text-sm text-text-primary">
-			{actionError}
-		</div>
+		<StateBanner tone="danger" title={actionError} onDismiss={() => (actionError = '')} />
 	{/if}
 
 	<GrantsOrfaosPanel />

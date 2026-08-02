@@ -18,15 +18,19 @@
 		/** Abre o editor já expandido ao montar (sem roubar o foco). */
 		startOpen?: boolean;
 		value?: string;
-		onCommit?: (value: string) => void;
+		/** Persiste o valor. Aguardável (Promise ou síncrono); só um retorno
+		 *  EXPLÍCITO `false` cancela a celebração — chamadores locais (sem
+		 *  round-trip) continuam celebrando como antes. */
+		onCommit?: (value: string) => unknown;
 		/** Sobrescreve o estado "preenchido" quando o editor é custom. */
 		filled?: boolean;
 		/** Sobrescreve o texto do preview quando o editor é custom. */
 		preview?: string;
 		editor?: Snippet;
 		onEditorOpen?: () => void;
-		/** Confirmação do editor custom; retorna se houve mudança (celebra). */
-		onEditorConfirm?: () => boolean;
+		/** Confirmação do editor custom; retorna (ou resolve) algo "truthy" quando
+		 *  houve mudança E persistiu — só então celebra. Aguardável. */
+		onEditorConfirm?: () => unknown;
 		onEditorCancel?: () => void;
 	}
 
@@ -113,22 +117,32 @@
 		if (refocus) void tick().then(() => toggleEl?.focus());
 	}
 
-	function confirmRow(refocus: boolean): void {
-		if (!open) return;
-		if (editor) {
-			const changed = onEditorConfirm?.() ?? false;
-			// startOpen vazio: mantém aberto por padrão; caso contrário colapsa.
-			if (!(startOpen && !isFilled)) closeEditor(refocus);
-			if (changed) celebrate();
-			return;
+	// Evita reentrância: um onCommit/onEditorConfirm assíncrono em voo não pode
+	// ser disparado de novo pelo par mousedown+click do mesmo clique.
+	let confirming = $state(false);
+
+	async function confirmRow(refocus: boolean): Promise<void> {
+		if (!open || confirming) return;
+		confirming = true;
+		try {
+			if (editor) {
+				const result = await onEditorConfirm?.();
+				// startOpen vazio: mantém aberto por padrão; caso contrário colapsa.
+				if (!(startOpen && !isFilled)) closeEditor(refocus);
+				// Só comemora depois da confirmação real (nunca antes de persistir).
+				if (result) celebrate();
+				return;
+			}
+			const next = draft.trim();
+			const changed = next.length > 0 && next !== value.trim();
+			// Sempre propaga (inclui limpar, para o status/preview não ficarem presos).
+			const result = await onCommit?.(next);
+			// startOpen vazio: não colapsa; com conteúdo, colapsa com a animação.
+			if (!(startOpen && next.length === 0)) closeEditor(refocus);
+			if (changed && result !== false) celebrate();
+		} finally {
+			confirming = false;
 		}
-		const next = draft.trim();
-		const changed = next.length > 0 && next !== value.trim();
-		// Sempre propaga (inclui limpar, para o status/preview não ficarem presos).
-		onCommit?.(next);
-		// startOpen vazio: não colapsa; com conteúdo, colapsa com a animação.
-		if (!(startOpen && next.length === 0)) closeEditor(refocus);
-		if (changed) celebrate();
 	}
 
 	function cancelRow(refocus: boolean): void {
@@ -147,20 +161,20 @@
 		if (event.key === 'Enter' && (!multiline || event.ctrlKey || event.metaKey)) {
 			event.preventDefault();
 			event.stopPropagation();
-			confirmRow(true);
+			void confirmRow(true);
 		}
 	}
 
 	// Blur salva (paridade com o protótipo); os botões usam mousedown+preventDefault
 	// justamente para agir antes do blur sem disparar commit duplo.
 	function onInputBlur(): void {
-		if (open) confirmRow(false);
+		if (open) void confirmRow(false);
 	}
 
 	// API para editores custom (snippet): confirmam/cancelam a LINHA, não só o
 	// próprio estado — sem isso a linha com startOpen nunca colapsa.
 	export function confirmFromEditor(): void {
-		confirmRow(false);
+		void confirmRow(false);
 	}
 
 	export function cancelFromEditor(): void {
@@ -269,9 +283,9 @@
 					aria-label={`Salvar ${label}`}
 					onmousedown={(e) => {
 						e.preventDefault();
-						confirmRow(true);
+						void confirmRow(true);
 					}}
-					onclick={() => confirmRow(true)}
+					onclick={() => void confirmRow(true)}
 					class="cp-lrow-btn-in grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<i class="fas fa-check text-xs" aria-hidden="true"></i>

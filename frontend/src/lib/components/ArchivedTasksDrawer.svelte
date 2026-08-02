@@ -19,6 +19,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
 	import type { TaskCard, TaskHubData } from '$lib/types/tasks';
+	import LoadErrorState from './LoadErrorState.svelte';
 	import PaginationBar from './PaginationBar.svelte';
 	import CountBadge from './CountBadge.svelte';
 	import OrgaoTreeSelect from './OrgaoTreeSelect.svelte';
@@ -263,19 +264,13 @@
 					Carregando tarefas arquivadas…
 				</div>
 			{:else if loadState === 'error'}
-				<div
-					role="alert"
-					class="flex flex-col gap-2 rounded-md border border-danger bg-surface px-4 py-3 text-sm text-text-primary"
-				>
-					<p class="m-0">{errorMessage}</p>
-					<button
-						type="button"
-						onclick={() => void load()}
-						class="self-start rounded-md border border-border-subtle bg-surface px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						Tentar novamente
-					</button>
-				</div>
+				<LoadErrorState
+					variant="block"
+					title="Arquivadas indisponíveis"
+					message={errorMessage}
+					retryLabel="Tentar novamente"
+					onRetry={() => void load()}
+				/>
 			{:else if isEmpty}
 				<div class="flex flex-col items-center gap-2 py-10 text-center">
 					<i class="fas fa-box-open text-2xl text-text-muted" aria-hidden="true"></i>

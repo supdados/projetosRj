@@ -22,6 +22,7 @@
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
+	import { priorityIconId } from '$lib/utils/taskLabels';
 	import type {
 		ProjectDetail,
 		ProjectDetailOptions,
@@ -100,6 +101,23 @@
 	function selectChip(field: HeaderField, value: string): void {
 		onEditField(field, value);
 	}
+
+	type ChipField = 'status' | 'prioridade' | 'delivery_type' | 'special_project';
+
+	const CHIP_LABELS: { field: ChipField; label: string }[] = [
+		{ field: 'status', label: 'Status' },
+		{ field: 'prioridade', label: 'Prioridade' },
+		{ field: 'delivery_type', label: 'Tipo de entrega' },
+		{ field: 'special_project', label: 'Projeto especial' }
+	];
+
+	/** Erros de gravação dos chips: sem isto o 403 reverte o chip em silêncio. */
+	const chipErrors = $derived(
+		CHIP_LABELS.flatMap(({ field, label }) => {
+			const message = fieldStates[field]?.error;
+			return message ? [{ field, label, message }] : [];
+		})
+	);
 
 	// --- Edição inline de TÍTULO e DESCRIÇÃO (paridade com v4.5) --------------
 	// Réplica do 09-project-inline-editor.js: clicar no lápis troca o texto por um
@@ -303,7 +321,12 @@
 		statusOptions.map((opt) => ({ value: opt.value, label: opt.label, dot: STATUS_DOT[opt.value] }))
 	);
 	const prioMenuOptions = $derived<SelectMenuOption[]>(
-		options.prioridade.map((opt) => ({ value: opt.value, label: opt.label, dot: PRIO_DOT[opt.value] }))
+		options.prioridade.map((opt) => ({
+			value: opt.value,
+			label: opt.label,
+			dot: PRIO_DOT[opt.value],
+			icon: priorityIconId(opt.value)
+		}))
 	);
 	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
 		options.delivery_type.map((opt) => ({ value: opt, label: opt }))
@@ -608,6 +631,19 @@
 			</span>
 		{/if}
 	</div>
+
+	<!-- Erro de gravação dos chips, ancorado logo abaixo da linha deles (a linha
+	     usa align-items:flex-end; pendurar o erro em cada chip desalinharia todos). -->
+	{#if chipErrors.length > 0}
+		<div class="ph-chip-errors">
+			{#each chipErrors as chipError (chipError.field)}
+				<p class="ph-text-error" role="alert">
+					<strong>{chipError.label}:</strong>
+					{chipError.message}
+				</p>
+			{/each}
+		</div>
+	{/if}
 
 	<!-- Seletor Detalhes/Etapas: alterna as seções da página (estado na página). -->
 	<nav class="ph-tabs" aria-label="Seções do projeto">
@@ -1073,6 +1109,14 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--ds-color-danger-200);
+	}
+
+	.ph-chip-errors {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
 	}
 
 	/* Badge "Convidado": acesso por convite (access_via), sobre o header glass. */

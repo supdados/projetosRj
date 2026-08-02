@@ -15,6 +15,7 @@
 	 */
 	import { tick } from 'svelte';
 	import { seiDigitsOnly, formatSeiDigits, hasMinimumSeiDigits } from '$lib/utils/seiFormat';
+	import { flash } from '$lib/stores/flash';
 
 	interface Props {
 		fieldId: string;
@@ -85,7 +86,9 @@
 				copiedIndex = null;
 			}, 1700);
 		} catch {
-			// Clipboard indisponível: silencioso (paridade com MeetingDisplay).
+			flash.danger('Não foi possível copiar o número do processo SEI.', {
+				key: 'sei-copy-number'
+			});
 		}
 	}
 

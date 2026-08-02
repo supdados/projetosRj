@@ -16,18 +16,17 @@
 	 * pelo servidor na importação. Por isso o rodapé do preview avisa que são
 	 * datas estimadas.
 	 *
-	 * Acessibilidade: diálogo modal (`role="dialog"`, `aria-modal`), título
-	 * rotulando o diálogo, foco inicial no seletor, Escape fecha, fundo clicável
-	 * fecha. Estados loading/erro/vazio anunciados; confirmar desabilita sem
-	 * seleção válida.
+	 * Chrome: `Modal.svelte` (backdrop `z-modal`, Esc/backdrop fecham, foco preso).
+	 * Estados loading/erro/vazio anunciados; confirmar desabilita sem seleção
+	 * válida. Sucesso emite toast com a contagem de etapas criadas.
 	 */
 	import { tick } from 'svelte';
-	import { fade, fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
 	import type { StageTemplateOption } from '$lib/types/projectDetail';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
 	import { addBusinessDays, nextBusinessDay } from '$lib/utils/businessDays';
+	import Modal from '$lib/components/Modal.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 
@@ -188,43 +187,17 @@
 		previewStages.reduce((sum, row) => sum + row.duration, 0)
 	);
 
+	// O toast de sucesso é da página, que tem a contagem real do servidor
+	// (`etapas_criadas`); aqui só se dispara a ação.
 	function confirm(): void {
 		if (!canConfirm) return;
 		onConfirm({ template_id: Number(selectedId), start_date: startDate });
 	}
-
-	function onKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') {
-			event.preventDefault();
-			onClose();
-		}
-	}
 </script>
 
 {#if open}
-	<!-- Fundo: clicar fora fecha. Fade ~280ms ease-out (paridade .modal). -->
-	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
-		role="presentation"
-		transition:fade={{ duration: 280, easing: cubicOut }}
-		onclick={onClose}
-		onkeydown={onKeydown}
-	>
-		<!--
-			Diálogo: para o clique de borbulhar para o fundo. Raio 16px (rounded-xl)
-			e entrada translateY+escala em ~320ms cubic-bezier(0.22,1,0.36,1) (cubicOut)
-			como o .modal-content do detalhe.
-		-->
-		<div
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="import-model-title"
-			class="flex w-full max-w-lg flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5 shadow-lg"
-			transition:fly={{ y: 18, duration: 320, easing: cubicOut }}
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={onKeydown}
-			tabindex="-1"
-		>
+	<Modal labelId="import-model-title" maxWidth="max-w-lg" onBackdrop={onClose}>
+		<div class="flex flex-col gap-4">
 			<header class="flex items-start justify-between gap-3">
 				<div class="flex items-start gap-3">
 					<span
@@ -377,7 +350,7 @@
 			{/if}
 
 			{#if error}
-				<p role="alert" class="text-sm text-danger">{error}</p>
+				<StateBanner tone="danger" title={error} />
 			{/if}
 
 			<footer class="flex items-center justify-end gap-2">
@@ -393,11 +366,11 @@
 					type="button"
 					onclick={confirm}
 					disabled={!canConfirm}
-					class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					{submitting ? 'Importando…' : 'Importar'}
 				</button>
 			</footer>
 		</div>
-	</div>
+	</Modal>
 {/if}

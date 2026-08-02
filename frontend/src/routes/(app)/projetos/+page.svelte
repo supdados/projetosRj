@@ -38,9 +38,9 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
-	import Modal from '$lib/components/Modal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import { priorityIconId } from '$lib/utils/taskLabels';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import ProjetosSkeleton from '$lib/components/skeletons/ProjetosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
@@ -48,6 +48,7 @@
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import { auth } from '$lib/stores/auth';
 
 	type LoadState = 'loading' | 'ready' | 'error';
@@ -293,7 +294,8 @@
 		priorityOptions.map((o) => ({
 			value: o,
 			label: capitalize(o),
-			dot: `var(--ds-color-priority-${o.toLowerCase()})`
+			dot: `var(--ds-color-priority-${o.toLowerCase()})`,
+			icon: priorityIconId(o.toLowerCase())
 		}))
 	);
 	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
@@ -521,43 +523,40 @@
 		}
 	}
 
-	// --- Exclusão de projeto: confirmação em dois passos + EXCLUSÃO REAL ----
+	// --- Exclusão de projeto: ConfirmDialog danger + EXCLUSÃO REAL ----------
 	// Persiste via DELETE /api/projetos/<id> (client `del`). A linha só some da
 	// UI APÓS o sucesso da chamada (fade-out de 280ms, igual ao list.js); em erro
-	// mostramos flash e MANTEMOS a linha. `deletingId` trava o botão durante a
-	// requisição (evita duplo-submit / clique no overlay).
-	let pendingDelete = $state<{ id: number; titulo: string } | null>(null);
+	// a mensagem vira banner DENTRO do diálogo e a linha PERMANECE.
+	// `deletingId` trava o botão da linha durante a requisição.
 	let removingIds = $state<Set<number>>(new Set());
 	let deletingId = $state<number | null>(null);
 
-	function requestDelete(project: Project): void {
-		pendingDelete = { id: project.id, titulo: project.titulo };
+	async function requestDelete(project: Project): Promise<void> {
+		if (deletingId !== null) return;
+		const id = project.id;
+		const titulo = project.titulo;
+		const ok = await confirmAction({
+			title: 'Excluir projeto?',
+			description: `"${titulo}" e todas as suas etapas, tarefas e anexos serão apagados. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir projeto',
+			busyLabel: 'Excluindo…',
+			run: async () => {
+				deletingId = id;
+				try {
+					await deleteProject(id);
+				} finally {
+					deletingId = null;
+				}
+			}
+		});
+		if (!ok) return;
+		fadeOutDeletedRow(id, titulo);
 	}
 
-	function cancelDelete(): void {
-		if (deletingId !== null) return; // não cancela no meio da exclusão
-		pendingDelete = null;
-	}
-
-	async function confirmDelete(): Promise<void> {
-		if (!pendingDelete || deletingId !== null) return;
-		const id = pendingDelete.id;
-		const titulo = pendingDelete.titulo;
-		deletingId = id;
-		try {
-			await deleteProject(id);
-		} catch (err) {
-			// Falha: mantém a linha e informa o motivo (403/404/500 do envelope).
-			deletingId = null;
-			pendingDelete = null;
-			flash.danger(
-				err instanceof Error ? err.message : 'Não foi possível excluir o projeto.'
-			);
-			return;
-		}
-		// Sucesso: fecha o modal e só então faz o fade-out + remove do payload.
-		deletingId = null;
-		pendingDelete = null;
+	/** Sucesso da exclusão: fade-out da linha e só então tira do payload. */
+	function fadeOutDeletedRow(id: number, titulo: string): void {
 		removingIds = new Set([...removingIds, id]);
 		setTimeout(() => {
 			if (data) {
@@ -1234,10 +1233,11 @@
 											</a>
 											<button
 												type="button"
-												onclick={() => requestDelete(project)}
+												onclick={() => void requestDelete(project)}
+												disabled={deletingId === project.id}
 												title="Excluir projeto"
 												aria-label="Excluir projeto"
-												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
+												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 											>
 												<AppIcon id="exclusao" size={14} />
 											</button>
@@ -1283,54 +1283,3 @@
 	onImported={onProjectsImported}
 />
 
-<!--
-	Confirmação de exclusão em dois passos. A persistência é REAL: confirmar
-	dispara DELETE /api/projetos/<id> e a linha só some (com fade) após o
-	sucesso; em erro mantém a linha + flash.
--->
-<svelte:window
-	onkeydown={(e) => {
-		if (pendingDelete && e.key === 'Escape') cancelDelete();
-	}}
-/>
-
-{#if pendingDelete}
-	<Modal labelId="deleteProjectTitle" onBackdrop={cancelDelete}>
-		<h2
-			id="deleteProjectTitle"
-			class="m-0 flex items-center gap-2 font-heading text-lg font-bold text-text-primary"
-		>
-			<i class="fas fa-triangle-exclamation text-danger" aria-hidden="true"></i>
-			Excluir projeto
-		</h2>
-		<p class="mt-3 text-sm text-text-secondary">
-			Tem certeza que deseja excluir <strong class="text-text-primary"
-				>{pendingDelete.titulo}</strong
-			>? Esta ação não pode ser desfeita.
-		</p>
-		<div class="mt-5 flex justify-end gap-2">
-			<button
-				type="button"
-				onclick={cancelDelete}
-				disabled={deletingId !== null}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border-subtle bg-surface px-3 text-sm font-semibold text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				Cancelar
-			</button>
-			<button
-				type="button"
-				onclick={confirmDelete}
-				disabled={deletingId !== null}
-				class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-danger-soft bg-danger px-3 text-sm font-semibold text-on-danger transition-all duration-fast ease-out hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-60"
-			>
-				{#if deletingId !== null}
-					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-					Excluindo…
-				{:else}
-					<AppIcon id="exclusao" size={14} />
-					Excluir
-				{/if}
-			</button>
-		</div>
-	</Modal>
-{/if}

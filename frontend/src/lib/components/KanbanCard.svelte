@@ -24,8 +24,11 @@
 	 */
 	import { getContext, tick, untrack } from 'svelte';
 	import type { BoardCard } from '$lib/types/board';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
+	import StateIcon from '$lib/components/StateIcon.svelte';
+	import { flash } from '$lib/stores/flash';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
+	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import {
 		KANBAN_COLUMN_MOTION,
@@ -41,8 +44,8 @@
 
 	/**
 	 * Exclusão de card: fornecida via contexto pela página. O card coordena o
-	 * MINI-CONFIRM INLINE local; a página executa a chamada e remove o card da
-	 * store. Abrir um confirm fecha os demais via `closeOtherDeletes`.
+	 * `InlineConfirm` local; a página executa a chamada e remove o card da
+	 * store. Abrir um confirm fecha os demais via `registerDeleteConfirm`.
 	 */
 	const deleteTask =
 		getContext<((taskId: number) => Promise<boolean>) | undefined>('deleteTaskCard');
@@ -194,10 +197,10 @@
 		untrack(() => scheduleFooterRefit());
 	});
 
-	// MINI-CONFIRM INLINE de exclusão (paridade com .task-items-kanban-delete-confirm).
+	// Exclusão pequena e frequente no próprio card: InlineConfirm (spec Grupo 4).
 	let confirmingDelete = $state(false);
 	let deleting = $state(false);
-	let deleteError = $state<string | null>(null);
+	let cardEl = $state<HTMLElement | null>(null);
 
 	function openDeleteConfirm(): void {
 		// Abrir um confirm fecha os demais (paridade board-dnd.js).
@@ -205,19 +208,22 @@
 			confirmingDelete = false;
 		});
 		confirmingDelete = true;
-		deleteError = null;
 	}
-	function cancelDeleteConfirm(): void {
+	async function cancelDeleteConfirm(): Promise<void> {
 		confirmingDelete = false;
+		// Depois do desmonte: a faixa restaura o foco do gatilho (já removido do
+		// DOM) ao sair, e sem o `tick` esse restore anularia o foco no card.
+		await tick();
+		cardEl?.focus();
 	}
 	async function confirmDelete(): Promise<void> {
 		if (!deleteTask) return;
 		deleting = true;
-		deleteError = null;
 		const ok = await deleteTask(card.id);
 		if (!ok) {
-			deleteError = 'Não foi possível excluir a tarefa.';
 			deleting = false;
+			// Sem espaço ancorável dentro da faixa: o motivo vai por toast.
+			flash.danger('Não foi possível excluir a tarefa.', { key: 'tarefa-excluir-falha' });
 		}
 		// Em sucesso o card é removido da store (some do DOM); nada a fazer aqui.
 	}
@@ -284,9 +290,10 @@
 	Focus-visible com ring triplo acessível.
 -->
 <div
+	bind:this={cardEl}
 	class="kanban-card group relative flex cursor-pointer flex-col gap-2 rounded-lg bg-surface px-3.5 pb-3 pt-3 [contain:layout] shadow-sm outline-none transition-[transform,box-shadow,background-color] duration-fast hover:-translate-y-px hover:shadow-md focus-visible:ring-2 focus-visible:ring-brand active:cursor-grabbing {dragging
 		? 'is-dragging'
-		: ''} {settled ? 'is-drop-settling' : ''}"
+		: ''} {settled ? 'is-drop-settling' : ''} {confirmingDelete ? 'min-h-[9rem]' : ''}"
 	draggable="true"
 	tabindex="0"
 	data-item-id={card.id}
@@ -330,8 +337,9 @@
 	<div bind:this={footerEl} class="mt-auto flex min-w-0 items-center gap-1.5 pt-0.5">
 		{#if prioridadeLabel}
 			<span class="kc-chip kc-chip--prio">
-				<span aria-hidden="true" class="kc-prio-dot" style:background={prioridadeDotColor}
-				></span>{prioridadeLabel}
+				<span class="flex flex-none" style:color={prioridadeDotColor}>
+					<StateIcon id={priorityIconId(card.prioridade)} size={12} />
+				</span>{prioridadeLabel}
 			</span>
 		{/if}
 		{#if prioridadeLabel && tipoLabel && fitLevel < 1}
@@ -434,34 +442,18 @@
 	{/if}
 
 	{#if confirmingDelete}
-		<!-- Mini-confirm inline no card (animação de entrada). -->
-		<div
-			role="alertdialog"
-			aria-label="Confirmar exclusão da tarefa"
-			class="kanban-delete-confirm mt-[0.12rem] flex flex-col gap-2 rounded-md border px-[0.46rem] py-[0.42rem]"
-		>
-			<p class="m-0 text-xs font-semibold text-danger">Excluir esta tarefa?</p>
-			{#if deleteError}
-				<p role="alert" class="text-xs text-danger">{deleteError}</p>
-			{/if}
-			<div class="flex justify-end gap-[0.24rem]">
-				<button
-					type="button"
-					onclick={cancelDeleteConfirm}
-					disabled={deleting}
-					class="h-[26px] rounded-md border border-border-subtle bg-surface px-[0.44rem] text-xs font-semibold text-brand transition-colors duration-fast hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					onclick={() => void confirmDelete()}
-					disabled={deleting}
-					class="kc-confirm-delete-btn h-[26px] rounded-md border px-[0.44rem] text-xs font-semibold text-danger transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
-				>
-					{deleting ? 'Excluindo…' : 'Excluir'}
-				</button>
-			</div>
+		<!-- A faixa COBRE o card (absolute inset-0): confirmar não muda a altura da coluna. -->
+		<div class="kanban-delete-confirm absolute inset-0">
+			<InlineConfirm
+				question="Excluir esta tarefa? Comentários e anexos serão apagados."
+				tone="danger"
+				icon="trash"
+				confirmLabel="Excluir tarefa"
+				cancelLabel="Cancelar"
+				busy={deleting}
+				onConfirm={confirmDelete}
+				onCancel={cancelDeleteConfirm}
+			/>
 		</div>
 	{/if}
 </div>
@@ -485,12 +477,6 @@
 	.kc-chip--prio {
 		color: var(--ds-color-text-secondary);
 	}
-	.kc-prio-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		flex: none;
-	}
 	/* Bolinha agregada de responsáveis ("+N", nível 2 do rodapé adaptativo). */
 	.kc-avatar-overflow {
 		background-color: var(--ds-color-wash-neutral);
@@ -500,20 +486,6 @@
 	/* Lixeira sem fundo (só o ícone): o hover acende o vermelho (token puro). */
 	.kc-delete-btn:hover {
 		color: var(--ds-color-text-danger);
-	}
-
-	/* Tons de perigo do mini-confirm: degraus nomeados do DS (deslocam sozinhos
-	 * no dark — sem bloco [data-theme='dark'] re-temperando). */
-	.kanban-delete-confirm {
-		border-color: var(--ds-color-border-danger-soft);
-		background-color: var(--ds-color-wash-danger);
-	}
-	.kc-confirm-delete-btn {
-		border-color: var(--ds-color-border-danger-soft);
-		background-color: var(--ds-color-wash-danger);
-	}
-	.kc-confirm-delete-btn:hover:not(:disabled) {
-		background-color: var(--ds-color-wash-danger-strong);
 	}
 
 	/*

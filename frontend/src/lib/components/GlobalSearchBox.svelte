@@ -29,6 +29,7 @@
 	import { get } from '$lib/api/client';
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import type { AppIconId } from '$lib/icons/appIcons';
 	import type {
 		GlobalSearchData,
@@ -71,6 +72,8 @@
 	 */
 	let dismissed = $state<boolean>(false);
 	let stateMessage = $state<string>('Digite ao menos 2 caracteres.');
+	/** Distingue falha de rede do texto neutro (vazio/carregando) — ganha role=alert. */
+	let searchError = $state<boolean>(false);
 	let data = $state<GlobalSearchData | null>(null);
 	/** Indice do item selecionado por teclado/hover (-1 = nenhum). */
 	let selectedIndex = $state<number>(-1);
@@ -132,6 +135,7 @@
 		inFlight = new AbortController();
 		const localController = inFlight;
 		stateMessage = 'Buscando...';
+		searchError = false;
 		// NAO zera `data` aqui: manter os resultados anteriores visiveis enquanto
 		// a nova requisicao corre evita o flash de "vazio" entre digitacoes.
 		selectedIndex = -1;
@@ -155,6 +159,7 @@
 			if (err instanceof DOMException && err.name === 'AbortError') return;
 			data = null;
 			stateMessage = 'Nao foi possivel carregar os resultados.';
+			searchError = true;
 		} finally {
 			if (inFlight === localController) inFlight = null;
 		}
@@ -174,6 +179,7 @@
 			if (inFlight) inFlight.abort();
 			data = null;
 			stateMessage = 'Digite ao menos 2 caracteres.';
+			searchError = false;
 			return;
 		}
 
@@ -286,7 +292,11 @@
 	{#if open}
 		<div class="app-global-search-dropdown" id="appGlobalSearchDropdown" role="listbox">
 			{#if !data || !hasAnyResult}
-				<div class="app-global-search-state">{stateMessage}</div>
+				{#if searchError}
+					<StateBanner tone="danger" title={stateMessage} />
+				{:else}
+					<div class="app-global-search-state">{stateMessage}</div>
+				{/if}
 			{/if}
 
 			{#if data && hasAnyResult}

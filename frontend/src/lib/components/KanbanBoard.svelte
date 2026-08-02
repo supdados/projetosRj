@@ -18,11 +18,14 @@
 	 *   - cada card é focável (`tabindex=0`) e responde a teclado (setas ←/→ para
 	 *     mover entre colunas, Home/End para os extremos) — alternativa ao DnD,
 	 *     sem texto redundante duplicado abaixo da coluna;
-	 *   - um região `aria-live="polite"` anuncia as movimentações e erros.
+	 *   - um região `aria-live="polite"` anuncia as movimentações e, para quem
+ *     enxerga, movimento recusado vira toast e falha de mutação vira StateBanner.
 	 */
 	import { getContext, setContext, type Snippet } from 'svelte';
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
 	import KanbanDoneColumn from '$lib/components/KanbanDoneColumn.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
+	import { flash } from '$lib/stores/flash';
 	import type { BoardStore } from '$lib/stores/board';
 	import type { BoardCard } from '$lib/types/board';
 	import type { KanbanZoneView } from '$lib/types/kanbanDnd';
@@ -112,6 +115,16 @@
 
 	const columns = $derived($store.columns);
 	const boardError = $derived($store.error);
+	// Falha de MUTAÇÃO já reverteu o card na tela; a falha de CARGA não reverte nada.
+	const boardErrorDescription = $derived(
+		$store.status === 'error' ? undefined : 'O quadro voltou ao estado anterior.'
+	);
+
+	/** Aviso visível (não só sr-only) de movimento recusado, com dedupe por gesto. */
+	function warnBlockedMove(message: string): void {
+		liveMessage = message;
+		flash.warning(message, { key: 'kanban-movimento-bloqueado' });
+	}
 
 	const colNaoIniciada = $derived(columns.find((c) => c.status === 'nao_iniciada'));
 	const colEmAndamento = $derived(columns.find((c) => c.status === 'em_andamento'));
@@ -236,7 +249,7 @@
 		collapsedId = null;
 
 		if (!canItemMoveToStatus(ctx.card, status, ctx.fromStatus)) {
-			liveMessage = 'Sem permissão para finalizar esta tarefa.';
+			warnBlockedMove('Sem permissão para finalizar esta tarefa.');
 			return;
 		}
 
@@ -317,6 +330,8 @@
 		if (fromStatus === toStatus) return;
 		const target = columns.find((c) => c.status === toStatus);
 		const ok = await commitMove(card, fromStatus, toStatus, target ? target.tasks.length : 0);
+		// Mesmo assentamento do drop de mouse: mover por teclado também é visível.
+		if (ok) markSettled(card.id);
 		if (
 			ok &&
 			normalizeStatus(toStatus) === 'finalizada' &&
@@ -351,17 +366,18 @@
 			if (target !== fromStatus && canItemMoveToStatus(card, target, fromStatus)) {
 				await moveToColumnEnd(card, fromStatus, target, cardEl);
 			} else {
-				liveMessage = 'Sem permissão para finalizar esta tarefa.';
+				warnBlockedMove('Sem permissão para finalizar esta tarefa.');
 			}
 			return;
 		}
 
 		const next = adjacentStatus(card, fromStatus, direction);
 		if (!next) {
-			liveMessage =
+			warnBlockedMove(
 				direction === 1
 					? 'Não é possível avançar esta tarefa.'
-					: 'Esta tarefa já está na primeira coluna.';
+					: 'Esta tarefa já está na primeira coluna.'
+			);
 			return;
 		}
 		await moveToColumnEnd(card, fromStatus, next, cardEl);
@@ -370,9 +386,7 @@
 
 <div class="flex flex-col gap-3">
 	{#if boardError}
-		<p role="alert" class="rounded-md border border-danger bg-surface px-4 py-2 text-sm text-danger">
-			{boardError}
-		</p>
+		<StateBanner tone="danger" title={boardError} description={boardErrorDescription} />
 	{/if}
 
 	<!-- Anuncia movimentações/erros para leitores de tela. -->

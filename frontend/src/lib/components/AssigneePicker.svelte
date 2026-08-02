@@ -26,6 +26,8 @@
 	import type { TaskCard } from '$lib/types/tasks';
 	import AssigneeAvatar from './AssigneeAvatar.svelte';
 	import { fetchHubResponsaveis, fetchTaskCandidates, saveTaskAssignees } from '$lib/api/tasks';
+	import { ApiClientError } from '$lib/api/client';
+	import { flash } from '$lib/stores/flash';
 
 	interface Props {
 		/** Quando presente: modo PERSIST (salva e notifica a cada toggle). */
@@ -195,7 +197,13 @@
 						onChange?.(assignees);
 						onSaved?.(res);
 					}
-				} catch {
+				} catch (err) {
+					flash.danger(
+						err instanceof ApiClientError
+							? err.message
+							: 'Não foi possível salvar os responsáveis.',
+						{ key: 'task-assignees' }
+					);
 					if (pendingIds === null) {
 						assignees = [...confirmed]; // reverte ao último confirmado
 						onChange?.(assignees);

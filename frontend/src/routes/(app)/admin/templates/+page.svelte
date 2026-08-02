@@ -31,6 +31,7 @@
 	} from '$lib/api/adminTemplates';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type {
 		TemplateListResult,
 		TemplateListQuery,
@@ -41,7 +42,7 @@
 	import Card from '$lib/components/Card.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import Badge from '$lib/components/Badge.svelte';
-	import Modal from '$lib/components/Modal.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
@@ -119,11 +120,6 @@
 
 	// --- Estado de ações de linha (duplicar/excluir) ----------------------
 	let busyRowId = $state<number | null>(null);
-	let confirmDeleteRow = $state<TemplateRow | null>(null);
-	let confirmPhrase = $state<string>('');
-	let deleteError = $state<string>('');
-
-	const DELETE_PHRASE = 'APAGAR MODELO';
 
 	const orderOptions = $derived<TemplateOrder[]>(
 		data?.order_options ?? [
@@ -319,11 +315,15 @@
 	}
 
 	/** "Limpar tudo": confirma antes de remover, como o `clearAll` do original. */
-	function clearStages(): void {
+	async function clearStages(): Promise<void> {
 		if (formStages.length === 0) return;
-		const ok = window.confirm(
-			'Remover todas as etapas deste modelo? Esta ação só é aplicada quando você salvar.'
-		);
+		const ok = await confirmAction({
+			title: 'Limpar todas as etapas?',
+			description: 'Remove todas as etapas digitadas. A alteração só é aplicada quando você salvar o modelo.',
+			tone: 'warning',
+			icon: 'draft',
+			confirmLabel: 'Limpar etapas'
+		});
 		if (!ok) return;
 		formStages = [blankStage()];
 	}
@@ -345,6 +345,7 @@
 			if (row && row.contains(document.activeElement)) return;
 			if (current.name.trim() === '') {
 				removeStage(formStages.indexOf(current));
+				flash.info('Etapa em branco removida automaticamente.');
 			}
 		}, 0);
 	}
@@ -481,6 +482,7 @@
 			view = 'list';
 			page = 1;
 			await load();
+			flash.success(formMode === 'edit' ? 'Modelo atualizado.' : 'Modelo criado.');
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			formError = err instanceof Error ? err.message : 'Falha ao salvar o modelo.';
@@ -523,6 +525,7 @@
 		try {
 			await duplicateTemplate(row.id);
 			await load();
+			flash.success('Modelo duplicado.');
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			errorMessage =
@@ -532,40 +535,33 @@
 		}
 	}
 
-	function askDelete(row: TemplateRow): void {
-		confirmDeleteRow = row;
-		confirmPhrase = '';
-		deleteError = '';
-	}
-
-	function cancelDelete(): void {
-		confirmDeleteRow = null;
-		confirmPhrase = '';
-		deleteError = '';
-	}
-
-	async function confirmDelete(): Promise<void> {
-		if (!confirmDeleteRow) return;
-		if (confirmPhrase.trim().toUpperCase() !== DELETE_PHRASE) {
-			deleteError = `Digite "${DELETE_PHRASE}" para confirmar.`;
-			return;
-		}
-		const target = confirmDeleteRow;
-		busyRowId = target.id;
-		deleteError = '';
-		try {
-			await deleteTemplate(target.id);
-			confirmDeleteRow = null;
-			confirmPhrase = '';
-			// Se a página ficou vazia após excluir, recua uma página.
-			if (data && data.templates.length === 1 && page > 1) page -= 1;
-			await load();
-		} catch (err) {
-			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			deleteError = err instanceof Error ? err.message : 'Falha ao excluir o modelo.';
-		} finally {
-			busyRowId = null;
-		}
+	/** Type-to-confirm (catástrofe): apaga o modelo e todas as suas etapas. */
+	async function askDelete(row: TemplateRow): Promise<void> {
+		await confirmAction({
+			title: 'Apagar modelo?',
+			description: `Você está prestes a apagar "${row.name}" e todas as suas etapas. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Apagar modelo',
+			busyLabel: 'Apagando…',
+			typeToConfirm: 'apagar modelo',
+			run: async () => {
+				busyRowId = row.id;
+				try {
+					await deleteTemplate(row.id);
+					// Se a página ficou vazia após excluir, recua uma página.
+					if (data && data.templates.length === 1 && page > 1) page -= 1;
+					await load();
+				} catch (err) {
+					if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+					throw new Error(
+						err instanceof Error ? err.message : 'Falha ao excluir o modelo.'
+					);
+				} finally {
+					busyRowId = null;
+				}
+			}
+		});
 	}
 
 	onMount(() => {
@@ -681,12 +677,7 @@
 				</div>
 
 				{#if formError}
-					<p
-						role="alert"
-						class="rounded-md border border-danger bg-wash-danger px-3 py-2 text-sm font-medium text-danger"
-					>
-						{formError}
-					</p>
+					<StateBanner tone="danger" title={formError} />
 				{/if}
 
 				{#if formLoading}
@@ -942,7 +933,7 @@
 				<div
 					class="flex flex-col items-center gap-2 rounded-xl border border-border-subtle bg-surface px-6 py-12 text-center shadow-sm"
 				>
-					<span class="mb-1 text-4xl text-text-muted/60" aria-hidden="true">
+					<span class="mb-1 text-4xl text-text-faint" aria-hidden="true">
 						{#if search.trim()}
 							<i class="fas fa-search"></i>
 						{:else}
@@ -1203,60 +1194,6 @@
 		{/if}
 	{/if}
 </section>
-
-{#if confirmDeleteRow}
-	<Modal labelId="tpl-delete-title">
-			<div class="flex items-center gap-3">
-				<span
-					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wash-danger text-danger"
-					aria-hidden="true"
-				>
-					<AppIcon id="exclusao" size={14} />
-				</span>
-				<h2 id="tpl-delete-title" class="font-heading text-lg font-bold text-text-primary">
-					Apagar modelo?
-				</h2>
-			</div>
-			<p class="mt-2 text-sm text-text-secondary">
-				Você está prestes a apagar <strong>{confirmDeleteRow.name}</strong> e todas as suas
-				etapas. Esta ação não pode ser desfeita.
-			</p>
-			<label
-				for="tplDeleteConfirm"
-				class="mt-4 block text-2xs font-bold uppercase tracking-caps text-text-muted"
-			>
-				Digite <strong>{DELETE_PHRASE}</strong> para confirmar
-			</label>
-			<input
-				id="tplDeleteConfirm"
-				type="text"
-				bind:value={confirmPhrase}
-				autocomplete="off"
-				class="mt-1 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
-			/>
-			{#if deleteError}
-				<p role="alert" class="mt-2 text-sm text-danger">{deleteError}</p>
-			{/if}
-			<div class="mt-5 flex items-center justify-end gap-2">
-				<button
-					type="button"
-					onclick={cancelDelete}
-					class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					Cancelar
-				</button>
-				<button
-					type="button"
-					onclick={confirmDelete}
-					disabled={busyRowId === confirmDeleteRow.id ||
-						confirmPhrase.trim().toUpperCase() !== DELETE_PHRASE}
-					class="rounded-md border border-danger bg-danger px-4 py-2 text-sm font-medium text-on-danger transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-				>
-					{busyRowId === confirmDeleteRow.id ? 'Apagando…' : 'Apagar modelo'}
-				</button>
-			</div>
-	</Modal>
-{/if}
 
 <style>
 	:global(.drop-indicator) {

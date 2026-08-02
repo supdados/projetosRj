@@ -24,6 +24,7 @@
 	} from '$lib/api/calendars';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type {
 		CalendarEvent,
 		CalendarEventInput,
@@ -35,8 +36,13 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
-	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
+	import CalendarEventModal, {
+		confirmDeleteEvent,
+		copyMeetLink,
+		writeToClipboard
+	} from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
 	import { fillToBottom } from '$lib/components/calendar/fillToBottom';
 	import CalendarRightPanel from '$lib/components/calendar/CalendarRightPanel.svelte';
@@ -63,7 +69,11 @@
 	let loadState = $state<LoadState>(initialHub ? 'ready' : 'loading');
 	let hub = $state<CalendarHub | null>(initialHub);
 	let errorMessage = $state<string>('');
-	let connectionBusy = $state<boolean>(false);
+
+	/** Ação de conexão Google em voo — dá rótulo de progresso ao item do menu. */
+	type ConnectionAction = 'sync' | 'watch' | 'disconnect';
+	let connectionAction = $state<ConnectionAction | null>(null);
+	const connectionBusy = $derived(connectionAction !== null);
 
 	const today = new Date();
 	let curYear = $state(today.getFullYear());
@@ -80,18 +90,6 @@
 	let modalCreateDate = $state<string>('');
 	// datetime-local "YYYY-MM-DDTHH:MM" do clique no time-grid (prefill do horario).
 	let modalCreateStart = $state<string>('');
-
-	let actionNotice = $state<{ message: string; tone: 'success' | 'warning' } | null>(null);
-	let noticeTimer: ReturnType<typeof setTimeout> | null = null;
-
-	function showNotice(message: string, tone: 'success' | 'warning'): void {
-		if (noticeTimer) clearTimeout(noticeTimer);
-		actionNotice = { message, tone };
-		noticeTimer = setTimeout(() => {
-			actionNotice = null;
-			noticeTimer = null;
-		}, 2200);
-	}
 
 	let inFlight: AbortController | null = null;
 
@@ -138,8 +136,10 @@
 		try {
 			const res = await fetchCalendarMembers();
 			members = res.members;
-		} catch {
+		} catch (err) {
 			members = [];
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			flash.danger('Não foi possível carregar a equipe do calendário.', { key: 'cal-membros' });
 		}
 	}
 
@@ -157,7 +157,6 @@
 		void loadMembers();
 		return () => {
 			inFlight?.abort();
-			if (noticeTimer) clearTimeout(noticeTimer);
 		};
 	});
 
@@ -643,17 +642,7 @@
 	}
 
 	async function copyMeet(link: string): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(link);
-		} catch {
-			const ta = document.createElement('textarea');
-			ta.value = link;
-			ta.style.cssText = 'position:fixed;opacity:0;';
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand('copy');
-			ta.remove();
-		}
+		if (!(await copyMeetLink(link))) return;
 		copiedPopover = true;
 		setTimeout(() => (copiedPopover = false), 1500);
 	}
@@ -668,39 +657,53 @@
 				if (idx >= 0) hub.events[idx] = result.event;
 			}
 			if (eventPopover) eventPopover = { ...eventPopover, ev: result.event };
-			if (link) showNotice('Link do Meet gerado.', 'success');
+			if (link) flash.success('Link do Meet gerado.');
 		} catch (err) {
 			if (!(err instanceof ApiClientError && err.code === 'unauthenticated')) {
-				showNotice(readErrorMessage(err, 'Falha ao gerar o link do Meet.'), 'warning');
+				flash.danger(readErrorMessage(err, 'Falha ao gerar o link do Meet.'));
 			}
 		} finally {
 			meetGenBusy = null;
 		}
 	}
 
-	async function runConnectionAction(action: () => Promise<unknown>, fallback: string): Promise<void> {
-		if (connectionBusy) return;
-		connectionBusy = true;
-		errorMessage = '';
+	// Falha de acao de conexao NAO derruba a tela: o hub segue no lugar e o erro
+	// vai para o toast. O sucesso deixou de ser silencioso.
+	async function runConnectionAction(
+		kind: ConnectionAction,
+		action: () => Promise<unknown>,
+		successMessage: string,
+		fallback: string
+	): Promise<void> {
+		if (connectionAction) return;
+		connectionAction = kind;
 		try {
 			await action();
 			await load();
+			googleMenuOpen = false;
+			flash.success(successMessage);
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
-			errorMessage = readErrorMessage(err, fallback);
-			loadState = 'error';
+			flash.danger(readErrorMessage(err, fallback));
 		} finally {
-			connectionBusy = false;
+			connectionAction = null;
 		}
 	}
 	function handleSync(): void {
-		void runConnectionAction(() => syncNow(), 'Falha ao sincronizar com o Google.');
+		void runConnectionAction(
+			'sync',
+			() => syncNow(),
+			'Calendário sincronizado com o Google.',
+			'Falha ao sincronizar com o Google.'
+		);
 	}
 	function handleRenewWatch(): void {
-		void runConnectionAction(() => renewWatch(), 'Falha ao renovar o watch.');
-	}
-	function handleDisconnect(): void {
-		void runConnectionAction(() => disconnectGoogle(), 'Falha ao desconectar a conta Google.');
+		void runConnectionAction(
+			'watch',
+			() => renewWatch(),
+			'Watch do Google renovado.',
+			'Falha ao renovar o watch.'
+		);
 	}
 
 	// --- Menu de conexão Google (abre ao clicar no badge "Google") ---
@@ -727,19 +730,30 @@
 		googleMenuY = rect.bottom + 4;
 		googleMenuOpen = true;
 	}
-	function runGoogleAction(action: () => void): void {
-		googleMenuOpen = false;
-		action();
-	}
-	function confirmDisconnect(): void {
-		googleMenuOpen = false;
-		if (typeof window !== 'undefined') {
-			const ok = window.confirm(
-				'Desconectar a conta Google Calendar? A sincronização será interrompida.'
-			);
-			if (!ok) return;
+	async function runDisconnect(): Promise<void> {
+		connectionAction = 'disconnect';
+		try {
+			await disconnectGoogle();
+			await load();
+		} finally {
+			connectionAction = null;
 		}
-		handleDisconnect();
+	}
+	// `run` mantem o dialogo em busy e transforma a falha em banner DENTRO dele.
+	async function confirmDisconnect(): Promise<void> {
+		const ok = await confirmAction({
+			title: 'Desconectar o Google Calendar?',
+			description:
+				'A sincronização com o Google é interrompida e novos eventos deixam de aparecer aqui. Os eventos já importados continuam no calendário.',
+			tone: 'brand',
+			icon: 'unlink',
+			confirmLabel: 'Desconectar conta',
+			busyLabel: 'Desconectando…',
+			run: runDisconnect
+		});
+		if (!ok) return;
+		googleMenuOpen = false;
+		flash.success('Google Calendar desconectado.');
 	}
 	function onWindowClickGoogle(event: MouseEvent): void {
 		if (googleMenuOpen && googleMenuEl && !googleMenuEl.contains(event.target as Node)) {
@@ -790,8 +804,22 @@
 		}
 	}
 
-	function noticeToneFor(result: CalendarEventMutationResult): 'success' | 'warning' {
-		return result.sync_outcome === 'sync_error' ? 'warning' : 'success';
+	function announceSave(result: CalendarEventMutationResult): void {
+		if (result.sync_outcome === 'sync_error') {
+			flash.warning(result.sync_message);
+			return;
+		}
+		flash.success(result.sync_message);
+	}
+
+	function announceDelete(result: CalendarEventDeleteResult): void {
+		if (result.remote_warning) {
+			flash.warning('Evento removido apenas no ProjetosRJ.', {
+				description: `Falha no Google: ${result.remote_warning}`
+			});
+			return;
+		}
+		flash.success('Evento excluído.');
 	}
 
 	function handleSave(input: CalendarEventInput): void {
@@ -801,7 +829,7 @@
 			? 'Nao foi possivel salvar o evento.'
 			: 'Nao foi possivel criar o evento.';
 		void runModalAction(action, fallback).then((result) => {
-			if (result) showNotice(result.sync_message, noticeToneFor(result));
+			if (result) announceSave(result);
 		});
 	}
 
@@ -810,15 +838,7 @@
 			() => deleteEvent(id),
 			'Nao foi possivel excluir o evento.'
 		).then((result) => {
-			if (!result) return;
-			if (result.remote_warning) {
-				showNotice(
-					`Evento removido localmente, mas falhou no Google: ${result.remote_warning}`,
-					'warning'
-				);
-			} else {
-				showNotice('Evento removido com sucesso.', 'success');
-			}
+			if (result) announceDelete(result);
 		});
 	}
 
@@ -829,20 +849,28 @@
 		).then(async (result) => {
 			const link = result?.event.meet_link;
 			if (!link) return;
-			try {
-				await navigator.clipboard?.writeText(link);
-				showNotice('Link copiado!', 'success');
-			} catch {
-				showNotice('Link do Meet gerado com sucesso.', 'success');
-			}
+			const copiado = await writeToClipboard(link);
+			flash.success(
+				'Link do Meet gerado.',
+				copiado ? { description: 'O link já está na área de transferência.' } : undefined
+			);
 		});
 	}
 
-	// Delete a partir dos popovers/lista (sem abrir modal).
-	function deleteFromUi(id: number): void {
-		if (!confirm('Excluir este evento?')) return;
+	// Delete a partir dos popovers/lista (sem abrir modal): o erro nao tem onde
+	// ancorar — vai para o toast em vez de sumir num modal fechado.
+	async function deleteFromUi(ev: CalendarEvent): Promise<void> {
+		const ok = await confirmDeleteEvent(ev.title);
+		if (!ok) return;
 		closeEventPopover();
-		handleDelete(id);
+		try {
+			const result = await deleteEvent(ev.id);
+			await load();
+			announceDelete(result);
+		} catch (err) {
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			flash.danger(readErrorMessage(err, 'Não foi possível excluir o evento.'));
+		}
 	}
 
 	// Esc fecha popovers; clique fora tambem.
@@ -891,22 +919,22 @@
 					</button>
 					{#if googleMenuOpen}
 						<div class="cal-gmenu-pop" role="menu" style="left: {googleMenuX}px; top: {googleMenuY}px;">
-							<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={() => runGoogleAction(handleSync)}>
+							<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={handleSync}>
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" /></svg>
-								Sincronizar agora
+								{connectionAction === 'sync' ? 'Sincronizando…' : 'Sincronizar agora'}
 							</button>
 							{#if hub.connection.watch_expiring_soon}
-								<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={() => runGoogleAction(handleRenewWatch)}>
+								<button type="button" role="menuitem" class="cal-gmenu-item" disabled={connectionBusy} onclick={handleRenewWatch}>
 									<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-									Renovar watch
+									{connectionAction === 'watch' ? 'Renovando…' : 'Renovar watch'}
 									{#if hub.connection.watch_expiration_display}
 										<span class="cal-gmenu-meta">expira em {hub.connection.watch_expiration_display}</span>
 									{/if}
 								</button>
 							{/if}
-							<button type="button" role="menuitem" class="cal-gmenu-item cal-gmenu-item--danger" disabled={connectionBusy} onclick={confirmDisconnect}>
+							<button type="button" role="menuitem" class="cal-gmenu-item cal-gmenu-item--danger" disabled={connectionBusy} onclick={() => void confirmDisconnect()}>
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71" /><line x1="8" y1="2" x2="8" y2="5" /><line x1="2" y1="8" x2="5" y2="8" /><line x1="16" y1="19" x2="16" y2="22" /><line x1="19" y1="16" x2="22" y2="16" /></svg>
-								Desconectar do Google
+								{connectionAction === 'disconnect' ? 'Desconectando…' : 'Desconectar do Google'}
 							</button>
 						</div>
 					{/if}
@@ -942,21 +970,12 @@
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if hub}
 		{#if !hub.google_calendar_enabled}
-			<div class="cal-alert" role="alert">
-				<i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-				Integração Google Calendar desabilitada neste servidor.
-			</div>
-		{/if}
-
-		{#if actionNotice}
-			<p
-				role={actionNotice.tone === 'warning' ? 'alert' : 'status'}
-				aria-live={actionNotice.tone === 'warning' ? 'assertive' : 'polite'}
-				class="cal-action-notice"
-				class:cal-action-notice--warning={actionNotice.tone === 'warning'}
-			>
-				{actionNotice.message}
-			</p>
+			<StateBanner
+				tone="info"
+				icon="plug"
+				title="Integração com o Google Calendar desabilitada neste servidor"
+				description="Os eventos ficam apenas no ProjetosRJ: não há sincronização nem link do Meet."
+			/>
 		{/if}
 
 		<!-- ── Conteudo: visao ativa (centro) + painel direito ──────────── -->
@@ -1230,7 +1249,7 @@
 				<button
 					class="cal-event-popover-action cal-event-popover-action--danger"
 					type="button"
-					onclick={(e) => { e.stopPropagation(); deleteFromUi(ev.id); }}
+					onclick={(e) => { e.stopPropagation(); void deleteFromUi(ev); }}
 				>
 					<AppIcon id="exclusao" size={14} /> Apagar
 				</button>
@@ -1482,29 +1501,6 @@
 	.cal-btn-sm--danger:hover {
 		background: var(--ds-color-wash-danger);
 		border-color: var(--ds-color-border-danger-soft);
-	}
-
-	/* ── Alert / notice ─────────────────────────────────────────────── */
-	.cal-alert {
-		font-size: 0.8125rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid var(--app-color-border);
-		background: var(--ds-color-wash-warning);
-		color: var(--app-color-text-secondary);
-	}
-	.cal-action-notice {
-		font-size: 0.8125rem;
-		padding: 0.5rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--ds-color-border-success-soft);
-		background: var(--ds-color-wash-success);
-		color: var(--app-color-success);
-	}
-	.cal-action-notice--warning {
-		border-color: var(--ds-color-border-warning-soft);
-		background: var(--app-color-surface-muted);
-		color: var(--ds-color-text-warning);
 	}
 
 	.cal-view {

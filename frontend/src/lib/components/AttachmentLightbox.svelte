@@ -61,14 +61,14 @@
 <svelte:window onkeydown={onKeydown} />
 
 {#if current}
-	<div class="fixed inset-0 z-[1000] bg-overlay" onclick={onClose} role="presentation"></div>
+	<div class="fixed inset-0 z-modal-backdrop bg-overlay" onclick={onClose} role="presentation"></div>
 	<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 	<section
 		role="dialog"
 		aria-modal="true"
 		aria-label={`Anexos — ${current.filename}`}
 		tabindex="-1"
-		class="fixed inset-0 z-[1001] m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
+		class="fixed inset-0 z-modal m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 	>
 		<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">
 			<div class="flex min-w-0 items-center gap-2">

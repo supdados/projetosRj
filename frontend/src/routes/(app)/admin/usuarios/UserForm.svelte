@@ -18,6 +18,7 @@
 	 * `required`/`aria-invalid`, erro em `role=alert`.
 	 */
 	import OrgaoPapelRepeater from '$lib/components/OrgaoPapelRepeater.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import { buildOrgaoTree, computeOrgaoCoverage } from '$lib/utils/orgaoTree';
 	import type { AdminOrgaoOption, AdminUserOrgaoVinculo } from '$lib/types/adminUsers';
 
@@ -96,12 +97,7 @@
 
 <form class="flex flex-col gap-4" onsubmit={handleSubmit} novalidate>
 	{#if errorMessage}
-		<div
-			role="alert"
-			class="rounded-lg border border-danger bg-wash-danger px-4 py-3 text-sm font-medium text-danger"
-		>
-			{errorMessage}
-		</div>
+		<StateBanner tone="danger" title={errorMessage} />
 	{/if}
 
 	<fieldset

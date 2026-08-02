@@ -29,6 +29,7 @@
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { flash } from '$lib/stores/flash';
+	import { confirmAction } from '$lib/stores/confirm';
 	import {
 		fetchProjectDetail,
 		peekProjectDetail,
@@ -150,14 +151,6 @@
 	}
 	let dateMenu = $state<DateContextMenuState | null>(null);
 
-	// Confirmação de cascata após mudar uma data_inicio.
-	interface CascadeState {
-		etapaId: number;
-		daysDiff: number;
-	}
-	let cascadePrompt = $state<CascadeState | null>(null);
-	let cascadeBusy = $state<boolean>(false);
-
 	// Importar modelo de etapas.
 	let importOpen = $state<boolean>(false);
 	let templates = $state<StageTemplateOption[]>([]);
@@ -271,13 +264,15 @@
 	/** Reabre um projeto Finalizado (status volta a Vigente) via /inline. */
 	async function onReopenProject(): Promise<void> {
 		if (!data || reopenInFlight || !isFinalizado || !canEdit) return;
-		if (
-			typeof window !== 'undefined' &&
-			!window.confirm(
-				'Este projeto está finalizado. Reabrir o projeto voltará o status para Vigente e permitirá edições. Deseja continuar?'
-			)
-		)
-			return;
+		const titulo = data.project.titulo;
+		const ok = await confirmAction({
+			title: 'Reabrir projeto finalizado?',
+			description: `"${titulo}" volta para o status Vigente e a edição de campos e etapas é liberada novamente.`,
+			tone: 'brand',
+			icon: 'reopen',
+			confirmLabel: 'Reabrir projeto'
+		});
+		if (!ok || !data) return;
 		reopenInFlight = true;
 		try {
 			const result = await updateProjectInline(projectId, { status: 'Vigente' });
@@ -380,10 +375,20 @@
 		}
 	}
 
-	/** Exclui a reunião (confirm nativo); em sucesso re-busca + toast. */
+	/** Exclui a reunião (confirmação destrutiva); em sucesso re-busca + toast. */
 	async function onDeleteMeeting(etapaId: number): Promise<void> {
-		if (typeof window !== 'undefined' && !window.confirm('Tem certeza que deseja excluir esta reunião?'))
-			return;
+		const etapa = data?.etapas.find((e) => e.id === etapaId);
+		const tituloReuniao = etapa?.meeting?.title?.trim() || 'esta reunião';
+		const nomeEtapa = etapa?.descricao?.trim();
+		const contexto = nomeEtapa ? `, da etapa "${nomeEtapa}",` : '';
+		const ok = await confirmAction({
+			title: 'Excluir reunião?',
+			description: `"${tituloReuniao}"${contexto} será removida do projeto e da agenda do Google. Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir reunião'
+		});
+		if (!ok) return;
 		meetingDeleting = { ...meetingDeleting, [etapaId]: true };
 		try {
 			const result = await deleteStageMeeting(etapaId);
@@ -499,7 +504,7 @@
 	// --- Deep-link ?focus_etapa=<id> (etapa vinda da busca global) -----------
 	// Após as etapas carregarem, rola até a linha da etapa-alvo e a destaca por
 	// alguns segundos; o param é consumido UMA vez e removido da URL (replaceState)
-	// para não repetir num refresh/voltar. Etapa inexistente => ignora em silêncio.
+	// para não repetir num refresh/voltar. Etapa inexistente => toast de aviso.
 	let highlightEtapaId = $state<number | null>(null);
 	let highlightTimer: ReturnType<typeof setTimeout> | null = null;
 	let focusEtapaConsumed = false;
@@ -528,12 +533,24 @@
 	$effect(() => {
 		if (focusEtapaConsumed || loadState !== 'ready' || !data) return;
 		focusEtapaConsumed = true;
+		const search = window.location.search;
 		const target = resolveFocusEtapaId(
-			window.location.search,
+			search,
 			data.etapas.map((e) => e.id)
 		);
+		const requested = new URLSearchParams(search).get('focus_etapa');
 		clearFocusEtapaParam();
-		if (target !== null) void focusEtapaRow(target);
+		if (target !== null) {
+			void focusEtapaRow(target);
+			return;
+		}
+		// Link da busca global apontando para etapa já excluída/movida: sem aviso o
+		// usuário fica esperando um destaque que nunca vem.
+		if (requested !== null) {
+			flash.warning('Etapa não encontrada neste projeto.', {
+				description: 'O link pode estar desatualizado — a etapa foi excluída ou movida.'
+			});
+		}
 	});
 
 	// --- Edicao inline de campos do projeto (cabecalho + demais) -------------
@@ -815,12 +832,15 @@
 	 * Edita um campo inline da etapa (descricao/data_inicio/data_fim/responsavel).
 	 * Ao mudar uma DATA, o backend pode propagar a cascata para etapas seguintes;
 	 * por isso RE-BUSCAMOS o estado completo apos o sucesso. O front nao recalcula.
+	 *
+	 * Devolve `true` só quando o servidor confirmou a gravação — quem encadeia
+	 * feedback (menu +N dias úteis) precisa distinguir sucesso de falha.
 	 */
 	async function onUpdateField(
 		etapaId: number,
 		field: EtapaInlineField,
 		value: string
-	): Promise<void> {
+	): Promise<boolean> {
 		setRowFieldState(etapaId, field, { pending: true, error: null });
 		try {
 			const result = await updateEtapaField(etapaId, field, value === '' ? null : value);
@@ -832,19 +852,32 @@
 				// Ao mudar data_inicio com deslocamento de dias, oferece a cascata
 				// (paridade com showCascadeConfirmModal de 07-stage-dnd.js).
 				const diff = result.field_update?.daysDiff ?? 0;
-				if (field === 'data_inicio' && diff !== 0) {
-					cascadePrompt = { etapaId, daysDiff: diff };
-				}
+				// Sem await: o diálogo da cascata não pode segurar o retorno deste save.
+				if (field === 'data_inicio' && diff !== 0) void promptCascade(etapaId, diff);
 			}
+			return true;
 		} catch (err) {
-			if (isUnauthenticated(err)) return;
+			if (isUnauthenticated(err)) return false;
 			const isDateField = field === 'data_inicio' || field === 'data_fim';
 			if (isDateField) flashEtapaError(err, 'Falha ao salvar o campo da etapa.');
 			setRowFieldState(etapaId, field, {
 				pending: false,
 				error: isDateField ? null : messageOf(err, 'Falha ao salvar o campo da etapa.')
 			});
+			return false;
 		}
+	}
+
+	/**
+	 * Confirma o novo status da etapa com o MESMO texto de /projetos/pendentes
+	 * (PendingProjectCard): a mesma ação não pode falar diferente em cada tela.
+	 */
+	function flashStatusEtapa(etapa: EtapaDetail, wasDone: boolean): void {
+		if (!etapa.iniciada && !etapa.done && wasDone) {
+			flash.info('Etapa marcada como não iniciada e, consequentemente, como não concluída.');
+			return;
+		}
+		flash.success(etapa.done ? 'Concluída.' : etapa.iniciada ? 'Iniciada.' : 'Não iniciada.');
 	}
 
 	/**
@@ -874,11 +907,13 @@
 			}
 		}
 		setRowBusy(etapaId, true);
+		const wasDone = etapa.done;
 		try {
 			const result =
 				state === 'started' ? await toggleEtapaDone(etapaId) : await toggleEtapaIniciada(etapaId);
 			replaceEtapa(result.etapa);
 			setRowBusy(etapaId, false);
+			flashStatusEtapa(result.etapa, wasDone);
 			await refresh();
 		} catch (err) {
 			if (isUnauthenticated(err)) {
@@ -906,8 +941,33 @@
 		}
 	}
 
+	/**
+	 * Rótulo da etapa para textos de confirmação. Usa a MESMA numeração visível
+	 * na tabela (`displayNumber` do StageList: projectId.posicao de render).
+	 */
+	function etapaLabel(etapa: EtapaDetail, index: number): string {
+		const numero = `${projectId}.${index + 1}`;
+		const nome = etapa.descricao?.trim();
+		return nome ? `${numero} — ${nome}` : `Etapa ${numero}`;
+	}
+
 	async function onDeleteEtapa(etapaId: number): Promise<void> {
-		if (typeof window !== 'undefined' && !window.confirm('Excluir esta etapa?')) return;
+		const index = data?.etapas.findIndex((e) => e.id === etapaId) ?? -1;
+		const etapa = index >= 0 ? data?.etapas[index] : undefined;
+		if (!etapa) return;
+		const total = etapa.task_count?.total ?? 0;
+		const tarefas =
+			total > 0
+				? ` As ${total} tarefa(s) vinculadas não são excluídas, mas ficam sem etapa.`
+				: '';
+		const ok = await confirmAction({
+			title: 'Excluir esta etapa?',
+			description: `"${etapaLabel(etapa, index)}" sai do projeto e as etapas seguintes são renumeradas.${tarefas} Esta ação não pode ser desfeita.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Excluir etapa'
+		});
+		if (!ok) return;
 		setRowBusy(etapaId, true);
 		try {
 			await deleteEtapa(etapaId);
@@ -925,19 +985,21 @@
 	/**
 	 * Persiste a nova ordem das etapas. O backend pode recalcular datas em cascata
 	 * (dias uteis); por isso RE-BUSCAMOS o estado completo apos o sucesso.
+	 *
+	 * Devolve `true` só com a ordem GRAVADA — o recibo de recálculo do StageList
+	 * depende disso para não anunciar sucesso sobre uma reordenação recusada.
 	 */
-	async function onReorder(orderedIds: number[]): Promise<void> {
+	async function onReorder(orderedIds: number[]): Promise<boolean> {
 		reordering = true;
 		reorderError = null;
 		try {
 			await reorderEtapas(projectId, orderedIds);
 			await refresh();
+			return true;
 		} catch (err) {
-			if (isUnauthenticated(err)) {
-				reordering = false;
-				return;
-			}
+			if (isUnauthenticated(err)) return false;
 			reorderError = messageOf(err, 'Falha ao reordenar as etapas.');
+			return false;
 		} finally {
 			reordering = false;
 		}
@@ -1014,34 +1076,34 @@
 			flash.danger('Não foi possível calcular a nova data útil.');
 			return;
 		}
-		await onUpdateField(etapaId, field, newValue);
-		flash.success(`Data atualizada: +${days} dia(s) útil(eis)`);
+		// Só confirma o que o servidor gravou: o erro já saiu por flashEtapaError.
+		if (await onUpdateField(etapaId, field, newValue)) {
+			flash.success(`Data atualizada: +${days} dia(s) útil(eis)`);
+		}
 	}
 
 	// --- Cascata de datas (server-side) --------------------------------------
 
-	async function confirmCascade(): Promise<void> {
-		if (!cascadePrompt || cascadeBusy) return;
-		cascadeBusy = true;
-		const { etapaId, daysDiff } = cascadePrompt;
-		try {
-			await cascadeDates(projectId, { etapa_id: etapaId, days_diff: daysDiff });
-			cascadePrompt = null;
-			await refresh();
-			flash.success('Datas subsequentes atualizadas.');
-		} catch (err) {
-			if (isUnauthenticated(err)) return;
-			flash.danger(messageOf(err, 'Falha na atualização em cascata.'));
-		} finally {
-			cascadeBusy = false;
-		}
-	}
-	function dismissCascade(): void {
-		cascadePrompt = null;
-	}
-	// Fecha o modal de cascata via teclado (Escape), espelhando o clique no backdrop.
-	function onCascadeKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') dismissCascade();
+	/**
+	 * Oferta não-destrutiva de propagar o deslocamento de dias às etapas
+	 * seguintes. `run` mantém o diálogo aberto em busy e transforma a falha em
+	 * banner DENTRO dele — nunca sobra modal por cima de um toast de erro.
+	 */
+	async function promptCascade(etapaId: number, daysDiff: number): Promise<void> {
+		const ok = await confirmAction({
+			title: 'Atualizar datas subsequentes?',
+			description:
+				'A mesma alteração de dias será aplicada às datas de início e fim de todas as etapas posteriores a esta.',
+			tone: 'brand',
+			icon: 'sync',
+			confirmLabel: 'Atualizar datas',
+			cancelLabel: 'Manter como está',
+			busyLabel: 'Atualizando…',
+			run: () => cascadeDates(projectId, { etapa_id: etapaId, days_diff: daysDiff }).then(() => {})
+		});
+		if (!ok) return;
+		await refresh();
+		flash.success('Datas subsequentes atualizadas.');
 	}
 
 	// --- Adicionar etapa (composer inline) -----------------------------------
@@ -1065,14 +1127,16 @@
 		// Projeto Finalizado: adicionar etapa o reativa (Vigente). Confirma antes
 		// (paridade com o reactivate-project-confirm-modal de 05-stage-composer.js).
 		const willReactivate = (data?.project.status ?? '') === 'Finalizado';
-		if (
-			willReactivate &&
-			typeof window !== 'undefined' &&
-			!window.confirm(
-				'Este projeto está finalizado. Ao adicionar uma nova etapa, ele voltará para o status Vigente. Deseja continuar?'
-			)
-		) {
-			return false;
+		if (willReactivate) {
+			const titulo = data?.project.titulo ?? 'Este projeto';
+			const ok = await confirmAction({
+				title: 'Reativar projeto para adicionar a etapa?',
+				description: `"${titulo}" está finalizado. Ao criar a etapa "${draft.descricao.trim()}", ele volta para o status Vigente e a edição é liberada.`,
+				tone: 'brand',
+				icon: 'reopen',
+				confirmLabel: 'Reativar e adicionar etapa'
+			});
+			if (!ok) return false;
 		}
 		addingStage = true;
 		addStageError = null;
@@ -1128,9 +1192,13 @@
 		importSubmitting = true;
 		importError = null;
 		try {
-			await importStageModel(projectId, payload);
+			const result = await importStageModel(projectId, payload);
 			importOpen = false;
 			await refresh();
+			// A contagem é o único sinal do que entrou: o modal fecha e a tabela
+			// cresce sem dizer quantas etapas vieram do modelo.
+			const criadas = result.etapas_criadas;
+			flash.success(criadas === 1 ? '1 etapa importada do modelo.' : `${criadas} etapas importadas do modelo.`);
 		} catch (err) {
 			if (isUnauthenticated(err)) {
 				importSubmitting = false;
@@ -1694,40 +1762,6 @@
 	</ul>
 {/if}
 
-<!-- Modal de confirmação de cascata de datas -->
-{#if cascadePrompt}
-	<div class="cascade-overlay" role="presentation" onclick={dismissCascade}>
-		<div
-			class="cascade-modal"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="cascade-title"
-			tabindex={-1}
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={onCascadeKeydown}
-		>
-			<h5 id="cascade-title">Atualizar Datas Subsequentes?</h5>
-			<p>
-				Deseja aplicar a mesma alteração de dias para as datas de início e fim de todas as etapas
-				posteriores?
-			</p>
-			<div class="cascade-buttons">
-				<button type="button" class="cascade-btn cascade-btn-secondary" onclick={dismissCascade}>
-					Não
-				</button>
-				<button
-					type="button"
-					class="cascade-btn cascade-btn-primary"
-					disabled={cascadeBusy}
-					onclick={confirmCascade}
-				>
-					{cascadeBusy ? 'Atualizando…' : 'Sim, atualizar'}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
 <!-- Aviso de conclusão (overlay) — o chime + confete são disparados na ação. -->
 <ConcludeCelebrationOverlay
 	active={celebrationActive}
@@ -1833,58 +1867,4 @@
 		}
 	}
 
-	/* Modal de cascata (paridade .confirm-modal-overlay/.confirm-modal) */
-	.cascade-overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 1060;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--ds-color-overlay);
-	}
-	.cascade-modal {
-		background: var(--ds-color-surface-base);
-		padding: 2rem;
-		border-radius: 16px;
-		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-		max-width: 400px;
-		text-align: center;
-		color: var(--ds-color-text-secondary);
-	}
-	:global([data-theme='dark']) .cascade-modal {
-		box-shadow: var(--ds-shadow-md);
-	}
-	.cascade-modal h5 {
-		margin: 0 0 0.75rem;
-		font-weight: 700;
-		color: var(--ds-color-text-primary);
-	}
-	.cascade-buttons {
-		margin-top: 1.5rem;
-		display: flex;
-		justify-content: center;
-		gap: 1rem;
-	}
-	.cascade-btn {
-		padding: 0.5rem 1.1rem;
-		border-radius: 8px;
-		font-size: 0.875rem;
-		font-weight: 600;
-		cursor: pointer;
-		border: 1px solid transparent;
-	}
-	.cascade-btn-secondary {
-		background: var(--ds-color-surface-muted);
-		border-color: var(--ds-color-border-base);
-		color: var(--ds-color-text-secondary);
-	}
-	.cascade-btn-primary {
-		background: var(--ds-color-fill-brand);
-		color: var(--ds-color-fill-brand-fg);
-	}
-	.cascade-btn-primary:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
 </style>

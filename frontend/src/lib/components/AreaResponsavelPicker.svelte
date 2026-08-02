@@ -135,6 +135,9 @@
 		} catch {
 			allCandidates = [];
 			areasPromise = null; // permite novo retry
+			flash.danger('Não foi possível carregar as áreas disponíveis.', {
+				key: 'etapa-areas-candidatos'
+			});
 		} finally {
 			candidatesLoaded = true;
 			loadingCandidates = false;

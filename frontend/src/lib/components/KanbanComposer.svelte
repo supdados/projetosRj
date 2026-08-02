@@ -10,8 +10,8 @@
 	 *   - estado `is-saving` (loading) durante o submit;
 	 *   - Enter (sem Shift) submete; Escape fecha e limpa.
 	 *
-	 * Validações client (paridade):
-	 *   - descrição vazia -> apenas re-foca o textarea (SEM alert);
+	 * Validações client:
+	 *   - descrição vazia -> aviso inline + re-foca o textarea;
 	 *   - projeto não selecionado -> aviso inline 'Selecione um projeto para criar
 	 *     a tarefa.' + foca o picker;
 	 *   - abrir responsável sem projeto -> aviso 'Selecione um projeto para
@@ -29,8 +29,9 @@
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import type { TaskStatus } from '$lib/utils/taskStatus';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
-	import { priorityDotColor } from '$lib/utils/taskLabels';
+	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
 
 	interface Props {
 		/** Status (coluna) onde a tarefa será criada. */
@@ -74,15 +75,35 @@
 	let etapaLoading = $state(false);
 	let responsavelOptions = $state<{ id: number; name: string }[]>([]);
 
+	// Sem isso o select simplesmente sumia (lista vazia) sem explicar o porquê.
+	let etapasFailed = $state(false);
+	let responsaveisFailed = $state(false);
+	const optionsError = $derived(
+		etapasFailed && responsaveisFailed
+			? 'Não foi possível carregar as etapas e os responsáveis deste projeto.'
+			: etapasFailed
+				? 'Não foi possível carregar as etapas deste projeto.'
+				: responsaveisFailed
+					? 'Não foi possível carregar os responsáveis deste projeto.'
+					: null
+	);
+
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	const PROJECT_TRIGGER_ID = `kanban-composer-project-${status}`;
 
-	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
-		{ value: 'baixa', label: 'Baixa', dot: priorityDotColor('baixa') },
-		{ value: 'media', label: 'Média', dot: priorityDotColor('media') },
-		{ value: 'alta', label: 'Alta', dot: priorityDotColor('alta') },
-		{ value: 'urgente', label: 'Urgente', dot: priorityDotColor('urgente') }
-	];
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = (
+		[
+			['baixa', 'Baixa'],
+			['media', 'Média'],
+			['alta', 'Alta'],
+			['urgente', 'Urgente']
+		] as const
+	).map(([value, label]) => ({
+		value,
+		label,
+		dot: priorityDotColor(value),
+		icon: priorityIconId(value)
+	}));
 	// Sem "implementacao": é tipo LEGADO (`LEGACY_TIPOS`) — a criação via
 	// /api/tarefas só aceita VALID_TIPOS e descartaria o valor silenciosamente.
 	const TIPO_OPTIONS: SelectMenuOption[] = [
@@ -111,6 +132,8 @@
 	function resetFields(): void {
 		saving = false;
 		errorMessage = null;
+		etapasFailed = false;
+		responsaveisFailed = false;
 		project = '';
 		etapaOptions = [];
 		responsavelOptions = [];
@@ -146,6 +169,8 @@
 		etapa = '';
 		etapaOptions = [];
 		responsavelOptions = [];
+		etapasFailed = false;
+		responsaveisFailed = false;
 		if (!project) return;
 		await Promise.all([loadEtapas(), loadResponsaveis()]);
 	}
@@ -156,8 +181,10 @@
 		try {
 			const data = await fetchProjectDetail(Number(project));
 			etapaOptions = data.etapas.filter((e) => !e.is_google_meeting);
+			etapasFailed = false;
 		} catch {
 			etapaOptions = [];
+			etapasFailed = true;
 		} finally {
 			etapaLoading = false;
 		}
@@ -168,8 +195,10 @@
 		try {
 			const data = await fetchHubResponsaveis({ project });
 			responsavelOptions = data.users;
+			responsaveisFailed = false;
 		} catch {
 			responsavelOptions = [];
+			responsaveisFailed = true;
 		}
 	}
 
@@ -188,8 +217,8 @@
 	async function submit(): Promise<void> {
 		if (saving) return;
 		errorMessage = null;
-		// Descrição vazia: apenas re-foca (paridade — sem alert).
 		if (!descricao.trim()) {
+			errorMessage = 'Descreva a tarefa para poder criá-la.';
 			textareaEl?.focus();
 			return;
 		}
@@ -325,6 +354,16 @@
 				/>
 			</div>
 		</div>
+
+		{#if optionsError}
+			<StateBanner
+				tone="warning"
+				title={optionsError}
+				description="Você ainda pode criar a tarefa sem esses campos."
+				actionLabel="Tentar novamente"
+				onAction={() => void onProjectChange()}
+			/>
+		{/if}
 
 		{#if errorMessage}
 			<p role="alert" class="text-xs text-danger">{errorMessage}</p>

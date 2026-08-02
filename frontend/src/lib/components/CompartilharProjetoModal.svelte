@@ -22,6 +22,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { ApiClientError } from '$lib/api/client';
+	import { confirmAction } from '$lib/stores/confirm';
 	import { fetchAreas, type AreaOption } from '$lib/api/areas';
 	import {
 		bulkInviteOrgao,
@@ -386,14 +387,24 @@
 		}
 	}
 
-	/** Roda uma mutação de linha marcando-a como ocupada e re-buscando a lista. */
-	async function mutarLinha(id: number, acao: () => Promise<void>, fallback: string): Promise<void> {
+	/**
+	 * Roda uma mutação de linha marcando-a como ocupada e re-buscando a lista.
+	 * `successMessage`: recibo exibido no rodapé do formulário (o resumo não pode
+	 * zerar sem repopular — a pessoa perde a confirmação de que a ação funcionou).
+	 */
+	async function mutarLinha(
+		id: number,
+		acao: () => Promise<void>,
+		fallback: string,
+		successMessage?: string
+	): Promise<void> {
 		linhaOcupada = id;
 		formError = '';
 		resumoAcao = '';
 		try {
 			await acao();
 			await recarregar();
+			if (successMessage) resumoAcao = successMessage;
 		} catch (err) {
 			formError = mensagemDeErro(err, fallback);
 		} finally {
@@ -418,7 +429,8 @@
 				updateProjectMember(projectId, membro.id, {
 					expires_at: expiracaoDoPeriodo(CONVITE_PERIODO_PADRAO_DIAS)
 				}),
-			'Falha ao renovar o convite.'
+			'Falha ao renovar o convite.',
+			`Convite de ${membro.user_name} renovado por ${CONVITE_PERIODO_PADRAO_DIAS} dias.`
 		);
 	}
 
@@ -432,15 +444,27 @@
 					papel: membro.papel,
 					expires_at: expiracaoDoPeriodo(CONVITE_PERIODO_PADRAO_DIAS)
 				}),
-			'Falha ao reativar o convite.'
+			'Falha ao reativar o convite.',
+			`${membro.user_name} reativado(a) no projeto.`
 		);
 	}
 
-	function revogar(membro: ProjectMemberDireto): void {
+	/** Revogar remove o acesso na hora — pede confirmação citando a pessoa. */
+	async function revogar(membro: ProjectMemberDireto): Promise<void> {
+		const ok = await confirmAction({
+			title: `Revogar o acesso de ${membro.user_name}?`,
+			description: `${membro.user_name} perde o acesso a este projeto imediatamente. Dá para reativar o convite depois, se precisar.`,
+			tone: 'danger',
+			icon: 'trash',
+			confirmLabel: 'Revogar acesso',
+			cancelLabel: 'Cancelar'
+		});
+		if (!ok) return;
 		void mutarLinha(
 			membro.id,
 			() => revokeProjectMember(projectId, membro.id),
-			'Falha ao revogar o convite.'
+			'Falha ao revogar o convite.',
+			`Acesso de ${membro.user_name} revogado.`
 		);
 	}
 
@@ -456,7 +480,7 @@
 	}
 
 	function executarAcao(membro: ProjectMemberDireto, acao: string | null): void {
-		if (acao === 'revogar') revogar(membro);
+		if (acao === 'revogar') void revogar(membro);
 		else if (acao === 'renovar') renovar(membro);
 		else if (acao === 'reativar') reativar(membro);
 	}

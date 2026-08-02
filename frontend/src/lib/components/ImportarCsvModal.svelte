@@ -6,14 +6,17 @@
 	 * os atributos comuns aplicados a todas as linhas (órgão/status/especial/tipo).
 	 *
 	 * O CSV exige cabeçalho com as colunas `titulo` e `descricao` (mesma regra do
-	 * backend). Em sucesso, fecha e dispara `onImported(count)`.
+	 * backend). Em sucesso, fecha e dispara `onImported(count)`. Fechar com um
+	 * arquivo já escolhido pede confirmação (o fechamento reseta o formulário).
 	 */
 	import { ApiClientError } from '$lib/api/client';
 	import { importProjectsCsv } from '$lib/api/projects';
+	import { confirmAction } from '$lib/stores/confirm';
 	import type { ProjectsListOptions } from '$lib/types/projects';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import Modal from '$lib/components/Modal.svelte';
+	import StateBanner from '$lib/components/StateBanner.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 
@@ -87,6 +90,27 @@
 		file = input.files?.[0] ?? null;
 	}
 
+	/**
+	 * Fechar descarta o arquivo escolhido e os atributos (o `$effect` de abertura
+	 * reseta tudo); com arquivo em mãos, confirma antes de perder a seleção.
+	 */
+	async function requestClose(): Promise<void> {
+		if (submitting) return;
+		if (file === null) {
+			onClose();
+			return;
+		}
+		const ok = await confirmAction({
+			title: 'Descartar a importação?',
+			description: `O arquivo "${file.name}" e os atributos escolhidos serão descartados.`,
+			tone: 'warning',
+			icon: 'draft',
+			confirmLabel: 'Descartar importação',
+			cancelLabel: 'Continuar editando'
+		});
+		if (ok) onClose();
+	}
+
 	async function handleSubmit(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!canSubmit || file === null) return;
@@ -111,7 +135,7 @@
 </script>
 
 {#if open}
-	<Modal labelId="import-csv-title" maxWidth="max-w-lg" onBackdrop={onClose}>
+	<Modal labelId="import-csv-title" maxWidth="max-w-lg" onBackdrop={() => void requestClose()}>
 		<div class="flex flex-col gap-4">
 			<div class="flex items-start justify-between gap-3">
 				<h2 id="import-csv-title" class="font-heading text-lg font-bold text-brand">
@@ -119,7 +143,7 @@
 				</h2>
 				<button
 					type="button"
-					onclick={onClose}
+					onclick={() => void requestClose()}
 					aria-label="Fechar"
 					class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
@@ -134,9 +158,7 @@
 			</p>
 
 			{#if errorMsg}
-				<div role="alert" class="rounded-lg border border-danger bg-surface px-3 py-2 text-sm text-text-primary">
-					{errorMsg}
-				</div>
+				<StateBanner tone="danger" title="Não foi possível importar o CSV." description={errorMsg} />
 			{/if}
 
 			<form class="flex flex-col gap-3" onsubmit={handleSubmit}>
@@ -213,15 +235,16 @@
 				<div class="mt-1 flex justify-end gap-2">
 					<button
 						type="button"
-						onclick={onClose}
-						class="h-9 rounded-md border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						onclick={() => void requestClose()}
+						disabled={submitting}
+						class="h-9 rounded-md border border-border-subtle bg-surface px-4 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						Cancelar
 					</button>
 					<button
 						type="submit"
 						disabled={!canSubmit}
-						class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-white shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
+						class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-4 text-sm font-semibold text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<i class="fas {submitting ? 'fa-spinner fa-spin' : 'fa-file-import'}" aria-hidden="true"></i>
 						Importar
