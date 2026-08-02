@@ -13,6 +13,7 @@
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { DashboardData } from '$lib/types/dashboard';
 	import StatCard from '$lib/components/StatCard.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import FolderReveal from '$lib/components/micro/FolderReveal.svelte';
 	import ClipboardStamp from '$lib/components/micro/ClipboardStamp.svelte';
 	import FolderPeek from '$lib/components/micro/FolderPeek.svelte';
@@ -230,33 +231,28 @@
 		return { r, C, segs };
 	});
 
-	// Metadados de tipo de pedido (icone FontAwesome + cor). `duvida` usa roxo
-	// literal (sem token dedicado no design system).
-	const TYPE_META: Record<string, { label: string; icon: string; color: string }> = {
-		bug: { label: 'Bug', icon: 'fa-bug', color: 'var(--ds-color-text-danger)' },
-		melhoria: { label: 'Melhoria', icon: 'fa-arrow-up', color: 'var(--ds-color-text-warning)' },
-		// paleta categórica de tipo de pedido — exceção declarada (plano-regua-de-cor §7.12)
-		duvida: { label: 'Dúvida', icon: 'fa-circle-question', color: '#7c3aed' },
-		outros: { label: 'Outros', icon: 'fa-ellipsis', color: 'var(--ds-color-text-muted)' },
-		implementacao: { label: 'Implementação', icon: 'fa-code', color: 'var(--ds-color-text-brand)' }
+	// Icone/cor de tipo de pedido moram em TaskTipoIcon (bloco T-A do design).
+	const TYPE_LABEL: Record<string, string> = {
+		bug: 'Bug',
+		melhoria: 'Melhoria',
+		duvida: 'Dúvida'
 	};
-	// "outros" tem icone/cor em TYPE_META (usado na lista de recentes), mas NAO
-	// vira chip em "Por tipo" — fica de fora da ordem dos chips de propósito.
-	const TYPE_ORDER = ['bug', 'melhoria', 'duvida', 'implementacao'] as const;
+	// "outros" NAO vira chip em "Por tipo" — fica de fora da ordem de propósito.
+	// "implementacao" foi descontinuado como opção (só existe em tarefas legadas).
+	const TYPE_ORDER = ['bug', 'melhoria', 'duvida'] as const;
 
 	// Chips "Por tipo": so os tipos com tarefas em aberto (count > 0).
 	const taskTypes = $derived.by(() => {
 		const d = data;
-		if (!d) return [] as { key: string; label: string; icon: string; color: string; count: number }[];
+		if (!d) return [] as { key: string; label: string; count: number }[];
 		const counts: Record<string, number> = {
 			bug: d.task_tipo_bug_count,
 			melhoria: d.task_tipo_melhoria_count,
-			duvida: d.task_tipo_duvida_count,
-			implementacao: d.task_tipo_implementacao_count
+			duvida: d.task_tipo_duvida_count
 		};
 		return TYPE_ORDER.filter((k) => counts[k] > 0).map((k) => ({
 			key: k,
-			...TYPE_META[k],
+			label: TYPE_LABEL[k],
 			count: counts[k]
 		}));
 	});
@@ -541,7 +537,7 @@
 											href={`${base}/tarefas?tipo=${ty.key}`}
 											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
-											<i class="fas {ty.icon}" style="color: {ty.color};" aria-hidden="true"></i>
+											<TaskTipoIcon tipo={ty.key} size={16} />
 											{ty.label}
 											<span class="text-2xs font-semibold tabular-nums text-text-muted">{ty.count}</span>
 										</a>
@@ -561,18 +557,13 @@
 									class="flex flex-col gap-1.5 overflow-hidden lg:min-h-0 lg:flex-1"
 								>
 									{#each data.recent_tasks as t (t.id)}
-										{@const meta = TYPE_META[t.tipo_pedido ?? '']}
 										<a
 											href={`${base}/tarefas?focus_task=${t.id}`}
 											title={t.descricao}
 											class="recent-task-item flex items-center gap-2.5 rounded-md border border-border-faint px-3 py-1 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
-											<span
-												class="flex h-5 w-5 shrink-0 items-center justify-center"
-												style="color: {meta?.color ?? 'var(--ds-color-text-muted)'};"
-												aria-hidden="true"
-											>
-												<i class="fas {meta?.icon ?? 'fa-circle-dot'}"></i>
+											<span class="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">
+												<TaskTipoIcon tipo={t.tipo_pedido} size={16} />
 											</span>
 											<span class="flex min-w-0 flex-1 flex-col">
 												<span class="truncate text-sm font-semibold text-text-primary">{t.descricao}</span>
