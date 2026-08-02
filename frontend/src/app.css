@@ -219,7 +219,7 @@
 	--ds-color-overlay: color-mix(in srgb, var(--ds-color-neutral-1000) 45%, transparent);
 
 	/* --- Ilustração 3D (regra de marca: 600 contorno / 400 base / 300-200 luz /
-	       100 interior). Consumida por lib/components/micro/* e lib/nav3d/*. --- */
+	       100 interior). Consumida por lib/components/micro/*. --- */
 	--ds-color-icon-outline: var(--ds-color-primary-600);
 	--ds-color-icon-base: var(--ds-color-primary-400);
 	--ds-color-icon-light: var(--ds-color-primary-300);

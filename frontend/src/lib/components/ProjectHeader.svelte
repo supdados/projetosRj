@@ -20,6 +20,7 @@
 	import { tick } from 'svelte';
 	import { stickyHeader } from '$lib/actions/stickyHeader';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type {
 		ProjectDetail,
@@ -359,7 +360,7 @@
 			     o textarea tem id próprio para não roubar o id do heading. -->
 			{#if isConvidado}
 				<span class="ph-guest-badge" title="Você acessa este projeto por convite">
-					<i class="fas fa-user-check" aria-hidden="true"></i>
+					<AppIcon id="atribuicao" size={14} />
 					Convidado
 				</span>
 			{/if}
@@ -404,14 +405,13 @@
 						onmousedown={(e) => onPenPointerDown('titulo', e)}
 						onclick={() => onPenClick('titulo')}
 					>
-						<i
-							class="fas {fieldStates.titulo?.pending
-								? 'fa-spinner fa-spin'
-								: editingField === 'titulo'
-									? 'fa-check'
-									: 'fa-pen'}"
-							aria-hidden="true"
-						></i>
+						{#if fieldStates.titulo?.pending}
+							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+						{:else if editingField === 'titulo'}
+							<i class="fas fa-check" aria-hidden="true"></i>
+						{:else}
+							<AppIcon id="edicao" size={14} />
+						{/if}
 					</button>
 				{/if}
 			</div>
@@ -465,14 +465,13 @@
 							onmousedown={(e) => onPenPointerDown('short_description', e)}
 							onclick={() => onPenClick('short_description')}
 						>
-							<i
-								class="fas {fieldStates.short_description?.pending
-									? 'fa-spinner fa-spin'
-									: editingField === 'short_description'
-										? 'fa-check'
-										: 'fa-pen'}"
-								aria-hidden="true"
-							></i>
+							{#if fieldStates.short_description?.pending}
+								<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+							{:else if editingField === 'short_description'}
+								<i class="fas fa-check" aria-hidden="true"></i>
+							{:else}
+								<AppIcon id="edicao" size={14} />
+							{/if}
 						</button>
 					{/if}
 				</div>
@@ -495,7 +494,7 @@
 		<div class="ph-header-actions">
 			{#if canShare}
 				<button type="button" class="ph-back-button" onclick={() => onShare?.()}>
-					<i class="fas fa-user-plus" aria-hidden="true"></i>
+					<AppIcon id="convite" size={14} />
 					<span>Compartilhar</span>
 				</button>
 			{/if}

@@ -17,6 +17,7 @@
 	 * e RE-BUSCA. Acessibilidade: DnD com fallback por teclado (mover ↑/↓ na alça).
 	 */
 	import StageRow from './StageRow.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import DatePickerPanel from './DatePickerPanel.svelte';
 	import type {
@@ -662,7 +663,7 @@
 				{#if etapas.length === 0 && readonly}
 					<tr>
 						<td colspan="9" class="no-etapas-cell">
-							<i class="fas fa-tasks" aria-hidden="true"></i>
+							<AppIcon id="tarefas" size={14} />
 							<p>Nenhuma etapa adicionada ainda.</p>
 						</td>
 					</tr>

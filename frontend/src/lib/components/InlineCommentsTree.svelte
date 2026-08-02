@@ -23,6 +23,7 @@
 		type CommentSegment
 	} from '$lib/utils/commentPresentation';
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 
 	interface Props {
 		store: TaskDrawerStore;
@@ -384,13 +385,13 @@
 										aria-label="Editar comentário"
 										title="Editar"
 										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-									><i class="fas fa-pen" aria-hidden="true"></i></button>{/if}{#if comment.can_delete}<button
+									><AppIcon id="edicao" size={14} /></button>{/if}{#if comment.can_delete}<button
 										type="button"
 										onclick={() => (confirmingId = comment.id)}
 										aria-label="Excluir comentário"
 										title="Excluir"
 										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
-									><i class="fas fa-trash-can" aria-hidden="true"></i></button>{/if}</span>{/if}</p>
+									><AppIcon id="exclusao" size={14} /></button>{/if}</span>{/if}</p>
 						{/if}
 
 						{#if confirmingId === comment.id}
@@ -534,7 +535,7 @@
 							aria-label="Anexar arquivo"
 							class="inline-flex h-7 w-7 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 						>
-							<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'} text-xs" aria-hidden="true"></i>
+							{#if uploading}<i class="fas fa-spinner fa-spin text-xs" aria-hidden="true"></i>{:else}<AppIcon id="anexo" size={14} />{/if}
 						</button>
 						<input
 							bind:this={fileInput}

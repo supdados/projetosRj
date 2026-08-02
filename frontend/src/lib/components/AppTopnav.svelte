@@ -11,6 +11,8 @@
 	 * Fiacao base-aware (`$app/paths`), link ativo via `aria-current="page"`
 	 * comparando `$page.url.pathname`, store de tema (`$theme`/`toggleTheme`) e o
 	 * menu Admin acessivel ja existentes. A busca live vive em GlobalSearchBox.
+	 * Icones: sistema duotone SVG do redesign 2026 (TopnavIcon/AdminMenuIcon/
+	 * AppIcon) — substituiu o nav3d (three.js).
 	 */
 	import { base } from '$app/paths';
 	import { page } from '$app/stores';
@@ -20,8 +22,10 @@
 		marcarNotificacoesLidas
 	} from '$lib/api/notifications';
 	import GlobalSearchBox from '$lib/components/GlobalSearchBox.svelte';
-	import Nav3dIcon from '$lib/components/Nav3dIcon.svelte';
-	import type { NavIconKind } from '$lib/nav3d/palettes';
+	import TopnavIcon, { type NavIconKind } from '$lib/components/TopnavIcon.svelte';
+	import AdminMenuIcon, { type AdminIconKind } from '$lib/components/AdminMenuIcon.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
+	import { APP_ICONS, type AppIconId } from '$lib/icons/appIcons';
 	import type { User } from '$lib/types/entities';
 	import type { Notificacao } from '$lib/types/notifications';
 
@@ -31,34 +35,14 @@
 
 	let { user }: Props = $props();
 
-	interface NavLink {
-		label: string;
-		path: string;
-		icon: string;
-	}
-
-	/** Item da nav principal: tem modelo 3D; o FA continua sendo o fallback. */
-	interface MainNavLink extends NavLink {
-		kind: NavIconKind;
-	}
-
 	// Ordem do v4.5 (sem item "Busca" — a busca virou o campo live a direita).
-	const navLinks: MainNavLink[] = [
-		{ label: 'Inicio', path: '/dashboard', icon: 'fa-home', kind: 'inicio' },
-		{ label: 'Projetos', path: '/projetos', icon: 'fa-folder-open', kind: 'projetos' },
-		{
-			label: 'Pendentes',
-			path: '/projetos/pendentes',
-			icon: 'fa-exclamation-triangle',
-			kind: 'pendentes'
-		},
-		{ label: 'Tarefas', path: '/tarefas', icon: 'fa-tasks', kind: 'tarefas' },
-		{ label: 'Calendario', path: '/calendarios', icon: 'fa-calendar-alt', kind: 'calendario' }
+	const navLinks: { label: string; path: string; kind: NavIconKind }[] = [
+		{ label: 'Inicio', path: '/dashboard', kind: 'inicio' },
+		{ label: 'Projetos', path: '/projetos', kind: 'projetos' },
+		{ label: 'Pendentes', path: '/projetos/pendentes', kind: 'pendentes' },
+		{ label: 'Tarefas', path: '/tarefas', kind: 'tarefas' },
+		{ label: 'Calendario', path: '/calendarios', kind: 'calendario' }
 	];
-
-	// Item com o ponteiro/Enter pressionado — dirige o "pop" de acionamento do
-	// icone 3D. So visual e reversivel (WCAG 2.5.2): navegar continua no click.
-	let pressedPath = $state<string | null>(null);
 
 	// Indicador unico (pilula branca) que DESLIZA entre os itens da nav. Um so
 	// elemento persistente, posicionado por transform+width medindo o <a> ativo —
@@ -135,11 +119,10 @@
 	const pathname = $derived($page.url.pathname);
 
 	// Links do menu Admin (so renderizados quando user.is_admin === true).
-	// iconHover: cor do icone no hover do item — uma cor por item (tokens DS).
-	const adminLinks: (NavLink & { iconHover: string })[] = [
-		{ label: 'Usuarios', path: '/admin/usuarios', icon: 'fa-users-cog', iconHover: 'group-hover:text-brand' },
-		{ label: 'Orgaos', path: '/admin/orgaos', icon: 'fa-sitemap', iconHover: 'group-hover:text-brand' },
-		{ label: 'Templates', path: '/admin/templates', icon: 'fa-clone', iconHover: 'group-hover:text-success' }
+	const adminLinks: { label: string; path: string; kind: AdminIconKind }[] = [
+		{ label: 'Usuarios', path: '/admin/usuarios', kind: 'usuarios' },
+		{ label: 'Orgaos', path: '/admin/orgaos', kind: 'orgaos' },
+		{ label: 'Templates', path: '/admin/templates', kind: 'templates' }
 	];
 
 	// Dropdown acessivel: estado aberto + ativacao por teclado/aria.
@@ -191,31 +174,43 @@
 	let notifError = $state(false);
 	let notifLoadedOnce = $state(false);
 
-	/** Texto do badge: contagem nao-lida, com teto "99+" (igual v4.5). */
-	const notifBadgeText = $derived(notifUnread > 99 ? '99+' : String(notifUnread));
-
 	/**
-	 * Resolve icone FA por `event_type` (porte de resolveNotificationVisual do
-	 * v4.5). Cobre delecao/finalizacao/atribuicao/comentario/projeto/tarefa.
+	 * Resolve icone do redesign por `event_type` (13 grupos do doc). A ordem
+	 * importa: comentario/anexo/etapa/reuniao vem ANTES do `_deleted` generico.
 	 */
-	function notifIcon(eventType: string): string {
+	function notifIcon(eventType: string): AppIconId {
 		const t = (eventType ?? '').toString().trim().toLowerCase();
-		if (t.endsWith('_deleted') || t === 'task_deleted' || t === 'project_delete')
-			return 'fa-trash-can';
+		if (t.startsWith('task_comment_') || t.startsWith('task_item_comment_')) return 'comentario';
+		if (t.startsWith('task_attachment_')) return 'anexo';
+		if (t.includes('google_meeting')) return 'reuniao';
+		if (
+			t.startsWith('add_etapa') ||
+			t.startsWith('edit_etapa') ||
+			t.startsWith('delete_etapa') ||
+			t === 'import_model'
+		)
+			return 'etapa';
 		if (
 			t === 'task_finalized' ||
-			t === 'project_finalize' ||
-			t === 'project_toggle_done'
+			t.endsWith('finalize') ||
+			t.endsWith('reactivate') ||
+			t.endsWith('toggle_done')
 		)
-			return 'fa-check-circle';
-		if (t === 'task_assignment' || t === 'task_item_assignment') return 'fa-user-check';
-		// S4: convite por projeto (`projeto_convite`) — nao casa com `project_`.
-		if (t === 'projeto_convite') return 'fa-user-plus';
-		if (t.startsWith('task_comment_') || t.startsWith('task_item_comment_'))
-			return 'fa-comments';
-		if (t.startsWith('project_')) return 'fa-folder-tree';
-		if (t.startsWith('task_')) return 'fa-list-check';
-		return 'fa-bell';
+			return 'conclusao';
+		if (t === 'task_archived' || t === 'task_unarchived') return 'arquivo';
+		if (t === 'task_assignment' || t === 'task_item_assignment') return 'atribuicao';
+		if (t === 'projeto_convite') return 'convite';
+		if (t === 'task_created' || t.endsWith('create')) return 'criacao';
+		if (
+			t === 'task_status_updated' ||
+			t === 'task_priority_updated' ||
+			t === 'task_type_updated' ||
+			t.endsWith('toggle_iniciada')
+		)
+			return 'status';
+		if (t === 'task_deleted' || t === 'project_delete' || t.endsWith('_deleted')) return 'exclusao';
+		if (t === 'task_updated' || t.endsWith('edit')) return 'edicao';
+		return 'sino';
 	}
 
 	/** Tempo relativo em PT a partir de ISO 8601 (ex.: "há 2 dias"). */
@@ -329,32 +324,11 @@
 						href={`${base}${link.path}`}
 						aria-current={active ? 'page' : undefined}
 						title={link.label}
-						onpointerdown={(e) => {
-							// Botao direito/meio: o menu de contexto engole o pointerup e o
-							// icone ficaria afundado.
-							if (e.button === 0) pressedPath = link.path;
-						}}
-						onpointerup={() => (pressedPath = null)}
-						onpointerleave={() => (pressedPath = null)}
-						onpointercancel={() => (pressedPath = null)}
-						onblur={() => (pressedPath = null)}
-						onkeydown={(e) => {
-							// Espaco fica de fora de proposito: em <a href> ele rola a pagina.
-							if (e.key === 'Enter' && !e.repeat) pressedPath = link.path;
-						}}
-						onkeyup={(e) => {
-							if (e.key === 'Enter') pressedPath = null;
-						}}
 						class="relative z-[1] inline-flex h-[1.95rem] items-center gap-2 rounded-md px-3 text-md font-medium leading-none no-underline transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {active
 							? 'text-brand'
 							: 'text-on-brand-muted hover:text-on-topnav'}"
 					>
-						<Nav3dIcon
-							faIcon={link.icon}
-							kind={link.kind}
-							{active}
-							pressed={pressedPath === link.path}
-						/>
+						<TopnavIcon kind={link.kind} {active} />
 						<span class="whitespace-nowrap">{link.label}</span>
 					</a>
 				{/each}
@@ -377,21 +351,32 @@
 					onclick={toggleNotif}
 					aria-haspopup="menu"
 					aria-expanded={notifOpen}
-					title="Notificações"
-					aria-label="Notificações"
+					title={notifUnread > 0 ? `Notificações (${notifUnread} não lidas)` : 'Notificações'}
+					aria-label={notifUnread > 0
+						? `Notificações (${notifUnread} não lidas)`
+						: 'Notificações'}
 					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
 						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 				>
-					<i class="fas fa-bell" aria-hidden="true"></i>
-					{#if notifUnread > 0}
-						<span
-							class="absolute -right-1 -top-1 inline-flex min-w-[1.05rem] items-center justify-center rounded-full bg-danger px-1 text-[0.62rem] font-bold leading-[1.05rem] text-on-danger ring-2 ring-on-brand"
-							aria-label={`${notifUnread} não lida(s)`}
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						class="shrink-0"
+						aria-hidden="true"
+					>
+						{#each APP_ICONS.sino as p (p.d)}
+							<path d={p.d} opacity={p.opacity} />
+						{/each}
+						<g class="nav-fade" opacity={notifOpen ? 1 : 0}
+							><circle cx="12" cy="21" r="1.7" opacity=".48" /></g
 						>
-							{notifBadgeText}
-						</span>
-					{/if}
+						<g class="nav-fade" opacity={notifUnread > 0 ? 1 : 0}
+							><circle cx="17.4" cy="6.1" r="3.3" fill="#B45A45" /></g
+						>
+					</svg>
 				</button>
 
 				{#if notifOpen}
@@ -445,7 +430,7 @@
 												></span>
 											{/if}
 											<span class="flex h-8 w-8 items-center justify-center text-brand">
-												<i class="fas {notifIcon(item.event_type)}" aria-hidden="true"></i>
+												<AppIcon id={notifIcon(item.event_type)} size={20} />
 											</span>
 										</span>
 										<span class="min-w-0 flex-1">
@@ -489,7 +474,27 @@
 							? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 							: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 					>
-						<i class="fas fa-user-circle" aria-hidden="true"></i>
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="shrink-0"
+							aria-hidden="true"
+						>
+							<g class="nav-fade" opacity={adminOpen || adminActive ? 0 : 1}
+								><path
+									fill-rule="evenodd"
+									d="M12 2.4A9.6 9.6 0 1 1 12 21.6A9.6 9.6 0 1 1 12 2.4ZM12 7A2.2 2.2 0 1 1 12 11.4A2.2 2.2 0 1 1 12 7ZM8.6 16.4A3.4 3.4 0 0 1 15.4 16.4Z"
+								/></g
+							>
+							<g class="nav-fade" opacity={adminOpen || adminActive ? 1 : 0}
+								><path
+									fill-rule="evenodd"
+									d="M12 2.4A9.6 9.6 0 1 1 12 21.6A9.6 9.6 0 1 1 12 2.4ZM12 8.1A3.1 3.1 0 1 1 12 14.3A3.1 3.1 0 1 1 12 8.1ZM7.36 19A4.9 4.9 0 0 1 16.64 19A8.4 8.4 0 0 1 7.36 19Z"
+								/></g
+							>
+						</svg>
 					</button>
 
 					{#if adminOpen}
@@ -520,10 +525,7 @@
 											? 'bg-surface-muted text-text-primary'
 											: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
 									>
-										<i
-											class="fas {link.icon} w-4 text-center text-text-muted transition-colors duration-fast {link.iconHover}"
-											aria-hidden="true"
-										></i>
+										<AdminMenuIcon kind={link.kind} />
 										<span>{link.label}</span>
 									</a>
 								{/each}
@@ -539,10 +541,7 @@
 								onclick={closeAdmin}
 								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
-								<i
-									class="fas fa-file-csv w-4 text-center text-text-muted transition-colors duration-fast group-hover:text-attention"
-									aria-hidden="true"
-								></i>
+								<AdminMenuIcon kind="csv" />
 								<span>Exportar CSV de projetos</span>
 							</a>
 							<hr class="my-1 border-border-subtle" />
@@ -552,9 +551,9 @@
 								role="menuitem"
 								href="/logout"
 								data-sveltekit-reload
-								class="flex items-center gap-3 px-4 py-2 text-sm text-danger no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+								class="group flex items-center gap-3 px-4 py-2 text-sm text-danger no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
-								<i class="fas fa-sign-out-alt w-4 text-center" aria-hidden="true"></i>
+								<AdminMenuIcon kind="sair" />
 								<span>Sair</span>
 							</a>
 						</div>
@@ -639,6 +638,15 @@
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.nav-pill--slide {
+			transition: none;
+		}
+	}
+
+	.nav-fade {
+		transition: opacity 0.22s;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.nav-fade {
 			transition: none;
 		}
 	}

@@ -23,6 +23,7 @@
 	} from '$lib/types/pendentes';
 	import type { ProjectsListOptions } from '$lib/types/projects';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
@@ -519,7 +520,7 @@
 				<div
 					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
 				>
-					<i class="fas fa-check-circle" aria-hidden="true"></i>
+					<AppIcon id="conclusao" size={28} />
 				</div>
 				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
 					Nenhum projeto pendente para os filtros selecionados.

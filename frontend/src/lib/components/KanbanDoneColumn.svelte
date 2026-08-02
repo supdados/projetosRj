@@ -8,6 +8,7 @@
 	 */
 	import { getContext } from 'svelte';
 	import KanbanColumnHeader from '$lib/components/KanbanColumnHeader.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import KanbanDropzone from '$lib/components/KanbanDropzone.svelte';
 	import type { BoardColumn } from '$lib/types/board';
 	import type { KanbanDndProps } from '$lib/types/kanbanDnd';
@@ -132,7 +133,7 @@
 					aria-label="Arquivar finalizados"
 					class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-muted"
 				>
-					<i class="fas fa-box-archive text-xs" aria-hidden="true"></i>
+					<AppIcon id="arquivo" size={14} />
 				</button>
 			{/if}
 		</div>
@@ -174,7 +175,7 @@
 					title="Arquivar tarefas finalizadas do escopo atual"
 					class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
 				>
-					<i class="fas fa-box-archive" aria-hidden="true"></i>
+					<AppIcon id="arquivo" size={14} />
 					Arquivar finalizados
 				</button>
 			</div>

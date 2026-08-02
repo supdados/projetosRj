@@ -26,6 +26,7 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { ApiClientError } from '$lib/api/client';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { flash } from '$lib/stores/flash';
 	import {
@@ -1225,7 +1226,7 @@
 							<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
 							Concluindo...
 						{:else}
-							<i class="fas fa-check-circle" aria-hidden="true"></i>
+							<AppIcon id="conclusao" size={14} />
 							Concluir Projeto
 						{/if}
 					</button>
@@ -1466,7 +1467,7 @@
 										onclick={() => removeCustomLink(i)}
 										class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-danger active:scale-95 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									>
-										<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
+										<AppIcon id="exclusao" size={14} />
 									</button>
 								{/if}
 							</div>

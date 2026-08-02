@@ -39,6 +39,7 @@
 		TemplateStageInput
 	} from '$lib/types/adminTemplates';
 	import Card from '$lib/components/Card.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -1143,7 +1144,7 @@
 													aria-label="Excluir modelo {row.name}"
 													class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-text-muted transition-colors duration-fast hover:border-danger-soft hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 												>
-													<i class="far fa-trash-alt" aria-hidden="true"></i>
+													<AppIcon id="exclusao" size={14} />
 												</button>
 											</div>
 										</td>
@@ -1210,7 +1211,7 @@
 					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-wash-danger text-danger"
 					aria-hidden="true"
 				>
-					<i class="far fa-trash-alt"></i>
+					<AppIcon id="exclusao" size={14} />
 				</span>
 				<h2 id="tpl-delete-title" class="font-heading text-lg font-bold text-text-primary">
 					Apagar modelo?

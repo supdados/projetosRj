@@ -34,6 +34,7 @@
 	import type { Project } from '$lib/types/entities';
 	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
 	import PageHeader from '$lib/components/PageHeader.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
@@ -989,7 +990,7 @@
 				<div
 					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
 				>
-					<i class="fas fa-folder-open" aria-hidden="true"></i>
+					<AppIcon id="projetos" size={28} />
 				</div>
 				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
 					{pageOutOfRange ? 'Esta página não existe mais' : 'Nenhum projeto encontrado'}
@@ -1125,7 +1126,7 @@
 												title="Você acessa este projeto por convite"
 												class="ml-2 inline-flex items-center gap-1 rounded-full bg-wash-neutral px-2 py-0.5 align-middle text-2xs font-bold uppercase tracking-wide text-brand"
 											>
-												<i class="fas fa-user-check" aria-hidden="true"></i>Convidado
+												<AppIcon id="atribuicao" size={14} />Convidado
 											</span>
 										{/if}
 									</td>
@@ -1229,7 +1230,7 @@
 												aria-label="Editar projeto"
 												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<i class="fas fa-pen" aria-hidden="true"></i>
+												<AppIcon id="edicao" size={14} />
 											</a>
 											<button
 												type="button"
@@ -1238,7 +1239,7 @@
 												aria-label="Excluir projeto"
 												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
 											>
-												<i class="fas fa-trash" aria-hidden="true"></i>
+												<AppIcon id="exclusao" size={14} />
 											</button>
 										</div>
 									</td>
@@ -1326,7 +1327,7 @@
 					<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
 					Excluindo…
 				{:else}
-					<i class="fas fa-trash" aria-hidden="true"></i>
+					<AppIcon id="exclusao" size={14} />
 					Excluir
 				{/if}
 			</button>

@@ -19,6 +19,7 @@
 	 */
 	import { tick } from 'svelte';
 	import InlineEditField from './InlineEditField.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
@@ -457,7 +458,7 @@
 					disabled={busy}
 					onclick={onDelete}
 				>
-					<i class="fas fa-trash" aria-hidden="true"></i>
+					<AppIcon id="exclusao" size={14} />
 				</button>
 			{:else}
 				<span class="text-muted-small">-</span>

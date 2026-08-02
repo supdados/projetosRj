@@ -21,6 +21,7 @@
 	import { papelLabel } from '$lib/utils/orgaoPapel';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import AdminUsuariosSkeleton from '$lib/components/skeletons/AdminUsuariosSkeleton.svelte';
@@ -429,7 +430,7 @@
 												aria-label="Editar usuário {user.name}"
 												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<i class="fas fa-pen"></i>
+												<AppIcon id="edicao" size={14} />
 											</a>
 											{#if isSelf}
 												<button
@@ -439,7 +440,7 @@
 													aria-label="Não é possível excluir o próprio usuário"
 													class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-text-muted"
 												>
-													<i class="fas fa-trash"></i>
+													<AppIcon id="exclusao" size={14} />
 												</button>
 											{:else}
 												<button
@@ -450,7 +451,10 @@
 													aria-label="Excluir usuário {user.name}"
 													class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 												>
-													<i class="fas {deletingId === user.id ? 'fa-spinner fa-spin' : 'fa-trash'}"></i>
+													{#if deletingId === user.id}<i
+															class="fas fa-spinner fa-spin"
+															aria-hidden="true"
+														></i>{:else}<AppIcon id="exclusao" size={14} />{/if}
 												</button>
 											{/if}
 										</div>

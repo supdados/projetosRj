@@ -12,6 +12,7 @@
 	 *     ações "Abrir em nova aba" e "Baixar" — antes só abria nova aba;
 	 *   - drag-and-drop de arquivo na zona de upload (drop → mesmo fluxo do input).
 	 */
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import type { TaskAttachment } from '$lib/types/taskDrawer';
 
@@ -116,7 +117,7 @@
 		id={`${idPrefix}-anexos-title`}
 		class="flex items-center gap-2 text-sm font-semibold text-text-primary"
 	>
-		<i class="fas fa-paperclip text-text-muted" aria-hidden="true"></i>
+		<AppIcon id="anexo" size={16} class="text-text-muted" />
 		<span>Anexos</span>
 		<span
 			class="inline-flex min-w-[18px] items-center justify-center rounded-full bg-wash-neutral px-1.5 text-2xs font-bold text-brand"

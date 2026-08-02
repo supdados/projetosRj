@@ -28,6 +28,8 @@
 	import { goto } from '$app/navigation';
 	import { get } from '$lib/api/client';
 	import { orgaoScope } from '$lib/stores/orgaoScope';
+	import AppIcon from '$lib/components/AppIcon.svelte';
+	import type { AppIconId } from '$lib/icons/appIcons';
 	import type {
 		GlobalSearchData,
 		SearchResultItem,
@@ -39,17 +41,17 @@
 	/** Janela de debounce do campo (ms) — igual ao v4.5. */
 	const DEBOUNCE_MS = 250;
 
-	/** Grupos na ordem do v4.5, com rotulo, icone FA e classe de cor do titulo. */
+	/** Grupos na ordem do v4.5, com rotulo, icone do redesign e classe de cor do titulo. */
 	const GROUPS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
 		label: string;
-		icon: string;
+		icon: AppIconId;
 		titleClass: 'type-project' | 'type-stage' | 'type-task' | 'type-event';
 	}> = [
-		{ key: 'projects', label: 'Projetos', icon: 'fa-folder-open', titleClass: 'type-project' },
-		{ key: 'stages', label: 'Etapas', icon: 'fa-list-check', titleClass: 'type-stage' },
-		{ key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', titleClass: 'type-task' },
-		{ key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', titleClass: 'type-event' }
+		{ key: 'projects', label: 'Projetos', icon: 'projetos', titleClass: 'type-project' },
+		{ key: 'stages', label: 'Etapas', icon: 'etapa', titleClass: 'type-stage' },
+		{ key: 'tasks', label: 'Tarefas', icon: 'tarefas', titleClass: 'type-task' },
+		{ key: 'events', label: 'Eventos', icon: 'calendario', titleClass: 'type-event' }
 	];
 
 	let term = $state<string>('');
@@ -294,7 +296,7 @@
 						{#if items && items.length}
 							<div class="app-global-search-group">
 								<div class="app-global-search-group-title {group.titleClass}">
-									<i class="fas {group.icon}" aria-hidden="true"></i>
+									<AppIcon id={group.icon} size={14} />
 									<span>{group.label}</span>
 									<!-- Total encontrado (pode ser maior que a fatia exibida). -->
 									<span class="app-global-search-group-count">
@@ -500,10 +502,6 @@
 		letter-spacing: 0.06em;
 		font-weight: 700;
 		color: var(--ds-color-text-muted);
-	}
-
-	.app-global-search-group-title i {
-		font-size: 0.6875rem;
 	}
 
 	.app-global-search-group-title.type-project {

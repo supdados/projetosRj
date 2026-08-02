@@ -32,6 +32,7 @@
 	import InlineCommentsTree from '$lib/components/InlineCommentsTree.svelte';
 	import AttachmentLightbox from '$lib/components/AttachmentLightbox.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 
 	interface Props {
@@ -349,7 +350,7 @@
 					aria-label="Editar descrição"
 					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-brand focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand group-hover/row:opacity-100"
 				>
-					<i class="fas fa-pen text-2xs" aria-hidden="true"></i>
+					<AppIcon id="edicao" size={12} />
 				</button>
 			</div>
 		{/if}
@@ -417,7 +418,7 @@
 					? 'text-brand'
 					: 'text-text-muted hover:text-brand'}"
 			>
-				<i class="{loadingComments ? 'fas fa-spinner fa-spin' : 'far fa-comment'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
+				{#if loadingComments}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="comentario" size={12} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
 			</button>
 			<button
 				type="button"
@@ -429,7 +430,7 @@
 					: `Ver anexos (${anexosCount})`}
 				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 			>
-				<i class="fas {uploading ? 'fa-spinner fa-spin' : 'fa-paperclip'}" aria-hidden="true"></i><span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
+				{#if uploading}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="anexo" size={12} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
 			</button>
 			<input
 				bind:this={fileInput}
@@ -446,7 +447,7 @@
 				title="Excluir tarefa"
 				class="inline-flex h-7 w-7 items-center justify-center text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
 			>
-				<i class="fas fa-trash-can text-xs" aria-hidden="true"></i>
+				<AppIcon id="exclusao" size={14} />
 			</button>
 		</div>
 	</div>

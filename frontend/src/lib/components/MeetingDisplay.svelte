@@ -15,6 +15,7 @@
 	 */
 	import type { EtapaMeeting } from '$lib/types/projectDetail';
 	import Badge from './Badge.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 
 	interface Props {
 		meeting: EtapaMeeting;
@@ -117,7 +118,7 @@
 					disabled={busy}
 					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-text-primary transition-colors duration-fast ease-out hover:bg-surface-muted hover:text-brand disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
-					<i class="fas fa-pen" aria-hidden="true"></i>
+					<AppIcon id="edicao" size={14} />
 					Editar
 				</button>
 			{/if}
@@ -127,7 +128,10 @@
 				disabled={busy}
 				class="inline-flex items-center gap-1 rounded-md border border-danger bg-surface px-2.5 py-1 text-sm font-medium text-danger transition-colors duration-fast ease-out hover:bg-danger hover:text-on-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 			>
-				<i class="fas {busy ? 'fa-spinner fa-spin' : 'fa-trash'}" aria-hidden="true"></i>
+				{#if busy}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon
+						id="exclusao"
+						size={14}
+					/>{/if}
 				{busy ? 'Apagando…' : 'Apagar'}
 			</button>
 		{:else}

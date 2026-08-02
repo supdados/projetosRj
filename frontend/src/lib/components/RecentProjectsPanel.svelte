@@ -19,6 +19,7 @@
 	 * funcionarem como no original.
 	 */
 	import { base } from '$app/paths';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import type { Project, TaskPrioridade } from '$lib/types/entities';
 
 	interface Props {
@@ -61,7 +62,7 @@
 
 	{#if projects.length === 0}
 		<div class="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8 text-center">
-			<i class="fas fa-folder-open fa-2x text-text-muted" aria-hidden="true"></i>
+			<AppIcon id="projetos" size={32} class="text-text-muted" />
 			{#if totalProjects > 0}
 				<p class="mb-0 text-sm text-text-muted">Nenhum projeto recente para mostrar.</p>
 			{:else}

@@ -38,6 +38,8 @@
 		SearchTypeKey
 	} from '$lib/types/search';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
+	import type { AppIconId } from '$lib/icons/appIcons';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
@@ -55,8 +57,8 @@
 	const ALL_TYPES: readonly SearchTypeKey[] = ['projects', 'stages', 'tasks', 'events'];
 
 	/**
-	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone Font
-	 * Awesome (`fas fa-*`, 1:1 com o template v4.5) e classes de cor da pilula de
+	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone do
+	 * redesign (AppIcon) e classes de cor da pilula de
 	 * tipo — os mesmos tons do Badge compartilhado (Badge.svelte): projeto usa
 	 * `bg-wash-brand`, demais tons `bg-surface-muted` + texto colorido
 	 * (dark-safe via tokens).
@@ -64,13 +66,13 @@
 	const SECTIONS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
 		label: string;
-		icon: string;
+		icon: AppIconId;
 		titleClass: string;
 	}> = [
-		{ key: 'projects', label: 'Projetos', icon: 'fa-folder-open', titleClass: 'text-brand' },
-		{ key: 'stages', label: 'Etapas', icon: 'fa-list-check', titleClass: 'text-warning' },
-		{ key: 'tasks', label: 'Tarefas', icon: 'fa-clipboard-list', titleClass: 'text-success' },
-		{ key: 'events', label: 'Eventos', icon: 'fa-calendar-alt', titleClass: 'text-text-secondary' }
+		{ key: 'projects', label: 'Projetos', icon: 'projetos', titleClass: 'text-brand' },
+		{ key: 'stages', label: 'Etapas', icon: 'etapa', titleClass: 'text-warning' },
+		{ key: 'tasks', label: 'Tarefas', icon: 'tarefas', titleClass: 'text-success' },
+		{ key: 'events', label: 'Eventos', icon: 'calendario', titleClass: 'text-text-secondary' }
 	];
 
 	// SWR: hidrata o estado inicial a partir da URL (deep-link) + peek do cache
@@ -399,7 +401,7 @@
 							? 'border-brand bg-wash-brand text-brand'
 							: 'border-border-subtle bg-surface text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'}"
 					>
-						<i class="fas {section.icon} text-2xs" aria-hidden="true"></i>
+						<AppIcon id={section.icon} size={12} />
 						{section.label}{#if typeCount !== undefined}
 							<span class="tabular-nums font-normal">({typeCount})</span>
 						{/if}
@@ -472,7 +474,7 @@
 									id={`busca-sec-${section.key}`}
 									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold {section.titleClass}"
 								>
-									<i class="fas {section.icon} text-sm" aria-hidden="true"></i>
+									<AppIcon id={section.icon} size={14} />
 									{section.label}
 								</h2>
 								<CountBadge>{data.meta.type_counts?.[section.key] ?? items.length}</CountBadge>

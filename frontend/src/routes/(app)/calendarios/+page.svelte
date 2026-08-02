@@ -34,6 +34,7 @@
 	} from '$lib/types/calendar';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import CalendarWeekGrid from '$lib/components/calendar/CalendarWeekGrid.svelte';
@@ -1224,14 +1225,14 @@
 					type="button"
 					onclick={(e) => { e.stopPropagation(); openEdit(ev); }}
 				>
-					<i class="fas fa-pen" aria-hidden="true"></i> Editar
+					<AppIcon id="edicao" size={14} /> Editar
 				</button>
 				<button
 					class="cal-event-popover-action cal-event-popover-action--danger"
 					type="button"
 					onclick={(e) => { e.stopPropagation(); deleteFromUi(ev.id); }}
 				>
-					<i class="fas fa-trash" aria-hidden="true"></i> Apagar
+					<AppIcon id="exclusao" size={14} /> Apagar
 				</button>
 			</div>
 		</div>

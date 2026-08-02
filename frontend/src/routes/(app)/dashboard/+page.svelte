@@ -13,6 +13,7 @@
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { DashboardData } from '$lib/types/dashboard';
 	import StatCard from '$lib/components/StatCard.svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import FolderReveal from '$lib/components/micro/FolderReveal.svelte';
 	import ClipboardStamp from '$lib/components/micro/ClipboardStamp.svelte';
@@ -572,10 +573,10 @@
 													{#if t.comments_count > 0 || t.anexos_count > 0}
 														<span class="opacity-40">·</span>
 														{#if t.comments_count > 0}
-															<span class="inline-flex shrink-0 items-center gap-0.5"><i class="fas fa-comment" aria-hidden="true"></i>{t.comments_count}</span>
+															<span class="inline-flex shrink-0 items-center gap-0.5"><AppIcon id="comentario" size={12} />{t.comments_count}</span>
 														{/if}
 														{#if t.anexos_count > 0}
-															<span class="inline-flex shrink-0 items-center gap-0.5"><i class="fas fa-paperclip" aria-hidden="true"></i>{t.anexos_count}</span>
+															<span class="inline-flex shrink-0 items-center gap-0.5"><AppIcon id="anexo" size={12} />{t.anexos_count}</span>
 														{/if}
 													{/if}
 												</span>
