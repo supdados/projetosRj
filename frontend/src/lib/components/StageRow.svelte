@@ -255,7 +255,9 @@
 					title="Arraste para reordenar"
 					onkeydown={onHandleKeydown}
 				>
-					<i class="fas fa-grip-vertical" aria-hidden="true"></i>
+					<span class="drag-dots" aria-hidden="true">
+						{#each { length: 6 } as _, i (i)}<i></i>{/each}
+					</span>
 				</span>
 			{/if}
 		</td>
@@ -322,6 +324,29 @@
 			</div>
 		</td>
 
+		<!-- Responsável (áreas) -->
+		<td class="cell-responsavel {rowTextClass}">
+			{#if locked || etapa.done}
+				{#if etapa.responsaveis.length > 0}
+					<span class="stage-resp-chips" aria-label="Áreas responsáveis">
+						{#each etapa.responsaveis as r (r.area_id ?? r.label)}
+							<span class="stage-resp-chip">{r.label}</span>
+						{/each}
+					</span>
+				{:else}
+					<span class="cell-readonly" class:editable-field-empty={!etapa.responsavel}>
+						{etapa.responsavel || 'Sem responsável'}
+					</span>
+				{/if}
+			{:else}
+				<AreaResponsavelPicker
+					etapaId={etapa.id}
+					selecionadas={etapa.responsaveis}
+					onSaved={(e) => onResponsaveisSaved(e)}
+				/>
+			{/if}
+		</td>
+
 		<!-- Data início -->
 		<td
 			class="cell-date {rowTextClass}"
@@ -379,29 +404,6 @@
 						{formatDateBr(v)}
 					{/snippet}
 				</InlineEditField>
-			{/if}
-		</td>
-
-		<!-- Responsável (áreas) -->
-		<td class="cell-responsavel {rowTextClass}">
-			{#if locked || etapa.done}
-				{#if etapa.responsaveis.length > 0}
-					<span class="stage-resp-chips" aria-label="Áreas responsáveis">
-						{#each etapa.responsaveis as r (r.area_id ?? r.label)}
-							<span class="stage-resp-chip">{r.label}</span>
-						{/each}
-					</span>
-				{:else}
-					<span class="cell-readonly" class:editable-field-empty={!etapa.responsavel}>
-						{etapa.responsavel || 'Sem responsável'}
-					</span>
-				{/if}
-			{:else}
-				<AreaResponsavelPicker
-					etapaId={etapa.id}
-					selecionadas={etapa.responsaveis}
-					onSaved={(e) => onResponsaveisSaved(e)}
-				/>
 			{/if}
 		</td>
 
@@ -541,21 +543,50 @@
 		width: 44px;
 		color: var(--ds-color-text-muted);
 	}
+	/* Alça: área de clique folgada em volta de uma grade 2×3 de pontos QUADRADOS
+	   (o `fa-grip-vertical` era redondo e minúsculo, difícil de pegar). */
 	.drag-handle {
 		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		border-radius: 6px;
 		cursor: grab;
-		color: var(--ds-color-text-muted);
-		transition: color 0.16s ease;
+		color: var(--ds-color-icon-faint);
+		transition:
+			color 0.16s ease,
+			background-color 0.16s ease;
 	}
 	.drag-handle:hover {
+		background: var(--ds-color-surface-muted);
 		color: var(--ds-color-text-secondary);
 	}
 	.drag-handle:active {
 		cursor: grabbing;
 	}
+	.drag-dots {
+		display: grid;
+		grid-template-columns: repeat(2, 3px);
+		gap: 3px;
+	}
+	.drag-dots i {
+		width: 3px;
+		height: 3px;
+		border-radius: 1px;
+		background: currentColor;
+	}
 
 	/* td.cell-number: empata especificidade com `.etapa-row :global(td)` e vence
 	   por ordem — sem isso o td genérico impõe 0.875rem/text-primary. */
+	/* Casa com `.col-drag` do StageList. Largura NÃO cresce (tabela tem largura
+	   fixa somada); o recuo sai do padding. */
+	td.cell-drag {
+		width: 44px;
+		padding-left: 0.6rem;
+		padding-right: 0;
+	}
+
 	td.cell-number {
 		width: 64px;
 		font-family: var(--ds-font-family-mono, ui-monospace, monospace);

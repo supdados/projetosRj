@@ -82,6 +82,10 @@
 			clientX: number,
 			clientY: number
 		) => void;
+		/** Abre o modal de importar modelo; sem ela o estado vazio só convida a criar. */
+		onImportModel?: (() => void) | null;
+		/** Composer abriu/fechou — o pai usa para descartar o erro da tentativa anterior. */
+		onComposerToggle?: ((aberto: boolean) => void) | null;
 		meetingSlot?: import('svelte').Snippet<[EtapaDetail]>;
 	}
 
@@ -104,8 +108,13 @@
 		onAddStage,
 		onResponsaveisSaved,
 		onDateContextMenu,
+		onImportModel = null,
+		onComposerToggle = null,
 		meetingSlot
 	}: Props = $props();
+
+	/** Projeto sem nenhuma etapa: a tabela ganha o convite alto no lugar da linha. */
+	const vazio = $derived(etapas.length === 0);
 
 	let tbodyEl = $state<HTMLTableSectionElement | null>(null);
 
@@ -379,6 +388,9 @@
 
 	async function openComposer(): Promise<void> {
 		composerOpen = true;
+		// Abrir limpo: o erro da tentativa anterior sobrevivia ao cancelar e
+		// reaparecia já na abertura seguinte.
+		onComposerToggle?.(true);
 		await Promise.resolve();
 		descricaoEl?.focus();
 		// Fixa a altura do textarea já na abertura (igual ao estado pós-digitação)
@@ -387,6 +399,7 @@
 	}
 	function closeComposer(): void {
 		composerOpen = false;
+		onComposerToggle?.(false);
 		draft = {
 			descricao: '',
 			data_inicio: '',
@@ -491,9 +504,9 @@
 					<th class="col-drag"></th>
 					<th class="col-number">ID</th>
 					<th class="col-desc">Descrição</th>
+					<th class="col-responsavel">Responsável</th>
 					<th class="col-date">Data Início</th>
 					<th class="col-date">Data Fim</th>
-					<th class="col-responsavel">Responsável</th>
 					<th class="col-tasks">Tarefas</th>
 					<th class="col-status">Status</th>
 					<th class="col-actions">Ações</th>
@@ -545,7 +558,89 @@
 					</tr>
 				{/if}
 
-				{#if !readonly}
+				{#if vazio && !composerOpen}
+					<!-- Projeto sem etapas: convite alto, no lugar da linha rasa lá no pé
+					     da tabela. Com etapas, a linha de entrada original é mantida. -->
+					<tr class="etapa-vazio-row">
+						<td colspan="9">
+							<div class="etapa-vazio">
+								<!-- Fantasma: esqueleto das linhas que virão. Decorativo — fora da
+								     árvore de acessibilidade e sem captura de ponteiro. -->
+								<div class="etapa-vazio-fantasma" aria-hidden="true">
+									{#each { length: 9 } as _, linha (linha)}
+										<div class="fantasma-linha">
+											<span class="fantasma-pilula fantasma-id"></span>
+											<span class="fantasma-pilula fantasma-desc"></span>
+											<span class="fantasma-avatar"></span>
+											<span class="fantasma-pilula"></span>
+											<span class="fantasma-pilula"></span>
+											<span class="fantasma-pilula"></span>
+											<span class="fantasma-pilula fantasma-curta"></span>
+											<span class="fantasma-pilula fantasma-status"></span>
+										</div>
+									{/each}
+								</div>
+
+								<div class="etapa-vazio-conteudo">
+								<svg class="etapa-vazio-icone" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+									<path
+										d="M3 5v22"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										opacity=".5"
+									/>
+									<rect
+										x="9"
+										y="5"
+										width="12"
+										height="6"
+										rx="3"
+										stroke="currentColor"
+										stroke-width="2"
+										opacity=".5"
+									/>
+									<rect x="9" y="13" width="19" height="6" rx="3" fill="currentColor" />
+									<rect
+										x="9"
+										y="21"
+										width="11"
+										height="6"
+										rx="3"
+										stroke="currentColor"
+										stroke-width="2"
+										opacity=".5"
+									/>
+								</svg>
+								<p class="etapa-vazio-titulo">Nenhuma etapa ainda</p>
+								{#if readonly}
+									<p class="etapa-vazio-texto">
+										Este projeto ainda não tem etapas cadastradas.
+									</p>
+								{/if}
+								{#if !readonly}
+									<div class="etapa-vazio-acoes">
+										<button type="button" class="etapa-vazio-btn" onclick={openComposer}>
+											<i class="fas fa-plus-circle" aria-hidden="true"></i>
+											<span>Adicionar etapa</span>
+										</button>
+										{#if onImportModel}
+											<button
+												type="button"
+												class="etapa-vazio-btn etapa-vazio-btn--secundario"
+												onclick={onImportModel}
+											>
+												<i class="fas fa-file-import" aria-hidden="true"></i>
+												<span>Importar modelo</span>
+											</button>
+										{/if}
+									</div>
+								{/if}
+								</div>
+							</div>
+						</td>
+					</tr>
+				{:else if !readonly}
 					{#if !composerOpen}
 						<tr class="etapa-entry-row">
 							<td colspan="9">
@@ -576,6 +671,9 @@
 									oninput={autoResizeDescricao}
 									onkeydown={composerKeydown}
 								></textarea>
+							</td>
+							<td class="cell-responsavel">
+								<AreaResponsavelPicker bind:selecionadas={draft.responsaveis} />
 							</td>
 							<td class="cell-date">
 								<button
@@ -630,9 +728,6 @@
 										onClose={() => (composerDateField = null)}
 									/>
 								{/if}
-							</td>
-							<td class="cell-responsavel">
-								<AreaResponsavelPicker bind:selecionadas={draft.responsaveis} />
 							</td>
 							<td class="cell-tasks">
 								<span class="etapa-task-pill-placeholder" aria-hidden="true">—</span>
@@ -731,20 +826,28 @@
 		margin: 0;
 		background: var(--ds-color-surface-base);
 	}
+	/* Cabeçalho leve, na mesma régua dos rótulos de ficha do card de detalhes
+	   (11px/600/muted) — a 12px em bold ele competia com o conteúdo das linhas. */
 	.etapa-table thead th {
 		border-bottom: 1px solid var(--ds-color-border-base);
 		background: var(--ds-color-surface-muted);
-		color: var(--ds-color-text-secondary);
-		font-size: 0.75rem;
+		color: var(--ds-color-text-muted);
+		font-size: 0.6875rem;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
-		font-weight: 700;
+		font-weight: 600;
 		padding: 0.58rem 0.7rem;
 		white-space: nowrap;
 		text-align: left;
 	}
+	/* NÃO alargar esta coluna: `.etapa-table` tem min-width 1100px e larguras
+	   fixas — cada px a mais empurra a tabela para além do card e acende a barra
+	   de rolagem horizontal (o thumb é azul por app.css). O recuo vem do padding,
+	   dentro dos mesmos 44px. */
 	.col-drag {
 		width: 44px;
+		padding-left: 0.6rem;
+		padding-right: 0;
 	}
 	.col-number {
 		width: 64px;
@@ -831,9 +934,23 @@
 	}
 
 	.etapa-entry-row td,
+	/* Contorno tracejado em volta da linha em criação: sinaliza "ainda não existe"
+	   (mesma linguagem do convite tracejado). Vai nas CÉLULAS porque a tabela usa
+	   `border-collapse: separate`, onde borda no <tr> não pinta. */
 	.etapa-composer-row td {
-		border-top: 1px solid var(--ds-color-border-base);
+		border-top: 1px dashed var(--ds-color-border-strong);
+		border-bottom: 1px dashed var(--ds-color-border-strong);
 		padding: 0.5rem 0.7rem;
+	}
+	.etapa-composer-row td:first-child {
+		border-left: 1px dashed var(--ds-color-border-strong);
+		border-top-left-radius: 8px;
+		border-bottom-left-radius: 8px;
+	}
+	.etapa-composer-row td:last-child {
+		border-right: 1px dashed var(--ds-color-border-strong);
+		border-top-right-radius: 8px;
+		border-bottom-right-radius: 8px;
 	}
 	/* Ocupa a linha inteira e centraliza: o tracejado vira a "última linha"
 	   adicionável; ao clicar, vira o composer (estado atual). */
@@ -858,6 +975,161 @@
 	.etapa-entry-btn:hover {
 		background: rgba(37, 99, 235, 0.07);
 		border-color: var(--ds-color-border-strong);
+	}
+
+	/* ----- Estado vazio (nenhuma etapa) -----
+	   Alvo de clique alto e centrado: com a linha rasa de entrada o convite ficava
+	   colado no rodapé da tabela, difícil de mirar. Só vale para a tabela vazia —
+	   com etapas, a linha `.etapa-entry-*` acima segue intacta.
+	   A MESMA altura vale para o composer aberto no projeto vazio, senão a área
+	   encolhe no clique e a página inteira pula. */
+	/* Reserva de 4 linhas: até a 4ª etapa o bloco não encolhe (nem no projeto
+	   vazio, nem com 1 ou 2 etapas); da 5ª em diante cresce normalmente. */
+	.etapa-table-card {
+		--etapa-linha-h: 5.5rem;
+		--etapas-reserva-h: calc(var(--etapa-linha-h) * 4);
+		/* Altura do <thead>: a reserva mede o CARTÃO inteiro, mas o estado vazio
+		   mede só o corpo. Sem descontar o cabeçalho, abrir o composer encolhia o
+		   bloco exatamente essa altura. */
+		--etapas-cabecalho-h: 2.2rem;
+	}
+	.etapa-table-wrap {
+		min-height: var(--etapas-reserva-h);
+	}
+	/* Reserva MENOS o cabeçalho: assim o cartão fica com a mesma altura total nos
+	   dois estados (convite e composer aberto) e nada sobra depois do tracejado. */
+	.etapa-vazio {
+		position: relative;
+		display: flex;
+		min-height: calc(var(--etapas-reserva-h) - var(--etapas-cabecalho-h));
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+		border: 1px dashed var(--ds-color-border-strong);
+		border-radius: 10px;
+		padding: 2rem 1rem;
+		text-align: center;
+	}
+	/* Fantasma atrás do convite: sugere o formato da tabela sem fingir conteúdo
+	   real. Fica preso ao fundo e nunca intercepta clique. */
+	.etapa-vazio-fantasma {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		padding: 1rem 1.25rem;
+		pointer-events: none;
+	}
+	.fantasma-linha {
+		display: grid;
+		align-items: center;
+		gap: 0.75rem;
+		/* Espelha a ordem das colunas: id · descrição · responsável · início · fim ·
+		   tarefas · status · ações. */
+		grid-template-columns:
+			2rem minmax(0, 2.4fr) 1.25rem minmax(0, 1fr) 6rem 5rem
+			2.75rem 5rem;
+	}
+	.fantasma-pilula {
+		height: 0.5rem;
+		border-radius: 99px;
+		background: var(--ds-color-surface-skeleton);
+	}
+	.fantasma-avatar {
+		width: 1.25rem;
+		height: 1.25rem;
+		border-radius: 50%;
+		background: var(--ds-color-surface-skeleton);
+	}
+	.fantasma-desc {
+		width: 88%;
+	}
+	.fantasma-id,
+	.fantasma-curta {
+		width: 72%;
+	}
+	.fantasma-status {
+		height: 1rem;
+		border-radius: 6px;
+	}
+	/* Larguras alternadas: linhas idênticas denunciam o truque. */
+	.fantasma-linha:nth-child(even) .fantasma-desc {
+		width: 64%;
+	}
+	.fantasma-linha:nth-child(3n) .fantasma-desc {
+		width: 76%;
+	}
+
+	/* Faixa que atravessa a largura TODA: o fantasma só aparece acima e abaixo do
+	   convite, nunca ao lado dele (ladeando o texto ficava poluído). O halo na cor
+	   da superfície dissolve a emenda com as linhas de cima e de baixo. */
+	.etapa-vazio-conteudo {
+		position: relative;
+		display: flex;
+		width: 100%;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.5rem 1rem;
+		background: var(--ds-color-surface-base);
+		/* Halo curto: com 1.75rem ele comia quase todas as linhas do fantasma. */
+		box-shadow: 0 0 0.6rem 0.6rem var(--ds-color-surface-base);
+	}
+	.etapa-vazio-icone {
+		width: 2.25rem;
+		height: 2.25rem;
+		margin-bottom: 0.6rem;
+		color: var(--ds-color-text-brand);
+	}
+	.etapa-vazio-titulo {
+		margin: 0;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--ds-color-text-primary);
+	}
+	.etapa-vazio-texto {
+		/* Largura curta força a quebra em duas linhas curtas, como na referência. */
+		max-width: 22rem;
+		margin: 0;
+		font-size: 0.8125rem;
+		line-height: 1.25rem;
+		color: var(--ds-color-text-muted);
+	}
+	.etapa-vazio-acoes {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.5rem;
+		margin-top: 0.85rem;
+	}
+	.etapa-vazio-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		border: 1px solid transparent;
+		border-radius: 8px;
+		background: var(--ds-color-fill-brand);
+		padding: 0.5rem 0.9rem;
+		color: var(--ds-color-fill-brand-fg);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition:
+			background 0.16s ease,
+			border-color 0.16s ease;
+	}
+	.etapa-vazio-btn:hover {
+		background: var(--ds-color-fill-brand-hover);
+	}
+	.etapa-vazio-btn--secundario {
+		background: none;
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-primary);
+	}
+	.etapa-vazio-btn--secundario:hover {
+		background: var(--ds-color-surface-muted);
 	}
 	.composer-drag-placeholder {
 		color: var(--ds-color-border-strong);
@@ -892,15 +1164,22 @@
 		text-align: center;
 		font-variant-numeric: tabular-nums;
 	}
+	/* Sem data = moldura tracejada, mesma linguagem do `.editable-field-empty` das
+	   linhas já criadas: convida o preenchimento em vez de fingir campo cheio. */
 	.composer-date-trigger--empty {
+		border-style: dashed;
+		border-color: var(--ds-color-border-strong);
 		color: var(--ds-color-text-muted);
 	}
 	.etapa-task-pill-placeholder {
 		color: var(--ds-color-text-muted);
 		font-weight: 500;
 	}
+	/* Célula do composer: mesma métrica de `.col-drag`/`td.cell-drag`. */
 	.cell-drag {
 		width: 44px;
+		padding-left: 0.6rem;
+		padding-right: 0;
 	}
 	.cell-number {
 		width: 64px;
@@ -932,10 +1211,22 @@
 		width: 72px;
 		text-align: center;
 	}
+	/* `display: flex` aqui é num <td>: tira a célula do fluxo da tabela e a borda
+	   dela desalinha das vizinhas. Mantém table-cell e alinha os botões inline. */
 	.composer-actions {
-		display: flex;
-		gap: 0.3rem;
-		justify-content: center;
+		/* 72px de coluna: dois alvos de 28px + folga. O padding padrão de 0.7rem de
+		   cada lado estourava a célula e cortava o X. */
+		padding-left: 0.2rem;
+		padding-right: 0.2rem;
+		text-align: center;
+		white-space: nowrap;
+	}
+	.composer-actions > button {
+		display: inline-grid;
+		vertical-align: middle;
+	}
+	.composer-actions > button + button {
+		margin-left: 0.15rem;
 	}
 	.no-etapas-cell {
 		padding: 0.7rem;
