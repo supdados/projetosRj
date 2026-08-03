@@ -49,10 +49,23 @@
 
 	let panelEl = $state<HTMLDivElement | null>(null);
 
-	// Mês exibido: parte do valor selecionado, senão de hoje. Captura só o valor
-	// inicial DE PROPÓSITO — o painel remonta a cada abertura ({#if} no caller).
+	/**
+	 * Data que define o mês inicial: o valor selecionado; sem valor, hoje
+	 * limitado a [min, max] — abrir "data fim" de uma etapa que só começa daqui
+	 * 5 meses cairia no mês de hoje, todo desabilitado, exigindo navegação.
+	 */
+	function initialAnchorDate(): string {
+		if (value) return value;
+		const today = todayStr();
+		if (min && today < min) return min;
+		if (max && today > max) return max;
+		return today;
+	}
+
+	// Captura só o valor inicial DE PROPÓSITO — o painel remonta a cada abertura
+	// ({#if} no caller).
 	// svelte-ignore state_referenced_locally
-	const initial = (value || todayStr()).split('-').map(Number);
+	const initial = initialAnchorDate().split('-').map(Number);
 	let year = $state(initial[0]);
 	let month = $state(initial[1] - 1);
 
@@ -172,6 +185,7 @@
 	});
 
 	const tdy = todayStr();
+	const todayOutOfRange = $derived((!!min && tdy < min) || (!!max && tdy > max));
 </script>
 
 <div
@@ -215,7 +229,14 @@
 		{/each}
 	</div>
 	<div class="dfp-footer">
-		<button type="button" class="dfp-footer-btn" onclick={() => onPick(todayStr())}>Hoje</button>
+		<button
+			type="button"
+			class="dfp-footer-btn"
+			disabled={todayOutOfRange}
+			onclick={() => onPick(todayStr())}
+		>
+			Hoje
+		</button>
 		{#if allowClear && value}
 			<button type="button" class="dfp-footer-btn dfp-footer-btn--clear" onclick={() => onClear?.()}>
 				Limpar
@@ -369,8 +390,12 @@
 		transition: background 0.12s;
 		font-family: inherit;
 	}
-	.dfp-footer-btn:hover {
+	.dfp-footer-btn:hover:not(:disabled) {
 		background: var(--ds-color-wash-neutral);
+	}
+	.dfp-footer-btn:disabled {
+		opacity: 0.4;
+		cursor: default;
 	}
 	.dfp-footer-btn--clear {
 		color: var(--ds-color-text-danger);
