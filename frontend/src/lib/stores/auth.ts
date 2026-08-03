@@ -9,10 +9,11 @@
  * cosmetico (renderizacao), nunca fonte de verdade de escopo.
  */
 
-import { writable, type Readable } from 'svelte/store';
+import { derived, writable, type Readable } from 'svelte/store';
 import { get } from '$lib/api/client';
 import { ApiClientError } from '$lib/api/client';
 import type { User } from '$lib/types/entities';
+import { canGrantAdmin } from '$lib/utils/adminGrant';
 
 export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -58,3 +59,12 @@ export function loadCurrentUser(): Promise<void> {
 }
 
 export const auth: Readable<AuthState> = { subscribe: store.subscribe };
+
+/**
+ * True somente para o administrador principal (unico que altera `is_admin`).
+ * Fail-closed enquanto a sessao nao carrega; o backend segue sendo a fonte da
+ * verdade — isto so controla a renderizacao dos controles.
+ */
+export const podeConcederAdmin: Readable<boolean> = derived(auth, ($auth) =>
+	canGrantAdmin($auth.user)
+);

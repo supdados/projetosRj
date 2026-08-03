@@ -24,6 +24,8 @@
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
 	import { confirmAction } from '$lib/stores/confirm';
+	import { auth, podeConcederAdmin } from '$lib/stores/auth';
+	import { canManageUser, MSG_SO_SUPER_ADMIN_GERE_ADMIN } from '$lib/utils/adminGrant';
 	import type {
 		AdminOrgaoOption,
 		AdminUser,
@@ -85,6 +87,9 @@
 	let inFlight: AbortController | null = null;
 
 	const listHref = `${base}/admin/usuarios`;
+
+	// Espelho do guard do servidor: admin comum não edita conta de administrador.
+	const podeEditar = $derived(usuario === null || canManageUser($auth.user, usuario));
 
 	/** Reidrata o form com o estado canônico do backend (vínculos + papéis). */
 	function hydrate(user: AdminUser): void {
@@ -246,6 +251,19 @@
 				</button>
 			{/if}
 		</div>
+	{:else if usuario && !podeEditar}
+		<div
+			role="alert"
+			class="flex flex-col items-start gap-3 rounded-lg border border-danger bg-surface px-5 py-4"
+		>
+			<p class="text-text-primary">{MSG_SO_SUPER_ADMIN_GERE_ADMIN}</p>
+			<a
+				href={listHref}
+				class="rounded-md border border-border-subtle bg-surface px-4 py-2 text-sm font-medium text-text-primary no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			>
+				Voltar à lista
+			</a>
+		</div>
 	{:else if usuario}
 		<UserForm
 			mode="edit"
@@ -255,6 +273,7 @@
 			hasCpf={Boolean(usuario.cpf_govbr)}
 			{saving}
 			errorMessage={formError}
+			canGrantAdmin={$podeConcederAdmin}
 			cancelHref={listHref}
 			onSubmit={() => submit()}
 			onRemoveCpf={() => removeCpf()}

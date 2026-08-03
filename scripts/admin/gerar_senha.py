@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # Importa a instância do app e do db, e o modelo User
 from app import app
 from models import db, User
+from scripts.migrations.run_migrations import elect_initial_super_admin
 
 
 def create_admin_user():
@@ -84,9 +85,15 @@ def create_admin_user():
 
             # Adiciona o novo usuário à sessão e salva no banco de dados
             db.session.add(admin_user)
+            db.session.flush()
+            # Numa base nova ninguém é super admin, e sem super admin nenhum
+            # admin consegue conceder is_admin até um restart rodar a eleição.
+            eleito = elect_initial_super_admin()
             db.session.commit()
 
             print(f"\n✅ Usuário administrador '{username}' criado com sucesso!")
+            if eleito == admin_user.id:
+                print("   ↳ Definido como administrador principal do sistema.")
 
         except IntegrityError:
             db.session.rollback()

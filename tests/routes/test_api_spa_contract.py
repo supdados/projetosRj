@@ -57,6 +57,7 @@ def test_api_me_returns_ok_envelope_with_safe_user_fields(client_user, seed_data
         "name",
         "username",
         "is_admin",
+        "is_super_admin",
         "orgaos",
         "tem_vinculo_de_area",
         "auth_provider",

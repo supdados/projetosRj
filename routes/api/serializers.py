@@ -216,12 +216,13 @@ def serialize_user(user: Any) -> dict[str, Any]:
         user: Instância de ``User``.
 
     Returns:
-        ``{id, name, username, is_admin, orgaos: [{id, sigla, nome, papel}],
-        tem_vinculo_de_area, auth_provider}``.
+        ``{id, name, username, is_admin, is_super_admin,
+        orgaos: [{id, sigla, nome, papel}], tem_vinculo_de_area, auth_provider}``.
 
     Exemplo:
         >>> serialize_user(g.user)
         {'id': 1, 'name': 'Ana', 'username': 'ana', 'is_admin': False,
+         'is_super_admin': False,
          'orgaos': [{'id': 3, 'sigla': 'SETD', 'nome': '...', 'papel': 'gestor'}],
          'tem_vinculo_de_area': True, 'auth_provider': 'govbr'}
     """
@@ -230,6 +231,7 @@ def serialize_user(user: Any) -> dict[str, Any]:
         "name": user.name,
         "username": user.username,
         "is_admin": bool(user.is_admin),
+        "is_super_admin": bool(getattr(user, "is_super_admin", False)),
         "orgaos": _user_orgao_refs(user),
         "tem_vinculo_de_area": _tem_vinculo_de_area(user),
         "auth_provider": _resolve_auth_provider(user),
@@ -246,13 +248,16 @@ def serialize_admin_user(user: Any) -> dict[str, Any]:
     ``hide_govbr_link_fields`` em ``routes/admin_users.py``). NUNCA expõe
     ``password_hash``, ``govbr_sub`` nem qualquer segredo.
 
+    ``is_super_admin`` é READ-ONLY: só muda por migração/DB e serve para a SPA
+    esconder os controles que o backend recusaria com 403.
+
     Args:
         user: Instância de ``User``.
 
     Returns:
-        ``dict`` JSON-safe ``{id, name, username, is_admin, orgao, orgaos,
-        cpf_govbr, has_govbr_link, govbr_link_locked, auth_provider}``, com
-        ``orgaos`` no formato ``[{id, sigla, nome, papel}]``.
+        ``dict`` JSON-safe ``{id, name, username, is_admin, is_super_admin,
+        orgao, orgaos, cpf_govbr, has_govbr_link, govbr_link_locked,
+        auth_provider}``, com ``orgaos`` no formato ``[{id, sigla, nome, papel}]``.
     """
     has_govbr_link = bool(
         getattr(user, "cpf_govbr", None) and getattr(user, "govbr_sub", None)
@@ -262,6 +267,7 @@ def serialize_admin_user(user: Any) -> dict[str, Any]:
         "name": user.name,
         "username": user.username,
         "is_admin": bool(user.is_admin),
+        "is_super_admin": bool(getattr(user, "is_super_admin", False)),
         "orgao": user.orgao,
         "orgaos": _user_orgao_refs(user),
         "cpf_govbr": user.cpf_govbr,

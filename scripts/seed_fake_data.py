@@ -38,6 +38,7 @@ from models import (
     db,
 )
 from catalogs.objectives import GOAL_CATALOG, sync_goal_catalog_to_db
+from scripts.migrations.run_migrations import elect_initial_super_admin
 
 SEED_ORGAO_SIGLAS = [
     "Auditoria",
@@ -130,6 +131,9 @@ def _create_seed_users(orgaos):
     admin.set_password("seed123")
     db.session.add(admin)
     db.session.flush()
+    # Sem isto a base semeada não tem super admin e ninguém consegue conceder
+    # is_admin até um restart rodar a eleição da migração.
+    elect_initial_super_admin()
     db.session.add(UserOrgao(user_id=admin.id, orgao_id=orgaos[0].id))
 
     users_by_sigla = {}

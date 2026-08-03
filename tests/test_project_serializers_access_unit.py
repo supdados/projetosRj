@@ -223,6 +223,7 @@ def test_serialize_user_expoe_tem_vinculo_de_area(app, cenario):
             "name",
             "username",
             "is_admin",
+            "is_super_admin",
             "orgaos",
             "tem_vinculo_de_area",
             "auth_provider",

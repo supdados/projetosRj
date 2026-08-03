@@ -18,6 +18,12 @@
 	import { ApiClientError } from '$lib/api/client';
 	import type { AdminUser, AdminUsersPageMeta, AdminOrgaoOption } from '$lib/types/adminUsers';
 	import { auth } from '$lib/stores/auth';
+	import {
+		canDeleteUser,
+		canManageUser,
+		MSG_SO_SUPER_ADMIN_GERE_ADMIN
+	} from '$lib/utils/adminGrant';
+	import type { User } from '$lib/types/entities';
 	import { papelLabel } from '$lib/utils/orgaoPapel';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
@@ -75,10 +81,10 @@
 
 	let inFlight: AbortController | null = null;
 
-	/** Id do usuário autenticado (para tag "Você" e travar auto-exclusão). */
-	let currentUserId = $state<number | null>(null);
+	/** Usuário autenticado: tag "Você", auto-exclusão e guards de super admin. */
+	let currentUser = $state<User | null>(null);
 	const unsubAuth = auth.subscribe((state) => {
-		currentUserId = state.user?.id ?? null;
+		currentUser = state.user;
 	});
 
 	const total = $derived(meta?.total ?? 0);
@@ -360,7 +366,9 @@
 						</thead>
 						<tbody>
 							{#each usuarios as user (user.id)}
-								{@const isSelf = currentUserId !== null && user.id === currentUserId}
+								{@const isSelf = currentUser !== null && user.id === currentUser.id}
+								{@const podeEditar = canManageUser(currentUser, user)}
+								{@const podeExcluir = canDeleteUser(currentUser, user)}
 								<tr class="border-t border-border-subtle transition-colors duration-fast hover:bg-surface-muted">
 									<td class="px-3 py-2.5 align-middle">
 										<span class="text-sm font-semibold text-text-secondary">{user.id}</span>
@@ -418,7 +426,15 @@
 										{/if}
 									</td>
 									<td class="px-3 py-2.5 text-center align-middle">
-										{#if user.is_admin}
+										{#if user.is_super_admin}
+											<span
+												title="Administrador principal: único que concede ou remove o perfil de administrador."
+												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-brand-soft bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-brand"
+											>
+												<i class="fas fa-user-shield"></i>
+												Principal
+											</span>
+										{:else if user.is_admin}
 											<span
 												class="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md border border-success-soft bg-surface-muted px-2.5 py-1 text-xs font-bold leading-tight text-success"
 											>
@@ -436,20 +452,37 @@
 									</td>
 									<td class="px-3 py-2.5 text-center align-middle">
 										<div class="inline-flex items-center gap-1">
-											<a
-												href={editHref(user)}
-												title="Editar Usuário"
-												aria-label="Editar usuário {user.name}"
-												class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-											>
-												<AppIcon id="edicao" size={14} />
-											</a>
-											{#if isSelf}
+											{#if podeEditar}
+												<a
+													href={editHref(user)}
+													title="Editar Usuário"
+													aria-label="Editar usuário {user.name}"
+													class="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+												>
+													<AppIcon id="edicao" size={14} />
+												</a>
+											{:else}
 												<button
 													type="button"
 													disabled
-													title="Não é possível excluir o próprio usuário"
-													aria-label="Não é possível excluir o próprio usuário"
+													title={MSG_SO_SUPER_ADMIN_GERE_ADMIN}
+													aria-label={MSG_SO_SUPER_ADMIN_GERE_ADMIN}
+													class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-text-muted opacity-50"
+												>
+													<AppIcon id="edicao" size={14} />
+												</button>
+											{/if}
+											{#if !podeExcluir}
+												{@const motivo = isSelf
+													? 'Não é possível excluir o próprio usuário'
+													: user.is_super_admin
+														? 'A conta do administrador principal não pode ser excluída.'
+														: MSG_SO_SUPER_ADMIN_GERE_ADMIN}
+												<button
+													type="button"
+													disabled
+													title={motivo}
+													aria-label={motivo}
 													class="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-text-muted"
 												>
 													<AppIcon id="exclusao" size={14} />

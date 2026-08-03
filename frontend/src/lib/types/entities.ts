@@ -48,6 +48,8 @@ export interface User {
 	name: string;
 	username: string;
 	is_admin: boolean;
+	/** Admin principal do sistema: unico que concede/remove `is_admin`. Read-only. */
+	is_super_admin: boolean;
 	orgaos: OrgaoRef[];
 	auth_provider: AuthProvider;
 	/** Tem ao menos um vinculo de area (§5.3): controla o seletor de orgao. */

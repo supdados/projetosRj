@@ -64,13 +64,20 @@ def _ensure_orgao(sigla):
 
 
 def _create_user(
-    username, name, *, is_admin=False, orgao_siglas=None, orgao="Orgao Teste"
+    username,
+    name,
+    *,
+    is_admin=False,
+    is_super_admin=False,
+    orgao_siglas=None,
+    orgao="Orgao Teste",
 ):
     user = User(
         username=username,
         name=name,
         orgao=orgao,
         is_admin=is_admin,
+        is_super_admin=is_super_admin,
     )
     user.set_password(TEST_PASSWORD)
     db.session.add(user)
@@ -134,8 +141,14 @@ def client(app):
 def seed_data(app):
     with app.app_context():
         ensure_default_orgao_tipos()
+        # O admin do seed é o administrador PRINCIPAL (super admin): é quem
+        # pode conceder/remover `is_admin` (services/admin_grant_policy.py).
         admin = _create_user(
-            "admin", "Administrador", is_admin=True, orgao_siglas=["Auditoria"]
+            "admin",
+            "Administrador",
+            is_admin=True,
+            is_super_admin=True,
+            orgao_siglas=["Auditoria"],
         )
         user = _create_user(
             "user_auditoria", "Usuario Auditoria", orgao_siglas=["Auditoria"]
@@ -447,4 +460,24 @@ def client_outsider(app, seed_data):
 def client_editable(app, seed_data):
     c = app.test_client()
     _login(c, seed_data["editable_user_id"])
+    return c
+
+
+# Admin COMUM (is_admin sem is_super_admin) criado sob demanda, não no seed: um
+# admin extra permanente mudaria a população de candidatos a responsável e a
+# contagem de admins ativos vista por toda a suíte.
+@pytest.fixture
+def admin_comum(app, seed_data):
+    with app.app_context():
+        user = _create_user(
+            "admin_comum", "Adm Secundario", is_admin=True, orgao_siglas=["Auditoria"]
+        )
+        db.session.commit()
+        return {"id": user.id, "username": user.username}
+
+
+@pytest.fixture
+def client_admin_comum(app, admin_comum):
+    c = app.test_client()
+    _login(c, admin_comum["id"])
     return c

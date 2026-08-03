@@ -31,6 +31,8 @@ ALLOWLIST: frozenset[str] = frozenset(
         "services/authorization.py",
         "routes/api/admin_users.py",
         "routes/api/serializers.py",
+        # Política de concessão: única escrita legítima da flag no fonte.
+        "services/admin_grant_policy.py",
     }
 )
 

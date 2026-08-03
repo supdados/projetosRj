@@ -20,6 +20,7 @@
 	import OrgaoPapelRepeater from '$lib/components/OrgaoPapelRepeater.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import { buildOrgaoTree, computeOrgaoCoverage } from '$lib/utils/orgaoTree';
+	import { MSG_SO_SUPER_ADMIN_ALTERA_PERFIL } from '$lib/utils/adminGrant';
 	import type { AdminOrgaoOption, AdminUserOrgaoVinculo } from '$lib/types/adminUsers';
 
 	type Mode = 'create' | 'edit';
@@ -46,6 +47,8 @@
 		saving: boolean;
 		/** Mensagem de erro vinda do backend (validação 422 etc.). */
 		errorMessage: string;
+		/** Só o administrador principal altera `is_admin` (backend devolve 403). */
+		canGrantAdmin: boolean;
 		cancelHref: string;
 		onSubmit: (values: UserFormValues) => void;
 		/** Callback do "Retirar CPF" (apenas no modo edição com CPF). */
@@ -61,6 +64,7 @@
 		hasCpf,
 		saving,
 		errorMessage,
+		canGrantAdmin,
 		cancelHref,
 		onSubmit,
 		onRemoveCpf,
@@ -258,13 +262,16 @@
 
 		<!-- Permissão de administrador como cartão de opção destacado. -->
 		<label
-			class="flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast {values.is_admin
+			class="flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors duration-fast {canGrantAdmin
+				? 'cursor-pointer'
+				: 'cursor-not-allowed'} {values.is_admin
 				? 'border-brand-soft bg-surface-elevated'
 				: 'border-border-subtle bg-surface-muted hover:border-border-strong hover:bg-surface-muted'}"
 		>
 			<input
 				type="checkbox"
-				disabled={saving}
+				disabled={saving || !canGrantAdmin}
+				aria-describedby={canGrantAdmin ? undefined : 'user-is-admin-lock'}
 				bind:checked={values.is_admin}
 				class="mt-0.5 h-4 w-4 rounded border-border-subtle text-brand focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-brand"
 			/>
@@ -277,6 +284,12 @@
 					Acesso total ao sistema, incluindo gerenciamento de usuários. Administradores sem
 					órgãos selecionados visualizam todos.
 				</span>
+				{#if !canGrantAdmin}
+					<span id="user-is-admin-lock" class="text-xs text-text-muted">
+						<i class="fas fa-lock mr-1" aria-hidden="true"></i>
+						{MSG_SO_SUPER_ADMIN_ALTERA_PERFIL}
+					</span>
+				{/if}
 			</span>
 		</label>
 

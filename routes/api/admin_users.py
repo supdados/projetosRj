@@ -14,6 +14,14 @@ unicidade de username/CPF, proteção do último admin, vínculos a órgãos ina
 são mantidas; erros de validação resultam em ``fail(..., 422, "validation")`` em
 vez do ``flash`` + re-render do fluxo Jinja.
 
+Política de concessão de administrador: a flag ``is_admin`` só pode ser alterada
+(concedida OU removida) pelo administrador principal (``is_super_admin``), e um
+admin comum não edita/exclui contas de outros administradores. As decisões vêm
+inteiras de ``services/admin_grant_policy.py`` — este módulo apenas traduz a
+mensagem de negação em ``fail(..., 403, "forbidden")``. A LEITURA
+(``list``/``detail``) segue livre para qualquer admin: o bloqueio é de escrita, e
+é a SPA que esconde os controles indisponíveis.
+
 Anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint novo e
 NUNCA serializa ``password_hash`` nem ``govbr_sub``.
 """
@@ -25,6 +33,13 @@ from typing import Any
 from flask import Response, g, request
 
 from models import OrgaoUnidade, User, UserOrgao, db
+from services.admin_grant_policy import (
+    apply_admin_flag,
+    denial_for_admin_flag_change,
+    denial_for_deleting_user,
+    denial_for_managing_user,
+    resolve_admin_flag,
+)
 from services.authorization import PAPEL_GESTOR, PAPEL_RANK
 from services.password_policy import validate_password_strength
 from time_utils import utc_now
@@ -152,9 +167,14 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
     ``orgaos_responsavel: [id]`` (interpretado como ``gestor``) — ver
     ``_parse_orgao_papel_pairs``.
 
+    Criar já com ``is_admin`` verdadeiro exige ser o administrador principal — caso
+    contrário 403 explícito (nunca rebaixamento silencioso). ``is_super_admin``
+    no payload é ignorado: a coluna só muda por migração/DB.
+
     Returns:
         Envelope ``{"ok": true, "data": {"usuario": {...}}}`` com HTTP 200 ao
-        criar; ``fail(..., 422)`` em erro de validação.
+        criar; ``fail(..., 403, "forbidden")`` sem poder de concessão;
+        ``fail(..., 422)`` em erro de validação.
     """
     payload = request.get_json(silent=True) or request.form
     orgao_pairs, invalid_orgaos, papel_error = _parse_orgao_papel_pairs(payload)
@@ -164,6 +184,12 @@ def api_admin_usuarios_create() -> Response | tuple[Response, int]:
     orgao = (payload.get("orgao") or "").strip()
     is_admin_flag = _parse_bool(payload.get("is_admin"))
     cpf_govbr, cpf_error = _parse_cpf_govbr(payload.get("cpf_govbr"))
+
+    # Autorização antes da validação: quem não pode criar admin não recebe pistas
+    # sobre o restante do payload.
+    denial = denial_for_admin_flag_change(g.user, None, is_admin_flag)
+    if denial:
+        return fail(denial, status=403, code="forbidden")
 
     if not username or not name or not password:
         return fail(
@@ -224,23 +250,36 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     aceitam os dois formatos de ``_parse_orgao_papel_pairs`` (novo com papel e
     ``orgaos_responsavel[]`` legado como ``gestor``).
 
+    ``is_admin`` é TRI-STATE: chave ausente (ou ``null``) mantém o valor atual —
+    inclusive em form-encoded, onde um checkbox desmarcado não trafega e antes
+    rebaixava o alvo silenciosamente. Mudança real da flag exige ser o
+    administrador principal; editar outra conta de admin idem (403 ``forbidden``).
+
     Args:
         user_id: ID do usuário a editar.
 
     Returns:
         Envelope ``{"ok": true, "data": {"usuario": {...}}}`` com HTTP 200; ou
-        ``fail(..., 422)`` em erro de validação; ``fail(..., 404)`` se não existe.
+        ``fail(..., 403, "forbidden")`` sem autorização; ``fail(..., 422)`` em
+        erro de validação; ``fail(..., 404)`` se não existe.
     """
     user = db.session.get(User, user_id)
     if user is None:
         return fail("Usuário não encontrado.", status=404, code="not_found")
+
+    denial = denial_for_managing_user(g.user, user)
+    if denial:
+        return fail(denial, status=403, code="forbidden")
 
     payload = request.get_json(silent=True) or request.form
     hide_govbr_link_fields = bool(user.cpf_govbr and user.govbr_sub)
 
     name = (payload.get("name") or "").strip()
     orgao = (payload.get("orgao") or "").strip()
-    is_admin_flag = _parse_bool(payload.get("is_admin"))
+    requested_admin = _parse_admin_flag_request(payload)
+    effective_admin, admin_denial = resolve_admin_flag(g.user, user, requested_admin)
+    if admin_denial:
+        return fail(admin_denial, status=403, code="forbidden")
 
     orgao_pairs, invalid_orgaos, papel_error = _resolve_update_orgao_pairs(
         user, payload
@@ -255,7 +294,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
     # Soft-delete C4: conta apenas administradores ATIVOS ao proteger o último.
     # Lock pessimista (bug 2.22): evita que dois requests concorrentes
     # despromovam ambos os 2 últimos admins antes de qualquer commit.
-    if user.is_admin and not is_admin_flag and _lock_and_count_active_admins() <= 1:
+    # Backstop hoje inalcançável via HTTP (o super admin nunca perde a flag, então
+    # sempre resta um admin ativo); mantido para bases sem super admin eleito.
+    if user.is_admin and not effective_admin and _lock_and_count_active_admins() <= 1:
         return fail(
             "Não é possível remover o status de administrador do único "
             "administrador existente.",
@@ -285,7 +326,9 @@ def api_admin_usuarios_update(user_id: int) -> Response | tuple[Response, int]:
 
     user.name = name
     user.orgao = orgao or None
-    user.is_admin = is_admin_flag
+    admin_denial = apply_admin_flag(g.user, user, requested_admin)
+    if admin_denial:
+        return fail(admin_denial, status=403, code="forbidden")
     if should_update_cpf:
         old_cpf = user.cpf_govbr
         user.cpf_govbr = cpf_govbr
@@ -314,11 +357,15 @@ def api_admin_usuarios_remove_cpf(user_id: int) -> Response | tuple[Response, in
 
     Returns:
         Envelope ``{"ok": true, "data": {"usuario": {...}}}`` com HTTP 200;
+        ``fail(..., 403, "forbidden")`` quando o ator não pode gerir o alvo;
         ``fail(..., 404)`` quando o usuário não existe.
     """
     user = db.session.get(User, user_id)
     if user is None:
         return fail("Usuário não encontrado.", status=404, code="not_found")
+    denial = denial_for_managing_user(g.user, user)
+    if denial:
+        return fail(denial, status=403, code="forbidden")
     user.cpf_govbr = None
     user.govbr_sub = None
     db.session.commit()
@@ -336,29 +383,39 @@ def api_admin_usuarios_delete(user_id: int) -> Response | tuple[Response, int]:
     cascateia/apaga dados — por isso não há mais try/except de IntegrityError de FK.
 
     Preserva as proteções: o admin não pode se auto-excluir e o único
-    administrador ATIVO do sistema não pode ser removido.
+    administrador ATIVO do sistema não pode ser removido. Somam-se a elas a
+    política de concessão: a conta do administrador principal é indelével e um
+    admin comum não exclui outros administradores (403 ``forbidden``).
 
     Args:
         user_id: ID do usuário a remover.
 
     Returns:
         Envelope ``{"ok": true, "data": {"deleted_id": <id>}}`` com HTTP 200; ou
-        ``fail(..., 422, "validation")`` quando a remoção é proibida;
-        ``fail(..., 404)`` quando o usuário não existe.
+        ``fail(..., 422, "validation")`` quando a remoção é proibida por regra de
+        negócio; ``fail(..., 403, "forbidden")`` quando é proibida por
+        autorização; ``fail(..., 404)`` quando o usuário não existe.
     """
     user = db.session.get(User, user_id)
     if user is None:
         return fail("Usuário não encontrado.", status=404, code="not_found")
 
+    # Guard de própria conta ANTES da política: mantém o 422 histórico da
+    # auto-exclusão (o super admin nesse caminho toma 422, não 403 — o efeito
+    # prático, não excluir, é o mesmo).
     if user.id == g.user.id:
         return fail(
             "Você não pode excluir sua própria conta de administrador.",
             status=422,
             code="validation",
         )
+    denial = denial_for_deleting_user(g.user, user)
+    if denial:
+        return fail(denial, status=403, code="forbidden")
     # O guard do "único admin" conta apenas administradores ATIVOS (deleted_at
     # is None) — admins já removidos não contam como existentes. Lock
     # pessimista (bug 2.22): evita TOCTOU entre duas exclusões concorrentes.
+    # Backstop hoje inalcançável via HTTP (o super admin ativo nunca é excluído).
     active_admins = _lock_and_count_active_admins()
     if user.is_admin and user.deleted_at is None and active_admins == 1:
         return fail(
@@ -472,6 +529,27 @@ def _parse_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in {"on", "true", "1", "yes"}
+
+
+def _parse_admin_flag_request(payload: Any) -> bool | None:
+    """Flag ``is_admin`` pedida no payload; ``None`` = ausente (mantém a atual).
+
+    Distingue "não mandou nada" de "mandou ``false``": checkbox desmarcado em
+    form-encoded simplesmente não trafega, e tratá-lo como ``False`` rebaixava o
+    alvo silenciosamente. JSON ``null`` equivale a ausente.
+
+    Exemplo:
+        >>> _parse_admin_flag_request({"name": "Ana"})
+        None
+        >>> _parse_admin_flag_request({"is_admin": "on"})
+        True
+    """
+    if "is_admin" not in payload:
+        return None
+    raw = payload.get("is_admin")
+    if raw is None:
+        return None
+    return _parse_bool(raw)
 
 
 def _inactive_current_pairs(

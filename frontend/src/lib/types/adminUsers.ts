@@ -36,6 +36,11 @@ export interface AdminUser {
 	name: string;
 	username: string;
 	is_admin: boolean;
+	/**
+	 * Admin principal do sistema. Read-only: o backend nunca aceita este campo
+	 * em payload de escrita — só muda por migração/DB.
+	 */
+	is_super_admin: boolean;
 	/** Campo legado de órgão (string livre). */
 	orgao: string | null;
 	orgaos: AdminUserOrgaoRef[];

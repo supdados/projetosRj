@@ -19,6 +19,7 @@
 	} from '$lib/api/adminUsers';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
+	import { podeConcederAdmin } from '$lib/stores/auth';
 	import type {
 		AdminOrgaoOption,
 		AdminUserCreatePayload,
@@ -166,6 +167,7 @@
 			hasCpf={false}
 			{saving}
 			errorMessage={formError}
+			canGrantAdmin={$podeConcederAdmin}
 			cancelHref={listHref}
 			onSubmit={() => submit()}
 		/>

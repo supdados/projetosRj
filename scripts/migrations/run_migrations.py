@@ -136,6 +136,7 @@ STAGE_TEMPLATE_AUDIT_COLUMNS = [
 ]
 PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
 USER_ORGAO_PAPEL_COLUMN = ("papel", "VARCHAR(10) NOT NULL DEFAULT 'gestor'")
+USER_IS_SUPER_ADMIN_COLUMN = ("is_super_admin", "BOOLEAN NOT NULL DEFAULT 0")
 PROJECT_MEMBER_TABLE = "project_member"
 AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
 SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
@@ -1637,6 +1638,76 @@ def ensure_user_orgao_papel_column(emit_output=True):
         return {"success": False, "error": str(exc), "added": False}
 
 
+def _add_is_super_admin_column(inspector, emit_output):
+    """Adiciona user.is_super_admin quando ausente; True se criou a coluna."""
+    column_name, column_type = USER_IS_SUPER_ADMIN_COLUMN
+    if column_name in _column_names(inspector, "user"):
+        return False
+    # `user` é palavra reservada no MySQL: sempre entre crases (SQLite também aceita).
+    db.session.execute(
+        text(f"ALTER TABLE `user` ADD COLUMN {column_name} {column_type}")
+    )
+    db.session.execute(
+        text("UPDATE `user` SET is_super_admin = 0 WHERE is_super_admin IS NULL")
+    )
+    _emit("   ✓ Coluna user.is_super_admin criada.", emit_output)
+    return True
+
+
+def elect_initial_super_admin():
+    """Promove o menor id entre admins ativos; devolve o id eleito ou None.
+
+    Devolve None quando já existe super admin (inclusive soft-deletado) ou quando
+    a base não tem nenhum admin ativo. NÃO commita — o chamador decide.
+    Ex.: `elect_initial_super_admin() -> 1`.
+    """
+    # Duas queries: o MySQL (erro 1093) proíbe subquery na tabela do próprio UPDATE.
+    ja_existe = db.session.execute(
+        text("SELECT COUNT(*) FROM `user` WHERE is_super_admin = 1")
+    ).scalar()
+    if ja_existe:
+        return None
+    alvo = db.session.execute(
+        text("SELECT MIN(id) FROM `user` WHERE is_admin = 1 AND deleted_at IS NULL")
+    ).scalar()
+    if alvo is None:
+        return None
+    db.session.execute(
+        text("UPDATE `user` SET is_super_admin = 1 WHERE id = :uid"), {"uid": alvo}
+    )
+    return alvo
+
+
+def ensure_user_is_super_admin_column(emit_output=True):
+    """Garante user.is_super_admin e elege o admin inicial (idempotente).
+
+    Backfill: promove o MENOR id entre os admins ATIVOS, e SÓ quando não existe
+    nenhum super admin (inclusive soft-deletado) — re-execução nunca reelege.
+    """
+    _emit("→ Garantindo coluna user.is_super_admin...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        if not _table_exists(inspector, "user"):
+            _emit("   ✓ Tabela user ainda não existe.", emit_output)
+            return {"success": True, "added": False, "elected_user_id": None}
+        added = _add_is_super_admin_column(inspector, emit_output)
+        eleito = elect_initial_super_admin()
+        db.session.commit()
+        _emit(
+            f"   ✓ Super admin eleito: {eleito or 'nenhum (já definido)'}.", emit_output
+        )
+        return {"success": True, "added": added, "elected_user_id": eleito}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao garantir user.is_super_admin: {exc}", emit_output)
+        return {
+            "success": False,
+            "error": str(exc),
+            "added": False,
+            "elected_user_id": None,
+        }
+
+
 def ensure_siorg_sync_log_table(emit_output=True):
     """Garante a tabela siorg_sync_log e suas colunas incrementais."""
     _emit("→ Garantindo tabela siorg_sync_log...", emit_output)
@@ -1780,6 +1851,9 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
     from scripts.migrations.backfill_sei_processes import backfill_sei_processes
 
     steps = [
+        # PRIMEIRO: steps adiante (backfill_task_assignees) consultam User pelo ORM,
+        # cujo SELECT já cita is_super_admin — sem a coluna, o boot inteiro aborta.
+        ("ensure_user_is_super_admin_column", ensure_user_is_super_admin_column),
         ("migrate_user_areas", _migrate_user_areas_step),
         ("ensure_project_history_table", ensure_project_history_table),
         ("ensure_project_columns", ensure_project_columns),

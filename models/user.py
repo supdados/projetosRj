@@ -15,6 +15,9 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     orgao = db.Column(db.String(100), nullable=True)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    # Super admin = admin inicial do sistema (menor id entre os admins ativos no
+    # backfill). SÓ muda por migração/DB — nenhum endpoint escreve esta coluna.
+    is_super_admin = db.Column(db.Boolean, default=False, nullable=False)
     cpf_govbr = db.Column(db.String(11), unique=True, nullable=True, index=True)
     govbr_sub = db.Column(db.String(255), unique=True, nullable=True, index=True)
     failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
