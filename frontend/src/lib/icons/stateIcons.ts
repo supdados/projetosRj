@@ -59,6 +59,11 @@ const STATUS_RING: StateIconShape = { kind: 'circle', cx: 12, cy: 12, r: 8.5 };
     no escuro a `finalizada` é um verde claro e o branco sumiria. */
 const KNOCKOUT = 'var(--ds-color-surface-base)';
 
+/** Distingue ids deste registry dos de `projectIcons` no union do SelectMenu. */
+export function isStateIconId(id: string): id is StateIconId {
+	return id in STATE_ICONS;
+}
+
 export const STATE_ICONS: Record<StateIconId, StateIconShape[]> = {
 	'prio-sem': ring(0),
 	'prio-baixa': ring(1),

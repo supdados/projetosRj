@@ -6,6 +6,8 @@
 	import { tick, type Snippet } from 'svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import StateIcon from '$lib/components/StateIcon.svelte';
+	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
+	import { isStateIconId } from '$lib/icons/stateIcons';
 
 	interface Props {
 		options: SelectMenuOption[];
@@ -315,7 +317,11 @@
 			<span class="flex min-w-0 items-center gap-2">
 				{#if selected?.icon}
 					<span class="flex shrink-0" style:color={selected.dot}>
-						<StateIcon id={selected.icon} />
+						{#if isStateIconId(selected.icon)}
+							<StateIcon id={selected.icon} />
+						{:else}
+							<ProjectIcon id={selected.icon} />
+						{/if}
 					</span>
 				{:else if selected?.dot}
 					<span class="h-2 w-2 shrink-0 rounded-full" style:background={selected.dot}></span>
@@ -408,7 +414,11 @@
 					>
 						{#if item.option?.icon}
 							<span class="flex shrink-0" style:color={item.option.dot}>
-								<StateIcon id={item.option.icon} />
+								{#if isStateIconId(item.option.icon)}
+									<StateIcon id={item.option.icon} />
+								{:else}
+									<ProjectIcon id={item.option.icon} />
+								{/if}
 							</span>
 						{:else if item.option?.dot}
 							<span class="h-2 w-2 shrink-0 rounded-full" style:background={item.option.dot}
