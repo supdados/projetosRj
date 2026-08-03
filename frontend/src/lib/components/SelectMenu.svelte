@@ -316,7 +316,7 @@
 		{:else}
 			<span class="flex min-w-0 items-center gap-2">
 				{#if selected?.icon}
-					<span class="flex shrink-0" style:color={selected.dot}>
+					<span class="flex shrink-0" style:color={selected.dot ?? 'var(--ds-color-text-brand)'}>
 						{#if isStateIconId(selected.icon)}
 							<StateIcon id={selected.icon} />
 						{:else}
@@ -413,7 +413,11 @@
 							: 'cursor-pointer'} {isSelected ? 'bg-wash-brand' : isHighlighted ? 'bg-surface-muted' : ''}"
 					>
 						{#if item.option?.icon}
-							<span class="flex shrink-0" style:color={item.option.dot}>
+							<!-- Sem `dot` semântico, o ícone cai no azul de marca (nunca no texto escuro). -->
+							<span
+								class="flex shrink-0"
+								style:color={item.option.dot ?? 'var(--ds-color-text-brand)'}
+							>
 								{#if isStateIconId(item.option.icon)}
 									<StateIcon id={item.option.icon} />
 								{:else}

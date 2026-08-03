@@ -36,6 +36,7 @@
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
+	import StateIcon from '$lib/components/StateIcon.svelte';
 	import { deliveryIconId, projectStatusIconId } from '$lib/utils/projectLabels';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -1139,7 +1140,7 @@
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
-										<span class="text-md font-semibold uppercase tracking-wide">
+										<span class="text-md font-medium uppercase tracking-wide">
 											{project.orgao_sigla ?? project.orgao ?? '—'}
 										</span>
 									</td>
@@ -1148,10 +1149,11 @@
 									>
 										{#if project.prioridade}
 											<span
-												class="text-md font-semibold uppercase tracking-wide {toneTextClass[
+												class="inline-flex items-center justify-center gap-1.5 text-md font-medium uppercase tracking-wide {toneTextClass[
 													priorityTone(project.prioridade)
 												]}"
 											>
+												<StateIcon id={priorityIconId(project.prioridade)} size={16} />
 												{capitalize(project.prioridade)}
 											</span>
 										{:else}
@@ -1164,7 +1166,7 @@
 										{#if project.status}
 											{@const statusIcon = projectStatusIconId(project.status)}
 											<span
-												class="inline-flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide {toneTextClass[
+												class="inline-flex items-center justify-center gap-1.5 text-md font-medium uppercase tracking-wide {toneTextClass[
 													statusTone(project.status)
 												]}"
 											>
@@ -1183,7 +1185,7 @@
 										{#if project.delivery_type}
 											{@const deliveryIcon = deliveryIconId(project.delivery_type)}
 											<span
-												class="inline-flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide"
+												class="inline-flex items-center justify-center gap-1.5 text-md font-medium uppercase tracking-wide"
 											>
 												{#if deliveryIcon}
 													<ProjectIcon id={deliveryIcon} size={16} />
