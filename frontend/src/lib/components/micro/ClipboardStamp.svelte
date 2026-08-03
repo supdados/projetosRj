@@ -59,9 +59,9 @@
 		}
 		stage = 1;
 		const seq: [number, number][] = [
-			[340, 2],
-			[500, 3],
-			[900, 4]
+			[265, 2],
+			[390, 3],
+			[700, 4]
 		];
 		for (const [at, next] of seq) timers.push(setTimeout(() => (stage = next), at));
 	}
@@ -275,7 +275,7 @@
 		box-shadow: 0 2px 6px rgba(35, 50, 45, 0.12);
 		overflow: hidden;
 		transform: scale(1);
-		transition: transform 0.28s cubic-bezier(0.3, 1.6, 0.5, 1);
+		transition: transform 0.22s cubic-bezier(0.3, 1.6, 0.5, 1);
 		will-change: transform;
 		backface-visibility: hidden;
 	}
@@ -339,7 +339,7 @@
 		margin-left: calc(var(--cs-size) * -0.25);
 		margin-top: calc(var(--cs-size) * -0.25);
 		opacity: 0;
-		transition: opacity 0.2s ease;
+		transition: opacity 0.16s ease;
 	}
 	.cs-wax-pulse,
 	.cs-wax svg {
@@ -408,8 +408,8 @@
 		opacity: 0;
 		transform: translate(-50%, calc(var(--cs-size) * -1.02)) rotate(-6deg) scale(0.94);
 		transition:
-			transform 0.3s ease-in,
-			opacity 0.25s ease;
+			transform 0.24s ease-in,
+			opacity 0.2s ease;
 		will-change: transform, opacity;
 		backface-visibility: hidden;
 	}
@@ -425,8 +425,8 @@
 		transform: translateY(calc(var(--cs-size) * -0.05)) rotateX(3deg);
 		box-shadow: 0 10px 18px rgba(15, 42, 71, 0.24);
 		transition:
-			transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-			box-shadow 0.55s ease;
+			transform 0.43s cubic-bezier(0.22, 1, 0.36, 1),
+			box-shadow 0.43s ease;
 	}
 
 	.cs-stage[data-stage='2'] .cs-paper {
@@ -443,34 +443,34 @@
 	.cs-stage[data-stage='2'] .cs-wax-pulse,
 	.cs-stage[data-stage='3'] .cs-wax-pulse,
 	.cs-stage[data-stage='4'] .cs-wax-pulse {
-		animation: cs-wax-settle 0.5s cubic-bezier(0.25, 0.9, 0.3, 1) both;
+		animation: cs-wax-settle 0.4s cubic-bezier(0.25, 0.9, 0.3, 1) both;
 	}
 
 	.cs-stage[data-stage='1'] .cs-stamp {
 		opacity: 1;
 		transform: translate(-50%, calc(var(--cs-size) * -0.42)) rotate(-2deg) scale(0.98);
 		transition:
-			transform 0.34s cubic-bezier(0.3, 0.7, 0.4, 1),
-			opacity 0.2s ease;
+			transform 0.26s cubic-bezier(0.3, 0.7, 0.4, 1),
+			opacity 0.16s ease;
 	}
 	.cs-stage[data-stage='2'] .cs-stamp {
 		opacity: 1;
 		transform: translate(-50%, calc(var(--cs-size) * -0.27)) rotate(0deg) scale(1);
 		transition:
-			transform 0.13s cubic-bezier(0.6, 0, 0.9, 0.5),
-			opacity 0.2s ease;
+			transform 0.1s cubic-bezier(0.6, 0, 0.9, 0.5),
+			opacity 0.16s ease;
 	}
 	.cs-stage[data-stage='3'] .cs-stamp {
 		opacity: 1;
 		transform: translate(-50%, calc(var(--cs-size) * -0.58)) rotate(2deg) scale(0.97);
 		transition:
-			transform 0.38s cubic-bezier(0.2, 0.9, 0.3, 1),
-			opacity 0.3s ease;
+			transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
+			opacity 0.24s ease;
 	}
 	.cs-stage[data-stage='4'] .cs-stamp {
 		transition:
-			transform 0.4s ease-in,
-			opacity 0.35s ease;
+			transform 0.32s ease-in,
+			opacity 0.28s ease;
 	}
 
 	:global([data-theme='dark']) .cs-board {
