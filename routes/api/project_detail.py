@@ -68,6 +68,7 @@ _DELIVERY_TYPE_OPTIONS = [
     "Norma",
     "Instrumento de parceria",
     "Fluxo Processual",
+    "Eventos",
     "Outro",
 ]
 

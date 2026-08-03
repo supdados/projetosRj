@@ -200,6 +200,7 @@ def build_projects_list_context(
         "Norma",
         "Instrumento de parceria",
         "Fluxo Processual",
+        "Eventos",
         "Outro",
     ]
     has_advanced_filters_active = any(

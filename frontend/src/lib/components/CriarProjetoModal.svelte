@@ -95,6 +95,7 @@
 		'Norma',
 		'Instrumento de parceria',
 		'Fluxo Processual',
+		'Eventos',
 		'Outro'
 	];
 	const SPECIAL_PROJECTS = ['ABEP', 'TCE'];
