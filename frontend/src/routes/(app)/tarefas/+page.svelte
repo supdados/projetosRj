@@ -793,7 +793,7 @@
 	aria-labelledby="tarefas-title"
 	class="flex flex-col motion-safe:transition-[gap] {expandMotion} {boardExpanded
 		? 'gap-3'
-		: 'gap-6'}"
+		: 'gap-4'}"
 >
 	<!-- CARD ÚNICO header + filtros: uma só seção (chrome de card no wrapper; o
 		 PageHeader entra `embedded`, sem chrome próprio). A linha de filtros vive
@@ -1024,7 +1024,7 @@
 		{:else}
 			<!-- Lista + pager num wrapper gap-4 → distância padrão (16px) até o pager. -->
 			<div class="flex flex-col gap-4">
-			<div class="flex flex-col gap-5" aria-busy={loadState !== 'ready'}>
+			<div class="flex flex-col gap-4" aria-busy={loadState !== 'ready'}>
 				{#each data.groups as group (group.key)}
 					{@const groupStages = stagesOf(group.tasks)}
 					<!-- Nivel 1 - PROJETO: header rico (codigo #id, contagens). -->

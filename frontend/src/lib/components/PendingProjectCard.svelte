@@ -20,7 +20,6 @@
 	import { base } from '$app/paths';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import Card from './Card.svelte';
 	import { flash } from '$lib/stores/flash';
 	import { ApiClientError } from '$lib/api/client';
 	import { toggleEtapaIniciada, toggleEtapaDone } from '$lib/api/pendentesMutations';
@@ -405,37 +404,43 @@
 	</tr>
 {/snippet}
 
-<Card labelId={headingId}>
-	<div class="flex flex-col gap-4">
-		<header
-			class="-mx-5 -mt-5 flex flex-col gap-2 border-b border-border-subtle px-5 pb-4 pt-5 sm:flex-row sm:items-start sm:justify-between"
-		>
-			<div class="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
-				<!-- ID original do projeto antes do nome (ID - Nome). Tipografia/cor do
-					 link espelham a coluna Título da lista de Projetos (text-base
-					 medium primary-700 + hover underline; ID em xs bold muted). -->
-				<a
-					href={`${base}/projetos/${project.id}`}
-					id={headingId}
-					title="Abrir projeto"
-					class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<span class="shrink-0 font-mono text-xs font-bold text-text-muted">{project.id}</span>
-					<span class="shrink-0 text-text-muted" aria-hidden="true">–</span>
-					<span class="truncate">{project.titulo}</span>
-				</a>
-				<span class="whitespace-nowrap text-xs text-text-muted">
-					Área responsável: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
-				</span>
-			</div>
-			{#if row.max_overdue_days > 0}
-				<span class="shrink-0 whitespace-nowrap text-xs text-text-muted sm:self-center">
-					Maior atraso:
-					<strong class="font-medium text-danger">{row.max_overdue_days} dia(s)</strong>
-				</span>
-			{/if}
-		</header>
+<!-- Mesma casca do card de grupo da tela de Tarefas: rounded-lg + overflow-hidden
+	 (o `Card` da marca é rounded-xl, reservado aos cards de header de página),
+	 header px-5 py-4 e corpo p-3. -->
+<section
+	aria-labelledby={headingId}
+	class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
+>
+	<header
+		class="flex flex-col gap-2 border-b border-border-subtle px-5 py-4 sm:flex-row sm:items-start sm:justify-between"
+	>
+		<div class="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
+			<!-- ID original do projeto antes do nome (ID - Nome). Tipografia/cor do
+				 link espelham a coluna Título da lista de Projetos (text-base
+				 medium primary-700 + hover underline; ID em xs bold muted). -->
+			<a
+				href={`${base}/projetos/${project.id}`}
+				id={headingId}
+				title="Abrir projeto"
+				class="flex min-w-0 items-baseline gap-1.5 text-base font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			>
+				<span class="shrink-0 font-mono text-xs font-bold text-text-muted">{project.id}</span>
+				<span class="shrink-0 text-text-muted" aria-hidden="true">–</span>
+				<span class="truncate">{project.titulo}</span>
+			</a>
+			<span class="whitespace-nowrap text-xs text-text-muted">
+				Área responsável: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
+			</span>
+		</div>
+		{#if row.max_overdue_days > 0}
+			<span class="shrink-0 whitespace-nowrap text-xs text-text-muted sm:self-center">
+				Maior atraso:
+				<strong class="font-medium text-danger">{row.max_overdue_days} dia(s)</strong>
+			</span>
+		{/if}
+	</header>
 
+	<div class="flex flex-col gap-3 p-3">
 		{#if row.etapas_visiveis.length === 0}
 			<p class="text-sm text-text-muted">Sem etapas urgentes na janela atual.</p>
 		{:else}
@@ -493,5 +498,5 @@
 			</div>
 		{/if}
 	</div>
-</Card>
+</section>
 
