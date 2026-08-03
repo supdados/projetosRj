@@ -6,8 +6,8 @@
  * em minúsculas porque dados legados variam a caixa ('Fluxo processual').
  *
  * O ícone herda a cor do chip via `currentColor`, então não há cor aqui.
- * Valores sem forma própria ('Outro', 'Inventário') caem em `null` e o site
- * consumidor decide o fallback.
+ * Valores sem forma própria ('Inventário') caem em `null` e o site consumidor
+ * decide o fallback.
  */
 
 import type { ProjectIconId } from '$lib/icons/projectIcons';
@@ -23,7 +23,9 @@ const DELIVERY_ICON_ID: Record<string, ProjectIconId> = {
 	painel: 'entrega-painel',
 	norma: 'entrega-norma',
 	'instrumento de parceria': 'entrega-instrumento',
-	'fluxo processual': 'entrega-fluxo'
+	'fluxo processual': 'entrega-fluxo',
+	eventos: 'entrega-eventos',
+	outro: 'entrega-outro'
 };
 
 const SPECIAL_PROJECT_ICON_ID: Record<string, ProjectIconId> = {

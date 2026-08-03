@@ -15,6 +15,8 @@ export type ProjectIconId =
 	| 'entrega-norma'
 	| 'entrega-instrumento'
 	| 'entrega-fluxo'
+	| 'entrega-eventos'
+	| 'entrega-outro'
 	| 'selo-abep'
 	| 'selo-tce'
 	| 'documentacao'
@@ -66,6 +68,19 @@ export const PROJECT_ICONS: Record<ProjectIconId, ProjectIconPath[]> = {
 		{ d: 'M21.4 20.6H11.4L7.6 16.8V11.2H21.4Z', opacity: '.48' }
 	],
 	'entrega-fluxo': [{ d: 'M2.6 3.4H11V13H15.4V10.6L21.4 14.8L15.4 19V16.6H7.4V7H2.6Z' }],
+	'entrega-eventos': [
+		{ d: 'M2 18.4H22V20.8H2Z' },
+		{ d: 'M3.2 14.6H5.8V18.4H3.2Z', opacity: '.48' },
+		{ d: 'M17.4 14.6H20V18.4H17.4Z', opacity: '.48' },
+		{ d: 'M7.4 4H9.9V18.4H7.4Z' },
+		{ d: 'M9.9 4.6H19.5L16.8 7.9L19.5 11.2H9.9Z' }
+	],
+	'entrega-outro': [
+		{ d: 'M2.8 2.8H11.2V11.2H2.8Z' },
+		{ d: 'M17 2.8A4.2 4.2 0 1 1 17 11.2A4.2 4.2 0 1 1 17 2.8Z', opacity: '.48' },
+		{ d: 'M2.8 12.8H8.4L11.2 15.6V21.2H2.8Z', opacity: '.48' },
+		{ d: 'M12.8 12.8H21.2V21.2H12.8Z' }
+	],
 	'selo-abep': [
 		{
 			d: 'M9.2 2.6H14.8L18.4 6.2V11.8L14.8 15.4H9.2L5.6 11.8V6.2ZM10.1 4.8H13.9L16.2 7.1V10.9L13.9 13.2H10.1L7.8 10.9V7.1Z',
