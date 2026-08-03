@@ -39,7 +39,7 @@
 		onSelect,
 		placeholder = 'Selecionar unidade...',
 		allowTodos = false,
-		todosLabel = 'Todos os órgãos',
+		todosLabel = 'Todas as áreas',
 		disabled = false,
 		id,
 		ariaLabel,

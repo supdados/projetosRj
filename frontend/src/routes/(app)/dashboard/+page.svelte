@@ -103,7 +103,7 @@
 		isAdmin
 			? 'Administrador'
 			: ($auth.user?.orgaos ?? []).map((o) => o.sigla).join(' › ') ||
-					'Sem órgão vinculado'
+					'Sem área vinculada'
 	);
 
 	function formatToday(now: Date): string {

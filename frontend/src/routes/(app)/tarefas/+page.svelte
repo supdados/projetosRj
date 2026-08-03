@@ -825,7 +825,7 @@
 						value={orgao === '' ? null : Number(orgao)}
 						onSelect={selectOrgao}
 						allowTodos={true}
-						ariaLabel="Filtrar por órgão"
+						ariaLabel="Filtrar por área responsável"
 					/>
 				</div>
 			{/if}
@@ -898,7 +898,7 @@
 				value={orgao === '' ? null : Number(orgao)}
 				onSelect={selectOrgao}
 				allowTodos={true}
-				ariaLabel="Filtrar por órgão"
+				ariaLabel="Filtrar por área responsável"
 				disabled={orgaoOptions.length === 0}
 			/>
 		</div>

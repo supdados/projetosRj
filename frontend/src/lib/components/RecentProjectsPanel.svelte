@@ -91,7 +91,7 @@
 			>
 				<span role="columnheader" class="px-3 py-2.5 text-center">ID</span>
 				<span role="columnheader" class="px-3 py-2.5">Projeto</span>
-				<span role="columnheader" class="px-3 py-2.5 text-center">Órgão</span>
+				<span role="columnheader" class="px-3 py-2.5 text-center">Área responsável</span>
 				<span role="columnheader" class="px-3 py-2.5 text-center">Prioridade</span>
 			</div>
 

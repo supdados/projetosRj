@@ -42,7 +42,7 @@
 
 	{#if orgaoSigla}
 		<span class="shrink-0 text-xs text-text-muted">
-			Órgão: <strong class="font-medium text-text-secondary">{orgaoSigla}</strong>
+			Área responsável: <strong class="font-medium text-text-secondary">{orgaoSigla}</strong>
 		</span>
 	{/if}
 

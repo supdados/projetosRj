@@ -425,7 +425,7 @@
 					<span class="truncate">{project.titulo}</span>
 				</a>
 				<span class="whitespace-nowrap text-xs text-text-muted">
-					Órgão: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
+					Área responsável: <strong class="font-medium text-text-secondary">{orgaoLabel}</strong>
 				</span>
 			</div>
 			{#if row.max_overdue_days > 0}

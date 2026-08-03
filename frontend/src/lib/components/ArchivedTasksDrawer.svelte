@@ -243,7 +243,7 @@
 						value={orgao === '' ? null : Number(orgao)}
 						onSelect={selectOrgao}
 						allowTodos={true}
-						ariaLabel="Filtrar arquivadas por órgão"
+						ariaLabel="Filtrar arquivadas por área responsável"
 						disabled={orgaoTreeOptions.length === 0}
 					/>
 				</div>

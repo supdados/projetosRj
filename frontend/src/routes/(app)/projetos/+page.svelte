@@ -764,7 +764,7 @@
 					bind:value={search}
 					oninput={onSearchInput}
 					aria-label="Busca livre"
-					placeholder="Digite título, órgão ou indicador…"
+					placeholder="Digite título, área responsável ou indicador…"
 					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
@@ -777,8 +777,8 @@
 						value={orgao ? Number(orgao) : null}
 						onSelect={onOrgaoSelect}
 						allowTodos
-						ariaLabel="Filtrar por órgão"
-						placeholder="Todos os órgãos"
+						ariaLabel="Filtrar por área responsável"
+						placeholder="Todas as áreas"
 					/>
 				</div>
 			{/if}
@@ -1059,7 +1059,7 @@
 									scope="col"
 									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
-									Órgão
+									Área responsável
 								</th>
 								<th
 									scope="col"
