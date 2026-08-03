@@ -27,6 +27,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { flash } from '$lib/stores/flash';
 	import { confirmAction } from '$lib/stores/confirm';
@@ -1265,7 +1266,7 @@
 					onclick={() => (historyOpen = true)}
 					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
-					<i class="fas fa-history" aria-hidden="true"></i>
+					<ProjectIcon id="historico" size={14} />
 					Ver Histórico
 				</button>
 				{#if canEdit && isVigente}
@@ -1437,7 +1438,9 @@
 							</div>
 						</div>
 						<div class="flex min-w-0 items-center gap-2 text-sm">
-							<i class="fas fa-book w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
+							<span class="flex w-4 shrink-0 justify-center text-brand">
+								<ProjectIcon id="documentacao" size={18} />
+							</span>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Documentação:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
@@ -1456,7 +1459,9 @@
 							</div>
 						</div>
 						<div class="flex min-w-0 items-center gap-2 text-sm">
-							<i class="fas fa-box w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
+							<span class="flex w-4 shrink-0 justify-center text-brand">
+								<ProjectIcon id="produto" size={18} />
+							</span>
 							<span class="w-32 shrink-0 font-semibold text-text-primary">Produto:</span>
 							<div class="min-w-0 flex-1">
 								<InlineEditField
@@ -1481,10 +1486,9 @@
 						<div class="flex min-w-0 flex-col gap-2.5">
 						{#each data.project.custom_links ?? [] as link, i (i)}
 							<div class="flex min-w-0 items-center gap-2 text-sm">
-								<i
-									class="fas fa-link w-4 shrink-0 text-center text-brand"
-									aria-hidden="true"
-								></i>
+								<span class="flex w-4 shrink-0 justify-center text-brand">
+									<ProjectIcon id="link" size={18} />
+								</span>
 								<div class="w-32 min-w-0 shrink-0 font-semibold text-text-primary" title={link.label}>
 									<InlineEditField
 										fieldId={`project-custom-label-${i}`}
@@ -1536,10 +1540,9 @@
 									class="flex items-center gap-2 text-sm"
 									onfocusout={onCustomLinkDraftFocusOut}
 								>
-									<i
-										class="fas fa-link w-4 shrink-0 text-center text-brand"
-										aria-hidden="true"
-									></i>
+									<span class="flex w-4 shrink-0 justify-center text-brand">
+										<ProjectIcon id="link" size={18} />
+									</span>
 									<!-- svelte-ignore a11y_autofocus -->
 									<input
 										bind:value={customLinkDraft.label}
@@ -1604,8 +1607,9 @@
 
 					<div class="flex min-w-0 flex-col gap-1.5 text-sm">
 						<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
-							<i class="fas fa-note-sticky w-4 text-center text-brand" aria-hidden="true"></i
-							>Observação:
+							<span class="flex w-4 shrink-0 justify-center text-brand">
+								<ProjectIcon id="observacao" size={18} />
+							</span>Observação:
 						</span>
 						<InlineEditField
 							fieldId="project-observacao"

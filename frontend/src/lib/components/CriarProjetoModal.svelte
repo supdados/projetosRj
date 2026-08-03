@@ -67,6 +67,8 @@
 	import DatePickerPanel from '$lib/components/DatePickerPanel.svelte';
 	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
 	import StateIcon from '$lib/components/StateIcon.svelte';
+	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
+	import { deliveryIconId } from '$lib/utils/projectLabels';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { AbepIndicadorOption, ProjectsListOptions } from '$lib/types/projects';
@@ -1214,6 +1216,48 @@
 	</svg>
 {/snippet}
 
+{#snippet deliveryOptionIcon(opt: SelectMenuOption)}
+	{@const iconId = deliveryIconId(opt.value)}
+	{#if iconId}
+		<ProjectIcon id={iconId} size={14} />
+	{/if}
+{/snippet}
+
+{#snippet deliveryTrigger({
+	open,
+	label,
+	selected
+}: {
+	open: boolean;
+	label: string;
+	selected: SelectMenuOption | null;
+})}
+	{@const iconId = deliveryIconId(selected?.value)}
+	<span class="flex min-w-0 items-center gap-2 text-text-primary">
+		{#if iconId}
+			<ProjectIcon id={iconId} size={14} />
+		{/if}
+		<span class="truncate">{label}</span>
+	</span>
+	<svg
+		width="10"
+		height="6"
+		viewBox="0 0 10 6"
+		class="shrink-0 text-text-muted transition-transform duration-fast"
+		style:transform={open ? 'rotate(180deg)' : 'none'}
+		aria-hidden="true"
+	>
+		<path
+			d="M1 1 L5 5 L9 1"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.6"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>
+{/snippet}
+
 {#snippet footer()}
 	<footer
 		class="flex flex-none items-center justify-between gap-3 border-t border-border-faint px-6 py-2"
@@ -1675,6 +1719,8 @@
 											allowAll
 											allLabel="Selecione o tipo"
 											ariaLabel="Tipo de entrega"
+											trigger={deliveryTrigger}
+											optionIcon={deliveryOptionIcon}
 										/>
 									</div>
 									<div class="flex flex-col gap-1.5 md:col-span-7">

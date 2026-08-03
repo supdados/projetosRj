@@ -19,8 +19,15 @@
 	import { stickyHeader } from '$lib/actions/stickyHeader';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
+	import StateIcon from '$lib/components/StateIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { priorityIconId } from '$lib/utils/taskLabels';
+	import {
+		deliveryIconId,
+		projectStatusIconId,
+		specialProjectIconId
+	} from '$lib/utils/projectLabels';
 	import type {
 		ProjectDetail,
 		ProjectDetailOptions,
@@ -285,12 +292,6 @@
 		media: 'Média',
 		baixa: 'Baixa'
 	};
-	const PRIO_ICON: Record<string, string> = {
-		urgente: 'fa-exclamation-triangle',
-		alta: 'fa-angle-double-up',
-		media: 'fa-minus',
-		baixa: 'fa-angle-double-down'
-	};
 	const PRIO_DOT: Record<string, string> = {
 		urgente: 'var(--ds-color-priority-urgente)',
 		alta: 'var(--ds-color-priority-alta)',
@@ -302,10 +303,18 @@
 		Suspenso: 'var(--ds-color-fill-warning)',
 		Finalizado: 'var(--ds-color-status-finalizada)'
 	};
+	const statusIcon = $derived(projectStatusIconId(project.status));
+	const deliveryIcon = $derived(deliveryIconId(project.delivery_type));
+	const specialIcon = $derived(specialProjectIconId(project.special_project));
 
 	// --- Opções dos 4 SelectMenu de chip (mapeadas das constantes existentes) --
 	const statusMenuOptions = $derived<SelectMenuOption[]>(
-		statusOptions.map((opt) => ({ value: opt.value, label: opt.label, dot: STATUS_DOT[opt.value] }))
+		statusOptions.map((opt) => ({
+			value: opt.value,
+			label: opt.label,
+			dot: STATUS_DOT[opt.value],
+			icon: projectStatusIconId(opt.value) ?? undefined
+		}))
 	);
 	const prioMenuOptions = $derived<SelectMenuOption[]>(
 		options.prioridade.map((opt) => ({
@@ -316,10 +325,18 @@
 		}))
 	);
 	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
-		options.delivery_type.map((opt) => ({ value: opt, label: opt }))
+		options.delivery_type.map((opt) => ({
+			value: opt,
+			label: opt,
+			icon: deliveryIconId(opt) ?? undefined
+		}))
 	);
 	const specialMenuOptions = $derived<SelectMenuOption[]>(
-		options.special_project.map((opt) => ({ value: opt, label: opt }))
+		options.special_project.map((opt) => ({
+			value: opt,
+			label: opt,
+			icon: specialProjectIconId(opt) ?? undefined
+		}))
 	);
 
 	/** Formata ISO (YYYY-MM-DD) em pt-BR; null => vazio. */
@@ -634,12 +651,8 @@
 
 	{#snippet statusChipContent()}
 		<span class="ph-chip ph-chip--status ph-chip--status-{statusKey}" data-value={project.status ?? ''}>
-			{#if project.status === 'Vigente'}
-				<span class="ph-chip-dot" aria-hidden="true"></span>Vigente
-			{:else if project.status === 'Finalizado'}
-				<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
-			{:else if project.status === 'Suspenso'}
-				<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+			{#if statusIcon}
+				<ProjectIcon id={statusIcon} size={16} />{project.status}
 			{:else}
 				{project.status || 'Sem status'}
 			{/if}
@@ -649,8 +662,8 @@
 
 	{#snippet prioChipContent()}
 		<span class="ph-chip ph-chip--prio ph-chip--prio-{prioKey}">
-			{#if project.prioridade && PRIO_ICON[project.prioridade]}
-				<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
+			{#if project.prioridade && PRIO_LABEL[project.prioridade]}
+				<StateIcon id={priorityIconId(project.prioridade)} size={16} />{PRIO_LABEL[
 					project.prioridade
 				]}
 			{:else}
@@ -662,14 +675,19 @@
 
 	{#snippet deliveryChipContent()}
 		<span class="ph-chip ph-chip--delivery" data-value={project.delivery_type ?? ''}>
-			<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
+			{#if deliveryIcon}<ProjectIcon id={deliveryIcon} size={16} />{/if}{project.delivery_type ||
+				'Sem tipo'}
 			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
 		</span>
 	{/snippet}
 
 	{#snippet specialChipContent()}
 		<span class="ph-chip ph-chip--special" data-value={project.special_project ?? ''}>
-			<i class="fas fa-star" aria-hidden="true"></i>{project.special_project || 'Sem categoria'}
+			{#if specialIcon}
+				<ProjectIcon id={specialIcon} size={16} />
+			{:else}
+				<i class="fas fa-star" aria-hidden="true"></i>
+			{/if}{project.special_project || 'Sem categoria'}
 			{#if canEdit}<i class="ph-chip-caret fas fa-chevron-down" aria-hidden="true"></i>{/if}
 		</span>
 	{/snippet}
@@ -690,19 +708,15 @@
 			{/if}
 			<div class="project-compact-meta">
 				<span class="pc-chip pc-chip--status pc-chip--status-{statusKey}">
-					{#if project.status === 'Vigente'}
-						<span class="pc-chip-dot" aria-hidden="true"></span>Vigente
-					{:else if project.status === 'Finalizado'}
-						<i class="fas fa-flag-checkered" aria-hidden="true"></i>Finalizado
-					{:else if project.status === 'Suspenso'}
-						<i class="fas fa-pause" aria-hidden="true"></i>Suspenso
+					{#if statusIcon}
+						<ProjectIcon id={statusIcon} size={14} />{project.status}
 					{:else}
 						{project.status || 'Sem status'}
 					{/if}
 				</span>
 				<span class="pc-chip pc-chip--prio pc-chip--prio-{prioKey}">
-					{#if project.prioridade && PRIO_ICON[project.prioridade]}
-						<i class="fas {PRIO_ICON[project.prioridade]}" aria-hidden="true"></i>{PRIO_LABEL[
+					{#if project.prioridade && PRIO_LABEL[project.prioridade]}
+						<StateIcon id={priorityIconId(project.prioridade)} size={14} />{PRIO_LABEL[
 							project.prioridade
 						]}
 					{:else}
@@ -710,11 +724,15 @@
 					{/if}
 				</span>
 				<span class="pc-chip" class:pc-chip--delivery={project.delivery_type}>
-					<i class="fas fa-box" aria-hidden="true"></i>{project.delivery_type || 'Sem tipo'}
+					{#if deliveryIcon}<ProjectIcon id={deliveryIcon} size={14} />{/if}{project.delivery_type ||
+						'Sem tipo'}
 				</span>
 				<span class="pc-chip" class:pc-chip--special={project.special_project}>
-					<i class="fas fa-star" aria-hidden="true"></i>{project.special_project ||
-						'Sem categoria'}
+					{#if specialIcon}
+						<ProjectIcon id={specialIcon} size={14} />
+					{:else}
+						<i class="fas fa-star" aria-hidden="true"></i>
+					{/if}{project.special_project || 'Sem categoria'}
 				</span>
 				<span class="pc-chip"
 					><i class="far fa-calendar-alt" aria-hidden="true"></i> Início: {startBr ||
@@ -1249,34 +1267,34 @@
 	.ph-chip i {
 		font-size: 0.75rem;
 	}
-	.ph-chip-dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: var(--ds-color-fill-success);
-		box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-color-fill-success) 35%, transparent);
+	.ph-chip--status-vigente :global(svg) {
+		color: var(--ds-color-fill-success);
 	}
 	.ph-chip--status-suspenso {
 		background: color-mix(in srgb, var(--ds-color-warning-500) 32%, transparent);
 		border-color: color-mix(in srgb, var(--ds-color-warning-500) 65%, transparent);
 	}
-	.ph-chip--prio-urgente i {
+	.ph-chip--status-suspenso :global(svg) {
+		color: var(--ds-color-text-warning);
+	}
+	.ph-chip--prio-urgente :global(svg) {
 		color: var(--ds-color-priority-urgente);
 	}
-	.ph-chip--prio-alta i {
+	.ph-chip--prio-alta :global(svg) {
 		color: var(--ds-color-priority-alta);
 	}
-	.ph-chip--prio-media i {
+	.ph-chip--prio-media :global(svg) {
 		color: var(--ds-color-priority-media);
 	}
-	.ph-chip--prio-baixa i {
+	.ph-chip--prio-baixa :global(svg) {
 		color: var(--ds-color-priority-baixa);
 	}
-	.ph-chip--delivery[data-value]:not([data-value='']) i {
+	.ph-chip--delivery[data-value]:not([data-value='']) :global(svg) {
 		color: var(--ds-color-text-brand);
 	}
 	/* attention (5ª família) e não warning: warning já é "suspenso" no mesmo par de chips. */
-	.ph-chip--special[data-value]:not([data-value='']) i {
+	.ph-chip--special[data-value]:not([data-value='']) i,
+	.ph-chip--special[data-value]:not([data-value='']) :global(svg) {
 		color: var(--ds-color-text-attention);
 	}
 
@@ -1397,32 +1415,30 @@
 	.pc-chip i {
 		font-size: 0.6875rem;
 	}
-	.pc-chip-dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: var(--ds-color-fill-success);
+	.pc-chip--status-vigente :global(svg) {
+		color: var(--ds-color-fill-success);
 	}
-	.pc-chip--status-suspenso i {
+	.pc-chip--status-suspenso :global(svg) {
 		color: var(--ds-color-text-warning);
 	}
-	.pc-chip--prio-urgente i {
+	.pc-chip--prio-urgente :global(svg) {
 		color: var(--ds-color-priority-urgente);
 	}
-	.pc-chip--prio-alta i {
+	.pc-chip--prio-alta :global(svg) {
 		color: var(--ds-color-priority-alta);
 	}
-	.pc-chip--prio-media i {
+	.pc-chip--prio-media :global(svg) {
 		color: var(--ds-color-priority-media);
 	}
-	.pc-chip--prio-baixa i {
+	.pc-chip--prio-baixa :global(svg) {
 		color: var(--ds-color-priority-baixa);
 	}
-	.pc-chip--delivery i {
+	.pc-chip--delivery :global(svg) {
 		color: var(--ds-color-text-brand);
 	}
 	/* Mesma decisão do header expandido: attention separa "especial" de suspenso (warning). */
-	.pc-chip--special i {
+	.pc-chip--special i,
+	.pc-chip--special :global(svg) {
 		color: var(--ds-color-text-attention);
 	}
 	.project-compact-back {

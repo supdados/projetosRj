@@ -35,6 +35,8 @@
 	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
+	import { deliveryIconId, projectStatusIconId } from '$lib/utils/projectLabels';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
@@ -288,7 +290,12 @@
 
 	// Opções dos filtros nativos convertidas para SelectMenuOption[] (sem duplicar dados).
 	const statusMenuOptions = $derived<SelectMenuOption[]>(
-		statusOptions.map((o) => ({ value: o, label: o, dot: statusDot(o) }))
+		statusOptions.map((o) => ({
+			value: o,
+			label: o,
+			dot: statusDot(o),
+			icon: projectStatusIconId(o) ?? undefined
+		}))
 	);
 	const priorityMenuOptions = $derived<SelectMenuOption[]>(
 		priorityOptions.map((o) => ({
@@ -299,7 +306,7 @@
 		}))
 	);
 	const deliveryMenuOptions = $derived<SelectMenuOption[]>(
-		deliveryOptions.map((o) => ({ value: o, label: o }))
+		deliveryOptions.map((o) => ({ value: o, label: o, icon: deliveryIconId(o) ?? undefined }))
 	);
 	const atrasoMenuOptions = $derived<SelectMenuOption[]>(
 		atrasoOptions.map((o) => ({ value: o.value, label: o.label }))
@@ -1155,11 +1162,15 @@
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle"
 									>
 										{#if project.status}
+											{@const statusIcon = projectStatusIconId(project.status)}
 											<span
-												class="text-md font-semibold uppercase tracking-wide {toneTextClass[
+												class="inline-flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide {toneTextClass[
 													statusTone(project.status)
 												]}"
 											>
+												{#if statusIcon}
+													<ProjectIcon id={statusIcon} size={18} />
+												{/if}
 												{project.status}
 											</span>
 										{:else}
@@ -1170,7 +1181,13 @@
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
 										{#if project.delivery_type}
-											<span class="text-md font-semibold uppercase tracking-wide">
+											{@const deliveryIcon = deliveryIconId(project.delivery_type)}
+											<span
+												class="inline-flex items-center justify-center gap-1.5 text-md font-semibold uppercase tracking-wide"
+											>
+												{#if deliveryIcon}
+													<ProjectIcon id={deliveryIcon} size={16} />
+												{/if}
 												{project.delivery_type}
 											</span>
 										{:else}
