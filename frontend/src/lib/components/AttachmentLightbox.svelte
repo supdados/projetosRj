@@ -5,9 +5,11 @@
 	 * Reusa o dimensionamento do preview do AttachmentsPanel (h-fit + max-h, imagem
 	 * max-h-[68vh] object-contain) — sem altura fixa (evita espaço vazio rolável).
 	 * Trava o scroll do `<main>` (único scroller do app) enquanto aberto — sem
-	 * scroll duplo. Esc fecha.
+	 * scroll duplo. Esc fecha, consumindo a tecla; foco entra no diálogo ao abrir
+	 * e volta ao gatilho ao fechar (mesmo padrão do `Modal.svelte`).
 	 */
 	import type { TaskAttachment } from '$lib/types/taskDrawer';
+	import { focusTrap } from '$lib/actions/focusTrap';
 
 	interface Props {
 		anexos: TaskAttachment[];
@@ -51,10 +53,23 @@
 	function next(): void {
 		index = (index + 1) % total;
 	}
+	// Consome a tecla ao agir: sem isso o mesmo Esc que fecha o lightbox também
+	// dispensa um toast não lido (`FlashToasts` só ignora Esc já consumido).
 	function onKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') onClose();
-		else if (event.key === 'ArrowLeft' && total > 1) prev();
-		else if (event.key === 'ArrowRight' && total > 1) next();
+		if (event.defaultPrevented) return;
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			onClose();
+			return;
+		}
+		if (total <= 1) return;
+		if (event.key === 'ArrowLeft') {
+			event.preventDefault();
+			prev();
+		} else if (event.key === 'ArrowRight') {
+			event.preventDefault();
+			next();
+		}
 	}
 </script>
 
@@ -68,6 +83,7 @@
 		aria-modal="true"
 		aria-label={`Anexos — ${current.filename}`}
 		tabindex="-1"
+		use:focusTrap
 		class="fixed inset-0 z-modal m-auto flex h-fit max-h-[88vh] w-[min(92vw,52rem)] flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg"
 	>
 		<header class="flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-2.5">

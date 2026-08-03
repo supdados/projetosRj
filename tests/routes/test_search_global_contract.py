@@ -1,7 +1,50 @@
 import datetime
 
+from sqlalchemy import event
+
+import routes.search as search_module
 from models import CalendarEvent, Etapa, Project, Task, db
 from tests._orgao_helpers import ensure_orgao
+
+
+class SearchStatementSpy:
+    """Coleta os statements SQL do engine — guarda-corpo do custo do typeahead."""
+
+    def __init__(self, engine) -> None:
+        self.engine = engine
+        self.statements: list[str] = []
+
+    def _on_execute(self, _conn, _cursor, statement, *_rest) -> None:
+        self.statements.append(statement)
+
+    def __enter__(self) -> "SearchStatementSpy":
+        event.listen(self.engine, "before_cursor_execute", self._on_execute)
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        event.remove(self.engine, "before_cursor_execute", self._on_execute)
+
+    @property
+    def count_statements(self) -> list[str]:
+        return [s for s in self.statements if "count(" in s.lower()]
+
+
+def _seed_matching_projects(app, total: int, prefix: str = "ZetaTeto") -> None:
+    with app.app_context():
+        orgao_id = ensure_orgao("Auditoria").id
+        for index in range(total):
+            db.session.add(
+                Project(
+                    titulo=f"{prefix} Projeto {index}",
+                    orgao_id=orgao_id,
+                    orgao="Orgao Busca",
+                    prioridade="media",
+                    status="Vigente",
+                    objetivo_id=1,
+                    resultado_esperado_id=1,
+                )
+            )
+        db.session.commit()
 
 
 def _client_for_user(app, user_id):
@@ -354,3 +397,72 @@ def test_global_search_api_formats_utc_full_day_duration_as_single_local_day(
 # (routes/spa.py). O contrato de dados da busca permanece coberto acima via
 # /api/busca-global (mesma fonte build_global_search_results) e em
 # tests/routes/test_api_*; o escopo de orgao e o filtro foram preservados ali.
+
+
+def test_global_search_counts_saturate_at_cap_and_flag_capped(
+    app, client_user, seed_data, monkeypatch
+):
+    """Regressão: o contador do dropdown satura no teto em vez de contar tudo."""
+    monkeypatch.setattr(search_module, "GLOBAL_SEARCH_COUNT_CAP", 3)
+    _seed_matching_projects(app, total=5)
+
+    response = client_user.get(
+        "/api/busca-global", query_string={"q": "ZetaTeto", "limit": 2}
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+
+    assert payload["meta"]["has_more"]["projects"] is True
+    assert payload["counts"]["projects"] == 3
+    assert payload["meta"]["counts_capped_at"] == 3
+    assert payload["meta"]["counts_capped"]["projects"] is True
+    assert payload["meta"]["counts_capped"]["any"] is True
+    # Tipos que não estouraram a fatia continuam exatos e sem flag de teto.
+    assert payload["counts"]["stages"] == 0
+    assert payload["meta"]["counts_capped"]["stages"] is False
+
+
+def test_global_search_counts_stay_exact_below_cap(
+    app, client_user, seed_data, monkeypatch
+):
+    monkeypatch.setattr(search_module, "GLOBAL_SEARCH_COUNT_CAP", 50)
+    _seed_matching_projects(app, total=4)
+
+    payload = client_user.get(
+        "/api/busca-global", query_string={"q": "ZetaTeto", "limit": 2}
+    ).get_json()
+
+    assert payload["counts"]["projects"] == 4
+    assert payload["meta"]["counts_capped_at"] == 50
+    assert payload["meta"]["counts_capped"]["projects"] is False
+    assert payload["meta"]["counts_capped"]["any"] is False
+
+
+def test_global_search_count_queries_are_limited_by_cap(app, client_user, seed_data):
+    """O COUNT do typeahead roda sobre subquery com LIMIT — nunca varredura cheia."""
+    _seed_matching_projects(app, total=8)
+    with app.app_context():
+        engine = db.engine
+
+    with SearchStatementSpy(engine) as spy:
+        payload = client_user.get(
+            "/api/busca-global", query_string={"q": "ZetaTeto", "limit": 2}
+        ).get_json()
+
+    assert payload["meta"]["has_more"]["projects"] is True
+    assert spy.count_statements, "o COUNT deveria rodar quando a fatia estoura"
+    assert all("LIMIT" in statement.upper() for statement in spy.count_statements)
+
+
+def test_paginated_search_keeps_exact_counts_without_cap(app, client_user, seed_data):
+    """A tela /busca precisa do total real — paginação não pode ser saturada."""
+    _seed_matching_projects(app, total=8)
+
+    payload = client_user.get(
+        "/api/busca", query_string={"q": "ZetaTeto", "page": 1, "per_page": 2}
+    ).get_json()["data"]
+
+    assert payload["meta"]["type_counts"]["projects"] == 8
+    assert payload["meta"]["pagination"]["total"] == 8
+    assert payload["meta"]["pagination"]["total_pages"] == 4
+    assert payload["meta"].get("counts_capped_at") is None

@@ -6,9 +6,9 @@
 	 * Esc e fechamento manual.
 	 *
 	 * Montado UMA vez por tela. O anúncio para leitor de tela sai de UMA região
-	 * `aria-live` persistente (fora da lista), escrita só no NASCIMENTO do toast:
-	 * repetição coalescida (`item.count` no store) não gera anúncio novo nem
-	 * aparece na tela — só reinicia o timer.
+	 * `aria-live` persistente (fora da lista), escrita no NASCIMENTO do toast e a
+	 * cada REESCRITA sob a mesma `key` (`item.revision` no store): repetição
+	 * coalescida (`item.count`) não gera anúncio novo — só reinicia o timer.
 	 */
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
@@ -44,8 +44,11 @@
 	const ANNOUNCE_CLEAR_MS = 1000;
 
 	let announcement = $state('');
-	// `id` é monotônico no store: toast já vivo ao montar a tela não é nascimento.
-	let lastAnnouncedId = get(flash).at(-1)?.id ?? 0;
+	// `id` -> `revision` já anunciados: toast vivo ao montar não é nascimento, e a
+	// reescrita sob a mesma `key` (revision maior, mesmo `id`) precisa reanunciar.
+	const announcedRevisions = new Map<number, number>(
+		get(flash).map((item) => [item.id, item.revision])
+	);
 
 	// Serializa as escritas: dois nascimentos em ticks vizinhos se atropelariam no
 	// `await` e o primeiro texto sairia do nó antes de ser lido.
@@ -68,10 +71,16 @@
 	}
 
 	$effect(() => {
-		const nascidos = $flash.filter((item) => item.id > lastAnnouncedId);
-		if (nascidos.length === 0) return;
-		lastAnnouncedId = nascidos[nascidos.length - 1].id;
-		const texto = nascidos.map(textoCompleto).join(' ');
+		const pendentes = $flash.filter(
+			(item) => (announcedRevisions.get(item.id) ?? -1) < item.revision
+		);
+		const vivos = new Set($flash.map((item) => item.id));
+		for (const id of announcedRevisions.keys()) {
+			if (!vivos.has(id)) announcedRevisions.delete(id);
+		}
+		if (pendentes.length === 0) return;
+		for (const item of pendentes) announcedRevisions.set(item.id, item.revision);
+		const texto = pendentes.map(textoCompleto).join(' ');
 		filaDeAnuncio = filaDeAnuncio.then(() => announceBirth(texto));
 	});
 

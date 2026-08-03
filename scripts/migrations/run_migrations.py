@@ -14,6 +14,7 @@ Uso:
 
 from collections import defaultdict
 from pathlib import Path
+import json
 import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -103,6 +104,8 @@ TASK_INDEXES = {
     "ix_task_etapa_id": "CREATE INDEX ix_task_etapa_id ON task (etapa_id)",
 }
 TASK_COMMENT_INDEX = "CREATE INDEX ix_task_comment_task_id ON task_comment (task_id)"
+# Espelha startup.ensure_task_comment_mentions_column; NULL = comentário anterior ao recurso.
+TASK_COMMENT_INCREMENTAL_COLUMNS = [("mentions", "JSON")]
 TASK_ANEXO_INDEX = "CREATE INDEX ix_task_anexo_task_id ON task_anexo (task_id)"
 TASK_TEMP_TABLES = (
     "task__migration_tmp",
@@ -206,6 +209,17 @@ def _enable_foreign_keys():
         db.session.execute(text("PRAGMA foreign_keys=ON"))
     elif db.engine.dialect.name == "mysql":
         db.session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+
+
+def _serialize_mentions(value: object) -> str | None:
+    """Devolve ``task_comment.mentions`` como texto JSON para o INSERT textual.
+
+    A reflexão de tabela pode entregar a coluna já desserializada (list/dict) ou
+    crua (str), conforme o dialeto; ambos precisam virar str antes do bind.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False)
 
 
 def _coerce_int(value):
@@ -368,7 +382,8 @@ def _create_task_temp_tables():
                     user_id INT NOT NULL,
                     task_id INT NOT NULL,
                     created_at DATETIME NOT NULL,
-                    updated_at DATETIME NULL
+                    updated_at DATETIME NULL,
+                    mentions JSON NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """))
         db.session.execute(text("""
@@ -417,7 +432,8 @@ def _create_task_temp_tables():
                     user_id INTEGER NOT NULL,
                     task_id INTEGER NOT NULL,
                     created_at DATETIME NOT NULL,
-                    updated_at DATETIME
+                    updated_at DATETIME,
+                    mentions JSON
                 )
                 """))
         db.session.execute(text("""
@@ -610,6 +626,7 @@ def _prepare_task_rebuild_payload():
                 "task_id": new_task_id,
                 "created_at": _resolve_created_at(row.get("created_at")),
                 "updated_at": row.get("updated_at"),
+                "mentions": _serialize_mentions(row.get("mentions")),
             }
         )
 
@@ -628,6 +645,8 @@ def _prepare_task_rebuild_payload():
                 "task_id": task_id,
                 "created_at": _resolve_created_at(row.get("created_at")),
                 "updated_at": row.get("updated_at"),
+                # task_item_comment é anterior ao recurso de menções: sempre NULL.
+                "mentions": None,
             }
         )
 
@@ -761,9 +780,10 @@ def _insert_task_rebuild_payload(payload):
         db.session.execute(
             text("""
                 INSERT INTO task_comment__migration_tmp (
-                    id, content, user_id, task_id, created_at, updated_at
+                    id, content, user_id, task_id, created_at, updated_at, mentions
                 ) VALUES (
-                    :id, :content, :user_id, :task_id, :created_at, :updated_at
+                    :id, :content, :user_id, :task_id, :created_at, :updated_at,
+                    :mentions
                 )
                 """),
             payload["comment_rows"],
@@ -1039,6 +1059,26 @@ def ensure_abep_indicator_column(emit_output=True):
         return False
 
 
+def _add_task_comment_columns() -> list[str]:
+    """Aplica as colunas incrementais de ``task_comment`` (ALTER idempotente)."""
+    inspector = inspect(db.engine)
+    if not _table_exists(inspector, "task_comment"):
+        return []
+
+    existing = _column_names(inspector, "task_comment")
+    added = []
+    for column_name, column_sql_type in TASK_COMMENT_INCREMENTAL_COLUMNS:
+        if column_name in existing:
+            continue
+        db.session.execute(
+            text(f"ALTER TABLE task_comment ADD COLUMN {column_name} {column_sql_type}")
+        )
+        added.append(f"task_comment.{column_name}")
+    if added:
+        db.session.commit()
+    return added
+
+
 def ensure_task_schema(emit_output=True):
     _emit("\n-- [5/7] Consolidando schema de tarefas...", emit_output)
     changes = []
@@ -1102,6 +1142,8 @@ def ensure_task_schema(emit_output=True):
                 changes.append(f"task.{required_column}")
                 inspector = inspect(db.engine)
             db.session.commit()
+
+        changes.extend(_add_task_comment_columns())
 
         db.create_all()
         _ensure_runtime_indexes()

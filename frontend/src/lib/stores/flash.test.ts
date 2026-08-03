@@ -178,14 +178,26 @@ describe('flash store — deduplicação', () => {
 		expect(get(outro)).toHaveLength(2);
 	});
 
-	it('options.key agrupa textos diferentes e preserva o texto do primeiro', () => {
+	// CONTRATO NOVO (antes: a `key` preservava o texto do primeiro e engolia o
+	// segundo). Texto/categoria diferentes sob a mesma `key` reescrevem o cartão.
+	it('options.key com texto diferente reescreve o cartão no lugar (mesmo id e posição)', () => {
 		const flash = createFlashStore();
-		flash.show('Finalize as 1 tarefa(s).', 'warning', { key: 'etapa-tarefas-pendentes' });
-		flash.show('Finalize as 2 tarefa(s).', 'warning', { key: 'etapa-tarefas-pendentes' });
+		flash.show('Antes.', 'info');
+		const id = flash.show('Finalize as 1 tarefa(s).', 'warning', { key: 'etapa-tarefas-pendentes' });
+		const reescrito = flash.show('Finalize as 2 tarefa(s).', 'warning', {
+			key: 'etapa-tarefas-pendentes'
+		});
 
-		expect(get(flash)).toHaveLength(1);
-		expect(get(flash)[0].count).toBe(2);
-		expect(get(flash)[0].message).toBe('Finalize as 1 tarefa(s).');
+		const items = get(flash);
+		expect(reescrito).toBe(id);
+		expect(items).toHaveLength(2);
+		expect(items[1]).toMatchObject({
+			id,
+			message: 'Finalize as 2 tarefa(s).',
+			category: 'warning',
+			count: 1,
+			revision: 1
+		});
 	});
 
 	it('cauda de 1 s suprime a repetição; depois dela nasce toast novo com count 1', () => {
@@ -202,6 +214,92 @@ describe('flash store — deduplicação', () => {
 		expect(novo).not.toBe(-1);
 		expect(get(flash)).toHaveLength(1);
 		expect(get(flash)[0].count).toBe(1);
+	});
+});
+
+describe('flash store — reescrita sob a mesma key', () => {
+	const KEY = 'kanban-mover';
+
+	it('key compartilhada por 3 textos (KanbanBoard) mostra sempre o último', () => {
+		const flash = createFlashStore();
+		flash.show('Não foi possível mover.', 'danger', { key: KEY });
+		flash.show('Tarefa movida para Em andamento.', 'success', { key: KEY });
+		flash.show('Tarefa movida para Concluída.', 'success', { key: KEY });
+
+		const items = get(flash);
+		expect(items).toHaveLength(1);
+		expect(items[0].message).toBe('Tarefa movida para Concluída.');
+		expect(items[0].revision).toBe(2);
+	});
+
+	it('só a categoria mudando (danger → warning) já reescreve e devolve o auto-dismiss', () => {
+		const flash = createFlashStore();
+		flash.show('Sem permissão nesta área.', 'danger', { key: 'area-responsavel' });
+		flash.show('Sem permissão nesta área.', 'warning', { key: 'area-responsavel' });
+
+		expect(get(flash)[0].category).toBe('warning');
+		vi.advanceTimersByTime(flashDurationMs('Sem permissão nesta área.', 'warning'));
+		expect(get(flash)).toHaveLength(0);
+	});
+
+	it('reescrita para danger torna o toast eterno mesmo tendo nascido warning', () => {
+		const flash = createFlashStore();
+		flash.show('Verifique a área.', 'warning', { key: 'area-responsavel' });
+		flash.show('Área bloqueada para o seu perfil.', 'danger', { key: 'area-responsavel' });
+
+		vi.advanceTimersByTime(600000);
+		expect(get(flash)).toHaveLength(1);
+		expect(get(flash)[0].category).toBe('danger');
+	});
+
+	it('reescrita reinicia o teto de vida: o texto novo não herda o relógio quase esgotado', () => {
+		const flash = createFlashStore();
+		flash.show('Finalize as 1 tarefa(s).', 'warning', { key: KEY });
+
+		vi.advanceTimersByTime(9500);
+		flash.show('Finalize as 2 tarefa(s).', 'warning', { key: KEY });
+
+		vi.advanceTimersByTime(6999);
+		expect(get(flash)).toHaveLength(1);
+		vi.advanceTimersByTime(1);
+		expect(get(flash)).toHaveLength(0);
+	});
+
+	it('description acompanha a reescrita e some quando a mensagem nova não tem', () => {
+		const flash = createFlashStore();
+		flash.show('Falhou.', 'danger', { key: KEY, description: 'Tente de novo.' });
+		expect(get(flash)[0].description).toBe('Tente de novo.');
+
+		flash.show('Salvo.', 'success', { key: KEY });
+		expect(get(flash)[0].description).toBeUndefined();
+	});
+
+	it('revision só sobe na reescrita: repetição idêntica continua contando em count', () => {
+		const flash = createFlashStore();
+		flash.show('Salvo.', 'success', { key: KEY });
+		flash.show('Salvo.', 'success', { key: KEY });
+
+		expect(get(flash)[0]).toMatchObject({ count: 2, revision: 0 });
+
+		flash.show('Outra coisa.', 'success', { key: KEY });
+		expect(get(flash)[0]).toMatchObject({ count: 1, revision: 1 });
+	});
+
+	it('toast pausado sob o ponteiro: reescreve o texto e só volta a contar no resume', () => {
+		const flash = createFlashStore();
+		const id = flash.show('Salvo.', 'success', { key: KEY });
+		const duracao = flashDurationMs('Atualizado.', 'success');
+
+		flash.pause(id);
+		flash.show('Atualizado.', 'success', { key: KEY });
+		vi.advanceTimersByTime(duracao * 3);
+		expect(get(flash)[0].message).toBe('Atualizado.');
+
+		flash.resume(id);
+		vi.advanceTimersByTime(duracao - 1);
+		expect(get(flash)).toHaveLength(1);
+		vi.advanceTimersByTime(1);
+		expect(get(flash)).toHaveLength(0);
 	});
 });
 
@@ -229,15 +327,45 @@ describe('flash store — teto e evicção', () => {
 		expect(items.map((item) => item.message)).toContain('Informação.');
 	});
 
-	it('fallback FIFO: pilha só de danger aceita o success despejando o mais antigo', () => {
+	// CONTRATO NOVO (antes: o fallback FIFO derrubava o `Erro 1` não lido).
+	it('pilha só de danger: o success entra e o teto cede, nenhum erro é despejado', () => {
 		const flash = createFlashStore();
 		for (let i = 1; i <= 3; i += 1) flash.show(`Erro ${i}`, 'danger');
 		flash.show('Salvo.', 'success');
 
 		const mensagens = get(flash).map((item) => item.message);
-		expect(mensagens).toHaveLength(3);
-		expect(mensagens).not.toContain('Erro 1');
-		expect(mensagens).toContain('Salvo.');
+		expect(mensagens).toEqual(['Erro 1', 'Erro 2', 'Erro 3', 'Salvo.']);
+	});
+
+	it('pilha só de danger: warning e info também não sacrificam erro não lido', () => {
+		const flash = createFlashStore();
+		for (let i = 1; i <= 3; i += 1) flash.show(`Erro ${i}`, 'danger');
+		flash.show('Atenção.', 'warning');
+		flash.show('Informação.', 'info');
+
+		const items = get(flash);
+		expect(items.filter((item) => item.category === 'danger')).toHaveLength(3);
+		expect(items).toHaveLength(5);
+	});
+
+	it('danger novo com pilha cheia de danger volta a respeitar o teto (despeja o mais antigo)', () => {
+		const flash = createFlashStore();
+		for (let i = 1; i <= 3; i += 1) flash.show(`Erro ${i}`, 'danger');
+		flash.show('Erro 4', 'danger');
+
+		const mensagens = get(flash).map((item) => item.message);
+		expect(mensagens).toEqual(['Erro 2', 'Erro 3', 'Erro 4']);
+	});
+
+	it('teto volta a valer assim que existe vítima elegível não-danger', () => {
+		const flash = createFlashStore();
+		for (let i = 1; i <= 3; i += 1) flash.show(`Erro ${i}`, 'danger');
+		flash.show('Salvo.', 'success');
+		flash.show('Informação.', 'info');
+
+		const mensagens = get(flash).map((item) => item.message);
+		expect(mensagens).not.toContain('Salvo.');
+		expect(mensagens).toEqual(['Erro 1', 'Erro 2', 'Erro 3', 'Informação.']);
 	});
 });
 

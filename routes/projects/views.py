@@ -3,6 +3,8 @@ import datetime
 import io
 from collections import defaultdict
 
+from sqlalchemy.orm import selectinload
+
 from flask import (
     flash,
     g,
@@ -449,7 +451,9 @@ def build_projetos_pendentes_context(
         key=lambda value: value.casefold(),
     )
 
-    etapas_query = Etapa.query.filter(
+    # selectinload: serialize_etapa_card chama etapa_tem_responsavel(), que toca
+    # Etapa.responsaveis (lazy="select") — sem isso é 1 SELECT por etapa do card.
+    etapas_query = Etapa.query.options(selectinload(Etapa.responsaveis)).filter(
         Etapa.project_id.in_(project_ids),
         Etapa.done.is_(False),
         Etapa.entry_type != "google_meeting",

@@ -156,3 +156,52 @@ def test_mencao_unica_nao_e_ambigua():
     spans = extract_mention_spans("oi @Ana", [ANA_CURTA])
 
     assert spans[0]["ambiguous"] is False
+
+
+# ---------------------------------------------------------------------------
+# Regressão: pontuação colada ao FIM do nome não pode invalidar o match
+# ---------------------------------------------------------------------------
+
+MARIA = MentionCandidate(user_id=21, name="Maria Silva")
+
+
+def test_hifen_apos_nome_completo_nao_desvia_para_homonima():
+    """Regressão: "@Ana Luiza Ribeiro-favor" gravava a menção da "Ana" (id errado)."""
+    spans = extract_mention_spans(
+        "@Ana Luiza Ribeiro-favor revisar", [ANA_CURTA, ANA_COMPOSTA]
+    )
+
+    assert [s["user_id"] for s in spans] == [7]
+    assert spans[0]["length"] == 18
+
+
+def test_ponto_apos_nome_completo_nao_desvia_para_homonima():
+    spans = extract_mention_spans(
+        "@Ana Luiza Ribeiro.confere ai", [ANA_CURTA, ANA_COMPOSTA]
+    )
+
+    assert [s["user_id"] for s in spans] == [7]
+    assert spans[0]["length"] == 18
+
+
+def test_pontuacao_apos_nome_sem_homonimo_ainda_gera_mencao():
+    """Regressão: sem homônimo o resultado era NENHUMA menção."""
+    for texto in ("@Maria Silva-me confirma", "@Maria Silva.ok", "@Maria Silva's doc"):
+        spans = extract_mention_spans(texto, [MARIA])
+
+        assert [s["user_id"] for s in spans] == [21], texto
+        assert texto[: spans[0]["length"]] == "@Maria Silva", texto
+
+
+def test_nome_mais_longo_ainda_ganha_com_pontuacao_interna():
+    """A pontuação só é aceita como fim do nome quando nenhum nome maior casa."""
+    ana_hifen = MentionCandidate(user_id=13, name="Ana-Maria")
+    spans = extract_mention_spans("oi @Ana-Maria agora", [ANA_CURTA, ana_hifen])
+
+    assert [s["user_id"] for s in spans] == [13]
+
+
+def test_letra_colada_ao_nome_continua_invalidando_o_match():
+    """Guarda: só letra/dígito prolonga a palavra — "@Anabel" segue sem menção."""
+    assert extract_mention_spans("@Anabel passou aqui", [ANA_CURTA]) == []
+    assert extract_mention_spans("@Maria Silvarez veio", [MARIA]) == []

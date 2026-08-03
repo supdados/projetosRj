@@ -219,7 +219,7 @@
 						err instanceof ApiClientError
 							? err.message
 							: 'Não foi possível salvar as áreas responsáveis.',
-						{ key: 'etapa-areas-responsaveis' }
+						{ key: 'etapa-areas-salvar-falha' }
 					);
 					if (pendingAreas === null) {
 						lista = [...confirmed]; // reverte ao último confirmado pelo servidor
@@ -237,7 +237,7 @@
 	function applySelection(next: EtapaResponsavelArea[]): void {
 		if (etapaId != null && next.length === 0) {
 			flash.warning('A etapa precisa de ao menos uma área responsável.', {
-				key: 'etapa-areas-responsaveis'
+				key: 'etapa-areas-minimo'
 			});
 			return;
 		}

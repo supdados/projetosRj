@@ -29,10 +29,12 @@
 	import { get } from '$lib/api/client';
 	import { orgaoScope } from '$lib/stores/orgaoScope';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import { formatSearchCount } from '$lib/utils/searchCountLabel';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import type { AppIconId } from '$lib/icons/appIcons';
 	import type {
 		GlobalSearchData,
+		SearchMeta,
 		SearchResultItem,
 		SearchResultsByType
 	} from '$lib/types/search';
@@ -106,6 +108,25 @@
 
 	const hasAnyResult = $derived(flatItems.length > 0);
 	const hasMore = $derived(Boolean(data?.meta?.has_more?.any));
+
+	/**
+	 * Teto dos contadores (routes/search.py: `meta.counts_capped_at`). O backend
+	 * satura o COUNT no teto para nao varrer as tabelas a cada tecla; ausente =
+	 * contagem exata. Campos ainda opcionais no contrato — extensao local do tipo.
+	 */
+	type CappedCountsMeta = {
+		counts_capped_at?: number | null;
+		counts_capped?: Partial<Record<keyof SearchResultsByType, boolean>>;
+	};
+
+	/** Rotulo do contador do grupo: exato, ou "99+" quando saturou no teto. */
+	function groupCountLabel(key: keyof SearchResultsByType, fallback: number): string {
+		const capMeta = data?.meta as (SearchMeta & CappedCountsMeta) | undefined;
+		return formatSearchCount(data?.counts?.[key] ?? fallback, {
+			capped: capMeta?.counts_capped?.[key],
+			capAt: capMeta?.counts_capped_at
+		});
+	}
 
 	/** Destino da pagina de busca (rota da SPA), preservando o escopo de orgao. */
 	const searchPageHref = $derived.by(() => {
@@ -310,7 +331,7 @@
 									<span>{group.label}</span>
 									<!-- Total encontrado (pode ser maior que a fatia exibida). -->
 									<span class="app-global-search-group-count">
-										{data.counts?.[group.key] ?? items.length}
+										{groupCountLabel(group.key, items.length)}
 									</span>
 								</div>
 								{#each items as item (item.url)}

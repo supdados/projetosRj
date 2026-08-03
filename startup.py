@@ -52,6 +52,9 @@ def ensure_task_comment_mentions_column():
     Mesmo padrão aditivo das demais ``ensure_*``. NULL nas linhas antigas é o
     sinal de "comentário anterior ao recurso" — o front cai no realce heurístico
     nesses casos, sem precisar reprocessar histórico.
+
+    Cinto de segurança: a coluna canônica é criada por
+    ``run_migrations.ensure_task_schema`` (TASK_COMMENT_INCREMENTAL_COLUMNS).
     """
     inspector = inspect(db.engine)
     if "task_comment" not in inspector.get_table_names():

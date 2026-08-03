@@ -78,3 +78,17 @@ export function resolveConfirm(accepted: boolean, requestId?: number): void {
 	settle(accepted);
 	pending.set(null);
 }
+
+/**
+ * Navegar com o diálogo aberto o deixaria montado sobre a página nova, e
+ * confirmar rodaria a closure `run` capturada da página anterior: recusa a
+ * solicitação pendente. Com `run` em voo (`busy`) não fecha — abortar no meio
+ * abandonaria a ação; o guard de `requestId` já cobre a resposta atrasada.
+ *
+ * Exemplo (em `<ConfirmHost />`):
+ *   afterNavigate(() => dismissConfirmOnNavigation(busy));
+ */
+export function dismissConfirmOnNavigation(busy: boolean): void {
+	if (busy) return;
+	resolveConfirm(false);
+}

@@ -4,6 +4,11 @@ Modo dropdown (``limit`` por tipo + ``has_more``) alimenta o GlobalSearchBox e
 o legado ``/api/busca-global``; o modo paginado (``page``/``per_page``/
 ``types``) alimenta a tela ``/busca`` da SPA via ``/api/busca`` com lista plana
 na ordem canônica projetos → etapas → tarefas → eventos.
+
+Os ``counts`` do dropdown têm TETO (``GLOBAL_SEARCH_COUNT_CAP``) e vêm com as
+chaves opcionais ``meta.counts_capped_at``/``meta.counts_capped``; ausentes (ou
+``counts_capped_at=None``) significam contagem exata. O modo paginado mantém
+contagem exata — ``pagination`` depende dos totais reais.
 """
 
 from __future__ import annotations
@@ -15,7 +20,7 @@ from flask import g, jsonify, request
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
 
-from models import CalendarEvent, Etapa, Project, Task
+from models import CalendarEvent, Etapa, Project, Task, db
 from services.authorization import project_visibility_criterion
 
 from .blueprint import main_bp
@@ -36,6 +41,9 @@ GLOBAL_SEARCH_DEFAULT_LIMIT = 5
 GLOBAL_SEARCH_API_MAX_LIMIT = 20
 GLOBAL_SEARCH_PAGE_SIZE = 40
 GLOBAL_SEARCH_PAGE_MAX_PER_PAGE = 100
+# Teto do contador do dropdown (typeahead): acima dele o número deixa de importar
+# para a decisão do usuário e o COUNT integral passa a custar uma varredura por tecla.
+GLOBAL_SEARCH_COUNT_CAP = 100
 SEARCH_TYPE_KEYS = ("projects", "stages", "tasks", "events")
 
 _SEARCH_SERIALIZERS = {
@@ -245,6 +253,22 @@ def _normalize_global_search_limit(
     return max(1, min(parsed, max_limit))
 
 
+def _capped_count(query, cap: int) -> int:
+    """Conta linhas com teto: ``SELECT count(*) FROM (<query> LIMIT cap)``.
+
+    Sem o teto, cada tecla do typeahead dispara um ``COUNT(*)`` integral por tipo
+    sobre ``ILIKE '%termo%'`` (varredura completa). Retorna o valor exato abaixo do
+    teto e exatamente ``cap`` quando há ``cap`` linhas ou mais.
+
+    Exemplo: ``_capped_count(_project_search_query("de", user, scope), 100)`` -> 100
+    quando existem 3 mil projetos com "de" no título.
+    """
+    if cap < 1:
+        raise ValueError(f"cap deve ser >= 1, recebido: {cap!r}")
+    limited = query.order_by(None).limit(cap).subquery()
+    return db.session.query(func.count()).select_from(limited).scalar() or 0
+
+
 def _search_queries_by_type(term: str, user, scope: _SearchScope) -> dict:
     return {
         "projects": _project_search_query(term, user, scope),
@@ -261,6 +285,16 @@ def build_global_search_results(
     include_has_more=False,
     selected_orgao_id=None,
 ):
+    """Monta o payload do dropdown (fatia por tipo + ``has_more`` + ``counts``).
+
+    ``counts[tipo]`` é exato até ``GLOBAL_SEARCH_COUNT_CAP``; a partir dele satura no
+    teto e ``meta.counts_capped[tipo]`` vira ``True`` (o consumidor exibe "99+").
+    ``meta.counts_capped_at`` traz o teto vigente, ou ``None`` quando nenhum COUNT
+    com teto pôde rodar (``limit_per_type=None``, contagem já exata).
+
+    Exemplo: ``build_global_search_results("de", g.user, limit_per_type=5,
+    include_has_more=True)``.
+    """
     normalized_term = (term or "").strip()
     if not normalized_term:
         return _empty_global_search_payload(normalized_term)
@@ -269,7 +303,8 @@ def build_global_search_results(
     queries = _search_queries_by_type(normalized_term, user, scope)
 
     effective_limit = limit_per_type
-    if include_has_more and limit_per_type is not None:
+    counts_are_capped = include_has_more and limit_per_type is not None
+    if counts_are_capped:
         effective_limit = limit_per_type + 1
 
     def fetch_rows(query):
@@ -285,16 +320,20 @@ def build_global_search_results(
     results = {}
     has_more = {}
     counts = {}
+    counts_capped = {}
     for key in SEARCH_TYPE_KEYS:
         rows, rows_has_more = fetch_rows(queries[key])
         results[key] = _SEARCH_SERIALIZERS[key](rows, normalized_term)
         has_more[key] = rows_has_more
         # O contador do dropdown anuncia o TOTAL encontrado, não a fatia exibida —
         # é ele que diz ao usuário se vale abrir a página de busca. O COUNT extra só
-        # roda quando a fatia estourou o limite.
-        counts[key] = (
-            queries[key].order_by(None).count() if rows_has_more else len(results[key])
-        )
+        # roda quando a fatia estourou o limite, e sempre com teto.
+        if not rows_has_more:
+            counts[key] = len(results[key])
+            counts_capped[key] = False
+            continue
+        counts[key] = _capped_count(queries[key], GLOBAL_SEARCH_COUNT_CAP)
+        counts_capped[key] = counts[key] >= GLOBAL_SEARCH_COUNT_CAP
 
     counts["total"] = sum(counts[key] for key in SEARCH_TYPE_KEYS)
 
@@ -305,6 +344,11 @@ def build_global_search_results(
             "has_more": {
                 **has_more,
                 "any": any(has_more.values()),
+            },
+            "counts_capped_at": GLOBAL_SEARCH_COUNT_CAP if counts_are_capped else None,
+            "counts_capped": {
+                **counts_capped,
+                "any": any(counts_capped.values()),
             },
         },
         "counts": counts,

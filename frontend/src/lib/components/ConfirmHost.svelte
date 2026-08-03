@@ -3,8 +3,9 @@
 	 * Ponte entre `confirmAction()` e o `ConfirmDialog`. Montado UMA vez no
 	 * layout autenticado, ao lado de `<FlashToasts />`.
 	 */
+	import { afterNavigate } from '$app/navigation';
 	import ConfirmDialog from './ConfirmDialog.svelte';
-	import { confirmRequest, resolveConfirm } from '$lib/stores/confirm';
+	import { confirmRequest, dismissConfirmOnNavigation, resolveConfirm } from '$lib/stores/confirm';
 
 	interface Flight {
 		id: number;
@@ -46,6 +47,10 @@
 		if (!request) return;
 		resolveConfirm(false, request.id);
 	}
+
+	// O host vive no layout: sem isto o diálogo sobrevive à navegação e confirmar
+	// rodaria o `run` da página anterior.
+	afterNavigate(() => dismissConfirmOnNavigation(busy));
 </script>
 
 {#if request}

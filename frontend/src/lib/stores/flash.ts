@@ -3,10 +3,18 @@
  * `static/js/app-shell/flash.js` do Jinja).
  *
  * Toasts no canto superior direito com auto-dismiss por categoria, teto de 3 na
- * pilha, deduplicação por chave (repetição só reinicia o timer e incrementa
- * `count`, não empilha cartão novo) e pausa em hover/foco. `danger` não expira
+ * pilha, deduplicação por chave e pausa em hover/foco. `danger` não expira
  * sozinho — só sai por X, Esc ou evicção. Consumido pelo `<FlashToasts>`
  * montado uma vez por tela.
+ *
+ * Dedupe por `key` tem dois desfechos:
+ * - repetição IDÊNTICA (mesma `message` e `category`): só incrementa `count` e
+ *   reinicia o timer, sem cartão novo;
+ * - texto ou categoria DIFERENTES sob a mesma `key`: o cartão vivo é REESCRITO
+ *   no lugar (mesmo `id` e mesma posição), `count` volta a 1, o timer reinicia
+ *   pela categoria nova e `revision` incrementa para o leitor de tela
+ *   reanunciar. Sem isso a 2ª mensagem de uma `key` compartilhada nunca
+ *   apareceria — e com `danger` eterno ficaria presa para sempre.
  *
  * Exemplo:
  *   import { flash } from '$lib/stores/flash';
@@ -38,10 +46,12 @@ export interface FlashMessage {
 	description?: string;
 	/** Chave de dedupe (explícita ou `${category}|${message}`). */
 	key: string;
-	/** 1 na primeira exibição; incrementa a cada repetição coalescida. */
+	/** 1 na primeira exibição do texto atual; incrementa a cada repetição coalescida. */
 	count: number;
-	/** Epoch ms da primeira exibição — base do teto de vida (não se aplica a `danger`). */
+	/** Epoch ms em que o texto atual entrou — base do teto de vida (não se aplica a `danger`). */
 	firstShownAt: number;
+	/** 0 no nascimento; incrementa a cada reescrita — sinal de re-anúncio (o `id` não muda). */
+	revision: number;
 }
 
 export interface FlashStore extends Readable<FlashMessage[]> {
@@ -57,7 +67,11 @@ export interface FlashStore extends Readable<FlashMessage[]> {
 	clear(): void;
 }
 
-/** Teto da pilha visível; acima disso há evicção (nunca recusa o toast novo). */
+/**
+ * Teto da pilha visível; acima disso há evicção (nunca recusa o toast novo).
+ * Teto SOFT: se não há vítima elegível (pilha só de `danger` e o novo não é
+ * `danger`), a pilha passa de 3 em vez de sacrificar um erro não lido.
+ */
 const MAX_TOASTS = 3;
 /** Janela de cauda: repetição logo após o sumiço é suprimida (absorve duplo-clique). */
 const DEDUPE_TAIL_MS = 1000;
@@ -162,15 +176,19 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 		}
 	}
 
-	/** Abre espaço: descarta o mais antigo de severidade ≤ à do novo, senão FIFO puro. */
+	/**
+	 * Abre espaço: descarta o mais antigo de severidade ≤ à do novo. Sem vítima
+	 * elegível não há FIFO de consolo — `danger` só é despejado por outro
+	 * `danger`, senão um "Salvo." derrubaria o erro que ninguém leu.
+	 */
 	function evict(incoming: FlashCategory): void {
 		const level = SEVERITY[incoming];
-		const victim = items.find((item) => SEVERITY[item.category] <= level) ?? items[0];
+		const victim = items.find((item) => SEVERITY[item.category] <= level);
 		if (!victim) return;
 		drop(victim.id, false);
 	}
 
-	/** Repetição coalescida: só contador + timer reiniciado; `message` nunca é reescrito. */
+	/** Repetição idêntica coalescida: só contador + timer reiniciado, sem cartão novo. */
 	function bump(id: number, at: number): void {
 		items = items.map((item) => (item.id === id ? { ...item, count: item.count + 1 } : item));
 		commit();
@@ -191,6 +209,44 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 		schedule(id, timer, deadline - at);
 	}
 
+	/**
+	 * Reescrita no lugar: a `key` já está viva, mas com outro texto/categoria. O
+	 * cartão mantém `id` e posição; o relógio recomeça pela categoria nova e
+	 * `revision` sobe para o anúncio ao leitor de tela sair de novo.
+	 */
+	function rewrite(
+		id: number,
+		message: string,
+		category: FlashCategory,
+		options: FlashOptions,
+		at: number
+	): void {
+		items = items.map((item) =>
+			item.id === id
+				? {
+						...item,
+						message,
+						category,
+						description: options.description,
+						count: 1,
+						firstShownAt: at,
+						revision: item.revision + 1
+					}
+				: item
+		);
+		commit();
+		const timer = timers.get(id);
+		if (!timer) return;
+		timer.durationMs = resolveDurationMs(message, category, options.durationMs);
+		timer.lifetimeEndsAt = at + lifetimeCapMs(category);
+		// Sob o ponteiro: o texto novo já vale, mas o relógio só volta a correr no resume.
+		if (timer.pauseCount > 0 && timer.pausedAt !== null) {
+			timer.remainingMs = timer.durationMs;
+			return;
+		}
+		schedule(id, timer, timer.durationMs);
+	}
+
 	function show(
 		message: string,
 		category: FlashCategory = 'info',
@@ -201,7 +257,8 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 
 		const alive = items.find((item) => item.key === key);
 		if (alive) {
-			bump(alive.id, at);
+			if (alive.message === message && alive.category === category) bump(alive.id, at);
+			else rewrite(alive.id, message, category, options, at);
 			return alive.id;
 		}
 
@@ -233,7 +290,8 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 				description: options.description,
 				key,
 				count: 1,
-				firstShownAt: at
+				firstShownAt: at,
+				revision: 0
 			}
 		];
 		commit();

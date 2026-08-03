@@ -29,10 +29,6 @@ from typing import Any, Iterable, Sequence
 
 MENTION_SIGIL = "@"
 
-#: Pontuação que só continua o nome quando seguida de letra/dígito: "@Ana-Maria"
-#: e "@Ana.Silva" continuam, mas "@Ana." (fim de frase) fecha a menção.
-_NAME_INNER_PUNCTUATION = {"-", "'", "."}
-
 
 @dataclass(frozen=True)
 class MentionCandidate:
@@ -63,17 +59,16 @@ def _fold(value: str) -> str:
     )
 
 
-def _continues_name(folded_text: str, position: int) -> bool:
-    """O nome continua em ``position``? Ponto final de frase NÃO continua."""
-    if position >= len(folded_text):
-        return False
-    char = folded_text[position]
-    if char.isalnum():
-        return True
-    if char not in _NAME_INNER_PUNCTUATION:
-        return False
-    following = position + 1
-    return following < len(folded_text) and folded_text[following].isalnum()
+def _extends_into_word(folded_text: str, position: int) -> bool:
+    """O nome casado é só o começo de uma palavra maior ("@Ana" em "@Anabel")?
+
+    Só letra/dígito COLADO prolonga a palavra. Pontuação (``-``, ``.``, ``'``)
+    não desqualifica o match: em "@Maria Silva-me confirma" o hífen é do texto,
+    não do nome. Nomes que de fato contêm pontuação ("Ana.Silva") continuam
+    ganhando porque :func:`_match_at` testa os candidatos do mais longo ao mais
+    curto — quando um nome casa, nenhum nome maior casava naquela posição.
+    """
+    return position < len(folded_text) and folded_text[position].isalnum()
 
 
 def _candidates_by_length(
@@ -105,11 +100,15 @@ def _count_by_folded_name(
 def _match_at(
     folded_text: str, position: int, ordered: Sequence[tuple[str, MentionCandidate]]
 ) -> tuple[str, MentionCandidate] | None:
-    """Maior nome que casa logo após o ``@`` em ``position``, ou ``None``."""
+    """Maior nome que casa logo após o ``@`` em ``position``, ou ``None``.
+
+    ``ordered`` vem do mais longo para o mais curto, então o primeiro nome que
+    casa inteiro já é o melhor possível.
+    """
     for folded_name, candidate in ordered:
         if not folded_text.startswith(folded_name, position):
             continue
-        if _continues_name(folded_text, position + len(folded_name)):
+        if _extends_into_word(folded_text, position + len(folded_name)):
             continue
         return folded_name, candidate
     return None
