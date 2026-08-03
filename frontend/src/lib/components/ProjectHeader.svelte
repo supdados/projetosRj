@@ -1255,7 +1255,6 @@
 	.ph-chip-wrap--editable:hover .ph-chip,
 	.ph-chip-wrap:focus-within .ph-chip {
 		background: color-mix(in srgb, var(--ds-color-neutral-1000) 16%, transparent);
-		border-color: var(--ds-color-on-brand-muted);
 	}
 	/* .ph-chip .ph-chip-caret (0,2,0) vence .ph-chip i (0,1,1) sem !important. */
 	.ph-chip .ph-chip-caret {
