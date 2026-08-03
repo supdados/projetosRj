@@ -1928,7 +1928,7 @@
 											aria-expanded={startDatePickerOpen}
 											title="As datas são calculadas em dias úteis a partir daqui."
 											onclick={() => (startDatePickerOpen = !startDatePickerOpen)}
-											class="{fieldClass} flex items-center text-left"
+											class="{fieldMdClass} flex items-center text-left"
 										>
 											<span class={startDate ? '' : 'text-text-faint'}>
 												{startDateLabel(startDate) || 'Selecionar data'}
