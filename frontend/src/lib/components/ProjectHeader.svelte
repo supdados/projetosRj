@@ -618,7 +618,6 @@
 		<!-- Datas + duração -->
 		{#if hasDates}
 			<span class="ph-chip-dates">
-				<i class="far fa-calendar-alt" aria-hidden="true"></i>
 				<span class="ph-date-range">
 					{#if startBr && endBr}
 						{startBr}<span class="ph-date-arrow" aria-hidden="true">→</span>{endBr}
@@ -734,19 +733,25 @@
 						<i class="fas fa-star" aria-hidden="true"></i>
 					{/if}{project.special_project || 'Sem categoria'}
 				</span>
-				<span class="pc-chip"
-					><i class="far fa-calendar-alt" aria-hidden="true"></i> Início: {startBr ||
-						'Não definida'}</span
-				>
-				<span class="pc-chip"
-					><i class="far fa-calendar-check" aria-hidden="true"></i> Fim: {endBr ||
-						'Não definida'}</span
-				>
-				{#if durationLabel}
-					<span class="pc-chip"
-						><i class="far fa-hourglass" aria-hidden="true"></i> {durationLabel}</span
-					>
-				{/if}
+				<!-- Datas em texto corrido, como no header expandido: três chips separados
+				     picotavam um dado único (início → fim · duração). -->
+				<span class="pc-chip-dates">
+					<span class="pc-date-range">
+						{#if startBr && endBr}
+							{startBr}<span class="pc-date-arrow" aria-hidden="true">→</span>{endBr}
+						{:else if startBr}
+							Início {startBr}
+						{:else if endBr}
+							Fim {endBr}
+						{:else}
+							Sem datas
+						{/if}
+					</span>
+					{#if durationLabel}
+						<span class="pc-date-sep" aria-hidden="true">·</span>
+						<strong class="pc-duration">{durationLabel}</strong>
+					{/if}
+				</span>
 			</div>
 		</div>
 		<a href={`${base}/projetos`} class="project-compact-back">
@@ -1302,14 +1307,10 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
-		padding: 0.35rem 0.18rem 0.35rem 0.4rem;
+		padding: 0.35rem 0.18rem;
 		color: var(--ds-color-on-brand-strong);
 		font-size: 0.8125rem;
 		line-height: 1;
-	}
-	.ph-chip-dates > i {
-		font-size: 0.875rem;
-		color: var(--ds-color-on-brand-muted);
 	}
 	.ph-date-range {
 		display: inline-flex;
@@ -1414,6 +1415,34 @@
 	}
 	.pc-chip i {
 		font-size: 0.6875rem;
+	}
+	/* Espelha .ph-chip-dates na paleta clara: sem caixa, seta e ponto como separadores. */
+	.pc-chip-dates {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.18rem 0.1rem;
+		color: var(--ds-color-text-secondary);
+		font-size: 0.6875rem;
+		line-height: 1;
+		white-space: nowrap;
+	}
+	.pc-date-range {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-variant-numeric: tabular-nums;
+	}
+	.pc-date-arrow,
+	.pc-date-sep {
+		color: var(--ds-color-text-muted);
+	}
+	.pc-date-sep {
+		user-select: none;
+	}
+	.pc-duration {
+		font-weight: 700;
+		color: var(--ds-color-text-primary);
 	}
 	.pc-chip--status-vigente :global(svg) {
 		color: var(--ds-color-fill-success);
