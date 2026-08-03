@@ -465,9 +465,10 @@
 	}
 
 	/* Cada família só declara o degrau base; os estados derivam dele.
-	   Claro:  repouso 100/200/600 · hover 200/300/700 · pressed 300/400/800
-	   Escuro: repouso 800/700/300 · hover 700/600/200 · pressed 600/500/100
-	   Hover/pressed só surtem efeito em chips interativos (trigger de select);
+	   Claro:  repouso 100/200/600 · hover 200/300/700
+	   Escuro: repouso 800/700/300 · hover 700/600/200
+	   Sem estado pressed: o clique mantém a cor de hover (decisão 2026-08-02).
+	   Hover só surte efeito em chips interativos (trigger de select);
 	   chips estáticos ficam no repouso. */
 	.chip--brand {
 		--chip-bg: var(--ds-color-primary-100);
@@ -479,11 +480,6 @@
 		--chip-border: var(--ds-color-primary-300);
 		--chip-fg: var(--ds-color-primary-700);
 	}
-	.chip--brand:active {
-		--chip-bg: var(--ds-color-primary-300);
-		--chip-border: var(--ds-color-primary-400);
-		--chip-fg: var(--ds-color-primary-800);
-	}
 	.chip--success {
 		--chip-bg: var(--ds-color-success-100);
 		--chip-border: var(--ds-color-success-200);
@@ -493,11 +489,6 @@
 		--chip-bg: var(--ds-color-success-200);
 		--chip-border: var(--ds-color-success-300);
 		--chip-fg: var(--ds-color-success-700);
-	}
-	.chip--success:active {
-		--chip-bg: var(--ds-color-success-300);
-		--chip-border: var(--ds-color-success-400);
-		--chip-fg: var(--ds-color-success-800);
 	}
 	.chip--warning {
 		--chip-bg: var(--ds-color-warning-100);
@@ -509,11 +500,6 @@
 		--chip-border: var(--ds-color-warning-300);
 		--chip-fg: var(--ds-color-warning-700);
 	}
-	.chip--warning:active {
-		--chip-bg: var(--ds-color-warning-300);
-		--chip-border: var(--ds-color-warning-400);
-		--chip-fg: var(--ds-color-warning-800);
-	}
 	.chip--attention {
 		--chip-bg: var(--ds-color-attention-100);
 		--chip-border: var(--ds-color-attention-200);
@@ -523,11 +509,6 @@
 		--chip-bg: var(--ds-color-attention-200);
 		--chip-border: var(--ds-color-attention-300);
 		--chip-fg: var(--ds-color-attention-700);
-	}
-	.chip--attention:active {
-		--chip-bg: var(--ds-color-attention-300);
-		--chip-border: var(--ds-color-attention-400);
-		--chip-fg: var(--ds-color-attention-800);
 	}
 	.chip--danger {
 		--chip-bg: var(--ds-color-danger-100);
@@ -539,11 +520,6 @@
 		--chip-border: var(--ds-color-danger-300);
 		--chip-fg: var(--ds-color-danger-700);
 	}
-	.chip--danger:active {
-		--chip-bg: var(--ds-color-danger-300);
-		--chip-border: var(--ds-color-danger-400);
-		--chip-fg: var(--ds-color-danger-800);
-	}
 	.chip--neutral {
 		--chip-bg: var(--ds-color-neutral-100);
 		--chip-border: var(--ds-color-neutral-200);
@@ -553,11 +529,6 @@
 		--chip-bg: var(--ds-color-neutral-200);
 		--chip-border: var(--ds-color-neutral-300);
 		--chip-fg: var(--ds-color-neutral-700);
-	}
-	.chip--neutral:active {
-		--chip-bg: var(--ds-color-neutral-300);
-		--chip-border: var(--ds-color-neutral-400);
-		--chip-fg: var(--ds-color-neutral-800);
 	}
 
 	/* Tipo de pedido: hex literal das cores aprovadas dos ícones T-A (fora da
@@ -586,13 +557,6 @@
 		--chip-border: color-mix(in srgb, var(--chip-hue) 32%, var(--ds-color-neutral-0));
 		--chip-fg: color-mix(in srgb, var(--chip-hue) 85%, var(--ds-color-neutral-1000));
 	}
-	.chip--tipo-bug:active,
-	.chip--tipo-melhoria:active,
-	.chip--tipo-duvida:active {
-		--chip-bg: color-mix(in srgb, var(--chip-hue) 28%, var(--ds-color-neutral-0));
-		--chip-border: color-mix(in srgb, var(--chip-hue) 40%, var(--ds-color-neutral-0));
-		--chip-fg: color-mix(in srgb, var(--chip-hue) 70%, var(--ds-color-neutral-1000));
-	}
 
 	/* Prioridade: mesma família danger separada por DEGRAU — bg 50/100/200,
 	   borda 200/300/400 e tinta de repouso = token --ds-color-priority-*;
@@ -607,11 +571,6 @@
 		--chip-border: var(--ds-color-neutral-300);
 		--chip-fg: var(--ds-color-neutral-600);
 	}
-	.chip--prio-baixa:active {
-		--chip-bg: var(--ds-color-neutral-300);
-		--chip-border: var(--ds-color-neutral-400);
-		--chip-fg: var(--ds-color-neutral-700);
-	}
 	.chip--prio-media {
 		--chip-bg: var(--ds-color-danger-50);
 		--chip-border: var(--ds-color-danger-200);
@@ -621,11 +580,6 @@
 		--chip-bg: var(--ds-color-danger-100);
 		--chip-border: var(--ds-color-danger-300);
 		--chip-fg: var(--ds-color-danger-600);
-	}
-	.chip--prio-media:active {
-		--chip-bg: var(--ds-color-danger-200);
-		--chip-border: var(--ds-color-danger-400);
-		--chip-fg: var(--ds-color-danger-700);
 	}
 	.chip--prio-alta {
 		--chip-bg: var(--ds-color-danger-100);
@@ -637,11 +591,6 @@
 		--chip-border: var(--ds-color-danger-400);
 		--chip-fg: var(--ds-color-danger-700);
 	}
-	.chip--prio-alta:active {
-		--chip-bg: var(--ds-color-danger-300);
-		--chip-border: var(--ds-color-danger-500);
-		--chip-fg: var(--ds-color-danger-800);
-	}
 	.chip--prio-urgente {
 		--chip-bg: var(--ds-color-danger-200);
 		--chip-border: var(--ds-color-danger-400);
@@ -651,11 +600,6 @@
 		--chip-bg: var(--ds-color-danger-300);
 		--chip-border: var(--ds-color-danger-500);
 		--chip-fg: var(--ds-color-danger-800);
-	}
-	.chip--prio-urgente:active {
-		--chip-bg: var(--ds-color-danger-400);
-		--chip-border: var(--ds-color-danger-600);
-		--chip-fg: var(--ds-color-danger-900);
 	}
 
 	/* Desabilitado SEMPRE perde o matiz — é a única regra que ignora a família. */
@@ -676,11 +620,6 @@
 		--chip-border: var(--ds-color-primary-600);
 		--chip-fg: var(--ds-color-primary-200);
 	}
-	[data-theme='dark'] .chip--brand:active {
-		--chip-bg: var(--ds-color-primary-600);
-		--chip-border: var(--ds-color-primary-500);
-		--chip-fg: var(--ds-color-primary-100);
-	}
 	[data-theme='dark'] .chip--success {
 		--chip-bg: var(--ds-color-success-800);
 		--chip-border: var(--ds-color-success-700);
@@ -690,11 +629,6 @@
 		--chip-bg: var(--ds-color-success-700);
 		--chip-border: var(--ds-color-success-600);
 		--chip-fg: var(--ds-color-success-200);
-	}
-	[data-theme='dark'] .chip--success:active {
-		--chip-bg: var(--ds-color-success-600);
-		--chip-border: var(--ds-color-success-500);
-		--chip-fg: var(--ds-color-success-100);
 	}
 	[data-theme='dark'] .chip--warning {
 		--chip-bg: var(--ds-color-warning-800);
@@ -706,11 +640,6 @@
 		--chip-border: var(--ds-color-warning-600);
 		--chip-fg: var(--ds-color-warning-200);
 	}
-	[data-theme='dark'] .chip--warning:active {
-		--chip-bg: var(--ds-color-warning-600);
-		--chip-border: var(--ds-color-warning-500);
-		--chip-fg: var(--ds-color-warning-100);
-	}
 	[data-theme='dark'] .chip--attention {
 		--chip-bg: var(--ds-color-attention-800);
 		--chip-border: var(--ds-color-attention-700);
@@ -720,11 +649,6 @@
 		--chip-bg: var(--ds-color-attention-700);
 		--chip-border: var(--ds-color-attention-600);
 		--chip-fg: var(--ds-color-attention-200);
-	}
-	[data-theme='dark'] .chip--attention:active {
-		--chip-bg: var(--ds-color-attention-600);
-		--chip-border: var(--ds-color-attention-500);
-		--chip-fg: var(--ds-color-attention-100);
 	}
 	[data-theme='dark'] .chip--danger {
 		--chip-bg: var(--ds-color-danger-800);
@@ -736,11 +660,6 @@
 		--chip-border: var(--ds-color-danger-600);
 		--chip-fg: var(--ds-color-danger-200);
 	}
-	[data-theme='dark'] .chip--danger:active {
-		--chip-bg: var(--ds-color-danger-600);
-		--chip-border: var(--ds-color-danger-500);
-		--chip-fg: var(--ds-color-danger-100);
-	}
 	[data-theme='dark'] .chip--neutral {
 		--chip-bg: var(--ds-color-neutral-800);
 		--chip-border: var(--ds-color-neutral-700);
@@ -750,11 +669,6 @@
 		--chip-bg: var(--ds-color-neutral-700);
 		--chip-border: var(--ds-color-neutral-600);
 		--chip-fg: var(--ds-color-neutral-200);
-	}
-	[data-theme='dark'] .chip--neutral:active {
-		--chip-bg: var(--ds-color-neutral-600);
-		--chip-border: var(--ds-color-neutral-500);
-		--chip-fg: var(--ds-color-neutral-100);
 	}
 	[data-theme='dark'] .chip--tipo-bug,
 	[data-theme='dark'] .chip--tipo-melhoria,
@@ -770,13 +684,6 @@
 		--chip-border: color-mix(in srgb, var(--chip-hue) 46%, var(--ds-color-neutral-900));
 		--chip-fg: color-mix(in srgb, var(--chip-hue) 30%, var(--ds-color-neutral-0));
 	}
-	[data-theme='dark'] .chip--tipo-bug:active,
-	[data-theme='dark'] .chip--tipo-melhoria:active,
-	[data-theme='dark'] .chip--tipo-duvida:active {
-		--chip-bg: color-mix(in srgb, var(--chip-hue) 44%, var(--ds-color-neutral-900));
-		--chip-border: color-mix(in srgb, var(--chip-hue) 54%, var(--ds-color-neutral-900));
-		--chip-fg: color-mix(in srgb, var(--chip-hue) 24%, var(--ds-color-neutral-0));
-	}
 	/* Prioridade no dark: a tinta de repouso vem do token (que já espelha);
 	   bg/borda clareiam junto com a severidade. */
 	[data-theme='dark'] .chip--prio-baixa {
@@ -788,11 +695,6 @@
 		--chip-border: var(--ds-color-neutral-600);
 		--chip-fg: var(--ds-color-neutral-300);
 	}
-	[data-theme='dark'] .chip--prio-baixa:active {
-		--chip-bg: var(--ds-color-neutral-600);
-		--chip-border: var(--ds-color-neutral-500);
-		--chip-fg: var(--ds-color-neutral-200);
-	}
 	[data-theme='dark'] .chip--prio-media {
 		--chip-bg: var(--ds-color-danger-900);
 		--chip-border: var(--ds-color-danger-700);
@@ -801,11 +703,6 @@
 		--chip-bg: var(--ds-color-danger-800);
 		--chip-border: var(--ds-color-danger-600);
 		--chip-fg: var(--ds-color-danger-300);
-	}
-	[data-theme='dark'] .chip--prio-media:active {
-		--chip-bg: var(--ds-color-danger-700);
-		--chip-border: var(--ds-color-danger-500);
-		--chip-fg: var(--ds-color-danger-200);
 	}
 	[data-theme='dark'] .chip--prio-alta {
 		--chip-bg: var(--ds-color-danger-800);
@@ -816,11 +713,6 @@
 		--chip-border: var(--ds-color-danger-500);
 		--chip-fg: var(--ds-color-danger-200);
 	}
-	[data-theme='dark'] .chip--prio-alta:active {
-		--chip-bg: var(--ds-color-danger-600);
-		--chip-border: var(--ds-color-danger-400);
-		--chip-fg: var(--ds-color-danger-100);
-	}
 	[data-theme='dark'] .chip--prio-urgente {
 		--chip-bg: var(--ds-color-danger-700);
 		--chip-border: var(--ds-color-danger-500);
@@ -829,11 +721,6 @@
 		--chip-bg: var(--ds-color-danger-600);
 		--chip-border: var(--ds-color-danger-400);
 		--chip-fg: var(--ds-color-danger-100);
-	}
-	[data-theme='dark'] .chip--prio-urgente:active {
-		--chip-bg: var(--ds-color-danger-500);
-		--chip-border: var(--ds-color-danger-300);
-		--chip-fg: var(--ds-color-danger-50);
 	}
 	[data-theme='dark'] .chip:disabled,
 	[data-theme='dark'] .chip[aria-disabled='true'] {
