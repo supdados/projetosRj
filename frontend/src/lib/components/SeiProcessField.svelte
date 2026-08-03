@@ -24,6 +24,8 @@
 		readonly?: boolean;
 		pending?: boolean;
 		error?: string | null;
+		/** Sem moldura própria: para uso dentro de um bloco que já tem a sua. */
+		bare?: boolean;
 		onSave: (list: string[]) => void;
 	}
 
@@ -33,6 +35,7 @@
 		readonly = false,
 		pending = false,
 		error = null,
+		bare = false,
 		onSave
 	}: Props = $props();
 
@@ -215,7 +218,9 @@
 	<!-- Linha fechada: visual de campo com o 1º número + copiar + chip +N + chevron. -->
 	<!-- Token de altura padrão de campo — linha de Detalhes alinhada. -->
 	<div
-		class="flex h-[var(--control-h-md)] items-center gap-1.5 rounded-lg border border-border-subtle bg-surface pl-3 pr-1.5"
+		class="flex items-center gap-1.5 {bare
+			? 'min-h-6'
+			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface pl-3 pr-1.5'}"
 	>
 		<button
 			bind:this={triggerEl}
@@ -231,7 +236,11 @@
 			onclick={togglePopover}
 			class="flex h-full min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default"
 		>
-			<span class="truncate text-sm {firstNumber ? 'text-text-primary' : 'italic text-text-muted'}">
+			<span
+				class="truncate {bare ? 'text-md' : 'text-sm'} {firstNumber
+					? 'text-text-primary'
+					: 'italic text-text-muted'}"
+			>
 				{firstNumber ?? 'Não informado'}
 			</span>
 		</button>

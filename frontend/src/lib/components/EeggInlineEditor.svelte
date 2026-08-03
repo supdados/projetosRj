@@ -1,8 +1,11 @@
 <script lang="ts">
 	/**
-	 * EEGG editável inline — três cartões LADO A LADO (Objetivo · Resultado
-	 * esperado · Indicadores), cada um editável de forma INDEPENDENTE clicando
-	 * direto no valor (igual aos demais campos do detalhe).
+	 * EEGG editável inline — PLACA TÉCNICA horizontal: uma peça só, com a régua
+	 * de rótulos em cima e os valores embaixo (Objetivo · Resultado esperado ·
+	 * Indicadores). O número do objetivo é o prefixo da própria descrição do
+	 * catálogo ("9- Ampliar…"), exibido como texto comum. Cada valor é editável
+	 * de forma INDEPENDENTE clicando direto nele (igual aos demais campos do
+	 * detalhe).
 	 *
 	 * No backend os três são uma unidade coesa (`normalize_goal_selection`): cada
 	 * salvamento envia a seleção inteira via `onSave`. A CASCATA limpa os níveis
@@ -193,19 +196,42 @@
 		});
 	}
 
-	const cardClass =
-		'flex flex-col gap-2 rounded-md border border-border-subtle bg-surface px-4 py-3 shadow-sm';
-	const labelClass =
-		'flex items-center gap-1.5 border-b border-border-subtle pb-2 text-xs font-semibold uppercase tracking-wide text-text-muted';
+	// Lista exibida: o catálogo do resultado quando disponível (deixa os NÃO
+	// selecionados visíveis, apagados), senão só os escolhidos vindos do projeto.
+	const indicadoresExibidos = $derived(
+		indicadores.length > 0
+			? indicadores.map((ind) => ({ id: ind.id, descricao: ind.descricao, sel: selected.includes(ind.id) }))
+			: indicadoresDescricoes.map((descricao, i) => ({ id: -i - 1, descricao, sel: true }))
+	);
+	const totalSelecionados = $derived(indicadoresExibidos.filter((ind) => ind.sel).length);
 </script>
 
-{#snippet indReadList()}
-	{#if indicadoresDescricoes.length > 0}
-		<ul class="flex flex-col gap-1">
-			{#each indicadoresDescricoes as desc, i (i)}
-				<li class="flex items-start gap-2 text-sm text-text-primary">
-					<i class="fas fa-check mt-0.5 shrink-0 text-xs text-brand" aria-hidden="true"></i>
-					<span>{desc}</span>
+{#snippet caixaMarcada(marcada: boolean)}
+	<span
+		aria-hidden="true"
+		class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-fast {marcada
+			? 'border-brand bg-brand'
+			: 'border-border-strong bg-surface'}"
+	>
+		{#if marcada}
+			<svg viewBox="0 0 24 24" class="h-3 w-3 text-on-brand" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M5 13l4 4L19 7" />
+			</svg>
+		{/if}
+	</span>
+{/snippet}
+
+{#snippet listaIndicadoresLeitura()}
+	{#if indicadoresExibidos.length > 0}
+		<ul class="flex flex-col gap-1.5">
+			{#each indicadoresExibidos as ind (ind.id)}
+				<li
+					class="flex items-start gap-2.5 rounded-sm border px-2.5 py-2 text-sm {ind.sel
+						? 'border-border-strong bg-wash-neutral text-text-primary'
+						: 'border-border-subtle text-text-muted'}"
+				>
+					{@render caixaMarcada(ind.sel)}
+					<span class="leading-snug">{ind.descricao}</span>
 				</li>
 			{/each}
 		</ul>
@@ -215,12 +241,11 @@
 {/snippet}
 
 <div class="flex flex-col gap-2">
-	<div class="grid gap-4 sm:grid-cols-3">
-		<!-- Objetivo -->
-		<div class={cardClass}>
-			<span class={labelClass}>Objetivo</span>
+	<div class="eegd-placa">
+		<div class="eegd-rotulo eegd-col-objetivo">Objetivo</div>
+		<div class="eegd-valor eegd-col-objetivo">
 			{#if readonly}
-				<span class="text-sm {objetivoDescricao ? 'text-text-primary' : 'text-text-muted'}">
+				<span class="eegd-texto {objetivoDescricao ? 'text-text-primary' : 'text-text-muted'}">
 					{objetivoDescricao ?? 'Não definido'}
 				</span>
 			{:else}
@@ -239,11 +264,10 @@
 			{/if}
 		</div>
 
-		<!-- Resultado esperado -->
-		<div class={cardClass}>
-			<span class={labelClass}>Resultado esperado</span>
+		<div class="eegd-rotulo eegd-col-resultado">Resultado esperado</div>
+		<div class="eegd-valor eegd-col-resultado">
 			{#if readonly}
-				<span class="text-sm {resultadoDescricao ? 'text-text-primary' : 'text-text-muted'}">
+				<span class="eegd-texto {resultadoDescricao ? 'text-text-primary' : 'text-text-muted'}">
 					{resultadoDescricao ?? 'Não definido'}
 				</span>
 			{:else if objetivoId === null}
@@ -264,18 +288,21 @@
 			{/if}
 		</div>
 
-		<!-- Indicadores -->
-		<div class={cardClass}>
-			<span class={labelClass}>
-				Indicadores
-				{#if !readonly && resultadoId !== null && !indicadoresLoading && indicadores.length > 0}
-					<!-- selecionados / TOTAL disponível neste resultado (limite de 4 ainda
-					     vale e atenua/avisa quando há mais de 4 opções). -->
-					<span class="ml-1 normal-case text-text-muted">({selected.length}/{indicadores.length})</span>
-				{/if}
-			</span>
+		<div class="eegd-rotulo eegd-col-indicadores">
+			<span>Indicadores</span>
+			{#if indicadoresExibidos.length > 0 && !indicadoresLoading}
+				<span class="eegd-contagem">
+					{#if indicadores.length > 0}
+						{totalSelecionados} de {indicadores.length} selecionados
+					{:else}
+						{totalSelecionados} selecionados
+					{/if}
+				</span>
+			{/if}
+		</div>
+		<div class="eegd-valor eegd-col-indicadores">
 			{#if readonly}
-				{@render indReadList()}
+				{@render listaIndicadoresLeitura()}
 			{:else if resultadoId === null}
 				<span class="text-sm italic text-text-muted">Defina o resultado primeiro</span>
 			{:else if indicadoresLoading}
@@ -285,10 +312,9 @@
 			{:else if indicadores.length === 0}
 				<p class="text-sm text-text-muted">Nenhum indicador disponível</p>
 			{:else}
-				<!-- Seleção INLINE: cada toque salva direto (sem Salvar/Cancelar).
-				     Linhas selecionáveis com checkbox CUSTOM nos tokens DS — o
-				     checkbox nativo usava o azul do navegador, destoando do azul
-				     primário do header. -->
+				<!-- Seleção INLINE: cada toque salva direto (sem Salvar/Cancelar). Os
+				     NÃO selecionados continuam visíveis, apagados — mostram o que o
+				     resultado oferece sem exigir abrir um seletor. -->
 				<div class="flex flex-col gap-1.5" role="group" aria-label="Indicadores do resultado">
 					{#each indicadores as ind (ind.id)}
 						{@const isSel = selected.includes(ind.id)}
@@ -300,23 +326,12 @@
 							disabled={pending || blocked}
 							onclick={() => toggleInd(ind.id)}
 							class="flex items-start gap-2.5 rounded-sm border px-2.5 py-2 text-left text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed {isSel
-								? 'border-transparent bg-wash-brand text-text-primary'
-								: 'border-border-subtle bg-surface text-text-primary hover:bg-surface-muted'} {blocked
+								? 'border-border-strong bg-wash-neutral text-text-primary'
+								: 'border-border-subtle text-text-muted hover:bg-surface-muted hover:text-text-primary'} {blocked
 								? 'opacity-50'
 								: ''}"
 						>
-							<span
-								aria-hidden="true"
-								class="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors duration-fast {isSel
-									? 'border-brand bg-brand'
-									: 'border-border-strong bg-surface'}"
-							>
-								{#if isSel}
-									<svg viewBox="0 0 24 24" class="h-3 w-3 text-on-brand" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-										<path d="M5 13l4 4L19 7" />
-									</svg>
-								{/if}
-							</span>
+							{@render caixaMarcada(isSel)}
 							<span class="leading-snug">{ind.descricao}</span>
 						</button>
 					{/each}
@@ -329,3 +344,107 @@
 		<p id={`${fieldId}-error`} role="alert" class="text-sm text-danger">{error}</p>
 	{/if}
 </div>
+
+<style>
+	/* Placa técnica: uma peça só. No desktop o numeral ocupa a coluna 1 nas duas
+	   linhas, os rótulos formam a régua de cima e os valores a faixa de baixo. */
+	.eegd-placa {
+		display: grid;
+		grid-template-columns: 1fr;
+		border: 1px solid var(--ds-color-border-base);
+		border-radius: var(--ds-radius-lg, 12px);
+		background: var(--ds-color-surface-base);
+		/* SEM overflow:hidden — recortava o popup do InlineCombobox, que é
+		   `absolute` na própria célula (não há portal). Os cantos que pintam
+		   fundo arredondam sozinhos abaixo. */
+	}
+
+	.eegd-rotulo {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		border-bottom: 1px solid var(--ds-color-border-base);
+		background: var(--ds-color-surface-muted);
+		font-size: var(--ds-font-size-2xs, 0.6875rem);
+		font-weight: 600;
+		line-height: 1rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--ds-color-text-muted);
+	}
+	/* Empilhado: o rótulo do objetivo é o topo da placa e precisa acompanhar o
+	   raio da borda — é o único filho com fundo próprio encostado no canto. */
+	.eegd-rotulo.eegd-col-objetivo {
+		border-radius: var(--ds-radius-lg, 12px) var(--ds-radius-lg, 12px) 0 0;
+	}
+	.eegd-contagem {
+		font-weight: 400;
+		text-transform: none;
+		letter-spacing: 0;
+		color: var(--ds-color-text-faint);
+	}
+
+	.eegd-valor {
+		padding: 0.875rem 1rem 1.125rem;
+	}
+	/* Objetivo e resultado são SEMPRE um item só, então sobem um degrau acima do
+	   corpo de UI (sm, 13px) para o md (14px). Vale para os dois modos, e o
+	   `.ic-closed`/`.ic-input` do InlineCombobox fixa `text-sm` no próprio
+	   componente — daí o :global para vencer a utilitária. */
+	.eegd-texto,
+	.eegd-valor :global(.ic-closed),
+	.eegd-valor :global(.ic-input) {
+		font-family: var(--ds-font-family-heading);
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+	}
+	/* NÃO declarar display aqui: o `.ic-closed` é flex (valor + chevron na mesma
+	   linha) e um `display: block` jogava o chevron para a linha de baixo. */
+	.eegd-texto {
+		display: block;
+	}
+
+	/* Empilhado (mobile): rótulo e valor em pares, sem numeral. */
+	.eegd-valor:not(:last-child) {
+		border-bottom: 1px solid var(--ds-color-border-base);
+	}
+
+	@media (min-width: 768px) {
+		/* Três colunas IGUAIS, espelhando `.ficha` (projetos/[id]/+page.svelte): os
+		   blocos ficam empilhados e as divisórias têm de se alinhar. */
+		.eegd-placa {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+		.eegd-rotulo.eegd-col-objetivo {
+			border-radius: var(--ds-radius-lg, 12px) 0 0 0;
+		}
+		.eegd-rotulo.eegd-col-indicadores {
+			border-radius: 0 var(--ds-radius-lg, 12px) 0 0;
+		}
+		.eegd-rotulo {
+			grid-row: 1;
+		}
+		/* Mesma especificidade da regra empilhada (`:not(:last-child)`), senão o
+		   divisor de mobile sobrevive no desktop e engrossa a borda de baixo. */
+		.eegd-valor,
+		.eegd-valor:not(:last-child) {
+			grid-row: 2;
+			border-bottom: 0;
+		}
+		.eegd-col-objetivo {
+			grid-column: 1;
+		}
+		.eegd-col-resultado {
+			grid-column: 2;
+		}
+		.eegd-col-indicadores {
+			grid-column: 3;
+		}
+		/* Divisórias verticais entre as três colunas de conteúdo. */
+		.eegd-col-objetivo,
+		.eegd-col-resultado {
+			border-right: 1px solid var(--ds-color-border-base);
+		}
+	}
+</style>

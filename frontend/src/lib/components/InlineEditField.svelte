@@ -451,22 +451,24 @@
 		display: inline-block;
 		margin-left: 0.45rem;
 		font-size: 0.75rem;
-		color: #8aa2bc;
+		color: var(--ds-color-icon-faint);
 		cursor: pointer;
 		transition: color 0.16s ease;
 	}
 	.cell-link-open:hover {
 		color: var(--ds-color-text-brand);
 	}
+	/* Vazio: só a moldura tracejada convida o clique — o fundo cheio competia com
+	   o conteúdo de verdade ao redor (e era hexe fora da régua de cor). */
 	.editable-field-empty {
-		color: #6f859f;
-		background: #f6f9fc;
-		border: 1px dashed #d6e2ef;
+		color: var(--ds-color-text-muted);
+		background: none;
+		border: 1px dashed var(--ds-color-border-base);
 	}
 	.editable-field-empty:hover:not(:disabled) {
-		background: #eef4fa;
-		border-color: #bfd0e1;
-		color: #536d89;
+		background: var(--ds-color-surface-muted);
+		border-color: var(--ds-color-border-strong);
+		color: var(--ds-color-text-secondary);
 	}
 
 	/* Caixa IDÊNTICA à do .editable-field (mesmo padding/borda/line-height/

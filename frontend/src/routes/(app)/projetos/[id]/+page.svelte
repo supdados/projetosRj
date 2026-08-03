@@ -1310,24 +1310,25 @@
 
 		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
 		<Card labelId="project-details-title">
-			<!-- Identidade + EEGG (editaveis inline, clicando direto no valor) —
-			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
+			<!-- Ordem: identidade do projeto, depois o enquadramento estratégico
+			     (EEGD) e por fim links/observação. Ficha técnica: UMA moldura por
+			     bloco, sem caixa aninhada. -->
 			<div class="flex flex-col gap-6">
-				<div class="grid gap-4 sm:grid-cols-2 {SHOW_ABEP ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}">
+				<div class="flex flex-col gap-3">
+					<h3 class="font-heading text-md font-semibold text-text-primary">
+						Informações Adicionais
+					</h3>
+					<div class="ficha {SHOW_ABEP ? 'ficha--quatro' : ''}">
 					<!-- Área Responsável: seletor em árvore de órgãos (orgao_id). -->
-					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
-						<label
-							for="project-orgao-id"
-							class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-						>
-							Área Responsável
-						</label>
+					<div class="ficha-campo">
+						<label for="project-orgao-id" class="ficha-rotulo">Área Responsável</label>
 						<OrgaoTreeSelect
 							id="project-orgao-id"
 							value={data.project.orgao_id ?? null}
 							options={orgaoOptions}
 							placeholder="Não informado"
 							fallbackLabel={data.project.orgao_sigla}
+							bare
 							disabled={fieldsLocked || (projectFieldStates.orgao_id?.pending ?? false)}
 							onSelect={saveOrgao}
 						/>
@@ -1338,15 +1339,14 @@
 						{/if}
 					</div>
 					<!-- Órgão: texto livre legado (orgao). -->
-					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
-						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Órgão</span>
+					<div class="ficha-campo">
+						<span class="ficha-rotulo">Órgão</span>
 						<InlineEditField
 							fieldId="project-orgao"
 							label="Órgão"
 							value={data.project.orgao}
 							kind="text"
 							variant="cell"
-							boxed
 							emptyLabel="Não informado"
 							readonly={fieldsLocked}
 							pending={projectFieldStates.orgao?.pending}
@@ -1355,11 +1355,12 @@
 						/>
 					</div>
 					<!-- Processo SEI mora na primeira linha (posição da tela antiga). -->
-					<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface px-4 py-1.5 text-sm shadow-sm">
-						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Processo SEI</span>
+					<div class="ficha-campo">
+						<span class="ficha-rotulo">Processo SEI</span>
 						<SeiProcessField
 							fieldId="project-sei"
 							processes={data.project.sei_processes}
+							bare
 							readonly={fieldsLocked}
 							pending={projectFieldStates.sei_processes?.pending}
 							error={projectFieldStates.sei_processes?.error}
@@ -1368,8 +1369,8 @@
 					</div>
 					{#if SHOW_ABEP}
 					<!-- Indicador ABEP: combobox pesquisável do catálogo (abep_indicator). -->
-					<div class="flex flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-4 py-1 text-sm shadow-sm">
-						<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Indicador ABEP</span>
+					<div class="ficha-campo">
+						<span class="ficha-rotulo">Indicador ABEP</span>
 						<InlineCombobox
 							fieldId="project-abep"
 							label="Indicador ABEP, editar"
@@ -1384,11 +1385,12 @@
 						/>
 					</div>
 					{/if}
+					</div>
 				</div>
 
 				<!-- EEGG: cascata objetivo/resultado/indicadores editável inline. -->
 				<div class="flex flex-col gap-3">
-					<h3 class="font-heading text-sm font-semibold text-text-primary">
+					<h3 class="font-heading text-md font-semibold text-text-primary">
 						EEGD - Estratégia Estadual de Governo Digital
 					</h3>
 					<EeggInlineEditor
@@ -1405,91 +1407,86 @@
 						onSave={saveEegg}
 					/>
 				</div>
-			</div>
 
-			<!-- Informações adicionais (editáveis) — agrupadas em um bloco com borda,
-			     espelhando a seção da tela antiga. -->
-			<div class="mt-6 flex flex-col gap-3">
-				<h3 class="font-heading text-sm font-semibold text-text-primary">
-					Informações Adicionais
-				</h3>
-				<div class="rounded-md border border-border-subtle bg-surface p-5 shadow-sm">
-					<!-- Duas colunas verticais de links: fixos (Github/Documentação/Produto)
-					     à esquerda; personalizados (até 3) à direita. -->
-					<div class="grid grid-cols-1 gap-x-8 gap-y-2.5 lg:grid-cols-2">
-						<div class="flex min-w-0 flex-col gap-2.5">
-						<div class="flex min-w-0 items-center gap-2 text-sm">
-							<i class="fab fa-github w-4 shrink-0 text-center text-brand" aria-hidden="true"></i>
-							<span class="w-32 shrink-0 font-semibold text-text-primary">Github:</span>
-							<div class="min-w-0 flex-1">
-								<InlineEditField
-									fieldId="project-github"
-									label="Link do GitHub"
-									value={data.project.github_link}
-									kind="text"
-									variant="cell"
-									linkify
-									emptyLabel="Não informado"
-									readonly={fieldsLocked}
-									pending={projectFieldStates.github_link?.pending}
-									error={projectFieldStates.github_link?.error}
-									onSave={(v) => saveProjectField('github_link', v)}
-								/>
+				<div class="flex flex-col gap-3">
+					<h3 class="font-heading text-md font-semibold text-text-primary">
+						Links e Observação
+					</h3>
+					<div class="ficha-bloco">
+					<!-- DUAS fileiras verticais: os três links fixos à esquerda, os até
+					     três personalizados à direita. Misturar tudo numa grade só
+					     embaralhava fixo com personalizado. -->
+					<div class="ficha-colunas">
+						<div class="ficha-coluna">
+						<div class="ficha-campo">
+							<span class="ficha-rotulo">
+								<i class="fab fa-github" aria-hidden="true"></i>Github
+							</span>
+							<div class="ficha-valor">
+							<InlineEditField
+								fieldId="project-github"
+								label="Link do GitHub"
+								value={data.project.github_link}
+								kind="text"
+								variant="cell"
+								linkify
+								emptyLabel="Não informado"
+								readonly={fieldsLocked}
+								pending={projectFieldStates.github_link?.pending}
+								error={projectFieldStates.github_link?.error}
+								onSave={(v) => saveProjectField('github_link', v)}
+							/>
 							</div>
 						</div>
-						<div class="flex min-w-0 items-center gap-2 text-sm">
-							<span class="flex w-4 shrink-0 justify-center text-brand">
-								<ProjectIcon id="documentacao" size={18} />
+						<div class="ficha-campo">
+							<span class="ficha-rotulo">
+								<ProjectIcon id="documentacao" size={13} />Documentação
 							</span>
-							<span class="w-32 shrink-0 font-semibold text-text-primary">Documentação:</span>
-							<div class="min-w-0 flex-1">
-								<InlineEditField
-									fieldId="project-doc"
-									label="Link da documentação"
-									value={data.project.documentation_link}
-									kind="text"
-									variant="cell"
-									linkify
-									emptyLabel="Não informado"
-									readonly={fieldsLocked}
-									pending={projectFieldStates.documentation_link?.pending}
-									error={projectFieldStates.documentation_link?.error}
-									onSave={(v) => saveProjectField('documentation_link', v)}
-								/>
+							<div class="ficha-valor">
+							<InlineEditField
+								fieldId="project-doc"
+								label="Link da documentação"
+								value={data.project.documentation_link}
+								kind="text"
+								variant="cell"
+								linkify
+								emptyLabel="Não informado"
+								readonly={fieldsLocked}
+								pending={projectFieldStates.documentation_link?.pending}
+								error={projectFieldStates.documentation_link?.error}
+								onSave={(v) => saveProjectField('documentation_link', v)}
+							/>
 							</div>
 						</div>
-						<div class="flex min-w-0 items-center gap-2 text-sm">
-							<span class="flex w-4 shrink-0 justify-center text-brand">
-								<ProjectIcon id="produto" size={18} />
+						<div class="ficha-campo">
+							<span class="ficha-rotulo">
+								<ProjectIcon id="produto" size={13} />Produto
 							</span>
-							<span class="w-32 shrink-0 font-semibold text-text-primary">Produto:</span>
-							<div class="min-w-0 flex-1">
-								<InlineEditField
-									fieldId="project-product"
-									label="Link do produto"
-									value={data.project.product_link}
-									kind="text"
-									variant="cell"
-									linkify
-									emptyLabel="Não informado"
-									readonly={fieldsLocked}
-									pending={projectFieldStates.product_link?.pending}
-									error={projectFieldStates.product_link?.error}
-									onSave={(v) => saveProjectField('product_link', v)}
-								/>
+							<div class="ficha-valor">
+							<InlineEditField
+								fieldId="project-product"
+								label="Link do produto"
+								value={data.project.product_link}
+								kind="text"
+								variant="cell"
+								linkify
+								emptyLabel="Não informado"
+								readonly={fieldsLocked}
+								pending={projectFieldStates.product_link?.pending}
+								error={projectFieldStates.product_link?.error}
+								onSave={(v) => saveProjectField('product_link', v)}
+							/>
 							</div>
 						</div>
 						</div>
 
-						<!-- Coluna dos links personalizados (nomeados pelo usuario, ate 3).
-						     Nome tambem editavel inline; lixeira remove o item inteiro. -->
-						<div class="flex min-w-0 flex-col gap-2.5">
+						<!-- Coluna dos personalizados (nomeados pelo usuario, ate 3). O NOME
+						     é o próprio rótulo da célula, também editável; lixeira remove. -->
+						<div class="ficha-coluna">
 						{#each data.project.custom_links ?? [] as link, i (i)}
-							<div class="flex min-w-0 items-center gap-2 text-sm">
-								<span class="flex w-4 shrink-0 justify-center text-brand">
-									<ProjectIcon id="link" size={18} />
-								</span>
-								<div class="w-32 min-w-0 shrink-0 font-semibold text-text-primary" title={link.label}>
+							<div class="ficha-campo">
+								<span class="ficha-rotulo ficha-rotulo--editavel" title={link.label}>
+									<ProjectIcon id="link" size={13} />
 									<InlineEditField
 										fieldId={`project-custom-label-${i}`}
 										label={`Nome do link: ${link.label}`}
@@ -1502,8 +1499,9 @@
 										error={projectFieldStates[`custom_link_${i}`]?.error}
 										onSave={(v) => saveCustomLinkLabel(i, v)}
 									/>
-								</div>
-								<div class="min-w-0 flex-1">
+								</span>
+								<div class="ficha-valor">
+									<div class="min-w-0 flex-1">
 									<InlineEditField
 										fieldId={`project-custom-link-${i}`}
 										label={`Link: ${link.label}`}
@@ -1517,7 +1515,7 @@
 										error={projectFieldStates[`custom_link_${i}`]?.error}
 										onSave={(v) => saveCustomLinkUrl(i, v)}
 									/>
-								</div>
+									</div>
 								{#if !fieldsLocked}
 									<button
 										type="button"
@@ -1530,6 +1528,7 @@
 										<AppIcon id="exclusao" size={14} />
 									</button>
 								{/if}
+								</div>
 							</div>
 						{/each}
 
@@ -1537,12 +1536,9 @@
 							{#if customLinkDraft}
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div
-									class="flex items-center gap-2 text-sm"
+									class="ficha-campo"
 									onfocusout={onCustomLinkDraftFocusOut}
 								>
-									<span class="flex w-4 shrink-0 justify-center text-brand">
-										<ProjectIcon id="link" size={18} />
-									</span>
 									<!-- svelte-ignore a11y_autofocus -->
 									<input
 										bind:value={customLinkDraft.label}
@@ -1552,8 +1548,9 @@
 										aria-label="Nome do novo link personalizado"
 										autofocus
 										onkeydown={onCustomLinkDraftKeydown}
-										class="h-8 w-32 shrink-0 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+										class="ficha-rotulo-input h-7 rounded-md border border-border-subtle bg-surface px-2 text-xs text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 									/>
+									<div class="ficha-valor">
 									<input
 										bind:value={customLinkDraft.url}
 										type="text"
@@ -1584,33 +1581,36 @@
 									>
 										<i class="fas fa-xmark text-xs" aria-hidden="true"></i>
 									</button>
+									</div>
+									{#if projectFieldStates.custom_link_add?.error}
+										<p role="alert" class="text-xs text-danger">
+											{projectFieldStates.custom_link_add.error}
+										</p>
+									{/if}
 								</div>
-								{#if projectFieldStates.custom_link_add?.error}
-									<p role="alert" class="text-xs text-danger">
-										{projectFieldStates.custom_link_add.error}
-									</p>
-								{/if}
 							{:else}
-								<button
-									type="button"
-									onclick={() => (customLinkDraft = { label: '', url: '' })}
-									class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-dashed border-border-subtle bg-surface px-3 text-sm font-medium text-brand transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-								>
-									<i class="fas fa-plus text-xs" aria-hidden="true"></i>Adicionar link personalizado
-								</button>
+								<div class="ficha-campo ficha-campo--acao">
+									<button
+										type="button"
+										onclick={() => (customLinkDraft = { label: '', url: '' })}
+										class="ficha-acao-botao flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border-strong font-medium text-brand transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+									>
+										<i class="fas fa-plus text-xs" aria-hidden="true"></i>Adicionar link
+									</button>
+								</div>
 							{/if}
 						{/if}
 						</div>
 					</div>
+				</div>
 
-					<div class="my-4 border-t border-border-subtle"></div>
-
-					<div class="flex min-w-0 flex-col gap-1.5 text-sm">
-						<span class="flex items-center gap-2 text-sm font-semibold text-text-primary">
-							<span class="flex w-4 shrink-0 justify-center text-brand">
-								<ProjectIcon id="observacao" size={18} />
-							</span>Observação:
-						</span>
+					<!-- Observação em moldura PRÓPRIA (e com folga extra): é texto livre,
+					     não um link — junto deles lia como mais uma linha da lista. -->
+					<div class="ficha-bloco mt-3">
+						<div class="ficha-campo">
+							<span class="ficha-rotulo">
+								<ProjectIcon id="observacao" size={13} />Observação
+							</span>
 						<InlineEditField
 							fieldId="project-observacao"
 							label="Observação"
@@ -1623,6 +1623,7 @@
 							error={projectFieldStates.observacao?.error}
 							onSave={(v) => saveProjectField('observacao', v)}
 						/>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1675,6 +1676,8 @@
 			{onAddStage}
 			onResponsaveisSaved={onEtapaResponsaveisSaved}
 			{onDateContextMenu}
+			onImportModel={canEdit ? openImport : null}
+			onComposerToggle={() => (addStageError = null)}
 		>
 			{#snippet meetingSlot(etapa)}
 				{#if etapa.meeting}
@@ -1777,6 +1780,160 @@
 {/if}
 
 <style>
+	/* Ficha técnica: UMA moldura para o bloco inteiro, colunas separadas por
+	   divisória — nada de um cartão com borda/sombra por campo. Mesma casca da
+	   placa EEGD logo abaixo, para os dois blocos lerem como um par. */
+	.ficha {
+		display: grid;
+		grid-template-columns: 1fr;
+		border: 1px solid var(--ds-color-border-base);
+		border-radius: var(--ds-radius-lg, 12px);
+		background: var(--ds-color-surface-base);
+	}
+	.ficha-campo {
+		display: flex;
+		min-width: 0;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 0.875rem 1rem 1rem;
+	}
+	.ficha > .ficha-campo:not(:last-child) {
+		border-bottom: 1px solid var(--ds-color-border-base);
+	}
+	.ficha-rotulo {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		min-width: 0;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		line-height: 1rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--ds-color-text-muted);
+	}
+	/* Ícone na cor de marca: o rótulo é apagado de propósito, mas o ícone é o que
+	   distingue um link do outro na varredura. */
+	.ficha-rotulo i,
+	.ficha-rotulo :global(svg) {
+		color: var(--ds-color-text-brand);
+	}
+	/* O nome do link personalizado É o rótulo e continua editável: o campo inline
+	   herda tipografia E métrica do rótulo — com o min-height/padding próprios
+	   do .editable-field a célula ficava ~12px mais alta que a dos links fixos. */
+	.ficha-campo .ficha-rotulo--editavel :global(.editable-field) {
+		min-height: 1rem;
+		padding: 0;
+		font-size: inherit;
+		font-weight: inherit;
+		line-height: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
+		color: inherit;
+	}
+
+	/* Informações adicionais: mesma moldura, mas com um número VARIÁVEL de
+	   células (0–3 links personalizados). O divisor é o vão de 1px mostrando o
+	   fundo da moldura — funciona em qualquer quantidade, sem :nth-child. */
+	.ficha-bloco {
+		overflow: hidden;
+		border: 1px solid var(--ds-color-border-base);
+		border-radius: var(--ds-radius-lg, 12px);
+		background: var(--ds-color-surface-base);
+	}
+	/* Duas fileiras verticais (fixos | personalizados). O divisor é o vão de 1px
+	   mostrando o fundo — funciona com qualquer número de linhas, e os
+	   personalizados vão de 0 a 3. */
+	.ficha-colunas {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1px;
+		background: var(--ds-color-border-base);
+	}
+	/* A coluna pinta o fundo e estica na altura da linha: com o truque do vão de
+	   1px aqui dentro, a sobra da coluna mais curta virava uma faixa cinza. */
+	.ficha-coluna {
+		display: flex;
+		flex-direction: column;
+		background: var(--ds-color-surface-base);
+	}
+	.ficha-coluna > * + * {
+		border-top: 1px solid var(--ds-color-border-base);
+	}
+	/* Coluna vazia (nenhum link personalizado) não vira meia moldura solta. */
+	.ficha-coluna:empty {
+		display: none;
+	}
+	/* Nos links o rótulo fica NA MESMA LINHA do valor, em faixa de largura fixa:
+	   com rótulo em cima a célula do personalizado (rótulo editável) ficava mais
+	   alta que a do fixo (rótulo estático). Em uma linha só, a altura passa a ser
+	   a do valor nos dois casos. */
+	.ficha-coluna .ficha-campo {
+		flex-direction: row;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.5rem 1rem;
+	}
+	.ficha-coluna .ficha-rotulo,
+	.ficha-rotulo-input {
+		width: 8.5rem;
+		flex: none;
+	}
+	.ficha-valor {
+		display: flex;
+		min-width: 0;
+		flex: 1;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	/* O convite ocupa a MESMA área que o link ocuparia depois de criado — daí a
+	   métrica copiada do .editable-field vazio (min-height/padding/fonte), senão
+	   a moldura fica mais baixa que os "Não informado" ao lado. */
+	.ficha-acao-botao {
+		flex: 1;
+		box-sizing: border-box;
+		min-height: 1.75rem;
+		padding: 0.18rem 0.4rem;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+	}
+	/* Valor um degrau acima do corpo, igual à placa EEGD. Os controles fixam
+	   `text-sm` internamente; `bare` cuida do OrgaoTreeSelect/SeiProcessField e
+	   o :global alcança o texto fechado do InlineEditField. */
+	.ficha-campo :global(.value-text),
+	.ficha-campo :global(.editable-field),
+	.ficha-campo :global(.cell-editor) {
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+	}
+	/* Os VALORES das colunas são links: cor de marca e sublinhado. Escopo em
+	   `.ficha-valor` de propósito — o nome do link personalizado também é um
+	   `.editable-field`, mas é rótulo, não link. O estado vazio ("Não informado")
+	   fica de fora: não leva a lugar nenhum. */
+	.ficha-coluna .ficha-valor :global(.editable-field:not(.editable-field-empty)) {
+		color: var(--ds-color-text-brand);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
+	@media (min-width: 768px) {
+		/* MESMAS trilhas da placa EEGD (EeggInlineEditor.svelte): os dois blocos
+		   ficam um sobre o outro e as divisórias têm de se alinhar. */
+		.ficha {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+		.ficha--quatro {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+		.ficha > .ficha-campo:not(:last-child) {
+			border-bottom: 0;
+			border-right: 1px solid var(--ds-color-border-base);
+		}
+		.ficha-colunas {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
 	.section-divider {
 		display: flex;
 		align-items: center;

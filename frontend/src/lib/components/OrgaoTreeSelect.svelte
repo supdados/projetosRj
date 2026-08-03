@@ -31,6 +31,8 @@
 		ariaLabel?: string;
 		/** Rótulo exibido quando `value` não está em `options` (ex.: órgão fora do escopo). */
 		fallbackLabel?: string | null;
+		/** Sem moldura própria: para uso dentro de um bloco que já tem a sua. */
+		bare?: boolean;
 	}
 
 	let {
@@ -43,7 +45,8 @@
 		disabled = false,
 		id,
 		ariaLabel,
-		fallbackLabel = null
+		fallbackLabel = null,
+		bare = false
 	}: Props = $props();
 
 	let open = $state(false);
@@ -157,7 +160,9 @@
 		aria-label={ariaLabel ? `${ariaLabel}: ${triggerLabel}` : undefined}
 		onclick={() => (open ? closePanel() : openPanel())}
 		onkeydown={onTriggerKeydown}
-		class="flex h-[var(--control-h-md)] w-full items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-left text-sm transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
+		class="flex w-full items-center justify-between gap-2 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50 {bare
+			? 'rounded-md border border-transparent text-md hover:bg-surface-muted'
+			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface px-3 text-sm hover:border-brand'}"
 	>
 		<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
 			{triggerLabel}
