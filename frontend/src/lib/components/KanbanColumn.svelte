@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
-	 * Coluna do Kanban (status ativo): header tingido + dropzone + composer
-	 * opcional. A Finalizada tem componente próprio (KanbanDoneColumn).
+	 * Coluna do Kanban: header tingido + dropzone + rodapé opcional. Serve os 5
+	 * status, inclusive a Finalizada (mesma largura, sem caso especial).
 	 */
 	import type { Snippet } from 'svelte';
 	import KanbanColumnHeader from '$lib/components/KanbanColumnHeader.svelte';
@@ -12,11 +12,11 @@
 
 	interface Props extends KanbanDndProps {
 		column: BoardColumn;
-		/** Composer inline opcional, renderizado no rodapé da coluna. */
-		composer?: Snippet<[TaskStatus]>;
+		/** Rodapé opcional da coluna (composer inline, ação de arquivar…). */
+		footer?: Snippet<[TaskStatus]>;
 	}
 
-	let { column, composer, ...dnd }: Props = $props();
+	let { column, footer, ...dnd }: Props = $props();
 </script>
 
 <section
@@ -32,9 +32,9 @@
 
 	<KanbanDropzone status={column.status} label={column.label} tasks={column.tasks} {...dnd} />
 
-	{#if composer}
+	{#if footer}
 		<div class="shrink-0 px-1 pb-1">
-			{@render composer(column.status)}
+			{@render footer(column.status)}
 		</div>
 	{:else}
 		<!-- Rodapé fantasma na altura do "+ adicionar": alinha o fim das colunas. -->

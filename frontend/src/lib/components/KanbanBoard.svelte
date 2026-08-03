@@ -1,9 +1,8 @@
 <script lang="ts">
 	/**
-	 * Board do Kanban de Tarefas (jun/2026): os 4 status ativos como colunas
-	 * IGUAIS — Não iniciada | Em andamento | Para validação | Para ajustes — e a
-	 * Finalizada como trilho colapsável, com DnD nativo HTML5 (espelha
-	 * `static/js/modules/kanban/board-dnd.js`).
+	 * Board do Kanban de Tarefas (jun/2026): os 5 status como colunas IGUAIS —
+	 * Não iniciada | Em andamento | Para validação | Para ajustes | Finalizada —
+	 * com DnD nativo HTML5 (espelha `static/js/modules/kanban/board-dnd.js`).
 	 *
 	 * FONTE DE VERDADE = STORE: o board lê `$store.columns` e despacha mutações
 	 * (`moveCard`/`reorder`) que são otimistas + confirmadas pelo backend +
@@ -21,18 +20,14 @@
 	 *   - um região `aria-live="polite"` anuncia as movimentações e, para quem
  *     enxerga, movimento recusado vira toast e falha de mutação vira StateBanner.
 	 */
-	import { getContext, setContext, type Snippet } from 'svelte';
+	import { getContext, type Snippet } from 'svelte';
+	import AppIcon from '$lib/components/AppIcon.svelte';
 	import KanbanColumn from '$lib/components/KanbanColumn.svelte';
-	import KanbanDoneColumn from '$lib/components/KanbanDoneColumn.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import { flash } from '$lib/stores/flash';
 	import type { BoardStore } from '$lib/stores/board';
-	import type { BoardCard } from '$lib/types/board';
+	import type { BoardCard, BoardColumn } from '$lib/types/board';
 	import type { KanbanZoneView } from '$lib/types/kanbanDnd';
-	import {
-		KANBAN_COLUMN_MOTION,
-		type KanbanColumnMotionSignal
-	} from '$lib/utils/kanbanColumnMotion';
 	import {
 		STATUS_LABELS,
 		TASK_STATUS_ORDER,
@@ -60,9 +55,8 @@
 
 	let { store, composer }: Props = $props();
 
-	// Sinal "morph de largura em curso" — ver kanbanColumnMotion.ts.
-	const columnMotion = $state<KanbanColumnMotionSignal>({ active: false });
-	setContext(KANBAN_COLUMN_MOTION, columnMotion);
+	/** Arquivar finalizadas: a página fornece a ação via contexto. */
+	const requestArchive = getContext<(() => void) | undefined>('requestArchiveFinalizadas');
 
 	/** Contexto do drag em curso (estado canônico no componente, não no DOM). */
 	interface DragContext {
@@ -120,17 +114,29 @@
 		$store.status === 'error' ? undefined : 'O quadro voltou ao estado anterior.'
 	);
 
-	/** Aviso visível (não só sr-only) de movimento recusado, com dedupe por gesto. */
-	function warnBlockedMove(message: string): void {
-		liveMessage = message;
-		flash.warning(message, { key: 'kanban-movimento-bloqueado' });
+	/** Motivo do bloqueio = chave de dedupe: mensagens diferentes não se engolem. */
+	type BlockedMoveReason =
+		| 'kanban-bloqueio-permissao'
+		| 'kanban-bloqueio-avanco'
+		| 'kanban-bloqueio-borda';
+
+	/**
+	 * Aviso de movimento recusado. Só toast: o toast já tem `aria-live` próprio,
+	 * escrever também em `liveMessage` fazia o leitor de tela anunciar 2×.
+	 */
+	function warnBlockedMove(message: string, reason: BlockedMoveReason): void {
+		flash.warning(message, { key: reason });
 	}
 
-	const colNaoIniciada = $derived(columns.find((c) => c.status === 'nao_iniciada'));
-	const colEmAndamento = $derived(columns.find((c) => c.status === 'em_andamento'));
-	const colValidacao = $derived(columns.find((c) => c.status === 'para_validacao'));
-	const colAjustes = $derived(columns.find((c) => c.status === 'para_ajustes'));
-	const colFinalizada = $derived(columns.find((c) => c.status === 'finalizada'));
+	/** Colunas na ordem canônica dos status, ignorando status desconhecido. */
+	const orderedColumns = $derived(
+		TASK_STATUS_ORDER.map((status) => columns.find((c) => c.status === status)).filter(
+			(column): column is BoardColumn => column !== undefined
+		)
+	);
+	const finalizadasCount = $derived(
+		columns.find((c) => c.status === 'finalizada')?.tasks.length ?? 0
+	);
 
 	/** Leitura reativa do estado de drag de uma zona (evita prop por status). */
 	function zoneView(status: TaskStatus): KanbanZoneView {
@@ -249,7 +255,7 @@
 		collapsedId = null;
 
 		if (!canItemMoveToStatus(ctx.card, status, ctx.fromStatus)) {
-			warnBlockedMove('Sem permissão para finalizar esta tarefa.');
+			warnBlockedMove('Sem permissão para finalizar esta tarefa.', 'kanban-bloqueio-permissao');
 			return;
 		}
 
@@ -363,21 +369,26 @@
 		if (event.key === 'Home' || event.key === 'End') {
 			const edge = direction === 1 ? TASK_STATUS_ORDER.length - 1 : 0;
 			const target = TASK_STATUS_ORDER[edge];
-			if (target !== fromStatus && canItemMoveToStatus(card, target, fromStatus)) {
+			if (target === fromStatus) {
+				warnBlockedMove(
+					`Esta tarefa já está em ${STATUS_LABELS[target]}.`,
+					'kanban-bloqueio-borda'
+				);
+			} else if (canItemMoveToStatus(card, target, fromStatus)) {
 				await moveToColumnEnd(card, fromStatus, target, cardEl);
 			} else {
-				warnBlockedMove('Sem permissão para finalizar esta tarefa.');
+				warnBlockedMove('Sem permissão para finalizar esta tarefa.', 'kanban-bloqueio-permissao');
 			}
 			return;
 		}
 
 		const next = adjacentStatus(card, fromStatus, direction);
 		if (!next) {
-			warnBlockedMove(
-				direction === 1
-					? 'Não é possível avançar esta tarefa.'
-					: 'Esta tarefa já está na primeira coluna.'
-			);
+			if (direction === 1) {
+				warnBlockedMove('Não é possível avançar esta tarefa.', 'kanban-bloqueio-avanco');
+			} else {
+				warnBlockedMove('Esta tarefa já está na primeira coluna.', 'kanban-bloqueio-borda');
+			}
 			return;
 		}
 		await moveToColumnEnd(card, fromStatus, next, cardEl);
@@ -399,27 +410,29 @@
 		role="group"
 		aria-label="Quadro Kanban de tarefas"
 	>
-		{#if colNaoIniciada && colEmAndamento && colValidacao && colAjustes && colFinalizada}
-			<!-- Composer só em "Não iniciada": toda tarefa nasce ali. -->
-			{#each [colNaoIniciada, colEmAndamento, colValidacao, colAjustes] as column (column.status)}
-				<KanbanColumn
-					{column}
-					composer={column.status === 'nao_iniciada' ? composer : undefined}
-					{zoneView}
-					draggingId={collapsedId}
-					{settledId}
-					placeholderHeight={dragCardHeight}
-					{onCardDragStart}
-					{onCardDragEnd}
-					{onZoneDragEnter}
-					{onZoneDragOver}
-					{onZoneDragLeave}
-					{onZoneDrop}
-					{onCardKeydown}
-				/>
-			{/each}
-			<KanbanDoneColumn
-				column={colFinalizada}
+		{#snippet archiveFooter()}
+			<button
+				type="button"
+				onclick={requestArchive}
+				disabled={finalizadasCount === 0}
+				title="Arquivar tarefas finalizadas do escopo atual"
+				class="flex w-full items-center justify-center gap-1 rounded-lg border border-border-subtle bg-transparent px-[0.48rem] py-[0.42rem] text-xs font-semibold text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 disabled:hover:border-border-subtle disabled:hover:bg-transparent disabled:hover:text-text-muted"
+			>
+				<AppIcon id="arquivo" size={14} />
+				Arquivar finalizados
+			</button>
+		{/snippet}
+
+		<!-- Composer só em "Não iniciada" (toda tarefa nasce ali); em "Finalizada"
+			 o rodapé é a ação de arquivar. -->
+		{#each orderedColumns as column (column.status)}
+			<KanbanColumn
+				{column}
+				footer={column.status === 'nao_iniciada'
+					? composer
+					: column.status === 'finalizada' && requestArchive
+						? archiveFooter
+						: undefined}
 				{zoneView}
 				draggingId={collapsedId}
 				{settledId}
@@ -432,6 +445,6 @@
 				{onZoneDrop}
 				{onCardKeydown}
 			/>
-		{/if}
+		{/each}
 	</div>
 </div>
