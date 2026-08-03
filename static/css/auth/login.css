@@ -21,22 +21,46 @@
 }
 
 
+/* Os motivos vivem em DUAS FAIXAS presas às bordas (topo e rodapé), nunca na
+   faixa central: o título e os números ficam centrados verticalmente no .lp-left
+   e antes passavam por cima deles. `max-height` em vh é o que garante a regra em
+   qualquer altura de viewport — sem ele o SVG cresce pela proporção do viewBox e
+   invade o miolo em telas baixas. */
 .lp-bg-svg {
   position: absolute;
   opacity: 0;
   animation: lp-svg-float 20s ease-in-out infinite, lp-svg-in 1.6s ease forwards;
 }
 
-.lp-bg-svg-1  { top: 5%;    left: 3%;   width: 320px; animation-delay: 0s,   0.3s; }
-.lp-bg-svg-2  { top: 52%;  left: 8%;   width: 270px; animation-delay: 3s,   0.6s; }
-.lp-bg-svg-3  { top: 18%;  left: 32%;  width: 250px; animation-delay: 6s,   0.9s; }
-.lp-bg-svg-4  { bottom: 6%; left: 18%; width: 210px; animation-delay: 9s,   1.2s; }
-.lp-bg-svg-5  { top: 72%;  left: 36%;  width: 230px; animation-delay: 4s,   0.7s; }
-.lp-bg-svg-6  { top: 3%;   left: 52%;  width: 190px; animation-delay: 7s,   1.0s; }
-.lp-bg-svg-7  { top: 38%;  left: 2%;   width: 200px; animation-delay: 5s,   0.8s; }
-.lp-bg-svg-8  { bottom: 4%; left: 48%; width: 180px; animation-delay: 11s,  1.4s; }
-.lp-bg-svg-9  { top: 28%;  left: 58%;  width: 160px; animation-delay: 2s,   0.5s; }
-.lp-bg-svg-10 { top: 62%;  left: 52%;  width: 170px; animation-delay: 8s,   1.1s; }
+/* Faixa superior — teto em 22vh + o `top` mantém tudo acima de ~25% da tela. */
+.lp-bg-svg-1,
+.lp-bg-svg-3,
+.lp-bg-svg-7,
+.lp-bg-svg-6,
+.lp-bg-svg-9 {
+  max-height: 22vh;
+}
+
+/* Faixa inferior — ancorada por `bottom`, cresce para cima até ~28%. */
+.lp-bg-svg-4,
+.lp-bg-svg-2,
+.lp-bg-svg-5,
+.lp-bg-svg-8,
+.lp-bg-svg-10 {
+  max-height: 24vh;
+}
+
+.lp-bg-svg-1  { top: 3%;    left: 1%;   width: 240px; animation-delay: 0s,   0.3s; }
+.lp-bg-svg-3  { top: 2%;    left: 20%;  width: 190px; animation-delay: 6s,   0.9s; }
+.lp-bg-svg-7  { top: 4%;    left: 36%;  width: 170px; animation-delay: 5s,   0.8s; }
+.lp-bg-svg-6  { top: 2%;    left: 48%;  width: 160px; animation-delay: 7s,   1.0s; }
+.lp-bg-svg-9  { top: 5%;    left: 58%;  width: 150px; animation-delay: 2s,   0.5s; }
+
+.lp-bg-svg-4  { bottom: 3%; left: 2%;   width: 180px; animation-delay: 9s,   1.2s; }
+.lp-bg-svg-2  { bottom: 6%; left: 16%;  width: 220px; animation-delay: 3s,   0.6s; }
+.lp-bg-svg-5  { bottom: 2%; left: 32%;  width: 200px; animation-delay: 4s,   0.7s; }
+.lp-bg-svg-8  { bottom: 7%; left: 46%;  width: 165px; animation-delay: 11s,  1.4s; }
+.lp-bg-svg-10 { bottom: 2%; left: 58%;  width: 155px; animation-delay: 8s,   1.1s; }
 
 @keyframes lp-svg-float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
@@ -74,29 +98,22 @@
   animation: lp-slide-up 0.8s ease forwards 0.4s;
 }
 
+/* Teto em --ds-font-size-4xl (2rem): é o maior degrau da escala, acima disso
+   vira ilustração e não texto. O clamp segue para telas estreitas. */
 .lp-hero-title {
   font-family: var(--ds-font-family-heading);
-  font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+  font-size: clamp(var(--ds-font-size-2xl), 3.5vw, var(--ds-font-size-4xl));
   font-weight: var(--ds-font-weight-extrabold);
-  line-height: 1.12;
+  line-height: var(--ds-line-height-tight);
   color: var(--app-color-text-primary);
   margin-bottom: 15px;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--ds-letter-spacing-tight);
 }
 
+/* Azul chapado da régua (primary-600). O gradiente com text-fill transparente
+   entregava um tom fora da régua e mudava conforme o tamanho do texto. */
 .lp-hero-accent {
-  background: linear-gradient(135deg, var(--ds-color-primary-600), var(--ds-color-primary-500));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.lp-hero-desc {
-  font-size: var(--ds-font-size-md);
-  line-height: var(--ds-line-height-relaxed);
-  color: var(--app-color-text-muted);
-  max-width: 400px;
-  margin: 0;
+  color: var(--ds-color-primary-600);
 }
 
 /* Stats row */
@@ -110,11 +127,11 @@
 
 .lp-stat-number {
   font-family: var(--ds-font-family-heading);
-  font-size: 1.9rem;
+  font-size: var(--ds-font-size-3xl);
   font-weight: var(--ds-font-weight-extrabold);
   color: var(--app-color-text-primary);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--ds-letter-spacing-tight);
 }
 
 .lp-stat-label {
@@ -338,7 +355,7 @@
 }
 
 .lp-toggle-btn i {
-  font-size: 0.75rem;
+  font-size: var(--ds-font-size-xs);
   opacity: 0.8;
 }
 
@@ -541,10 +558,6 @@ html[data-theme="dark"] body:not(.is-authenticated) .lp-hero-accent {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-html[data-theme="dark"] body:not(.is-authenticated) .lp-hero-desc {
-  color: #8faec9;
 }
 
 html[data-theme="dark"] body:not(.is-authenticated) .lp-stat-number {
