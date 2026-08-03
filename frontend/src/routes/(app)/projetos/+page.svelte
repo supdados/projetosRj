@@ -1030,68 +1030,68 @@
 			-->
 			<div class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm">
 				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
-					<table class="m-0 w-full min-w-[980px] border-separate border-spacing-0 text-sm">
+					<table class="m-0 w-full min-w-[1040px] border-separate border-spacing-0 text-md">
 						<caption class="sr-only">Lista de projetos filtrados</caption>
 						<thead>
 							<!-- Cabeçalho: fundo suave, MAIÚSCULAS com letter-spacing caps. -->
 							<tr class="text-left text-text-muted">
 								<th
 									scope="col"
-									class="w-16 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="w-16 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									ID
 								</th>
 								<th
 									scope="col"
-									class="min-w-[220px] border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="min-w-[220px] border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Título
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Órgão
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Prioridade
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Status
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Tipo de entrega
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Data Início
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Data Fim
 								</th>
 								<th
 									scope="col"
-									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Etapas
 								</th>
 								<th
 									scope="col"
-									class="w-28 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-xs font-bold uppercase tracking-caps whitespace-nowrap"
+									class="w-28 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									Ações
 								</th>
@@ -1109,7 +1109,7 @@
 								>
 									<td class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle">
 										<!-- ID em texto simples (sem chip/fundo). -->
-										<span class="text-xs font-bold text-text-muted">
+										<span class="text-sm font-bold text-text-muted">
 											{project.id}
 										</span>
 									</td>
@@ -1132,7 +1132,7 @@
 									<td
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
-										<span class="text-xs font-semibold uppercase tracking-wide">
+										<span class="text-md font-semibold uppercase tracking-wide">
 											{project.orgao_sigla ?? project.orgao ?? '—'}
 										</span>
 									</td>
@@ -1141,7 +1141,7 @@
 									>
 										{#if project.prioridade}
 											<span
-												class="text-xs font-semibold uppercase tracking-wide {toneTextClass[
+												class="text-md font-semibold uppercase tracking-wide {toneTextClass[
 													priorityTone(project.prioridade)
 												]}"
 											>
@@ -1156,7 +1156,7 @@
 									>
 										{#if project.status}
 											<span
-												class="text-xs font-semibold uppercase tracking-wide {toneTextClass[
+												class="text-md font-semibold uppercase tracking-wide {toneTextClass[
 													statusTone(project.status)
 												]}"
 											>
@@ -1170,7 +1170,7 @@
 										class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle text-text-secondary"
 									>
 										{#if project.delivery_type}
-											<span class="text-xs font-semibold uppercase tracking-wide">
+											<span class="text-md font-semibold uppercase tracking-wide">
 												{project.delivery_type}
 											</span>
 										{:else}
@@ -1204,7 +1204,7 @@
 									>
 										{#if project.total_workflow_etapas > 0}
 											<span
-												class="text-xs font-semibold {project.todas_etapas_concluidas
+												class="text-md font-semibold {project.todas_etapas_concluidas
 													? 'text-success'
 													: ''}"
 											>
@@ -1229,7 +1229,7 @@
 												aria-label="Editar projeto"
 												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand"
 											>
-												<AppIcon id="edicao" size={14} />
+												<AppIcon id="edicao" size={16} />
 											</a>
 											<button
 												type="button"
@@ -1239,7 +1239,7 @@
 												aria-label="Excluir projeto"
 												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
 											>
-												<AppIcon id="exclusao" size={14} />
+												<AppIcon id="exclusao" size={16} />
 											</button>
 										</div>
 									</td>

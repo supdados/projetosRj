@@ -372,7 +372,7 @@
 				autofocus
 				rows="1"
 				aria-label="Editar descrição"
-				class="min-h-7 w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs leading-normal text-text-primary focus:border-brand focus:outline-none 2xl:text-sm"
+				class="min-h-7 w-full min-w-0 resize-y rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm leading-normal text-text-primary focus:border-brand focus:outline-none 2xl:text-md"
 			></textarea>
 		{:else}
 			<div class="flex min-w-0 items-center gap-1">
@@ -380,7 +380,7 @@
 					type="button"
 					onclick={onDescriptionClick}
 					title={nestedInDrawer ? 'Editar descrição' : undefined}
-					class="min-w-0 break-words text-left text-xs text-text-primary transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand 2xl:text-sm"
+					class="min-w-0 break-words text-left text-sm text-text-primary transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand 2xl:text-md"
 				>
 					{task.descricao}
 				</button>
@@ -391,7 +391,7 @@
 					aria-label="Editar descrição"
 					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-brand focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand group-hover/row:opacity-100"
 				>
-					<AppIcon id="edicao" size={12} />
+					<AppIcon id="edicao" size={14} />
 				</button>
 			</div>
 		{/if}
@@ -456,11 +456,11 @@
 				aria-label={`Comentários (${commentsCount})`}
 				aria-expanded={commentsOpen}
 				aria-controls={`${panelId}-comments-region`}
-				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {commentsOpen
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {commentsOpen
 					? 'text-brand'
 					: 'text-text-muted hover:text-brand'}"
 			>
-				{#if loadingComments}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="comentario" size={12} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
+				{#if loadingComments}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="comentario" size={16} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if commentsCount > 0}{commentsCount}{/if}</span>
 			</button>
 			<button
 				type="button"
@@ -470,9 +470,9 @@
 				aria-label={anexosCount === 0
 					? 'Anexar arquivo'
 					: `Ver anexos (${anexosCount})`}
-				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-2xs font-semibold text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+				class="inline-flex items-center gap-0.5 rounded-md px-1 py-1 text-xs font-semibold text-text-muted transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 			>
-				{#if uploading}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="anexo" size={12} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
+				{#if uploading}<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>{:else}<AppIcon id="anexo" size={16} />{/if}<span class="min-w-[0.7rem] text-left tabular-nums">{#if anexosCount > 0}{anexosCount}{/if}</span>
 			</button>
 			<input
 				bind:this={fileInput}
@@ -489,7 +489,7 @@
 				title="Excluir tarefa"
 				class="inline-flex h-7 w-7 items-center justify-center text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
 			>
-				<AppIcon id="exclusao" size={14} />
+				<AppIcon id="exclusao" size={16} />
 			</button>
 		</div>
 	</div>

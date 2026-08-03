@@ -313,7 +313,7 @@
 	}
 
 	// Rótulo de coluna: mesmo estilo do StageGroupHeader do hub de Tarefas.
-	const TH = 'px-2 py-2 text-2xs font-bold uppercase tracking-caps text-text-secondary';
+	const TH = 'px-2 py-2 text-xs font-bold uppercase tracking-caps text-text-secondary';
 </script>
 
 {#snippet stageColumns()}
@@ -440,7 +440,7 @@
 			<p class="text-sm text-text-muted">Sem etapas urgentes na janela atual.</p>
 		{:else}
 			<div class="overflow-x-auto rounded-lg border border-border-subtle">
-				<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
+				<table class="w-full table-fixed border-collapse text-sm 2xl:text-md">
 					<caption class="sr-only">Etapas pendentes de {project.titulo}</caption>
 					{@render stageColumns()}
 					{@render stageTableHead()}
@@ -473,11 +473,11 @@
 						class="overflow-hidden border-t border-dashed border-border-subtle pt-3"
 						transition:slide={{ duration: 340, easing: cubicOut }}
 					>
-						<div class="pb-2 text-2xs font-bold uppercase tracking-caps text-text-muted">
+						<div class="pb-2 text-xs font-bold uppercase tracking-caps text-text-muted">
 							Outras etapas
 						</div>
 						<div class="overflow-x-auto rounded-lg border border-border-subtle">
-							<table class="w-full table-fixed border-collapse text-xs 2xl:text-sm">
+							<table class="w-full table-fixed border-collapse text-sm 2xl:text-md">
 								<caption class="sr-only">Outras etapas de {project.titulo}</caption>
 								{@render stageColumns()}
 								{@render stageTableHead()}

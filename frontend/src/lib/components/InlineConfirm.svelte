@@ -129,15 +129,15 @@
 	aria-label={question}
 	aria-busy={busy}
 	tabindex="-1"
-	class="flex h-full w-full flex-col justify-center gap-3 rounded-md border p-3.5 {TONE_SURFACE[
+	class="flex h-full w-full flex-col justify-center gap-2 rounded-md border p-2.5 {TONE_SURFACE[
 		tone
 	]}"
 >
-	<div class="flex items-start gap-[0.5625rem]">
-		<FeedbackIcon id={iconId} size={18} class="mt-px shrink-0 {TONE_INK[tone]}" />
-		<span class="text-md font-semibold text-text-primary">{question}</span>
+	<div class="flex items-start gap-1.5">
+		<FeedbackIcon id={iconId} size={16} class="mt-px shrink-0 {TONE_INK[tone]}" />
+		<span class="text-sm font-semibold text-text-primary">{question}</span>
 	</div>
-	<div class="flex gap-2">
+	<div class="flex gap-1.5">
 		<button
 			bind:this={confirmEl}
 			type="button"

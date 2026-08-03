@@ -30,10 +30,6 @@
 	import AssigneeAvatar from '$lib/components/AssigneeAvatar.svelte';
 	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
-	import {
-		KANBAN_COLUMN_MOTION,
-		type KanbanColumnMotionSignal
-	} from '$lib/utils/kanbanColumnMotion';
 
 	/**
 	 * Abertura do drawer: fornecida via contexto pela página, para não exigir
@@ -122,22 +118,15 @@
 	 * Rodapé adaptativo por medição: nível 0 = tudo; 1 = suprime o tipo; 2 =
 	 * agrega avatares em "+N". Sobe um degrau enquanto há overflow horizontal;
 	 * `refitToken` descarta rodadas obsoletas. A medição nunca roda direto no
-	 * ResizeObserver: coalesce por rAF e suspende durante morph de largura
-	 * (KANBAN_COLUMN_MOTION) — ver docs/refinamento-animacao-kanban-expandir.md.
+	 * ResizeObserver: coalesce por rAF.
 	 */
 	let footerEl = $state<HTMLElement | null>(null);
 	let fitLevel = $state(0);
 	let refitToken = 0;
 
-	const columnMotion = getContext<KanbanColumnMotionSignal | undefined>(KANBAN_COLUMN_MOTION);
 	let rafPending = false;
-	let needsRefit = $state(false);
 
 	function scheduleFooterRefit(): void {
-		if (columnMotion?.active) {
-			needsRefit = true;
-			return;
-		}
 		if (rafPending) return;
 		rafPending = true;
 		requestAnimationFrame(() => {
@@ -188,13 +177,6 @@
 		// (effect_update_depth_exceeded derruba o board inteiro).
 		untrack(() => scheduleFooterRefit());
 		return () => observer.disconnect();
-	});
-
-	// Re-medição única quando o sinal de morph desliga.
-	$effect(() => {
-		if (!columnMotion || columnMotion.active || !needsRefit) return;
-		needsRefit = false;
-		untrack(() => scheduleFooterRefit());
 	});
 
 	// Exclusão pequena e frequente no próprio card: InlineConfirm (spec Grupo 4).
@@ -310,7 +292,7 @@
 >
 	<!-- max-height em vez de line-clamp: dentro de -webkit-box o float (que
 	     reserva o canto da 1ª linha p/ a lixeira) não flutua. -->
-	<p class="m-0 max-h-[3.75em] overflow-hidden break-words text-xs font-normal leading-snug text-text-primary 2xl:text-sm">
+	<p class="m-0 max-h-[3.75em] overflow-hidden break-words text-sm font-normal leading-snug text-text-primary 2xl:text-md">
 		{#if deleteTask}<span aria-hidden="true" class="float-right h-3.5 w-7"></span>{/if}{card.descricao}
 	</p>
 
@@ -320,7 +302,7 @@
 		<a
 			href={`/projetos/${card.project_id}`}
 			draggable="false"
-			class="-mt-1 w-fit max-w-full truncate rounded-sm text-2xs font-medium text-brand transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			class="-mt-1 w-fit max-w-full truncate rounded-sm text-xs font-medium text-brand transition-colors duration-fast hover:text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			title={card.project_titulo}
 		>
 			{card.project_titulo}
@@ -349,9 +331,8 @@
 			>
 		{/if}
 		{#if tipoLabel && fitLevel < 1}
-			<span class="inline-flex flex-none items-center" title={tipoLabel}>
-				<TaskTipoIcon tipo={card.tipo_pedido} size={14} />
-				<span class="sr-only">{tipoLabel}</span>
+			<span class="kc-chip kc-chip--prio">
+				<TaskTipoIcon tipo={card.tipo_pedido} size={14} />{tipoLabel}
 			</span>
 		{/if}
 
@@ -474,6 +455,7 @@
 		white-space: nowrap;
 		flex: none;
 	}
+	/* Tinta dos rótulos do rodapé (prioridade e tipo). */
 	.kc-chip--prio {
 		color: var(--ds-color-text-secondary);
 	}
