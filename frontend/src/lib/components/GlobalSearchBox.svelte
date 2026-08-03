@@ -334,7 +334,10 @@
 										{groupCountLabel(group.key, items.length)}
 									</span>
 								</div>
-								{#each items as item (item.url)}
+								<!-- Chave com índice (mesmo padrão de busca/+page.svelte): todo evento
+								     serializa a MESMA url (o hub de calendários não aceita id), e chave
+								     duplicada faz o Svelte lançar each_key_duplicate, matando o painel. -->
+								{#each items as item, i (`${group.key}-${item.url}-${i}`)}
 									{@const flatIndex = flatItems.indexOf(item)}
 									{@const active = flatIndex === selectedIndex}
 									<a
