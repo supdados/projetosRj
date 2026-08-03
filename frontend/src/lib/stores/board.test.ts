@@ -168,6 +168,20 @@ describe('board store — rollback não apaga mudanças concorrentes confirmadas
 		expect(get(board).error).toBeTruthy();
 	});
 
+	it('upsert com prioridade editada mantém o card na posição (não teleporta na coluna)', () => {
+		const board = createBoardStore();
+		// ordem manual: [3, 2, 1] (unshift no addCard)
+		board.addCard(makeCard(1), 'nao_iniciada');
+		board.addCard(makeCard(2), 'nao_iniciada');
+		board.addCard(makeCard(3), 'nao_iniciada');
+
+		// Editar prioridade via drawer não pode reordenar: o salto tirava o card
+		// da viewport e lia-se como "a tarefa sumiu" (bug 2026-08-02).
+		board.upsertCard({ ...makeCard(2), prioridade: 'urgente' });
+
+		expect(columnTaskIds(board, 'nao_iniciada')).toEqual([3, 2, 1]);
+	});
+
 	it('falha de reorder restaura ordem anterior sem apagar card adicionado em voo', async () => {
 		const board = createBoardStore();
 		board.addCard(makeCard(1), 'nao_iniciada');

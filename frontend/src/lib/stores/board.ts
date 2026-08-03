@@ -367,11 +367,11 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 
 	/**
 	 * Insere ou atualiza um card (reconciliação vinda do drawer da Fase 5b-2).
-	 * Se o card já existe na coluna do seu status atual, é substituído no lugar
-	 * (preserva posição); se mudou de coluna ou é novo, entra no topo da coluna
-	 * correta. O status do card determina a coluna (autoritativo do servidor).
-	 * Em seguida a coluna alvo é reordenada por prioridade (paridade com o
-	 * backend) — editar a prioridade reposiciona o card sem precisar de reload.
+	 * Se o card já existe na coluna do seu status atual, é substituído NO LUGAR:
+	 * editar prioridade não reordena a coluna — o salto para a posição ordenada
+	 * tirava o card da viewport e lia-se como "a tarefa sumiu" (bug 2026-08-02);
+	 * a ordem por prioridade volta no próximo load. Card novo ou que mudou de
+	 * coluna entra ordenado na coluna do status (autoritativo do servidor).
 	 */
 	function upsertCard(card: BoardCard): void {
 		store.update((state) => {
@@ -387,11 +387,12 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 			}
 			const target = next.find((column) => column.status === targetStatus);
 			if (target) {
-				const idx = priorIndexInTarget === -1
-					? 0
-					: Math.min(priorIndexInTarget, target.tasks.length);
-				target.tasks.splice(idx, 0, card);
-				target.tasks = sortByPriority(target.tasks);
+				if (priorIndexInTarget !== -1) {
+					target.tasks.splice(Math.min(priorIndexInTarget, target.tasks.length), 0, card);
+				} else {
+					target.tasks.unshift(card);
+					target.tasks = sortByPriority(target.tasks);
+				}
 			}
 			return { ...state, columns: next };
 		});
