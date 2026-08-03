@@ -40,6 +40,7 @@
 	import InlineCommentsTree from './InlineCommentsTree.svelte';
 	import AttachmentsPanel from './AttachmentsPanel.svelte';
 	import SelectMenu from './SelectMenu.svelte';
+	import TaskTipoIcon from './TaskTipoIcon.svelte';
 	import InlineConfirm from './InlineConfirm.svelte';
 	import StateBanner from './StateBanner.svelte';
 	import FeedbackIcon from './FeedbackIcon.svelte';
@@ -479,6 +480,7 @@
 								allowAll
 								allLabel="—"
 								disabled={!detail.permissions.can_edit}
+								optionIcon={tipoOptionIcon}
 							/>
 						</div>
 
@@ -568,6 +570,10 @@
 		{/if}
 	</div>
 {/if}
+
+{#snippet tipoOptionIcon(opt: SelectMenuOption)}
+	{#if opt.value}<TaskTipoIcon tipo={opt.value} size={14} />{/if}
+{/snippet}
 
 <style>
 	/* Chip "Arquivada" do header (tinta âmbar suave, degraus DS dark-safe). */

@@ -26,7 +26,11 @@
 		/** Esconde o ✓ da opção selecionada (o realce de fundo/peso permanece). */
 		hideCheck?: boolean;
 		trigger?: Snippet<[{ open: boolean; label: string; selected: SelectMenuOption | null }]>;
-		/** Ícone renderizado antes do rótulo de cada opção do painel. */
+		/**
+		 * Ícone renderizado antes do rótulo de cada opção do painel — e também no
+		 * gatilho padrão, para a opção selecionada (com `trigger` próprio, quem
+		 * renderiza o gatilho decide).
+		 */
 		optionIcon?: Snippet<[SelectMenuOption]>;
 	}
 
@@ -323,6 +327,8 @@
 							<ProjectIcon id={selected.icon} />
 						{/if}
 					</span>
+				{:else if selected && optionIcon}
+					{@render optionIcon(selected)}
 				{:else if selected?.dot}
 					<span class="h-2 w-2 shrink-0 rounded-full" style:background={selected.dot}></span>
 				{/if}
