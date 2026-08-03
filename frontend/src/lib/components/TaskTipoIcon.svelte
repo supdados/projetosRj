@@ -5,8 +5,8 @@
 	 * base de apoio em 48% e o tipo como estado da matéria (partido, degrau,
 	 * incompleto ou intacto). Cores aprovadas junto com os desenhos — hex
 	 * literal de propósito, fora da régua de tokens (exceção como o roxo de
-	 * dúvida antigo). `outros`/`implementacao` ainda não têm conceito
-	 * aprovado: seguem no FontAwesome com as cores atuais.
+	 * dúvida antigo). `outros` = bloco vazio cinza (igual sem_tipo);
+	 * `implementacao` segue no FontAwesome (legado sem conceito aprovado).
 	 *
 	 * Ex.: `<TaskTipoIcon tipo={task.tipo_pedido} />` — `null`/desconhecido
 	 * rende o bloco liso de "Sem tipo".
@@ -49,9 +49,10 @@
 			]
 		}
 	};
+	// "Outros" = indefinido: mesmo bloco vazio cinza do sem_tipo (decisão 2026-08-02).
+	BLOCO.outros = BLOCO.sem_tipo;
 
 	const FA_LEGADO: Record<string, { icon: string; color: string }> = {
-		outros: { icon: 'fa-ellipsis', color: 'var(--ds-color-text-muted)' },
 		implementacao: { icon: 'fa-code', color: 'var(--ds-color-text-brand)' }
 	};
 
