@@ -62,10 +62,12 @@
     --ds-letter-spacing-wide: 0.02em;
     --ds-letter-spacing-caps: 0.06em;
 
-    --ds-color-primary-700: #004b79;
-    --ds-color-primary-600: #005a92;
-    --ds-color-primary-500: #1f73b5;
-    --ds-color-primary-100: #e6f0f6;
+    /* Régua de cor vigente — mesmos hexes de frontend/src/app.css:41-49. Este
+       arquivo só serve as telas de auth (Jinja); a SPA tem os seus. */
+    --ds-color-primary-700: #004973;
+    --ds-color-primary-600: #0b6397;
+    --ds-color-primary-500: #2f82bc;
+    --ds-color-primary-100: #ddf0ff;
 
     --ds-color-secondary-600: #bc9d32;
 
@@ -122,8 +124,8 @@
     --app-color-text-primary: #212529;
     --app-color-text-secondary: #475569;
     --app-color-text-muted: #6c757d;
-    --app-color-primary: #005a92;
-    --app-color-primary-hover: #0067a8;
+    --app-color-primary: #0b6397;
+    --app-color-primary-hover: #2f82bc;
     --app-color-success: #16a34a;
     --app-color-warning: #ca8a04;
     --app-color-danger: #dc2626;
