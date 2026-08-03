@@ -58,8 +58,7 @@
 		StageTemplateOption,
 		ProjectInlinePayload,
 		ProjectGoalsSelection,
-		MeetingPayload,
-		ProjectDetailTab
+		MeetingPayload
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
@@ -160,10 +159,6 @@
 
 	// Offset do topnav fixo para o sticky do cabecalho (medido no mount).
 	let topOffset = $state<number>(0);
-
-	// Aba ativa do seletor Detalhes/Etapas do cabecalho. Deep-link ?focus_etapa
-	// abre direto em Etapas (ajustado no mount).
-	let activeTab = $state<ProjectDetailTab>('detalhes');
 
 	const canEdit = $derived(data?.permissions.can_edit ?? false);
 
@@ -1216,8 +1211,6 @@
 		if (topnav) topOffset = Math.round(topnav.getBoundingClientRect().height);
 		// Deep-link do histórico (redirect da antiga página /historico).
 		if ($page.url.searchParams.has('historico')) historyOpen = true;
-		// Etapa vinda da busca global: a linha-alvo mora na aba Etapas.
-		if ($page.url.searchParams.has('focus_etapa')) activeTab = 'etapas';
 		void load();
 		return () => {
 			if (highlightTimer) clearTimeout(highlightTimer);
@@ -1259,12 +1252,9 @@
 			}}
 			onEditField={onHeaderEditField}
 			onShare={canShare ? () => (shareOpen = true) : undefined}
-			{activeTab}
-			onTabChange={(tab) => (activeTab = tab)}
 		/>
 
-		{#if activeTab === 'detalhes'}
-		<!-- Mesmo padrão da aba Etapas: título + linha (termina antes das ações). -->
+		<!-- Mesmo padrão da seção Etapas: título + linha (termina antes das ações). -->
 		<div class="section-divider">
 			<h2 id="project-details-title" class="font-heading text-lg font-bold text-text-primary">
 				Detalhes do Projeto
@@ -1319,8 +1309,6 @@
 
 		<!-- Detalhes editaveis do projeto (campos fora do cabecalho) -->
 		<Card labelId="project-details-title">
-
-
 			<!-- Identidade + EEGG (editaveis inline, clicando direto no valor) —
 			     cada campo em um cartão com borda/sombra, hierarquia e folga. -->
 			<div class="flex flex-col gap-6">
@@ -1635,9 +1623,7 @@
 				</div>
 			</div>
 		</Card>
-		{/if}
 
-		{#if activeTab === 'etapas'}
 		<!-- Título + linha + ações na MESMA linha: a linha (::after, order 1) termina
 		     antes dos botões (order 2). -->
 		<div class="section-divider">
@@ -1697,7 +1683,6 @@
 				{/if}
 			{/snippet}
 		</StageList>
-		{/if}
 
 		<ImportModelModal
 			open={importOpen}

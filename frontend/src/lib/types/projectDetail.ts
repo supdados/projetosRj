@@ -269,9 +269,6 @@ export interface EtapaDeleteResult {
 	total_etapas: number;
 }
 
-/** Abas da tela de detalhe do projeto (seletor no ProjectHeader). */
-export type ProjectDetailTab = 'detalhes' | 'etapas';
-
 /** Campos aceitos pela edição inline de etapa (update-field). */
 export type EtapaInlineField = 'descricao' | 'data_inicio' | 'data_fim' | 'responsavel';
 
