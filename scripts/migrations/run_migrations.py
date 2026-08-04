@@ -137,6 +137,11 @@ STAGE_TEMPLATE_AUDIT_COLUMNS = [
 PROJECT_ORGAO_COLUMN = ("orgao_id", "INTEGER")
 USER_ORGAO_PAPEL_COLUMN = ("papel", "VARCHAR(10) NOT NULL DEFAULT 'gestor'")
 USER_IS_SUPER_ADMIN_COLUMN = ("is_super_admin", "BOOLEAN NOT NULL DEFAULT 0")
+USER_DELETED_AT_COLUMN = ("deleted_at", "DATETIME")
+USER_DELETED_AT_INDEX = (
+    "ix_user_deleted_at",
+    "CREATE INDEX ix_user_deleted_at ON `user` (deleted_at)",
+)
 PROJECT_MEMBER_TABLE = "project_member"
 AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
 SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
@@ -1661,6 +1666,42 @@ def ensure_user_orgao_papel_column(emit_output=True):
         return {"success": False, "error": str(exc), "added": False}
 
 
+def ensure_user_deleted_at_column(emit_output=True):
+    """Garante user.deleted_at (soft-delete C4) — PRIMEIRO step da fila.
+
+    `elect_initial_super_admin` cita a coluna em SQL cru e `backfill_task_assignees`
+    consulta User pelo ORM (o SELECT gerado lista todas as colunas do modelo): num
+    banco anterior ao soft-delete, os dois quebram com OperationalError e o boot
+    aborta antes de qualquer chance de criar a coluna.
+    """
+    _emit("→ Garantindo coluna user.deleted_at...", emit_output)
+    try:
+        inspector = inspect(db.engine)
+        if not _table_exists(inspector, "user"):
+            _emit("   ✓ Tabela user ainda não existe.", emit_output)
+            return {"success": True, "added": False}
+        column_name, column_type = USER_DELETED_AT_COLUMN
+        added = column_name not in _column_names(inspector, "user")
+        if added:
+            # `user` é palavra reservada no MySQL: sempre entre crases (SQLite aceita).
+            db.session.execute(
+                text(f"ALTER TABLE `user` ADD COLUMN {column_name} {column_type}")
+            )
+            db.session.commit()
+            inspector = inspect(db.engine)
+            _emit("   ✓ Coluna user.deleted_at criada.", emit_output)
+        index_name, index_ddl = USER_DELETED_AT_INDEX
+        if index_name not in _index_names(inspector, "user"):
+            db.session.execute(text(index_ddl))
+            db.session.commit()
+            _emit("   ✓ Índice ix_user_deleted_at criado.", emit_output)
+        return {"success": True, "added": added}
+    except Exception as exc:
+        db.session.rollback()
+        _emit(f"   ✗ ERRO ao garantir user.deleted_at: {exc}", emit_output)
+        return {"success": False, "error": str(exc), "added": False}
+
+
 def _add_is_super_admin_column(inspector, emit_output):
     """Adiciona user.is_super_admin quando ausente; True se criou a coluna."""
     column_name, column_type = USER_IS_SUPER_ADMIN_COLUMN
@@ -1874,8 +1915,11 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
     from scripts.migrations.backfill_sei_processes import backfill_sei_processes
 
     steps = [
-        # PRIMEIRO: steps adiante (backfill_task_assignees) consultam User pelo ORM,
-        # cujo SELECT já cita is_super_admin — sem a coluna, o boot inteiro aborta.
+        # PRIMEIROS: steps adiante (backfill_task_assignees) consultam User pelo ORM,
+        # cujo SELECT já cita is_super_admin e deleted_at — sem as colunas, o boot
+        # inteiro aborta. deleted_at vem antes porque ensure_user_is_super_admin_column
+        # também a consulta ao eleger o super admin inicial.
+        ("ensure_user_deleted_at_column", ensure_user_deleted_at_column),
         ("ensure_user_is_super_admin_column", ensure_user_is_super_admin_column),
         ("migrate_user_areas", _migrate_user_areas_step),
         ("ensure_project_history_table", ensure_project_history_table),

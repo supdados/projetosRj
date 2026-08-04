@@ -31,6 +31,10 @@ def ensure_user_deleted_at_column():
     schema atual e só executa o ``ALTER TABLE ... ADD COLUMN`` quando a coluna
     falta. None = ativo; timestamp = removido. Em testes a coluna já vem por
     ``create_all`` a partir do modelo; aqui cobrimos o banco de dev no boot.
+
+    Cinto de segurança: a coluna canônica é criada pelo step
+    ``run_migrations.ensure_user_deleted_at_column``, que roda antes dos steps que
+    consultam User.
     """
     inspector = inspect(db.engine)
     table_names = inspector.get_table_names()
