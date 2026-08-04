@@ -22,7 +22,8 @@ class Project(db.Model):
         db.Integer, db.ForeignKey("resultado_esperado.id"), nullable=True
     )
 
-    special_project = db.Column(db.String(20), nullable=True)
+    # 50 porque "Fórum de simplificação" (22) não cabia no VARCHAR(20) original.
+    special_project = db.Column(db.String(50), nullable=True)
     # Espelho do 1º número de project_sei_process (expand-contract, 1 release):
     # mantém rollback/instância antiga funcionando; o backfill reconcilia no boot.
     sei_process = db.Column(db.String(50), nullable=True)

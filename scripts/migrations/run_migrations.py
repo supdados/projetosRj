@@ -61,7 +61,7 @@ LEGACY_TASK_TABLES = (
     "task_item_anexo",
 )
 PROJECT_COLUMNS = [
-    ("special_project", "VARCHAR(20)"),
+    ("special_project", "VARCHAR(50)"),
     ("sei_process", "VARCHAR(50)"),
     ("short_description", "TEXT"),
     ("delivery_type", "VARCHAR(50)"),
@@ -1006,6 +1006,26 @@ def create_history_table(emit_output=True):
         return False
 
 
+def _widen_special_project_column(inspector):
+    """Amplia ``project.special_project`` para VARCHAR(50) em bancos antigos.
+
+    A opção "Fórum de simplificação" tem 22 caracteres e não cabe no VARCHAR(20)
+    original. SQLite ignora o tamanho declarado, então só MySQL precisa do ALTER.
+    """
+    if db.engine.dialect.name != "mysql":
+        return False
+    for column in inspector.get_columns("project"):
+        if column["name"] != "special_project":
+            continue
+        if (getattr(column["type"], "length", None) or 0) >= 50:
+            return False
+        db.session.execute(
+            text("ALTER TABLE project MODIFY special_project VARCHAR(50) NULL")
+        )
+        return True
+    return False
+
+
 def ensure_project_columns(emit_output=True):
     _emit("\n-- [3/7] Garantindo colunas de projeto e etapa...", emit_output)
     added_columns = []
@@ -1022,6 +1042,9 @@ def ensure_project_columns(emit_output=True):
                 )
                 added_columns.append(f"project.{column_name}")
                 inspector = inspect(db.engine)
+
+            if _widen_special_project_column(inspector):
+                added_columns.append("project.special_project→VARCHAR(50)")
 
         if _table_exists(inspector, "etapa") and "ordem" not in _column_names(
             inspector, "etapa"

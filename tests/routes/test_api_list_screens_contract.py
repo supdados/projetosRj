@@ -67,7 +67,11 @@ def test_api_projetos_returns_ok_envelope_with_expected_shape(client_user):
     assert data["filters"]["status"] == "Vigente"
 
     options = data["options"]
-    assert options["special_projects_options"] == ["ABEP", "TCE"]
+    assert options["special_projects_options"] == [
+        "ABEP",
+        "TCE",
+        "Fórum de simplificação",
+    ]
     assert isinstance(options["abep_indicadores_options"], list)
     assert isinstance(options["orgaos_options"], list)
 

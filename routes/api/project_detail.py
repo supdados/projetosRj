@@ -61,7 +61,7 @@ _PRIORIDADE_OPTIONS = [
     {"value": "alta", "label": "Alta"},
     {"value": "urgente", "label": "Urgente"},
 ]
-_SPECIAL_PROJECT_OPTIONS = ["ABEP", "TCE"]
+_SPECIAL_PROJECT_OPTIONS = ["ABEP", "TCE", "Fórum de simplificação"]
 _DELIVERY_TYPE_OPTIONS = [
     "Sistema",
     "Painel",

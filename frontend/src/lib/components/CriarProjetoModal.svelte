@@ -98,7 +98,7 @@
 		'Eventos',
 		'Outro'
 	];
-	const SPECIAL_PROJECTS = ['ABEP', 'TCE'];
+	const SPECIAL_PROJECTS = ['ABEP', 'TCE', 'Fórum de simplificação'];
 	const PRIORITIES = [
 		{ value: 'baixa', label: 'Baixa' },
 		{ value: 'media', label: 'Média' },
@@ -1738,7 +1738,7 @@
 											id="cp-special"
 											role="group"
 											aria-labelledby="cp-special-label"
-											class="flex items-center gap-2"
+											class="flex flex-wrap items-center gap-2"
 										>
 											{#each SPECIAL_PROJECTS as sp (sp)}
 												{@const selected = specialProject === sp}
@@ -1746,7 +1746,7 @@
 													type="button"
 													aria-pressed={selected}
 													onclick={() => (specialProject = selected ? '' : sp)}
-													class="inline-flex h-[var(--control-h-md)] flex-1 items-center justify-center rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
+													class="inline-flex h-[var(--control-h-md)] flex-1 basis-auto items-center justify-center whitespace-nowrap rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
 														? 'border-brand bg-brand text-on-brand'
 														: 'border-border-strong bg-surface text-text-secondary hover:border-brand'}"
 												>

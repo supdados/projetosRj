@@ -82,7 +82,7 @@ def build_projects_list_context(
             (mantido aqui apenas como filtro, sem reescrever o default).
         selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
         selected_atraso: "atrasado" | "no_prazo" | "" (filtro aplicado em Python).
-        selected_special_project: "ABEP" | "TCE" | "" .
+        selected_special_project: "ABEP" | "TCE" | "Fórum de simplificação" | "" .
         selected_delivery_type: Tipo de entrega (ou "").
         selected_abep_indicator: Indicador ABEP (normalizado internamente).
         selected_objetivo: ID de objetivo como string (ou "").
@@ -191,7 +191,7 @@ def build_projects_list_context(
         get_goal_catalog_context()
     )  # Para o modal de adicionar projeto e filtro
 
-    special_projects_options = ["ABEP", "TCE"]
+    special_projects_options = ["ABEP", "TCE", "Fórum de simplificação"]
     if g.user.is_admin or any_orgao_allows_inventario(get_user_orgao_siglas(g.user)):
         special_projects_options.append("Inventário")
     delivery_types_options = [
