@@ -21,6 +21,7 @@
 	import InlineEditField from './InlineEditField.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import AreaResponsavelPicker from './AreaResponsavelPicker.svelte';
+	import StageTaskPill from './StageTaskPill.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import '$lib/styles/stage-chips.css';
@@ -412,25 +413,15 @@
 			{#if readonly}
 				<span class="text-muted-small">-</span>
 			{:else}
-				<button
-					type="button"
-					class="etapa-task-pill"
-					class:is-empty={etapa.task_count.total === 0}
-					class:is-stage-done={etapa.done}
-					aria-disabled={etapa.done ? 'true' : undefined}
+				<StageTaskPill
+					done={etapa.task_count.done}
+					total={etapa.task_count.total}
+					stageDone={etapa.done}
 					title={etapa.done
 						? 'Etapa concluída — desfaça a conclusão para criar tarefas'
 						: 'Criar tarefa nesta etapa'}
-					onclick={() => !etapa.done && onOpenTasks()}
-				>
-					<span class="etapa-task-pill-has">
-						<span class="etapa-task-pill-count">{etapa.task_count.done}/{etapa.task_count.total}</span>
-					</span>
-					<span class="etapa-task-pill-add">
-						<i class="fas fa-plus" aria-hidden="true"></i>
-						<span>Tarefas</span>
-					</span>
-				</button>
+					onclick={onOpenTasks}
+				/>
 			{/if}
 		</td>
 
@@ -735,74 +726,6 @@
 		width: 140px;
 		text-align: center;
 	}
-	/* Pílula de tarefas — paridade com 05-stage-task-quick-add.css */
-	.etapa-task-pill {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.34rem;
-		width: 116px;
-		height: 32px;
-		padding: 0 0.7rem;
-		border-radius: 8px;
-		border: 1px solid var(--stage-chip-started-border);
-		background: var(--stage-chip-started-bg);
-		color: var(--stage-chip-started-text);
-		font-size: 0.8125rem;
-		font-weight: 600;
-		line-height: 1;
-		cursor: pointer;
-		transition:
-			background-color 0.16s ease,
-			border-color 0.16s ease,
-			color 0.16s ease;
-	}
-	.etapa-task-pill:hover,
-	.etapa-task-pill:focus-visible {
-		background: var(--stage-chip-started-bg-hover);
-		border-color: var(--stage-chip-started-border-hover);
-		color: var(--stage-chip-started-text-hover);
-		outline: none;
-	}
-	.etapa-task-pill-has,
-	.etapa-task-pill-add {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.32rem;
-		line-height: 1;
-	}
-	.etapa-task-pill-count {
-		font-weight: 700;
-	}
-	.etapa-task-pill i {
-		font-size: 0.875rem;
-	}
-	.etapa-task-pill-add {
-		display: none;
-	}
-	.etapa-task-pill.is-empty {
-		background: transparent;
-		border-style: dashed;
-		border-color: var(--ds-color-border-strong);
-		color: var(--ds-color-text-muted);
-	}
-	.etapa-task-pill.is-empty:hover,
-	.etapa-task-pill.is-empty:focus-visible {
-		background: var(--stage-chip-started-bg);
-		border-color: var(--stage-chip-started-border);
-		color: var(--stage-chip-started-text);
-	}
-	.etapa-task-pill.is-empty .etapa-task-pill-has {
-		display: none;
-	}
-	.etapa-task-pill.is-empty .etapa-task-pill-add {
-		display: inline-flex;
-	}
-	.etapa-task-pill.is-stage-done {
-		opacity: 0.4;
-		cursor: not-allowed;
-	}
-
 	.cell-status {
 		width: 150px;
 		text-align: center;

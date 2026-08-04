@@ -32,6 +32,7 @@
 		EtapaTaskProgress
 	} from '$lib/types/pendentes';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
+	import StageTaskPill from './StageTaskPill.svelte';
 	import '$lib/styles/stage-chips.css';
 
 	interface QuickAddRequest {
@@ -348,7 +349,6 @@
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
-	{@const isEmpty = progress.total === 0}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted">
 		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
 			<span class="font-normal tabular-nums text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
@@ -369,24 +369,16 @@
 			{:else}—{/if}
 		</td>
 		<td class="px-2 py-2.5 text-center align-middle">
-			<button
-				type="button"
+			<StageTaskPill
+				done={progress.done}
+				total={progress.total}
+				stageDone={isDone}
+				title={isDone
+					? 'Etapa concluída — desfaça a conclusão para criar tarefas'
+					: 'Ver e adicionar tarefas desta etapa'}
+				ariaLabel="Ver e adicionar tarefas desta etapa"
 				onclick={() => openQuickAdd(etapa)}
-				disabled={isDone}
-				title="Ver e adicionar tarefas desta etapa"
-				aria-label="Ver e adicionar tarefas desta etapa"
-				class="inline-flex h-8 w-[7.25rem] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold leading-none transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-40
-					{isEmpty
-					? 'border-dashed border-brand-soft bg-transparent text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'
-					: 'border-brand-soft bg-wash-neutral text-brand hover:border-brand hover:bg-wash-neutral'}"
-			>
-				{#if isEmpty}
-					<i class="fas fa-plus" aria-hidden="true"></i>
-					<span>Tarefas</span>
-				{:else}
-					<span class="font-bold">{progress.done}/{progress.total}</span>
-				{/if}
-			</button>
+			/>
 		</td>
 		<td class="px-2 py-2.5 text-center align-middle">
 			<button
