@@ -178,15 +178,6 @@
 		hidden={!open}
 		aria-label="Assistente virtual de serviços"
 	>
-		<button
-			type="button"
-			class="dashboard-chatbot-close"
-			aria-label="Fechar assistente virtual"
-			onclick={() => (open = false)}
-		>
-			<span aria-hidden="true">&times;</span>
-		</button>
-
 		{#if !frameVisible}
 			<div
 				class="dashboard-chatbot-status"
@@ -304,30 +295,6 @@
 		}
 	}
 
-	.dashboard-chatbot-close {
-		position: absolute;
-		top: 0.5rem;
-		right: 0.5rem;
-		z-index: 1;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		padding: 0;
-		border: 0;
-		border-radius: 999px;
-		background: rgba(226, 232, 240, 0.9);
-		color: #475569;
-		font-size: 1.1rem;
-		line-height: 1;
-		cursor: pointer;
-	}
-	.dashboard-chatbot-close:hover,
-	.dashboard-chatbot-close:focus-visible {
-		background: #cbd5e1;
-	}
-
 	.dashboard-chatbot-status {
 		flex: 1;
 		display: flex;
@@ -401,14 +368,6 @@
 	}
 	:global([data-theme='dark']) .dashboard-chatbot-status {
 		color: #94a3b8;
-	}
-	:global([data-theme='dark']) .dashboard-chatbot-close {
-		background: rgba(30, 41, 59, 0.9);
-		color: #94a3b8;
-	}
-	:global([data-theme='dark']) .dashboard-chatbot-close:hover,
-	:global([data-theme='dark']) .dashboard-chatbot-close:focus-visible {
-		background: #334155;
 	}
 	:global([data-theme='dark']) .dashboard-chatbot-status.is-error {
 		color: #fca5a5;
