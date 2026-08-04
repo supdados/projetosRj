@@ -16,6 +16,7 @@
 	import AppFooter from '$lib/components/AppFooter.svelte';
 	import FlashToasts from '$lib/components/FlashToasts.svelte';
 	import ConfirmHost from '$lib/components/ConfirmHost.svelte';
+	import ChatbotWidget from '$lib/components/ChatbotWidget.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -121,4 +122,11 @@
 	     <main> (ambos 1050) — no empate quem decide é a ordem no DOM, e o diálogo
 	     precisa cobrir o modal que o disparou. -->
 	<ConfirmHost />
+
+	<!-- Assistente virtual: em TODAS as telas autenticadas, como na v4.5 (o widget
+	     vivia no base.html, que toda página estendia). Não renderiza nada quando a
+	     integração está desligada. -->
+	{#if $auth.status === 'authenticated'}
+		<ChatbotWidget />
+	{/if}
 </div>

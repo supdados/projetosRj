@@ -14,6 +14,11 @@
     {# Fonte do token CSRF para o client.ts (X-CSRFToken). Injetado server-side
        pelo Jinja ao servir o index do bundle SvelteKit via routes/spa.py. #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {# Config do chatbot para o ChatbotWidget.svelte. Só sai no HTML quando a
+       integração está ligada: a ausência da meta é o sinal de "desligado". #}
+    {% if chatbot_enabled and chatbot_base_url %}
+    <meta name="chatbot-base-url" content="{{ chatbot_base_url }}">
+    {% endif %}
     {# Valor inicial pre-hidratacao, sincronizado com --ds-color-surface-topnav (tema claro). #}
     <meta name="theme-color" content="#004973" id="appThemeColorMeta">
 
