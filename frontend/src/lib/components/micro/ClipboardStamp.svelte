@@ -16,9 +16,14 @@
 	interface Props {
 		/** Altura da prancheta em px (largura segue a proporcao). */
 		size?: number;
+		/**
+		 * Print da aplicacao preso na prancheta (webp/png, servido pelo Flask em
+		 * /static/img/). Ausente => volta ao documento falso desenhado em CSS.
+		 */
+		image?: string;
 	}
 
-	let { size = 52 }: Props = $props();
+	let { size = 52, image = '' }: Props = $props();
 	const uid = $props.id();
 
 	/** Contornos irregulares de cera derretida; um e sorteado a cada hover. */
@@ -125,13 +130,17 @@
 			<span class="cs-sheet cs-sheet--b"></span>
 
 			<span class="cs-paper">
-				<span class="cs-doc">
-					<span class="cs-doc-line cs-doc-line--title"></span>
-					<span class="cs-doc-line"></span>
-					<span class="cs-doc-line"></span>
-					<span class="cs-doc-line cs-doc-line--short"></span>
-					<span class="cs-doc-line cs-doc-line--tiny"></span>
-				</span>
+				{#if image}
+					<img class="cs-paper-img" src={image} alt="" loading="lazy" decoding="async" />
+				{:else}
+					<span class="cs-doc">
+						<span class="cs-doc-line cs-doc-line--title"></span>
+						<span class="cs-doc-line"></span>
+						<span class="cs-doc-line"></span>
+						<span class="cs-doc-line cs-doc-line--short"></span>
+						<span class="cs-doc-line cs-doc-line--tiny"></span>
+					</span>
+				{/if}
 
 				<span class="cs-wax">
 					<span class="cs-wax-pulse">
@@ -280,7 +289,17 @@
 		backface-visibility: hidden;
 	}
 
-	/* Texto falso: a 52px qualquer glifo seria ilegivel, entao so linhas. */
+	/* Print preso na prancheta: `cover` ancorado no topo mostra o cabecalho do
+	   projeto, que e' a parte reconhecivel a 40px de largura. */
+	.cs-paper-img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: top center;
+	}
+
+	/* Texto falso (sem `image`): a 52px qualquer glifo seria ilegivel, so linhas. */
 	.cs-doc {
 		position: absolute;
 		inset: 13% 12% auto 12%;

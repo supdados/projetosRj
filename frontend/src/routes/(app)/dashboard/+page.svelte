@@ -397,8 +397,10 @@
 					linkLabel="Ver projetos finalizados"
 				>
 					{#snippet icon()}
-						<!-- Micro-interacao: carimbo desce e sela o termo com lacre de cera "OK". -->
-						<ClipboardStamp size={52} />
+						<!-- Micro-interacao: carimbo desce e sela com lacre de cera "OK" o print
+							 de um projeto finalizado (servido pelo Flask em /static/img/, fora do
+							 bundle da SPA — mesmo esquema dos cartoes de pasta). -->
+						<ClipboardStamp size={52} image="/static/img/dashboard/termo.webp" />
 					{/snippet}
 				</StatCard>
 
