@@ -23,7 +23,7 @@
 	let iconLoaded = $state(false);
 	let statusMessage = $state('Conectando ao assistente…');
 	let statusIsError = $state(false);
-	let statusIsLoading = $state(true);
+	let statusIsLoading = $state(false);
 	let frameVisible = $state(false);
 	let frameEl = $state<HTMLIFrameElement | null>(null);
 	let panelEl = $state<HTMLElement | null>(null);
@@ -78,6 +78,7 @@
 		try {
 			const token = await fetchToken();
 			frameEl.src = `${baseUrl}/embed?token=${encodeURIComponent(token)}`;
+			hasConversation = false;
 			frameLoaded = true;
 			frameVisible = true;
 		} catch (error) {
@@ -118,6 +119,7 @@
 		if (event.origin !== origin) return;
 
 		if (event.data.type === 'close_embed') {
+			hasConversation = false;
 			open = false;
 			return;
 		}
@@ -127,6 +129,8 @@
 			const renewed = await fetchToken();
 			frameEl?.contentWindow?.postMessage({ type: 'token_response', token: renewed }, origin);
 		} catch {
+			frameLoaded = false;
+			hasConversation = false;
 			setStatus('Não foi possível renovar a sessão do assistente.', true);
 		}
 	}
@@ -172,9 +176,17 @@
 		id="dashboardChatbotPanel"
 		class="dashboard-chatbot-panel"
 		hidden={!open}
-		aria-hidden={!open}
 		aria-label="Assistente virtual de serviços"
 	>
+		<button
+			type="button"
+			class="dashboard-chatbot-close"
+			aria-label="Fechar assistente virtual"
+			onclick={() => (open = false)}
+		>
+			<span aria-hidden="true">&times;</span>
+		</button>
+
 		{#if !frameVisible}
 			<div
 				class="dashboard-chatbot-status"
@@ -207,7 +219,7 @@
 		position: fixed;
 		right: 1.25rem;
 		bottom: 1.25rem;
-		z-index: 1040;
+		z-index: 1041;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -260,7 +272,7 @@
 	.dashboard-chatbot-panel {
 		position: fixed;
 		right: 1.25rem;
-		bottom: 5.5rem;
+		bottom: 6rem;
 		width: min(26rem, calc(100vw - 1.5rem));
 		height: clamp(22rem, 62vh, 36rem);
 		z-index: 1040;
@@ -275,6 +287,9 @@
 			0 8px 24px rgba(15, 23, 42, 0.1);
 		transform-origin: bottom right;
 	}
+	.dashboard-chatbot-panel[hidden] {
+		display: none;
+	}
 	.dashboard-chatbot-panel:not([hidden]) {
 		animation: chatbotPanelIn 0.22s cubic-bezier(0.34, 1.15, 0.64, 1) both;
 	}
@@ -287,6 +302,30 @@
 			opacity: 1;
 			transform: translateY(0) scale(1);
 		}
+	}
+
+	.dashboard-chatbot-close {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
+		z-index: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+		border: 0;
+		border-radius: 999px;
+		background: rgba(226, 232, 240, 0.9);
+		color: #475569;
+		font-size: 1.1rem;
+		line-height: 1;
+		cursor: pointer;
+	}
+	.dashboard-chatbot-close:hover,
+	.dashboard-chatbot-close:focus-visible {
+		background: #cbd5e1;
 	}
 
 	.dashboard-chatbot-status {
@@ -339,6 +378,9 @@
 		display: flex;
 		flex-direction: column;
 	}
+	.dashboard-chatbot-frame-shell[hidden] {
+		display: none;
+	}
 	.dashboard-chatbot-frame {
 		display: block;
 		width: 100%;
@@ -360,6 +402,14 @@
 	:global([data-theme='dark']) .dashboard-chatbot-status {
 		color: #94a3b8;
 	}
+	:global([data-theme='dark']) .dashboard-chatbot-close {
+		background: rgba(30, 41, 59, 0.9);
+		color: #94a3b8;
+	}
+	:global([data-theme='dark']) .dashboard-chatbot-close:hover,
+	:global([data-theme='dark']) .dashboard-chatbot-close:focus-visible {
+		background: #334155;
+	}
 	:global([data-theme='dark']) .dashboard-chatbot-status.is-error {
 		color: #fca5a5;
 	}
@@ -368,9 +418,9 @@
 		.dashboard-chatbot-panel {
 			right: 0.75rem;
 			left: 0.75rem;
-			bottom: 5.25rem;
+			bottom: 5.75rem;
 			width: auto;
-			height: min(65dvh, calc(100vh - 6rem));
+			height: min(65dvh, calc(100vh - 6.5rem));
 			border-radius: 1.1rem;
 		}
 		.dashboard-chatbot-launcher {
