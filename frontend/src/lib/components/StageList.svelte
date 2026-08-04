@@ -496,7 +496,7 @@
 	</div>
 {/if}
 
-<div class="etapa-table-card" class:etapa-table-card--vazio={vazio}>
+<div class="etapa-table-card">
 	<div class="etapa-table-wrap">
 		<table class="etapa-table" aria-busy={reordering}>
 			<thead>
@@ -983,9 +983,8 @@
 	   com etapas, a linha `.etapa-entry-*` acima segue intacta.
 	   A MESMA altura vale para o composer aberto no projeto vazio, senão a área
 	   encolhe no clique e a página inteira pula. */
-	/* Reserva de 4 linhas SÓ no projeto vazio (convite/composer): com etapas o
-	   cartão encolhe pro conteúdo — sobra em branco abaixo de 1-2 etapas lia
-	   como tabela quebrada. */
+	/* Reserva de 4 linhas: até a 4ª etapa o bloco não encolhe (nem no projeto
+	   vazio, nem com 1 ou 2 etapas); da 5ª em diante cresce normalmente. */
 	.etapa-table-card {
 		--etapa-linha-h: 5.5rem;
 		--etapas-reserva-h: calc(var(--etapa-linha-h) * 4);
@@ -994,8 +993,13 @@
 		   bloco exatamente essa altura. */
 		--etapas-cabecalho-h: 2.2rem;
 	}
-	.etapa-table-card--vazio .etapa-table-wrap {
+	.etapa-table-wrap {
 		min-height: var(--etapas-reserva-h);
+	}
+	/* Última etapa fecha com borda: sem ela, a linha flutuava solta na reserva
+	   em branco quando o projeto tem poucas etapas. */
+	.etapa-table tbody :global(tr.etapa-row:last-child td) {
+		border-bottom: 1px solid var(--ds-color-border-base);
 	}
 	/* Reserva MENOS o cabeçalho: assim o cartão fica com a mesma altura total nos
 	   dois estados (convite e composer aberto) e nada sobra depois do tracejado. */
