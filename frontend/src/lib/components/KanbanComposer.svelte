@@ -89,7 +89,10 @@
 	);
 
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
-	const PROJECT_TRIGGER_ID = `kanban-composer-project-${status}`;
+	// `$derived` e nao `const`: `status` e prop reativa, e um const congelaria o id
+	// da montagem. Hoje cada coluna monta a sua instancia com status fixo, mas o
+	// valor congelado divergiria do `aria-label` (reativo) se isso mudar.
+	const PROJECT_TRIGGER_ID = $derived(`kanban-composer-project-${status}`);
 
 	const PRIORIDADE_OPTIONS: SelectMenuOption[] = (
 		[
