@@ -1606,9 +1606,8 @@
 
 					<!-- Observação em moldura PRÓPRIA (e com folga extra): é texto livre,
 					     não um link — junto deles lia como mais uma linha da lista.
-					     Largura limitada: textarea na largura inteira do card é ruim
-					     de escrever e de ler. -->
-					<div class="ficha-bloco mt-3 max-w-2xl">
+					     Largura acompanha a coluna dos links fixos acima. -->
+					<div class="ficha-bloco ficha-bloco--observacao mt-3">
 						<div class="ficha-campo">
 							<span class="ficha-rotulo">
 								<ProjectIcon id="observacao" size={13} />Observação
@@ -1933,6 +1932,11 @@
 		}
 		.ficha-colunas {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		/* Alinha com a coluna esquerda dos links: metade do card menos o vão de
+		   1px do divisor. Largura fixa (max-w-2xl) descolava conforme a tela. */
+		.ficha-bloco--observacao {
+			width: calc(50% - 0.5px);
 		}
 	}
 
