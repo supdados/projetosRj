@@ -30,7 +30,8 @@ const DELIVERY_ICON_ID: Record<string, ProjectIconId> = {
 
 const SPECIAL_PROJECT_ICON_ID: Record<string, ProjectIconId> = {
 	abep: 'selo-abep',
-	tce: 'selo-tce'
+	tce: 'selo-tce',
+	'fórum de simplificação': 'selo-forum'
 };
 
 function iconIdFor(

@@ -19,6 +19,7 @@ export type ProjectIconId =
 	| 'entrega-outro'
 	| 'selo-abep'
 	| 'selo-tce'
+	| 'selo-forum'
 	| 'documentacao'
 	| 'produto'
 	| 'observacao'
@@ -96,6 +97,18 @@ export const PROJECT_ICONS: Record<ProjectIconId, ProjectIconPath[]> = {
 		{ d: 'M15.6 8.4H18.4V17.2H15.6Z' },
 		{ d: 'M4.6 17.2H19.4V19.4H4.6Z', opacity: '.48' },
 		{ d: 'M2.6 19.4H21.4V21.4H2.6Z', opacity: '.48' }
+	],
+	// Duas falas (fórum); os dois vazados do balão da frente encurtam de 8.6 para
+	// 5.0 — a "simplificação".
+	'selo-forum': [
+		{
+			d: 'M14 2.6H19.4A2 2 0 0 1 21.4 4.6V7.4A2 2 0 0 1 19.4 9.4H14A2 2 0 0 1 12 7.4V4.6A2 2 0 0 1 14 2.6ZM16.8 9.4H19.4V11.4Z',
+			opacity: '.48'
+		},
+		{
+			d: 'M5.2 7.8H13.8A2.6 2.6 0 0 1 16.4 10.4V15.6A2.6 2.6 0 0 1 13.8 18.2H10.2L6 20.8V18.2H5.2A2.6 2.6 0 0 1 2.6 15.6V10.4A2.6 2.6 0 0 1 5.2 7.8ZM5.2 10.4H13.8V12.2H5.2ZM5.2 13.8H10.2V15.6H5.2Z',
+			fillRule: 'evenodd'
+		}
 	],
 	documentacao: [
 		{ d: 'M2.6 5.4L11.4 7.4V19.8L2.6 17.8Z', opacity: '.48' },
