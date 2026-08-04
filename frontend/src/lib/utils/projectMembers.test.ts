@@ -180,7 +180,9 @@ describe('filtrarConcessoes (busca da tela Gerenciar acesso)', () => {
 	it('acha por username e por sigla do órgão', () => {
 		expect(filtrarConcessoes(todos, 'mantonia', 'todos').map((d) => d.id)).toEqual([2]);
 		expect(filtrarConcessoes(todos, 'seeduc', 'todos').map((d) => d.id)).toEqual([2]);
-		expect(filtrarConcessoes(todos, 'sefaz', 'todos').map((d) => d.id)).toEqual([1, 3, 4]);
+		// 3 fica DE FORA: `revogado` é o único fixture com `user_orgao_sigla: null`
+		// (usado logo abaixo para cobrir sigla ausente), então não casa por sigla.
+		expect(filtrarConcessoes(todos, 'sefaz', 'todos').map((d) => d.id)).toEqual([1, 4]);
 	});
 
 	it('sigla ausente não quebra a busca', () => {
