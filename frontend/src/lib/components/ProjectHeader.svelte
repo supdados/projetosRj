@@ -1220,7 +1220,6 @@
 		--ds-color-priority-urgente: var(--ds-color-danger-200);
 		--ds-color-text-brand: var(--ds-color-primary-300);
 		--ds-color-text-warning: var(--ds-color-warning-300);
-		--ds-color-text-attention: var(--ds-color-attention-300);
 		--ds-color-fill-success: var(--ds-color-success-300);
 	}
 	.ph-chip {
@@ -1296,10 +1295,9 @@
 	.ph-chip--delivery[data-value]:not([data-value='']) :global(svg) {
 		color: var(--ds-color-text-brand);
 	}
-	/* attention (5ª família) e não warning: warning já é "suspenso" no mesmo par de chips. */
 	.ph-chip--special[data-value]:not([data-value='']) i,
 	.ph-chip--special[data-value]:not([data-value='']) :global(svg) {
-		color: var(--ds-color-text-attention);
+		color: var(--ds-color-text-brand);
 	}
 
 	.ph-chip-dates {
@@ -1464,10 +1462,9 @@
 	.pc-chip--delivery :global(svg) {
 		color: var(--ds-color-text-brand);
 	}
-	/* Mesma decisão do header expandido: attention separa "especial" de suspenso (warning). */
 	.pc-chip--special i,
 	.pc-chip--special :global(svg) {
-		color: var(--ds-color-text-attention);
+		color: var(--ds-color-text-brand);
 	}
 	.project-compact-back {
 		display: inline-flex;
