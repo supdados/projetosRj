@@ -1605,8 +1605,10 @@
 				</div>
 
 					<!-- Observação em moldura PRÓPRIA (e com folga extra): é texto livre,
-					     não um link — junto deles lia como mais uma linha da lista. -->
-					<div class="ficha-bloco mt-3">
+					     não um link — junto deles lia como mais uma linha da lista.
+					     Largura limitada: textarea na largura inteira do card é ruim
+					     de escrever e de ler. -->
+					<div class="ficha-bloco mt-3 max-w-2xl">
 						<div class="ficha-campo">
 							<span class="ficha-rotulo">
 								<ProjectIcon id="observacao" size={13} />Observação
