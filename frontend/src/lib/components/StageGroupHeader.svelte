@@ -23,14 +23,14 @@
 	<span class="flex min-w-0 items-center gap-2">
 		{#if stageCode}
 			<span
-				class="shrink-0 rounded bg-surface px-1.5 py-0.5 font-mono text-2xs font-semibold text-brand"
+				class="shrink-0 rounded bg-surface px-1.5 py-0.5 font-mono text-xs font-semibold text-brand"
 			>
 				{stageCode}
 			</span>
 		{/if}
 		<span class="truncate text-sm font-semibold text-brand">{titulo ?? 'Sem etapa'}</span>
 		<span
-			class="shrink-0 rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-brand"
+			class="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-semibold text-brand"
 		>
 			{count}
 		</span>

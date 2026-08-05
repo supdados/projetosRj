@@ -98,7 +98,7 @@
 						{/if}
 					</span>
 					{#if coveredBy != null}
-						<span class="text-2xs font-semibold uppercase tracking-caps text-warning">
+						<span class="text-xs font-semibold uppercase tracking-caps text-warning">
 							dentro de {siglaOf(coveredBy)}
 						</span>
 					{/if}

@@ -245,7 +245,7 @@
 				placeholder="Buscar por nome ou login…"
 				aria-label="Buscar usuários por nome ou login"
 				autocomplete="off"
-				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-brand focus:outline-none"
+				class="h-9 w-full max-w-sm shrink-0 rounded-lg border border-border-subtle bg-surface px-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast hover:bg-surface-muted focus:border-brand focus:outline-none"
 			/>
 
 			<!-- Seletor de área em árvore (mesmo componente de UserForm/CriarProjetoModal).
@@ -354,14 +354,14 @@
 						<caption class="sr-only">Lista de usuários do sistema</caption>
 						<thead>
 							<tr class="border-b border-border-subtle bg-surface-muted text-left">
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">ID</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Nome Completo</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Login</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Órgão</th>
-								<th scope="col" class="w-[160px] whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-2xs font-semibold uppercase tracking-caps text-text-muted">CPF gov.br</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-2xs font-semibold uppercase tracking-caps text-text-muted">Perfil</th>
-								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-2xs font-semibold uppercase tracking-caps text-text-muted">Ações</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">ID</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Nome Completo</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Login</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Órgão</th>
+								<th scope="col" class="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">CPF gov.br</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-caps text-text-muted">Perfil</th>
+								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-caps text-text-muted">Ações</th>
 							</tr>
 						</thead>
 						<tbody>

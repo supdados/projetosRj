@@ -448,11 +448,11 @@
 				oninput={onSearchInput}
 				aria-label="Busca livre"
 				placeholder="Digite título, área responsável ou indicador…"
-				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
+				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 			/>
 		</div>
 
-		<div class="min-w-[10rem] flex-1">
+		<div class="min-w-[11rem] flex-1">
 			<SelectMenu
 				id="periodoFilter"
 				options={periodoMenuOptions}
@@ -464,7 +464,7 @@
 		</div>
 
 		{#if data && data.orgaos_options.length > 1}
-			<div class="min-w-[10rem] flex-1">
+			<div class="min-w-[11rem] flex-1">
 				<OrgaoTreeSelect
 					id="orgaoFilter"
 					options={orgaoTreeOptions}
@@ -477,7 +477,7 @@
 			</div>
 		{/if}
 
-		<div class="min-w-[10rem] flex-1">
+		<div class="min-w-[11rem] flex-1">
 			<SelectMenu
 				id="responsavelFilter"
 				options={responsavelMenuOptions}
@@ -490,7 +490,7 @@
 			/>
 		</div>
 
-		<div class="min-w-[10rem] flex-1">
+		<div class="min-w-[11rem] flex-1">
 			<SelectMenu
 				id="prioridadeFilter"
 				options={PRIORIDADE_OPTIONS}

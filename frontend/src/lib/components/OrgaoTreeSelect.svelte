@@ -162,7 +162,7 @@
 		onkeydown={onTriggerKeydown}
 		class="flex w-full items-center justify-between gap-2 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50 {bare
 			? 'rounded-md border border-transparent text-md hover:bg-surface-muted'
-			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface px-3 text-sm hover:border-brand'}"
+			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface px-3 text-md hover:border-brand'}"
 	>
 		<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
 			{triggerLabel}
@@ -203,7 +203,7 @@
 					autocomplete="off"
 					placeholder="Buscar sigla ou nome..."
 					aria-label="Buscar órgão"
-					class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+					class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-md text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 				/>
 			</div>
 
@@ -213,7 +213,7 @@
 					role="option"
 					aria-selected={value == null}
 					onclick={chooseTodos}
-					class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm font-medium transition-colors duration-fast hover:bg-surface-muted {value ==
+					class="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-md font-medium transition-colors duration-fast hover:bg-surface-muted {value ==
 					null
 						? 'bg-wash-brand text-brand'
 						: 'text-text-primary'}"
@@ -227,7 +227,7 @@
 			{/if}
 
 			{#if rows.length === 0}
-				<div class="px-2.5 py-6 text-center text-sm text-text-muted">
+				<div class="px-2.5 py-6 text-center text-md text-text-muted">
 					Nenhuma unidade encontrada
 				</div>
 			{:else}
@@ -286,8 +286,8 @@
 							{/if}
 						</div>
 						<span class="min-w-0 flex-1 truncate" title={row.option.nome ?? undefined}>
-							{#if row.path}<span class="text-xs text-text-muted">{row.path} › </span
-								>{/if}<span class="text-sm font-medium text-text-primary"
+							{#if row.path}<span class="text-sm text-text-muted">{row.path} › </span
+								>{/if}<span class="text-md font-medium text-text-primary"
 								>{row.option.sigla ?? row.option.nome ?? ''}</span
 							>
 						</span>

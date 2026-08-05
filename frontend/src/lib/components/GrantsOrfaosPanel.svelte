@@ -69,12 +69,12 @@
 				<caption class="sr-only">Convites ativos sem concedente responsável</caption>
 				<thead>
 					<tr class="border-b border-border-subtle bg-surface-muted text-left">
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Projeto</th>
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Convidado</th>
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Concedente</th>
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Motivo</th>
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Criado em</th>
-						<th scope="col" class="whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-caps text-text-muted">Expira em</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Projeto</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Convidado</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Concedente</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Motivo</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Criado em</th>
+						<th scope="col" class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-caps text-text-muted">Expira em</th>
 					</tr>
 				</thead>
 				<tbody>

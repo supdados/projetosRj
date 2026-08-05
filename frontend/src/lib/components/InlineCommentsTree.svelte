@@ -357,7 +357,7 @@
 			<header class="mb-1 flex items-center gap-2 px-1">
 				<h3 class="text-sm font-bold text-text-primary">Comentários</h3>
 				<span
-					class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 font-mono text-2xs font-semibold text-text-secondary"
+					class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 font-mono text-xs font-semibold text-text-secondary"
 				>
 					{comments.length}
 				</span>
@@ -373,7 +373,7 @@
 					<div class="min-w-0 pt-0.5">
 						<div class="flex items-center gap-1.5">
 							<b class="text-xs font-semibold text-text-primary">{comment.author_name}</b>
-							<span class="text-2xs text-text-muted">· {formatCommentDate(comment.updated_at ?? comment.created_at)}</span>
+							<span class="text-xs text-text-muted">· {formatCommentDate(comment.updated_at ?? comment.created_at)}</span>
 						</div>
 
 						{#if editingId === comment.id}
@@ -417,13 +417,13 @@
 										onclick={() => startEdit(comment.id, comment.content)}
 										aria-label="Editar comentário"
 										title="Editar"
-										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 									><AppIcon id="edicao" size={14} /></button>{/if}{#if comment.can_delete}<button
 										type="button"
 										onclick={() => askDelete(comment.id)}
 										aria-label="Excluir comentário"
 										title="Excluir"
-										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-2xs text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
+										class="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-danger"
 									><AppIcon id="exclusao" size={14} /></button>{/if}</span>{/if}</p>
 						{/if}
 
@@ -507,7 +507,7 @@
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm text-text-primary">{candidate.name}</span>
 									{#if candidate.subtitle}
-										<span class="block truncate text-2xs text-text-muted">{candidate.subtitle}</span>
+										<span class="block truncate text-xs text-text-muted">{candidate.subtitle}</span>
 									{/if}
 								</span>
 							</button>
@@ -577,7 +577,7 @@
 							<button
 								type="button"
 								onclick={discard}
-								class="rounded-md px-2.5 py-1 text-2xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+								class="rounded-md px-2.5 py-1 text-xs font-medium text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 							>
 								Descartar
 							</button>
@@ -585,7 +585,7 @@
 						<button
 							type="submit"
 							disabled={busy || draft.trim() === ''}
-							class="inline-flex items-center rounded-md bg-brand px-3 py-1 text-2xs font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
+							class="inline-flex items-center rounded-md bg-brand px-3 py-1 text-xs font-semibold text-on-brand transition-colors duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Comentar
 						</button>

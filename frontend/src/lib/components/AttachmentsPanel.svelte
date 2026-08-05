@@ -130,7 +130,7 @@
 		<AppIcon id="anexo" size={16} class="text-text-muted" />
 		<span>Anexos</span>
 		<span
-			class="inline-flex min-w-[18px] items-center justify-center rounded-full bg-wash-neutral px-1.5 text-2xs font-bold text-brand"
+			class="inline-flex min-w-[18px] items-center justify-center rounded-full bg-wash-neutral px-1.5 text-xs font-bold text-brand"
 		>
 			{anexos.length}
 		</span>
@@ -171,7 +171,7 @@
 								<span class="truncate text-sm font-medium text-text-primary hover:text-brand">
 									{anexo.filename}
 								</span>
-								<span class="truncate text-2xs text-text-muted">{anexo.uploaded_by}</span>
+								<span class="truncate text-xs text-text-muted">{anexo.uploaded_by}</span>
 							</span>
 						</a>
 					{:else}
@@ -183,7 +183,7 @@
 						</span>
 						<span class="flex min-w-0 flex-1 flex-col">
 							<span class="truncate text-sm text-text-primary">{anexo.filename}</span>
-							<span class="truncate text-2xs text-text-muted">{anexo.uploaded_by}</span>
+							<span class="truncate text-xs text-text-muted">{anexo.uploaded_by}</span>
 						</span>
 					{/if}
 					{#if canManage}
@@ -227,9 +227,9 @@
 				onchange={onFileChange}
 				class="sr-only"
 			/>
-			<span class="text-2xs text-text-muted">Tamanho máximo: 10 MB. Arraste e solte também funciona.</span>
+			<span class="text-xs text-text-muted">Tamanho máximo: 10 MB. Arraste e solte também funciona.</span>
 			{#if localError}
-				<p role="alert" class="m-0 text-2xs text-danger">{localError}</p>
+				<p role="alert" class="m-0 text-xs text-danger">{localError}</p>
 			{/if}
 		</div>
 	{/if}

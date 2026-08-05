@@ -765,12 +765,12 @@
 					oninput={onSearchInput}
 					aria-label="Busca livre"
 					placeholder="Digite título, área responsável ou indicador…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
 
 			{#if temVinculoDeArea && orgaoTreeOptions.length > 0}
-				<div class="min-w-[10rem] flex-1">
+				<div class="min-w-[11rem] flex-1">
 					<OrgaoTreeSelect
 						id="projetosOrgao"
 						options={orgaoTreeOptions}
@@ -783,7 +783,7 @@
 				</div>
 			{/if}
 
-			<div class="min-w-[10rem] flex-1">
+			<div class="min-w-[11rem] flex-1">
 				<SelectMenu
 					id="projetosStatus"
 					options={statusMenuOptions}
@@ -798,7 +798,7 @@
 				/>
 			</div>
 
-			<div class="min-w-[10rem] flex-1">
+			<div class="min-w-[11rem] flex-1">
 				<SelectMenu
 					id="projetosPrioridade"
 					options={priorityMenuOptions}
@@ -1131,7 +1131,7 @@
 										{#if isAcessoPorConvite(project.access_via)}
 											<span
 												title="Você acessa este projeto por convite"
-												class="ml-2 inline-flex items-center gap-1 rounded-full bg-wash-neutral px-2 py-0.5 align-middle text-2xs font-bold uppercase tracking-wide text-brand"
+												class="ml-2 inline-flex items-center gap-1 rounded-full bg-wash-neutral px-2 py-0.5 align-middle text-xs font-bold uppercase tracking-wide text-brand"
 											>
 												<AppIcon id="atribuicao" size={14} />Convidado
 											</span>

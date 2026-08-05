@@ -885,7 +885,7 @@
 							type="button"
 							onclick={() => (filtroTermo = '')}
 							aria-label="Limpar filtro"
-							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-2xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							<i class="fas fa-times" aria-hidden="true"></i>
 						</button>
@@ -1005,7 +1005,7 @@
 		class="flex flex-wrap items-center gap-3 border-b border-border-subtle px-5 py-2.5 transition-colors duration-fast last:border-b-0 hover:bg-surface-muted"
 	>
 		<span
-			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-2xs font-bold text-brand {membro.status ===
+			class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-wash-neutral text-xs font-bold text-brand {membro.status ===
 			'revogado'
 				? 'opacity-60'
 				: ''}"

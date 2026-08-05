@@ -887,7 +887,7 @@
 				oninput={onSearchInput}
 				aria-label="Busca livre"
 				placeholder="Digite tarefa ou projeto…"
-				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
+				class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 			/>
 		</div>
 

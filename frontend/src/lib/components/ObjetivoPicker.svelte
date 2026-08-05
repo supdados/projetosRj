@@ -201,7 +201,7 @@
 		focarDepoisDoTick(() => botaoDoIndice(resZoneEl, idx) ?? botaoDoIndice(resZoneEl, 0));
 	}
 
-	const microLabelClass = 'text-2xs font-semibold uppercase tracking-caps text-text-muted';
+	const microLabelClass = 'text-xs font-semibold uppercase tracking-caps text-text-muted';
 	const pencilBtnClass =
 		'grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 	const removeBtnClass =
@@ -262,7 +262,7 @@
 
 					<div class="relative flex items-center gap-1.5">
 						<span class="flex min-w-0 flex-col gap-0.5" class:cp-op-dot-pop={celebrating}>
-							<span class="text-2xs font-semibold uppercase tracking-caps text-brand">
+							<span class="text-xs font-semibold uppercase tracking-caps text-brand">
 								Objetivo {String(objSnap.index + 1).padStart(2, '0')}
 							</span>
 							<span class="text-sm font-medium leading-snug text-text-primary">

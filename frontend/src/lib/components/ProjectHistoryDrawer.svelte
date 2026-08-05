@@ -262,7 +262,7 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
+				<p class="m-0 text-xs font-bold uppercase tracking-caps text-text-muted">
 					Histórico do projeto
 				</p>
 				<h2
@@ -383,7 +383,7 @@
 			<div class="flex flex-col gap-5">
 				{#each dayGroups as group (group.label)}
 					<section aria-label={group.label} class="flex flex-col gap-2">
-						<h3 class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
+						<h3 class="m-0 text-xs font-bold uppercase tracking-caps text-text-muted">
 							{group.label}
 						</h3>
 						<ol class="m-0 flex list-none flex-col border-l border-border-subtle p-0">
@@ -397,11 +397,11 @@
 									></span>
 
 									<div class="flex items-baseline justify-between gap-2">
-										<span class="text-2xs font-semibold uppercase tracking-wide text-text-muted">
+										<span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
 											{present.label}
 										</span>
 										<time
-											class="shrink-0 whitespace-nowrap text-2xs tabular-nums text-text-muted"
+											class="shrink-0 whitespace-nowrap text-xs tabular-nums text-text-muted"
 											datetime={entry.timestamp ?? undefined}
 										>
 											{formatTime(entry.timestamp)}
@@ -414,13 +414,13 @@
 										</p>
 									{/if}
 
-									<p class="m-0 text-2xs text-text-muted">por {actorName(entry)}</p>
+									<p class="m-0 text-xs text-text-muted">por {actorName(entry)}</p>
 
 									{#if entry.old_value || entry.new_value}
 										<div class="mt-1 grid gap-2 sm:grid-cols-2">
 											{#if entry.old_value}
 												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-2.5 py-2">
-													<h4 class="m-0 text-2xs font-bold uppercase tracking-wide text-text-muted">
+													<h4 class="m-0 text-xs font-bold uppercase tracking-wide text-text-muted">
 														Antes
 													</h4>
 													<pre class="m-0 whitespace-pre-wrap break-words font-sans text-xs leading-normal text-text-secondary">{entry.old_value}</pre>
@@ -428,7 +428,7 @@
 											{/if}
 											{#if entry.new_value}
 												<div class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-2.5 py-2">
-													<h4 class="m-0 text-2xs font-bold uppercase tracking-wide text-text-muted">
+													<h4 class="m-0 text-xs font-bold uppercase tracking-wide text-text-muted">
 														Depois
 													</h4>
 													<pre class="m-0 whitespace-pre-wrap break-words font-sans text-xs leading-normal text-text-secondary">{entry.new_value}</pre>

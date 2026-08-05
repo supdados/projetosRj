@@ -191,7 +191,7 @@
 		>
 			<div class="flex items-start justify-between gap-3">
 				<div class="flex min-w-0 flex-col gap-1">
-					<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
+					<p class="m-0 text-xs font-bold uppercase tracking-caps text-text-muted">
 						Histórico
 					</p>
 					<h2
@@ -233,7 +233,7 @@
 						oninput={onSearchInput}
 						aria-label="Buscar nas tarefas arquivadas"
 						placeholder="Digite tarefa ou projeto…"
-						class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
+						class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 					/>
 				</div>
 				<div class="archived-orgao-select w-44 shrink-0">
@@ -318,12 +318,12 @@
 											</button>
 											<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
 												{#if task.etapa_titulo}
-													<span class="truncate text-2xs text-text-muted" title={task.etapa_titulo}>
+													<span class="truncate text-xs text-text-muted" title={task.etapa_titulo}>
 														{task.etapa_display_id ? `${task.etapa_display_id} - ` : ''}{task.etapa_titulo}
 													</span>
 												{/if}
 												{#if archivedAt}
-													<span class="whitespace-nowrap text-2xs text-text-muted">
+													<span class="whitespace-nowrap text-xs text-text-muted">
 														Arquivada em {archivedAt}
 													</span>
 												{/if}

@@ -19,13 +19,13 @@
 		<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 			{#each { length: 4 } as _, i (i)}
 				<div
-					class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 shadow-sm"
+					class="flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm"
 				>
 					<Skeleton class="h-11 w-11 rounded-xl" />
 					<div class="flex min-w-0 flex-col gap-1.5">
-						<Skeleton class="h-7 w-12 rounded-md" />
-						<Skeleton class="h-3.5 w-20 rounded" />
-						<Skeleton class="hidden h-3 w-36 rounded sm:block" />
+						<Skeleton class="h-8 w-12 rounded-md" />
+						<Skeleton class="h-6 w-20 rounded" />
+						<Skeleton class="hidden h-5 w-36 rounded sm:block" />
 					</div>
 				</div>
 			{/each}

@@ -1160,13 +1160,13 @@
 	}
 
 	// --- Classes utilitárias (campos com visual unificado) -------------------
-	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-label';
+	const labelClass = 'text-xs font-bold uppercase tracking-caps text-text-label';
 	const fieldBaseClass =
 		'w-full rounded-control border border-border-strong bg-surface px-3.5 leading-tight text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60';
 	const fieldClass = `h-11 text-base ${fieldBaseClass}`;
 	// Altura dos controles compostos (SelectMenu/SEI/OrgaoTreeSelect) — usada onde
 	// campos nativos dividem linha com eles.
-	const fieldMdClass = `h-[var(--control-h-md)] text-sm ${fieldBaseClass}`;
+	const fieldMdClass = `h-[var(--control-h-md)] text-md ${fieldBaseClass}`;
 	const areaClass =
 		'w-full rounded-control border border-border-strong bg-surface px-3.5 py-3 text-base text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none';
 	const sectionTitleClass = 'font-heading text-2xl font-semibold text-text-primary';
@@ -1219,7 +1219,7 @@
 			{/each}
 		</div>
 		{#if label}
-			<span class="text-2xs font-semibold uppercase tracking-caps text-text-faint">
+			<span class="text-xs font-semibold uppercase tracking-caps text-text-faint">
 				{label}
 			</span>
 		{/if}
@@ -1655,7 +1655,7 @@
 									class="flex w-full items-center gap-3 border-t border-border-hairline px-1.5 py-2 text-left transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 								>
 									<span
-										class="grid h-5 w-5 flex-none place-items-center text-2xs font-bold tabular-nums {feita
+										class="grid h-5 w-5 flex-none place-items-center text-xs font-bold tabular-nums {feita
 											? 'text-success'
 											: 'text-text-faint'}"
 										aria-hidden="true"

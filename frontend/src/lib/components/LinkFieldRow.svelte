@@ -218,7 +218,7 @@
 		<span class="flex min-w-0 flex-1 flex-col gap-0.5">
 			<span
 				class="cp-lrow-label leading-snug {closedFilled
-					? 'text-2xs font-semibold uppercase tracking-caps text-text-muted'
+					? 'text-xs font-semibold uppercase tracking-caps text-text-muted'
 					: 'text-sm font-medium text-text-primary'}"
 			>
 				{label}

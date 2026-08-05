@@ -256,12 +256,12 @@
 		>
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
 				<div class="flex items-center gap-2">
-					<p class="m-0 text-2xs font-bold uppercase tracking-caps text-text-muted">
+					<p class="m-0 text-xs font-bold uppercase tracking-caps text-text-muted">
 						Tarefa{#if detail}&nbsp;#{detail.id}{/if}
 					</p>
 					{#if detail?.is_archived}
 						<span
-							class="td-archived-chip inline-flex items-center rounded-md border px-1.5 py-px text-2xs font-semibold"
+							class="td-archived-chip inline-flex items-center rounded-md border px-1.5 py-px text-xs font-semibold"
 						>
 							Arquivada
 						</span>
@@ -269,7 +269,7 @@
 					<!-- Erro nunca em tinta neutra: falha do autosave vira text-danger + ícone. -->
 					<span
 						aria-live="polite"
-						class="inline-flex items-center gap-1 text-2xs {autosaveFailed
+						class="inline-flex items-center gap-1 text-xs {autosaveFailed
 							? 'font-semibold text-danger'
 							: 'text-text-muted'}"
 					>
@@ -440,7 +440,7 @@
 							onblur={flush}
 							disabled={!detail.permissions.can_edit}
 							rows="3"
-							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60"
+							class="w-full resize-y rounded-lg border border-border-subtle bg-surface px-3 py-2 text-md leading-relaxed text-text-primary transition-colors duration-fast focus:border-brand focus:outline-none disabled:opacity-60"
 						></textarea>
 					</div>
 
@@ -510,7 +510,7 @@
 				</section>
 
 				{#if formatDate(detail.created_at)}
-					<p class="m-0 -mt-2 text-2xs text-text-muted">
+					<p class="m-0 -mt-2 text-xs text-text-muted">
 						Criada em {formatDate(detail.created_at)}{detail.is_archived &&
 						formatDate(detail.archived_at)
 							? ` · arquivada em ${formatDate(detail.archived_at)}`
@@ -536,7 +536,7 @@
 						></i>
 						<span class="text-sm font-bold text-text-primary">Comentários</span>
 						<span
-							class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-2xs font-semibold text-text-secondary"
+							class="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-border-subtle bg-surface px-1.5 text-xs font-semibold text-text-secondary"
 						>
 							{detail.comentarios.length}
 						</span>

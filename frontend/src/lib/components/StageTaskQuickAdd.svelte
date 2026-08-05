@@ -384,7 +384,7 @@
 	// Rótulos de coluna (mesmo token visual do StageGroupHeader do hub, um
 	// degrau menor — acompanha a variante compacta da grade).
 	const COL_LABEL =
-		'self-center text-center text-2xs font-bold uppercase tracking-caps text-text-secondary';
+		'self-center text-center text-xs font-bold uppercase tracking-caps text-text-secondary';
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -414,7 +414,7 @@
 	>
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex min-w-0 flex-1 flex-col gap-1">
-				<p class="m-0 truncate text-2xs font-bold uppercase tracking-caps text-text-muted">
+				<p class="m-0 truncate text-xs font-bold uppercase tracking-caps text-text-muted">
 					{eyebrow}
 				</p>
 				<h2
@@ -491,7 +491,7 @@
 				     como no hub — colunas sempre alinhadas. -->
 				<div class="overflow-x-auto overflow-y-hidden">
 					<div class="task-hub-grid bg-wash-neutral px-3 py-2">
-						<span class="text-2xs font-bold uppercase tracking-caps text-text-secondary">
+						<span class="text-xs font-bold uppercase tracking-caps text-text-secondary">
 							Tarefa
 						</span>
 						<span class={COL_LABEL}>Prioridade</span>
@@ -652,16 +652,16 @@
 	 * chevron sem truncar): "Urgente"/"Prioridade" 120px, "Melhoria" 108px,
 	 * "Para validação" 160px. */
 	.stq-compact {
-		--th-col-prio: 120px;
-		--th-col-tipo: 108px;
-		--th-col-status: 160px;
+		--th-col-prio: 128px;
+		--th-col-tipo: 116px;
+		--th-col-status: 168px;
 		--th-col-owner: 128px;
 		--th-col-actions: 84px;
 	}
 	.stq-compact :global(.task-hub-grid) {
 		/* 600px de colunas fixas + gaps + mínimo legível da descrição; abaixo
 		   disso o overflow-x-auto do card assume o scroll. */
-		min-width: 800px;
+		min-width: 824px;
 		column-gap: 0.45rem;
 	}
 

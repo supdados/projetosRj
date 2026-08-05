@@ -296,9 +296,13 @@
 		const sizeClass =
 			size === 'sm'
 				? 'h-[var(--control-h-sm)] px-2.5 text-sm'
-				: 'h-[var(--control-h-md)] px-3 text-sm';
+				: 'h-[var(--control-h-md)] px-3 text-md';
 		return `${base} ${sizeClass}`;
 	});
+
+	// Gatilho `unstyled` vive dentro de chips densos: o painel dele acompanha o
+	// degrau `sm`, não o de campo de formulário.
+	const panelTextClass = $derived(size === 'sm' || unstyled ? 'text-sm' : 'text-md');
 </script>
 
 <div bind:this={containerEl} class="relative w-full">
@@ -386,13 +390,13 @@
 						autocomplete="off"
 						placeholder="Buscar..."
 						aria-label="Buscar opção"
-						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+						class="w-full rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 {panelTextClass} text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
 					/>
 				</div>
 			{/if}
 
 			{#if navItems.length === 0}
-				<div class="px-2.5 py-6 text-center text-sm text-text-muted">
+				<div class="px-2.5 py-6 text-center {panelTextClass} text-text-muted">
 					Nenhuma opção encontrada
 				</div>
 			{:else}
@@ -413,7 +417,7 @@
 								chooseItem(item);
 							}
 						}}
-						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-fast {item
+						class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left {panelTextClass} transition-colors duration-fast {item
 							.option?.disabled
 							? 'cursor-not-allowed opacity-50'
 							: 'cursor-pointer'} {isSelected ? 'bg-wash-brand' : isHighlighted ? 'bg-surface-muted' : ''}"

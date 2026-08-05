@@ -444,9 +444,9 @@
 	 * troca sozinho pelas CSS vars semanticas — sem variantes dark: no markup.
 	 */
 
-	/* Chip canônico (plano-regua-de-cor §2.1/§7.9): 22px de altura, raio 6px,
-	   12px/500. SEM uppercase e SEM letter-spacing — a 12px isso custa
-	   legibilidade e não compra hierarquia que a cor já não dê. A pílula
+	/* Chip canônico: 22px de altura, raio 6px, 13px/500 (era 12px — ficou
+	   pequeno demais em tela grande). SEM uppercase e SEM letter-spacing — nesse
+	   tamanho isso custa legibilidade e não compra hierarquia. A pílula
 	   serve a status, tipo e prioridade (famílias .chip--* abaixo); o ponto
 	   sólido de prioridade sobrevive só nos dots dos menus. */
 	.chip {
@@ -458,7 +458,7 @@
 		border-radius: 6px;
 		background-color: var(--chip-bg);
 		color: var(--chip-fg);
-		font-size: 12px;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		line-height: 1;
 		white-space: nowrap;
@@ -819,12 +819,12 @@
 	display: grid;
 	grid-template-columns:
 		minmax(0, 1fr)
-		var(--th-col-prio, 104px)
-		var(--th-col-tipo, 112px)
-		var(--th-col-status, 140px)
+		var(--th-col-prio, 112px)
+		var(--th-col-tipo, 120px)
+		var(--th-col-status, 148px)
 		var(--th-col-owner, 180px)
 		var(--th-col-actions, 104px);
 	align-items: center;
 	gap: 0.4rem 0.6rem;
-	min-width: 760px;
+	min-width: 784px;
 }

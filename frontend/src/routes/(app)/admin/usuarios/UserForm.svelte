@@ -78,7 +78,7 @@
 	// casam com :focus-visible, então o anel piscava forte a cada clique).
 	const inputClass =
 		'h-10 w-full rounded-lg border border-border-subtle bg-surface-muted px-3 text-sm text-text-primary transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong hover:bg-surface focus:border-brand focus:bg-surface focus:outline-none disabled:opacity-60';
-	const labelClass = 'text-2xs font-bold uppercase tracking-caps text-text-muted';
+	const labelClass = 'text-xs font-bold uppercase tracking-caps text-text-muted';
 
 	// --- Vínculos de área (repeater área × papel) --------------------------
 	// Contador "N vínculos · cobre M unidades": M = vinculados + cobertos pela

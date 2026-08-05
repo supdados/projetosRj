@@ -345,7 +345,7 @@
 		{/snippet}
 		{#snippet actions()}
 			<div class="flex flex-col items-end gap-0.5 text-right">
-				<span class="text-2xs font-bold uppercase tracking-caps text-text-muted">Hoje</span>
+				<span class="text-xs font-bold uppercase tracking-caps text-text-muted">Hoje</span>
 				<span class="text-sm font-semibold text-brand">{todayLabel}</span>
 			</div>
 			<Button size="sm" onclick={openCreateModal} disabled={openingCreate}>
@@ -455,7 +455,7 @@
 					{#snippet header()}
 						<a
 							href={`${base}/tarefas`}
-							class="inline-flex items-center gap-1 text-xs font-semibold text-brand no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							class="inline-flex items-center gap-1 text-sm font-semibold text-brand no-underline transition-colors duration-fast hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 						>
 							Ver todas
 							<i class="fas fa-arrow-right" aria-hidden="true"></i>
@@ -516,14 +516,14 @@
 							<div class="min-w-0 flex-1">
 								<div class="mb-1 flex items-baseline gap-1.5">
 									<span class="text-xl font-bold tabular-nums text-text-primary">{data.dashboard_open_tasks_count}</span>
-									<span class="text-xs text-text-muted">tarefas abertas</span>
+									<span class="text-sm text-text-muted">tarefas abertas</span>
 								</div>
 								<ul class="flex flex-col gap-1.5" aria-label="Legenda por status">
 									{#each statusLegend as s (s.key)}
 										<li class="flex items-center gap-2 leading-none">
 											<span class="h-2 w-2 shrink-0 rounded-full" style="background: {s.color};" aria-hidden="true"></span>
-											<span class="min-w-0 flex-1 truncate text-2xs text-text-secondary">{s.label}</span>
-											<span class="shrink-0 text-2xs font-semibold tabular-nums text-text-primary">{s.count}</span>
+											<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">{s.label}</span>
+											<span class="shrink-0 text-xs font-semibold tabular-nums text-text-primary">{s.count}</span>
 										</li>
 									{/each}
 								</ul>
@@ -533,16 +533,16 @@
 						<!-- Por tipo: chips (so tipos com tarefas em aberto). Link p/ /tarefas. -->
 						{#if taskTypes.length > 0}
 							<section class="flex shrink-0 flex-col gap-2" aria-label="Tarefas por tipo">
-								<span class="text-2xs font-semibold uppercase tracking-caps text-text-muted">Por tipo</span>
+								<span class="text-xs font-semibold uppercase tracking-caps text-text-muted">Por tipo</span>
 								<div class="flex flex-wrap gap-1.5">
 									{#each taskTypes as ty (ty.key)}
 										<a
 											href={`${base}/tarefas?tipo=${ty.key}`}
-											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-xs font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+											class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface px-2.5 py-1.5 text-sm font-semibold text-text-secondary no-underline transition-colors duration-fast hover:border-brand hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 										>
 											<TaskTipoIcon tipo={ty.key} size={16} />
 											{ty.label}
-											<span class="text-2xs font-semibold tabular-nums text-text-muted">{ty.count}</span>
+											<span class="text-xs font-semibold tabular-nums text-text-muted">{ty.count}</span>
 										</a>
 									{/each}
 								</div>
@@ -554,7 +554,7 @@
 							 que nao cabem inteiros — telas maiores mostram mais, menores menos. -->
 						{#if data.recent_tasks.length > 0}
 							<section class="flex flex-col gap-2 lg:min-h-0 lg:flex-1" aria-label="Tarefas recentes">
-								<span class="shrink-0 text-2xs font-semibold uppercase tracking-caps text-text-muted">Recentes</span>
+								<span class="shrink-0 text-xs font-semibold uppercase tracking-caps text-text-muted">Recentes</span>
 								<div
 									bind:this={recentListEl}
 									class="flex flex-col gap-1.5 overflow-hidden lg:min-h-0 lg:flex-1"
@@ -569,8 +569,8 @@
 												<TaskTipoIcon tipo={t.tipo_pedido} size={16} />
 											</span>
 											<span class="flex min-w-0 flex-1 flex-col">
-												<span class="truncate text-sm font-semibold text-text-primary">{t.descricao}</span>
-												<span class="flex items-center gap-1.5 truncate text-2xs text-text-muted">
+												<span class="truncate text-md font-semibold text-text-primary">{t.descricao}</span>
+												<span class="flex items-center gap-1.5 truncate text-xs text-text-muted">
 													<span class="truncate">{t.project_titulo ?? (t.project_id ? `Projeto #${t.project_id}` : 'Sem projeto vinculado')}</span>
 													{#if t.comments_count > 0 || t.anexos_count > 0}
 														<span class="opacity-40">·</span>

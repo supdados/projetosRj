@@ -688,7 +688,7 @@
 					<div class="flex flex-col gap-2 border-b border-dashed border-border-subtle pb-4">
 						<label
 							for="tplName"
-							class="text-2xs font-bold uppercase tracking-caps text-text-muted"
+							class="text-xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Nome do modelo
 						</label>
@@ -703,7 +703,7 @@
 
 						<label
 							for="tplDesc"
-							class="mt-2 text-2xs font-bold uppercase tracking-caps text-text-muted"
+							class="mt-2 text-xs font-bold uppercase tracking-caps text-text-muted"
 						>
 							Descrição (opcional)
 						</label>
@@ -823,7 +823,7 @@
 											onclick={() => moveStage(index, -1)}
 											disabled={index === 0}
 											aria-label={`Mover etapa ${index + 1} para cima`}
-											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
 										>
 											<i class="fas fa-chevron-up" aria-hidden="true"></i>
 										</button>
@@ -841,7 +841,7 @@
 											onclick={() => moveStage(index, 1)}
 											disabled={index === formStages.length - 1}
 											aria-label={`Mover etapa ${index + 1} para baixo`}
-											class="inline-flex h-4 w-5 items-center justify-center rounded text-2xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
+											class="inline-flex h-4 w-5 items-center justify-center rounded text-xs text-text-muted opacity-0 transition-all duration-fast hover:text-text-primary focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:invisible group-focus-within:opacity-100"
 										>
 											<i class="fas fa-chevron-down" aria-hidden="true"></i>
 										</button>
@@ -981,43 +981,43 @@
 								<tr class="border-b border-border-subtle bg-surface-muted text-left">
 									<th
 										scope="col"
-										class="px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Modelo
 									</th>
 									<th
 										scope="col"
-										class="whitespace-nowrap px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Etapas
 									</th>
 									<th
 										scope="col"
-										class="whitespace-nowrap px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Duração
 									</th>
 									<th
 										scope="col"
-										class="hidden px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted lg:table-cell"
+										class="hidden px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted lg:table-cell"
 									>
 										Silhueta
 									</th>
 									<th
 										scope="col"
-										class="whitespace-nowrap px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Usado em
 									</th>
 									<th
 										scope="col"
-										class="px-4 py-3 text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="px-4 py-3 text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										Última edição
 									</th>
 									<th
 										scope="col"
-										class="px-4 py-3 pr-5 text-right text-2xs font-semibold uppercase tracking-caps text-text-muted"
+										class="px-4 py-3 pr-5 text-right text-xs font-semibold uppercase tracking-caps text-text-muted"
 									>
 										<span class="sr-only">Ações</span>
 									</th>

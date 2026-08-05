@@ -90,7 +90,7 @@
 			<div class="flex min-w-0 items-center gap-2">
 				<h6 class="m-0 truncate text-sm font-semibold text-text-primary">{current.filename}</h6>
 				{#if total > 1}
-					<span class="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-semibold text-text-secondary">
+					<span class="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-text-secondary">
 						{index + 1} / {total}
 					</span>
 				{/if}

@@ -438,7 +438,7 @@
 												<span class="truncate text-sm font-semibold text-text-primary"
 													>{item.title || 'Atualização'}</span
 												>
-												<span class="shrink-0 text-2xs text-text-muted"
+												<span class="shrink-0 text-xs text-text-muted"
 													>{relativeTime(item.created_at)}</span
 												>
 											</span>

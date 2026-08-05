@@ -87,12 +87,12 @@
 			     as linhas e empurrava as colunas fixas ~15px p/ a esquerda. -->
 			<div
 				role="row"
-				class="rp-grid sticky top-0 z-10 items-center border-b border-border-subtle bg-surface-muted text-2xs font-bold uppercase tracking-caps text-brand"
+				class="rp-grid sticky top-0 z-10 items-center border-b border-border-subtle bg-surface-muted text-xs font-bold uppercase tracking-caps text-brand"
 			>
-				<span role="columnheader" class="px-3 py-2.5 text-center">ID</span>
-				<span role="columnheader" class="px-3 py-2.5">Projeto</span>
-				<span role="columnheader" class="px-3 py-2.5 text-center">Área responsável</span>
-				<span role="columnheader" class="px-3 py-2.5 text-center">Prioridade</span>
+				<span role="columnheader" class="whitespace-nowrap px-3 py-2.5 text-center">ID</span>
+				<span role="columnheader" class="whitespace-nowrap px-3 py-2.5">Projeto</span>
+				<span role="columnheader" class="whitespace-nowrap px-3 py-2.5 text-center">Área responsável</span>
+				<span role="columnheader" class="whitespace-nowrap px-3 py-2.5 text-center">Prioridade</span>
 			</div>
 
 			<div role="rowgroup">
@@ -128,7 +128,7 @@
 	   64px | 1fr | 170px | 185px), garantindo alinhamento de colunas. */
 	.rp-grid {
 		display: grid;
-		grid-template-columns: 64px minmax(0, 1fr) 170px 185px;
+		grid-template-columns: 64px minmax(0, 1fr) 180px 185px;
 	}
 
 	/* Scroll-lock: trava a altura do corpo para a tabela rolar internamente (em

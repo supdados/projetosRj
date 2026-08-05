@@ -98,7 +98,7 @@
 			{/if}
 		</div>
 		{#if errorCode}
-			<span class="font-mono text-2xs text-text-faint">{errorCode}</span>
+			<span class="font-mono text-xs text-text-faint">{errorCode}</span>
 		{/if}
 	</div>
 {:else}
@@ -123,7 +123,7 @@
 			</a>
 		{/if}
 		{#if errorCode}
-			<span class="font-mono text-2xs text-text-faint">{errorCode}</span>
+			<span class="font-mono text-xs text-text-faint">{errorCode}</span>
 		{/if}
 	</div>
 {/if}

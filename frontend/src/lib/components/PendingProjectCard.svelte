@@ -332,7 +332,7 @@
 
 {#snippet stageTableHead()}
 	<!-- Faixa azul com labels de coluna — mesma linguagem do StageGroupHeader do
-	     hub de Tarefas (bg-wash-neutral, text-2xs bold uppercase text-text-secondary). -->
+	     hub de Tarefas (bg-wash-neutral, text-xs bold uppercase text-text-secondary). -->
 	<thead>
 		<tr class="border-b border-border-subtle bg-wash-neutral text-left">
 			<th scope="col" class={`${TH} text-left`}>Etapa</th>

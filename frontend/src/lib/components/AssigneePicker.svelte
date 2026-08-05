@@ -303,7 +303,7 @@
 				{/each}
 				{#if overflowCount > 0}
 					<span
-						class="relative z-[1] inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-muted text-2xs font-semibold text-text-secondary ring-2 ring-surface"
+						class="relative z-[1] inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-text-secondary ring-2 ring-surface"
 					>
 						+{overflowCount}
 					</span>
@@ -328,7 +328,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={open}
 			title="Atribuir responsável"
-			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-2xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+			class="inline-flex h-7 w-full items-center justify-center gap-1 whitespace-nowrap rounded-md border border-dashed border-border-subtle px-2 text-xs font-medium text-text-muted transition-colors duration-fast hover:border-brand-soft hover:bg-surface-muted hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 		>
 			<i class="fas fa-plus text-2xs" aria-hidden="true"></i>Atribuir
 		</button>

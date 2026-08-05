@@ -385,7 +385,7 @@
 	>
 		{#if lista.length > 0}
 			<div class="shrink-0 border-b border-border-subtle px-2 pb-1.5 pt-2">
-				<div class="px-1 pb-1 text-2xs font-bold uppercase tracking-caps text-text-muted">
+				<div class="px-1 pb-1 text-xs font-bold uppercase tracking-caps text-text-muted">
 					Selecionadas
 				</div>
 				<ul class="thin-scroll flex max-h-[140px] flex-col overflow-y-auto">
@@ -393,7 +393,7 @@
 						<li class="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors duration-fast hover:bg-surface-muted">
 							<span class="shrink-0 text-sm font-semibold text-text-primary">{item.label}</span>
 							<span
-								class="min-w-0 flex-1 truncate text-2xs text-text-muted"
+								class="min-w-0 flex-1 truncate text-xs text-text-muted"
 								title={nomeByKey.get(item.area_id ?? -1) ?? undefined}
 							>
 								{nomeByKey.get(item.area_id ?? -1) ?? ''}
