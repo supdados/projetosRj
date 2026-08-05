@@ -249,7 +249,12 @@
 		options?.abep_indicadores_options ?? []
 	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? DELIVERY_TYPES);
-	const specialProjects = $derived(options?.special_projects_options ?? SPECIAL_PROJECTS);
+	// "Inventário" entra por outro caminho (banco), não pela criação manual.
+	const specialProjects = $derived(
+		(options?.special_projects_options ?? SPECIAL_PROJECTS).filter(
+			(sp) => sp.trim().toLowerCase() !== 'inventário'
+		)
+	);
 
 	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
 	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
@@ -1253,7 +1258,7 @@
 {#snippet deliveryOptionIcon(opt: SelectMenuOption)}
 	{@const iconId = deliveryIconId(opt.value)}
 	{#if iconId}
-		<ProjectIcon id={iconId} size={14} />
+		<span class="flex shrink-0 text-brand"><ProjectIcon id={iconId} size={14} /></span>
 	{/if}
 {/snippet}
 
@@ -1269,7 +1274,7 @@
 	{@const iconId = deliveryIconId(selected?.value)}
 	<span class="flex min-w-0 items-center gap-2 text-text-primary">
 		{#if iconId}
-			<ProjectIcon id={iconId} size={14} />
+			<span class="flex shrink-0 text-brand"><ProjectIcon id={iconId} size={14} /></span>
 		{/if}
 		<span class="truncate">{label}</span>
 	</span>
@@ -1295,7 +1300,7 @@
 {#snippet specialOptionIcon(opt: SelectMenuOption)}
 	{@const iconId = specialProjectIconId(opt.value)}
 	{#if iconId}
-		<ProjectIcon id={iconId} size={14} />
+		<span class="flex shrink-0 text-brand"><ProjectIcon id={iconId} size={14} /></span>
 	{/if}
 {/snippet}
 
@@ -1311,7 +1316,7 @@
 	{@const iconId = specialProjectIconId(selected?.value)}
 	<span class="flex min-w-0 items-center gap-2 text-text-primary">
 		{#if iconId}
-			<ProjectIcon id={iconId} size={14} />
+			<span class="flex shrink-0 text-brand"><ProjectIcon id={iconId} size={14} /></span>
 		{/if}
 		<span class="truncate">{label}</span>
 	</span>
