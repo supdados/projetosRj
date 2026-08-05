@@ -458,3 +458,80 @@ def test_api_busca_dropdown_mode_has_no_pagination_keys(app, client_user, seed_d
     assert "pagination" not in data["meta"]
     assert "type_counts" not in data["meta"]
     assert "selected_types" not in data["meta"]
+
+
+def test_api_projetos_pendentes_responsaveis_options_um_item_por_area(
+    app, client_user, seed_data
+):
+    """Etapa com N áreas gera N opções — nunca a string concatenada.
+
+    Regressão: o filtro lia o espelho legado ``Etapa.responsavel``
+    ("SUBEXE, COODADOS, COOACES"), então três áreas viravam UMA opção só e o
+    usuário não conseguia filtrar por uma delas isoladamente.
+    """
+    from models import Etapa, db
+    from services.etapa_responsaveis import replace_etapa_responsaveis
+    from tests._orgao_helpers import ensure_orgao
+
+    with app.app_context():
+        areas = [ensure_orgao(sigla) for sigla in ("SUBEXE", "COODADOS", "COOACES")]
+        etapa = Etapa(
+            descricao="Etapa multi-area",
+            project_id=seed_data["project_id"],
+            ordem=95,
+        )
+        db.session.add(etapa)
+        db.session.flush()
+        replace_etapa_responsaveis(etapa, [{"area_id": a.id} for a in areas])
+        db.session.commit()
+        mirror = etapa.responsavel
+
+    assert "," in mirror  # o espelho legado continua concatenado
+
+    data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
+    options = data["responsaveis_options"]
+    assert {"SUBEXE", "COODADOS", "COOACES"} <= set(options)
+    assert mirror not in options
+    assert not [opt for opt in options if "," in opt]
+
+
+def test_api_projetos_pendentes_filtro_responsavel_casa_area_isolada(
+    app, client_user, seed_data
+):
+    """Filtrar por uma das áreas traz a etapa; prefixo de sigla não casa."""
+    import datetime
+
+    from models import Etapa, db
+    from services.etapa_responsaveis import replace_etapa_responsaveis
+    from tests._orgao_helpers import ensure_orgao
+
+    ontem = datetime.date.today() - datetime.timedelta(days=1)
+    with app.app_context():
+        areas = [ensure_orgao(sigla) for sigla in ("SUBEXE", "COODADOS")]
+        # data_inicio no passado => bucket "atrasada", visível no período default.
+        etapa = Etapa(
+            descricao="Etapa filtro area",
+            project_id=seed_data["project_id"],
+            ordem=96,
+            data_inicio=ontem,
+            data_fim=ontem,
+        )
+        db.session.add(etapa)
+        db.session.flush()
+        replace_etapa_responsaveis(etapa, [{"area_id": a.id} for a in areas])
+        db.session.commit()
+        etapa_id = etapa.id
+
+    def _etapa_ids(responsavel: str) -> set[int]:
+        payload = client_user.get(
+            f"/api/projetos-pendentes?responsavel={responsavel}"
+        ).get_json()
+        data = _assert_ok_envelope(payload)
+        return {
+            etapa["id"] for row in data["projetos"] for etapa in row["etapas_visiveis"]
+        }
+
+    assert etapa_id in _etapa_ids("COODADOS")
+    assert etapa_id in _etapa_ids("SUBEXE")
+    # "COO" é prefixo de COODADOS: substring casaria, rótulo exato não.
+    assert etapa_id not in _etapa_ids("COO")

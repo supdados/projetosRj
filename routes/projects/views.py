@@ -3,6 +3,7 @@ import datetime
 import io
 from collections import defaultdict
 
+from sqlalchemy import and_, func, literal, or_
 from sqlalchemy.orm import selectinload
 
 from flask import (
@@ -16,6 +17,7 @@ from flask import (
 
 from models import (
     Etapa,
+    EtapaResponsavel,
     Project,
     ProjectHistory,
     Task,
@@ -36,6 +38,7 @@ from routes.orgao_scope import (
 )
 from services.authorization import project_visibility_criterion
 from services.etapa_positions import build_etapa_position_map
+from services.etapa_responsaveis import split_responsavel_legado
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
@@ -275,6 +278,85 @@ def list_projects():
     return redirect("/projetos" + ("?" + query if query else ""))
 
 
+def _etapas_abertas_criterios(project_ids):
+    """Filtros comuns às etapas em aberto dos projetos visíveis."""
+    return (
+        Etapa.project_id.in_(project_ids),
+        Etapa.done.is_(False),
+        Etapa.entry_type != "google_meeting",
+    )
+
+
+def _build_responsaveis_options(project_ids):
+    """Rótulos individuais para o filtro de responsável da tela de pendentes.
+
+    Uma etapa com várias áreas guarda "SUBEXE, COODADOS, COOACES" no espelho
+    legado ``Etapa.responsavel``; a fonte da verdade é a N:N ``EtapaResponsavel``.
+    Cada área vira UMA opção — a string inteira nunca é oferecida. Etapas antigas,
+    sem linhas na N:N, entram pelo espelho já quebrado em itens.
+
+    Exemplo:
+        >>> _build_responsaveis_options([1])
+        ['COOACES', 'COODADOS', 'SUBEXE']
+    """
+    criterios = _etapas_abertas_criterios(project_ids)
+    rotulos = (
+        db.session.query(EtapaResponsavel.label)
+        .join(Etapa, Etapa.id == EtapaResponsavel.etapa_id)
+        .filter(*criterios)
+        .distinct()
+        .all()
+    )
+    legado = (
+        Etapa.query.filter(
+            *criterios,
+            Etapa.responsavel.isnot(None),
+            ~Etapa.responsaveis.any(),
+        )
+        .with_entities(Etapa.responsavel)
+        .distinct()
+        .all()
+    )
+
+    # Dedupe por casefold: o DISTINCT roda no banco ANTES do strip ("SUPIM" e
+    # "SUPIM " são linhas distintas no SQL), e chave duplicada derruba o {#each}
+    # do filtro na SPA (each_key_duplicate).
+    unicos: dict[str, str] = {}
+    for (rotulo,) in rotulos:
+        nome = " ".join((rotulo or "").split())
+        if nome:
+            unicos.setdefault(nome.casefold(), nome)
+    for (mirror,) in legado:
+        for nome in split_responsavel_legado(mirror):
+            unicos.setdefault(nome.casefold(), nome)
+    return sorted(unicos.values(), key=lambda value: value.casefold())
+
+
+def _responsavel_criterion(nome):
+    """Casa etapas cuja área responsável é EXATAMENTE ``nome``.
+
+    Substring não serve: "COO" casaria "COODADOS", e o espelho legado concatena
+    as áreas com vírgula. Na N:N a comparação é direta; no legado o LIKE é
+    ancorado nos separadores da própria string normalizada.
+    """
+    alvo = " ".join(nome.split()).casefold()
+    estruturado = Etapa.responsaveis.any(
+        func.lower(func.trim(EtapaResponsavel.label)) == alvo
+    )
+    mirror = func.replace(
+        func.lower(
+            literal(",").concat(func.coalesce(Etapa.responsavel, "")).concat(",")
+        ),
+        " ",
+        "",
+    )
+    legado = and_(
+        ~Etapa.responsaveis.any(),
+        mirror.like(f"%,{alvo.replace(' ', '')},%"),
+    )
+    return or_(estruturado, legado)
+
+
 def build_projetos_pendentes_context(
     selected_orgao_id,
     *,
@@ -299,7 +381,8 @@ def build_projetos_pendentes_context(
             ``sanitize_orgao_filter_for_current_user``.
         filtro_periodo: Janela de visibilidade ("atrasados" | "7dias" | "14dias"
             | "21dias"); valores fora do conjunto caem para "atrasados".
-        selected_responsavel: Filtro de responsável (substring, case-insensitive).
+        selected_responsavel: Rótulo EXATO de uma área responsável (uma etapa
+            com várias áreas casa por qualquer uma delas), case-insensitive.
         pending_page: Página solicitada (1-based) da lista paginada de projetos.
 
     Returns:
@@ -433,24 +516,7 @@ def build_projetos_pendentes_context(
             "pending_total_projects": 0,
         }
 
-    responsaveis_query = (
-        Etapa.query.filter(
-            Etapa.project_id.in_(project_ids),
-            Etapa.done.is_(False),
-            Etapa.entry_type != "google_meeting",
-            Etapa.responsavel.isnot(None),
-        )
-        .with_entities(Etapa.responsavel)
-        .distinct()
-        .all()
-    )
-    # set(): o DISTINCT roda no banco ANTES do strip — "SUPIM" e "SUPIM " viram
-    # duplicatas exatas após o trim, e a SPA quebra com chave duplicada no
-    # {#each} do filtro de responsável (each_key_duplicate).
-    responsaveis_options = sorted(
-        {r[0].strip() for r in responsaveis_query if r[0] and r[0].strip()},
-        key=lambda value: value.casefold(),
-    )
+    responsaveis_options = _build_responsaveis_options(project_ids)
 
     # selectinload: serialize_etapa_card chama etapa_tem_responsavel(), que toca
     # Etapa.responsaveis (lazy="select") — sem isso é 1 SELECT por etapa do card.
@@ -460,9 +526,7 @@ def build_projetos_pendentes_context(
         Etapa.entry_type != "google_meeting",
     )
     if selected_responsavel:
-        etapas_query = etapas_query.filter(
-            Etapa.responsavel.ilike(f"%{selected_responsavel}%")
-        )
+        etapas_query = etapas_query.filter(_responsavel_criterion(selected_responsavel))
 
     etapas_abertas = etapas_query.order_by(
         Etapa.project_id.asc(),

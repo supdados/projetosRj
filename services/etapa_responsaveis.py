@@ -1,8 +1,36 @@
 """Substituição transacional das áreas responsáveis de uma etapa (mudança #3)."""
 
+import re
+
 from models import EtapaResponsavel, OrgaoUnidade, db
 
 OUTRAS_LABEL = "Outras"
+
+_SEPARADORES = re.compile(r"[,;/\n]+")
+
+
+def split_responsavel_legado(raw: object) -> list[str]:
+    """Quebra o espelho legado ``Etapa.responsavel`` nos rótulos individuais.
+
+    ``apply_responsaveis_entries`` grava ``", ".join(labels)`` nessa coluna, então
+    uma etapa com três áreas vira "SUBEXE, COODADOS, COOACES". Filtros e listas de
+    opção precisam de UM item por área — não da string inteira.
+
+    Exemplo:
+        >>> split_responsavel_legado("SUBEXE, COODADOS ; COOACES")
+        ['SUBEXE', 'COODADOS', 'COOACES']
+    """
+    if not isinstance(raw, str):
+        return []
+    nomes: list[str] = []
+    vistos: set[str] = set()
+    for parte in _SEPARADORES.split(raw):
+        nome = " ".join(parte.split())
+        if not nome or nome.casefold() in vistos:
+            continue
+        vistos.add(nome.casefold())
+        nomes.append(nome)
+    return nomes
 
 
 def parse_responsaveis_entries(raw: object) -> list[dict]:

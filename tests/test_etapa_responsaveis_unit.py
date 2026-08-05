@@ -13,6 +13,7 @@ from services.etapa_responsaveis import (
     OUTRAS_LABEL,
     parse_responsaveis_entries,
     replace_etapa_responsaveis,
+    split_responsavel_legado,
 )
 
 
@@ -169,3 +170,29 @@ def test_replace_propaga_erro_de_parse(app):
         with pytest.raises(ValueError, match="Pelo menos uma área responsável"):
             replace_etapa_responsaveis(etapa, [])
         assert etapa.responsaveis == []
+
+
+# ── split_responsavel_legado ─────────────────────────────────────────────────
+
+
+def test_split_legado_quebra_string_concatenada():
+    assert split_responsavel_legado("SUBEXE, COODADOS, COOACES") == [
+        "SUBEXE",
+        "COODADOS",
+        "COOACES",
+    ]
+
+
+def test_split_legado_aceita_separadores_variados_e_normaliza_espacos():
+    assert split_responsavel_legado("SUBEXE ;COODADOS/ COOACES\nSUPIM  DOIS") == [
+        "SUBEXE",
+        "COODADOS",
+        "COOACES",
+        "SUPIM DOIS",
+    ]
+
+
+def test_split_legado_dedupe_case_insensitive_e_ignora_vazios():
+    assert split_responsavel_legado("SEA, , sea,SEA ") == ["SEA"]
+    assert split_responsavel_legado("") == []
+    assert split_responsavel_legado(None) == []
