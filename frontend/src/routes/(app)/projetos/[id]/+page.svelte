@@ -1413,9 +1413,9 @@
 						Links e Observação
 					</h3>
 					<div class="ficha-bloco">
-					<!-- DUAS fileiras verticais: os três links fixos à esquerda, os até
-					     três personalizados à direita. Misturar tudo numa grade só
-					     embaralhava fixo com personalizado. -->
+					<!-- DUAS fileiras verticais: todos os links à esquerda (fixos e depois
+					     os personalizados), a observação sozinha à direita — é texto livre,
+					     entre os links lia como mais uma linha da lista. -->
 					<div class="ficha-colunas">
 						<div class="ficha-coluna">
 						<div class="ficha-campo">
@@ -1478,11 +1478,9 @@
 							/>
 							</div>
 						</div>
-						</div>
-
-						<!-- Coluna dos personalizados (nomeados pelo usuario, ate 3). O NOME
-						     é o próprio rótulo da célula, também editável; lixeira remove. -->
-						<div class="ficha-coluna">
+						<!-- Personalizados (nomeados pelo usuario, ate 3) logo abaixo dos
+						     fixos. O NOME é o próprio rótulo da célula, também editável;
+						     lixeira remove. -->
 						{#each data.project.custom_links ?? [] as link, i (i)}
 							<div class="ficha-campo">
 								<span class="ficha-rotulo ficha-rotulo--editavel" title={link.label}>
@@ -1601,31 +1599,28 @@
 							{/if}
 						{/if}
 						</div>
-					</div>
-				</div>
 
-					<!-- Observação em moldura PRÓPRIA (e com folga extra): é texto livre,
-					     não um link — junto deles lia como mais uma linha da lista.
-					     Largura acompanha a coluna dos links fixos acima. -->
-					<div class="ficha-bloco ficha-bloco--observacao mt-3">
-						<div class="ficha-campo">
-							<span class="ficha-rotulo">
-								<ProjectIcon id="observacao" size={13} />Observação
-							</span>
-						<InlineEditField
-							fieldId="project-observacao"
-							label="Observação"
-							value={data.project.observacao}
-							kind="textarea"
-							variant="cell"
-							emptyLabel="Nenhuma observação registrada."
-							readonly={fieldsLocked}
-							pending={projectFieldStates.observacao?.pending}
-							error={projectFieldStates.observacao?.error}
-							onSave={(v) => saveProjectField('observacao', v)}
-						/>
+						<div class="ficha-coluna">
+							<div class="ficha-campo ficha-campo--observacao">
+								<span class="ficha-rotulo">
+									<ProjectIcon id="observacao" size={13} />Observação
+								</span>
+								<InlineEditField
+									fieldId="project-observacao"
+									label="Observação"
+									value={data.project.observacao}
+									kind="textarea"
+									variant="cell"
+									emptyLabel="Nenhuma observação registrada."
+									readonly={fieldsLocked}
+									pending={projectFieldStates.observacao?.pending}
+									error={projectFieldStates.observacao?.error}
+									onSave={(v) => saveProjectField('observacao', v)}
+								/>
+							</div>
 						</div>
 					</div>
+				</div>
 				</div>
 			</div>
 		</Card>
@@ -1880,6 +1875,18 @@
 		width: 8.5rem;
 		flex: none;
 	}
+	/* A observação é texto livre, não um link: rótulo em cima, valor ocupando a
+	   coluna inteira e a célula esticando até a altura da fileira de links. */
+	.ficha-coluna .ficha-campo--observacao {
+		flex: 1;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.25rem;
+		padding: 0.875rem 1rem 1rem;
+	}
+	.ficha-campo--observacao .ficha-rotulo {
+		width: auto;
+	}
 	.ficha-valor {
 		display: flex;
 		min-width: 0;
@@ -1932,11 +1939,6 @@
 		}
 		.ficha-colunas {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-		/* Alinha com a coluna esquerda dos links: metade do card menos o vão de
-		   1px do divisor. Largura fixa (max-w-2xl) descolava conforme a tela. */
-		.ficha-bloco--observacao {
-			width: calc(50% - 0.5px);
 		}
 	}
 
