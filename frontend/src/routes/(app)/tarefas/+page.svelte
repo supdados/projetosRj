@@ -53,6 +53,7 @@
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import TaskDrawer from '$lib/components/TaskDrawer.svelte';
@@ -789,6 +790,13 @@
 	<title>ProjetosRJ — Tarefas</title>
 </svelte:head>
 
+<!-- Tipo não tem `icon` na régua de ícones (o desenho é o bloco chanfrado do
+	 TaskTipoIcon), então o filtro passa o ícone por snippet; o gatilho padrão do
+	 SelectMenu já renderiza o `optionIcon` da opção selecionada. -->
+{#snippet tipoOptionIcon(opt: SelectMenuOption)}
+	<span class="flex shrink-0"><TaskTipoIcon tipo={opt.value} size={14} /></span>
+{/snippet}
+
 <section
 	aria-labelledby="tarefas-title"
 	class="flex flex-col motion-safe:transition-[gap] {expandMotion} {boardExpanded
@@ -930,6 +938,7 @@
 				allowAll
 				allLabel="Todos os tipos"
 				ariaLabel="Filtrar por tipo"
+				optionIcon={tipoOptionIcon}
 			/>
 		</div>
 
