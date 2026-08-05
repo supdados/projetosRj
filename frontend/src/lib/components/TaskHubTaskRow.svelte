@@ -389,7 +389,7 @@
 					onclick={startEditDesc}
 					title="Editar descrição"
 					aria-label="Editar descrição"
-					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-all duration-fast hover:text-brand focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand group-hover/row:opacity-100"
+					class="inline-flex h-6 w-6 shrink-0 items-center justify-center text-text-muted opacity-0 transition-ui duration-fast hover:text-brand focus:outline-none focus-visible:opacity-100 focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-brand group-hover/row:opacity-100"
 				>
 					<AppIcon id="edicao" size={14} />
 				</button>

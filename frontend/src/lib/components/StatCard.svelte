@@ -73,7 +73,7 @@
 	<a
 		{href}
 		aria-label={linkLabel ?? label}
-		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 no-underline shadow-sm transition-all duration-slow hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 no-underline shadow-sm transition-ui duration-slow hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	>
 		{@render body()}
 	</a>

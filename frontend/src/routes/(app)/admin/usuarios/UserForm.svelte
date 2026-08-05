@@ -320,14 +320,14 @@
 	<div class="flex items-center justify-end gap-2">
 		<a
 			href={cancelHref}
-			class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary no-underline transition-all duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+			class="inline-flex h-9 items-center rounded-md border border-border-strong bg-surface px-3.5 text-sm font-semibold text-text-secondary no-underline transition-ui duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 		>
 			Cancelar
 		</a>
 		<button
 			type="submit"
 			disabled={saving}
-			class="inline-flex h-9 items-center rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand shadow-token transition-all duration-fast hover:bg-brand-hover hover:shadow-token-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
+			class="inline-flex h-9 items-center rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand shadow-token transition-ui duration-fast hover:bg-brand-hover hover:shadow-token-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:opacity-50 disabled:shadow-none"
 		>
 			{saving ? 'Salvando…' : submitLabel}
 		</button>

@@ -37,11 +37,11 @@
 
 	// Ordem do v4.5 (sem item "Busca" — a busca virou o campo live a direita).
 	const navLinks: { label: string; path: string; kind: NavIconKind }[] = [
-		{ label: 'Inicio', path: '/dashboard', kind: 'inicio' },
+		{ label: 'Início', path: '/dashboard', kind: 'inicio' },
 		{ label: 'Projetos', path: '/projetos', kind: 'projetos' },
 		{ label: 'Pendentes', path: '/projetos/pendentes', kind: 'pendentes' },
 		{ label: 'Tarefas', path: '/tarefas', kind: 'tarefas' },
-		{ label: 'Calendario', path: '/calendarios', kind: 'calendario' }
+		{ label: 'Calendário', path: '/calendarios', kind: 'calendario' }
 	];
 
 	// Indicador unico (pilula branca) que DESLIZA entre os itens da nav. Um so
@@ -355,7 +355,7 @@
 					aria-label={notifUnread > 0
 						? `Notificações (${notifUnread} não lidas)`
 						: 'Notificações'}
-					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
+					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-ui duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
 						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
 				>
@@ -467,9 +467,9 @@
 						aria-haspopup="menu"
 						aria-expanded={adminOpen}
 						aria-current={adminActive ? 'page' : undefined}
-						title="Conta e administracao"
-						aria-label="Conta e administracao"
-						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-all duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {adminActive ||
+						title="Conta e administração"
+						aria-label="Conta e administração"
+						class="inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-ui duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {adminActive ||
 						adminOpen
 							? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
 							: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"

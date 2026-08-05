@@ -437,6 +437,22 @@
 	}
 }
 
+@layer utilities {
+	/* Substitui `transition-ui` em qualquer elemento focável: anima tudo que a
+	   UI usa, MENOS `outline-*`. Com outline na lista de transição, o Chrome usa
+	   a cor do focus-ring da UA (branco 70%) como valor INICIAL da interpolação
+	   e o `focus:outline-none` do Tailwind (2px solid transparent) como final —
+	   resultado: um flash branco de ~180ms na borda a cada clique. Verificado
+	   por amostragem de estilo quadro a quadro no Chrome. */
+	.transition-ui {
+		transition-property:
+			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
+			box-shadow, transform, filter, backdrop-filter;
+		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+		transition-duration: 150ms;
+	}
+}
+
 @layer components {
 	/*
 	 * Utilitarios reutilizaveis portados do legacy CSS. Reproduzem valores exatos

@@ -46,7 +46,7 @@
 	}: Props & HTMLButtonAttributes & HTMLAnchorAttributes = $props();
 
 	const base =
-		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-all duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-ui duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 
 	const variantClass: Record<Variant, string> = {
 		primary:

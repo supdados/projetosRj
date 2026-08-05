@@ -337,7 +337,7 @@
 				</p>
 				<a
 					href={`${base}/admin/usuarios/novo`}
-					class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand no-underline transition-all duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+					class="inline-flex h-9 items-center gap-2 rounded-md bg-brand px-3.5 text-sm font-semibold text-on-brand no-underline transition-ui duration-fast hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
 				>
 					<i class="fas fa-plus"></i>
 					Criar Primeiro Usuário

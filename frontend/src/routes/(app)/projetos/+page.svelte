@@ -824,7 +824,7 @@
 					aria-expanded={advancedOpen}
 					aria-controls="projetosAdvancedPanel"
 					title={advancedOpen ? 'Menos filtros' : 'Mais filtros'}
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-all duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {advancedOpen
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-ui duration-fast ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {advancedOpen
 						? 'border-brand-soft bg-wash-brand text-brand'
 						: 'border-border-subtle bg-surface text-text-secondary hover:border-border-strong hover:bg-surface-muted hover:text-brand'}"
 				>
@@ -837,7 +837,7 @@
 						onclick={clearFilters}
 						title="Limpar filtros"
 						aria-label="Limpar filtros"
-						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-all duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-ui duration-fast ease-out hover:border-border-strong hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
 					</button>
@@ -1015,7 +1015,7 @@
 					<button
 						type="button"
 						onclick={() => goToPage(lastPage)}
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-all duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-ui duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-arrow-left" aria-hidden="true"></i>
 						Ir para a última página
@@ -1024,7 +1024,7 @@
 					<button
 						type="button"
 						onclick={() => (createModalOpen = true)}
-						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-all duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-brand px-3 text-sm font-semibold text-on-brand shadow-sm transition-ui duration-fast ease-out hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 					>
 						<i class="fas fa-plus" aria-hidden="true"></i>
 						Criar projeto
