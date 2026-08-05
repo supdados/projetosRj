@@ -9,6 +9,10 @@
 	 * com prefixo "SEI-" fixo — o usuário digita só os dígitos; colar o número
 	 * já com "SEI-" é normalizado pela máscara.
 	 *
+	 * SEM nenhum número o popover não existe: clicar na linha abre o campo de
+	 * adição ali mesmo. Dropdown só a partir do segundo número, quando há de
+	 * fato uma lista para listar.
+	 *
 	 * CONTROLADO por callback (não chama API): `onSave(lista)` envia a lista
 	 * completa (substituição). No detalhe a página persiste via /inline e
 	 * devolve `pending`/`error`; no modal a lista é estado local até o submit.
@@ -40,6 +44,7 @@
 	}: Props = $props();
 
 	let open = $state(false);
+	let inlineAdding = $state(false);
 	let draftDigits = $state('');
 	let copiedIndex = $state<number | null>(null);
 	let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -57,8 +62,10 @@
 	const extraCount = $derived(Math.max(0, shownList.length - 1));
 	const draftFormatted = $derived(formatSeiDigits(draftDigits));
 	const canAddDraft = $derived(hasMinimumSeiDigits(draftDigits) && !pending);
-	// Sem números e sem permissão de editar não há o que abrir.
-	const canOpen = $derived(!readonly || shownList.length > 0);
+	// Popover só existe quando há número para listar; com a lista vazia a adição
+	// acontece na própria linha.
+	const canOpen = $derived(shownList.length > 0);
+	const canInlineAdd = $derived(!readonly && shownList.length === 0);
 
 	$effect(() => {
 		if (optimisticList === null) {
@@ -95,6 +102,30 @@
 		}
 	}
 
+	function onTriggerClick(): void {
+		if (open) {
+			closePopover();
+			return;
+		}
+		if (canInlineAdd) {
+			startInlineAdd();
+			return;
+		}
+		togglePopover();
+	}
+
+	function startInlineAdd(): void {
+		inlineAdding = true;
+		draftDigits = '';
+		void tick().then(() => draftInputEl?.focus());
+	}
+
+	function cancelInlineAdd(): void {
+		if (!inlineAdding) return;
+		inlineAdding = false;
+		draftDigits = '';
+	}
+
 	function togglePopover(): void {
 		if (!canOpen) return;
 		open = !open;
@@ -117,7 +148,8 @@
 
 	function closeAndRefocus(): void {
 		closePopover();
-		triggerEl?.focus();
+		cancelInlineAdd();
+		void tick().then(() => triggerEl?.focus());
 	}
 
 	function onWrapperFocusOut(event: FocusEvent): void {
@@ -125,7 +157,9 @@
 		// Blur para fora do wrapper fecha (timeout no padrão do InlineCombobox:
 		// deixa o clique em botões internos resolver antes).
 		setTimeout(() => {
-			if (!wrapper.contains(document.activeElement)) closePopover();
+			if (wrapper.contains(document.activeElement)) return;
+			closePopover();
+			cancelInlineAdd();
 		}, 120);
 	}
 
@@ -144,6 +178,13 @@
 			saveList([...shownList, candidate]);
 		}
 		draftDigits = '';
+		// Adição na linha é de um número só: com a lista preenchida o próximo
+		// entra pelo popover.
+		if (inlineAdding) {
+			inlineAdding = false;
+			void tick().then(() => triggerEl?.focus());
+			return;
+		}
 		draftInputEl?.focus();
 	}
 
@@ -165,7 +206,7 @@
 	// stopPropagation no wrapper: sem ele o mesmo Esc borbulha até o modal
 	// hospedeiro e dispara a ação de fase (voltar/fechar) junto.
 	function onWrapperKeydown(event: KeyboardEvent): void {
-		if (open && event.key === 'Escape') {
+		if ((open || inlineAdding) && event.key === 'Escape') {
 			event.preventDefault();
 			event.stopPropagation();
 			closeAndRefocus();
@@ -173,7 +214,7 @@
 	}
 
 	function onWindowKeydown(event: KeyboardEvent): void {
-		if (open && event.key === 'Escape') {
+		if ((open || inlineAdding) && event.key === 'Escape') {
 			event.preventDefault();
 			closeAndRefocus();
 		}
@@ -211,6 +252,48 @@
 	</svg>
 {/snippet}
 
+{#snippet draftControls()}
+	<span aria-hidden="true" class="shrink-0 text-sm font-semibold text-text-muted">SEI-</span>
+	<!-- NÃO desabilitar no pending: o input segura o foco do popover e
+	     disabled derruba o foco para o body, fechando via focusout no
+	     meio de remoções consecutivas (adicionar já é barrado por
+	     canAddDraft). -->
+	<input
+		bind:this={draftInputEl}
+		id={`${fieldId}-input`}
+		type="text"
+		inputmode="numeric"
+		autocomplete="off"
+		placeholder="000000/000000/0000"
+		aria-label="Novo número de processo SEI (somente números)"
+		value={draftFormatted}
+		oninput={onDraftInput}
+		onkeydown={onDraftKeydown}
+		class="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
+	/>
+	<button
+		type="button"
+		disabled={!canAddDraft}
+		onmousedown={(e) => e.preventDefault()}
+		onclick={addDraft}
+		aria-label="Adicionar processo SEI"
+		title="Adicionar"
+		class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+	>
+		<svg
+			viewBox="0 0 24 24"
+			class="h-3.5 w-3.5"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			aria-hidden="true"
+		>
+			<path d="M12 5v14M5 12h14" />
+		</svg>
+	</button>
+{/snippet}
+
 <svelte:window onkeydown={onWindowKeydown} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -222,30 +305,37 @@
 			? 'min-h-6'
 			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface pl-3 pr-1.5'}"
 	>
-		<button
-			bind:this={triggerEl}
-			type="button"
-			id={fieldId}
-			disabled={!canOpen}
-			aria-expanded={open}
-			aria-haspopup="true"
-			aria-controls={popoverId}
-			aria-label={shownList.length
-				? `Processos SEI: ${shownList.length}. Abrir lista`
-				: 'Processos SEI: nenhum. Abrir para adicionar'}
-			onclick={togglePopover}
-			class="flex h-full min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default"
-		>
-			<span
-				class="truncate {bare ? 'text-md' : 'text-sm'} {firstNumber
-					? 'text-text-primary'
-					: 'italic text-text-muted'}"
+		{#if inlineAdding}
+			{@render draftControls()}
+		{:else}
+			<button
+				bind:this={triggerEl}
+				type="button"
+				id={fieldId}
+				disabled={!canOpen && !canInlineAdd}
+				aria-expanded={open}
+				aria-haspopup={canOpen ? 'true' : undefined}
+				aria-controls={canOpen ? popoverId : undefined}
+				aria-label={shownList.length
+					? `Processos SEI: ${shownList.length}. Abrir lista`
+					: 'Processos SEI: nenhum. Adicionar número'}
+				onclick={onTriggerClick}
+				class="flex min-w-0 flex-1 items-center text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-default {bare &&
+				!firstNumber
+					? 'sei-vazio'
+					: 'h-full cursor-pointer'}"
 			>
-				{firstNumber ?? 'Não informado'}
-			</span>
-		</button>
+				<span
+					class="truncate {bare ? 'text-md' : 'text-sm'} {firstNumber
+						? 'text-text-primary'
+						: 'italic text-text-muted'}"
+				>
+					{firstNumber ?? 'Não informado'}
+				</span>
+			</button>
+		{/if}
 
-		{#if firstNumber}
+		{#if firstNumber && !inlineAdding}
 			<button
 				type="button"
 				title={copiedIndex === -1 ? 'Número copiado!' : 'Copiar número'}
@@ -273,7 +363,7 @@
 			</span>
 		{/if}
 
-		{#if canOpen}
+		{#if canOpen && !inlineAdding}
 			<button
 				type="button"
 				tabindex="-1"
@@ -369,45 +459,7 @@
 						? 'mt-1 border-t border-border-subtle pt-2'
 						: 'pt-1.5'}"
 				>
-					<span aria-hidden="true" class="shrink-0 text-sm font-semibold text-text-muted">SEI-</span>
-					<!-- NÃO desabilitar no pending: o input segura o foco do popover e
-					     disabled derruba o foco para o body, fechando via focusout no
-					     meio de remoções consecutivas (adicionar já é barrado por
-					     canAddDraft). -->
-					<input
-						bind:this={draftInputEl}
-						id={`${fieldId}-input`}
-						type="text"
-						inputmode="numeric"
-						autocomplete="off"
-						placeholder="000000/000000/0000"
-						aria-label="Novo número de processo SEI (somente números)"
-						value={draftFormatted}
-						oninput={onDraftInput}
-						onkeydown={onDraftKeydown}
-						class="h-7 min-w-0 flex-1 rounded-md border border-border-subtle bg-surface px-2 text-sm text-text-primary placeholder:text-text-muted focus:border-brand focus:outline-none"
-					/>
-					<button
-						type="button"
-						disabled={!canAddDraft}
-						onmousedown={(e) => e.preventDefault()}
-						onclick={addDraft}
-						aria-label="Adicionar processo SEI"
-						title="Adicionar"
-						class="grid h-7 w-7 flex-none place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface hover:text-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						<svg
-							viewBox="0 0 24 24"
-							class="h-3.5 w-3.5"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							aria-hidden="true"
-						>
-							<path d="M12 5v14M5 12h14" />
-						</svg>
-					</button>
+					{@render draftControls()}
 				</div>
 			{/if}
 		</div>
@@ -437,6 +489,31 @@
 			opacity: 1;
 			transform: scale(1);
 		}
+	}
+
+	/* Vazio: mesma moldura tracejada do .editable-field vazio (InlineEditField) —
+	   na ficha o campo tem de convidar o clique igual ao Órgão ao lado. */
+	.sei-vazio {
+		/* Cursor de texto: vazio o clique abre o input ali mesmo (escrita), não um
+		   menu. A mãozinha volta a partir do 1º número, quando o clique abre o
+		   popover. */
+		min-height: 1.75rem;
+		padding: 0.18rem 0.4rem;
+		border: 1px dashed var(--ds-color-border-base);
+		border-radius: 8px;
+		transition:
+			background-color 0.16s ease,
+			border-color 0.16s ease;
+	}
+	.sei-vazio:not(:disabled) {
+		/* Cursor de texto: vazio o clique abre o input ali mesmo (escrita), não um
+		   menu. A mãozinha volta a partir do 1º número, quando o clique abre o
+		   popover. */
+		cursor: text;
+	}
+	.sei-vazio:hover:not(:disabled) {
+		background: var(--ds-color-surface-muted);
+		border-color: var(--ds-color-border-strong);
 	}
 
 	.sei-error {
