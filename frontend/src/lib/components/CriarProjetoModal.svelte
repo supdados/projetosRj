@@ -17,8 +17,9 @@
 	 * Mantém (paridade funcional):
 	 *   - combobox ABEP filtrável (LEGADO, oculto via SHOW_ABEP);
 	 *   - cascata objetivo→resultado→indicadores via `/api/resultados`/
-	 *     `indicadores` legados, com revelação escalonada (índice·100ms) e LIMITE
-	 *     de 4 indicadores (flash 'Você pode selecionar no máximo 4 indicadores');
+	 *     `indicadores` legados, com revelação escalonada em CSS
+	 *     (`animation-delay` no ObjetivoPicker) e LIMITE de 4 indicadores
+	 *     (flash 'Você pode selecionar no máximo 4 indicadores');
 	 *   - MÚLTIPLOS processos SEI via `SeiProcessField`;
 	 *   - modelo de etapas com preview read-only (datas em dias ÚTEIS, iguais às
 	 *     que o servidor grava);
@@ -36,8 +37,6 @@
 	import {
 		createProject,
 		fetchObjetivosCatalogo,
-		fetchResultados,
-		fetchIndicadores,
 		fetchTemplates,
 		fetchTemplateStages,
 		type CreateProjectResult,
@@ -47,6 +46,12 @@
 		type TemplateOption,
 		type TemplateStage
 	} from '$lib/api/projects';
+	import {
+		loadIndicadores,
+		loadResultados,
+		peekIndicadores,
+		peekResultados
+	} from '$lib/api/eegdCatalogCache';
 	import {
 		applyStageTemplate,
 		saveDetailsSection,
@@ -68,7 +73,7 @@
 	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
 	import StateIcon from '$lib/components/StateIcon.svelte';
 	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
-	import { deliveryIconId } from '$lib/utils/projectLabels';
+	import { deliveryIconId, specialProjectIconId } from '$lib/utils/projectLabels';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { AbepIndicadorOption, ProjectsListOptions } from '$lib/types/projects';
@@ -98,6 +103,9 @@
 		'Eventos',
 		'Outro'
 	];
+	// Fallback offline: a lista REAL vem de `options.special_projects_options`
+	// (routes/projects/views.py). "Inventário" não entra aqui de propósito — é
+	// liberado por órgão no servidor e sanitizado na criação.
 	const SPECIAL_PROJECTS = ['ABEP', 'TCE', 'Fórum de simplificação'];
 	const PRIORITIES = [
 		{ value: 'baixa', label: 'Baixa' },
@@ -110,7 +118,10 @@
 
 	/** Seções complementares do hub, na ordem em que são numeradas (01..04). */
 	const HUB_SECTIONS = [
-		{ title: 'Objetivos e indicadores', subtitle: 'Resultados esperados e medição' },
+		{
+			title: 'Objetivos e indicadores da Estratégia Estadual de Governo Digital',
+			subtitle: 'Resultados esperados e medição'
+		},
 		{ title: 'Detalhes', subtitle: 'Órgão, tipo de entrega, processo SEI e observações' },
 		{ title: 'Links', subtitle: 'Documentos e links do projeto' },
 		{ title: 'Etapas', subtitle: 'Marcos e prazos' }
@@ -149,9 +160,13 @@
 	let resultadosLoading = $state(false);
 	let indicadores = $state<IndicadorCatalogo[]>([]);
 	let indicadoresLoading = $state(false);
+	let indicadoresErro = $state(false);
+	let resultadosErro = $state(false);
 	let selectedIndicadores = $state<number[]>([]);
-	// IDs já revelados pela animação escalonada (animate-in).
-	let revealedIndicadores = $state<Set<number>>(new Set());
+	// Tokens de geração: a guarda por identidade de ID deixa passar A → B → A
+	// (o `finally` do 1º fetch de A zerava o loading do 2º e a resposta velha vencia).
+	let resGen = 0;
+	let indGen = 0;
 
 	// --- ABEP combobox -----------------------------------------------------
 	// LEGADO (jun/2026): o campo sai da UI mas o código fica intacto para
@@ -234,10 +249,14 @@
 		options?.abep_indicadores_options ?? []
 	);
 	const deliveryTypes = $derived(options?.delivery_types_options ?? DELIVERY_TYPES);
+	const specialProjects = $derived(options?.special_projects_options ?? SPECIAL_PROJECTS);
 
 	// --- Opções dos SelectMenu (derivadas das constantes/catálogos acima) --
 	const deliveryTypeMenuOptions = $derived<SelectMenuOption[]>(
 		deliveryTypes.map((dt) => ({ value: dt, label: dt }))
+	);
+	const specialProjectMenuOptions = $derived<SelectMenuOption[]>(
+		specialProjects.map((sp) => ({ value: sp, label: sp }))
 	);
 	const templateMenuOptions = $derived<SelectMenuOption[]>(
 		templates.map((t) => ({ value: String(t.id), label: t.name }))
@@ -357,7 +376,10 @@
 		resultadoId = '';
 		indicadores = [];
 		selectedIndicadores = [];
-		revealedIndicadores = new Set();
+		resGen++; // invalida tudo em voo ao reabrir o modal
+		indGen++;
+		resultadosErro = false;
+		indicadoresErro = false;
 		abepValue = '';
 		abepLabel = '';
 		abepOpen = false;
@@ -402,62 +424,73 @@
 	// --- Cascata objetivo → resultado → indicadores ------------------------
 
 	async function onObjetivoChange(): Promise<void> {
+		const gen = ++resGen;
+		indGen++; // invalida indicadores em voo do objetivo anterior
 		resultadoId = '';
 		resultados = [];
 		indicadores = [];
 		selectedIndicadores = [];
-		revealedIndicadores = new Set();
-		// Fetch de indicadores pendente ficou órfão (resultadoId mudou): o finally
-		// guardado dele NÃO vai limpar o loading — limpamos aqui.
 		indicadoresLoading = false;
+		indicadoresErro = false;
+		resultadosErro = false;
+
 		if (!objetivoId) {
-			resultadosLoading = false; // idem para fetch de resultados pendente
+			resultadosLoading = false;
 			return;
 		}
-		// Guarda de corrida: respostas fora de ordem (ou após resetForm) são
-		// descartadas — só a resposta do objetivo ATUAL pode popular o estado.
-		const requested = objetivoId;
+
+		// Caminho quente (prefetch acertou): popula no MESMO flush do objetivoId,
+		// sem estado de loading — uma única mudança de altura no card.
+		const cacheado = peekResultados(objetivoId);
+		if (cacheado) {
+			resultados = cacheado;
+			resultadosLoading = false;
+			return;
+		}
+
 		resultadosLoading = true;
 		try {
-			const data = await fetchResultados(requested);
-			if (requested !== objetivoId) return;
+			const data = await loadResultados(objetivoId);
+			if (gen !== resGen) return;
 			resultados = data;
 		} catch {
-			if (requested === objetivoId) resultados = [];
+			if (gen !== resGen) return;
+			resultados = [];
+			resultadosErro = true; // erro != vazio: a mensagem na tela muda
 		} finally {
-			if (requested === objetivoId) resultadosLoading = false;
+			if (gen === resGen) resultadosLoading = false;
 		}
 	}
 
 	async function onResultadoChange(): Promise<void> {
+		const gen = ++indGen;
 		indicadores = [];
 		selectedIndicadores = [];
-		revealedIndicadores = new Set();
+		indicadoresErro = false;
+
 		if (!resultadoId) {
-			// Limpou a seleção com fetch em voo: o finally guardado não limpa.
 			indicadoresLoading = false;
 			return;
 		}
-		// Guarda de corrida: idem onObjetivoChange — resposta de um resultado
-		// antigo nunca pode popular os indicadores do resultado atual.
-		const requested = resultadoId;
+
+		const cacheado = peekIndicadores(resultadoId);
+		if (cacheado) {
+			indicadores = cacheado;
+			indicadoresLoading = false;
+			return;
+		}
+
 		indicadoresLoading = true;
 		try {
-			const data = await fetchIndicadores(requested);
-			if (requested !== resultadoId) return;
+			const data = await loadIndicadores(resultadoId);
+			if (gen !== indGen) return;
 			indicadores = data;
-			// Animação escalonada (animate-in): revela cada item a cada 100ms.
-			revealedIndicadores = new Set();
-			data.forEach((ind, index) => {
-				setTimeout(() => {
-					if (requested !== resultadoId) return; // lista trocou no meio
-					revealedIndicadores = new Set([...revealedIndicadores, ind.id]);
-				}, index * 100);
-			});
 		} catch {
-			if (requested === resultadoId) indicadores = [];
+			if (gen !== indGen) return;
+			indicadores = [];
+			indicadoresErro = true;
 		} finally {
-			if (requested === resultadoId) indicadoresLoading = false;
+			if (gen === indGen) indicadoresLoading = false;
 		}
 	}
 
@@ -1259,6 +1292,48 @@
 	</svg>
 {/snippet}
 
+{#snippet specialOptionIcon(opt: SelectMenuOption)}
+	{@const iconId = specialProjectIconId(opt.value)}
+	{#if iconId}
+		<ProjectIcon id={iconId} size={14} />
+	{/if}
+{/snippet}
+
+{#snippet specialTrigger({
+	open,
+	label,
+	selected
+}: {
+	open: boolean;
+	label: string;
+	selected: SelectMenuOption | null;
+})}
+	{@const iconId = specialProjectIconId(selected?.value)}
+	<span class="flex min-w-0 items-center gap-2 text-text-primary">
+		{#if iconId}
+			<ProjectIcon id={iconId} size={14} />
+		{/if}
+		<span class="truncate">{label}</span>
+	</span>
+	<svg
+		width="10"
+		height="6"
+		viewBox="0 0 10 6"
+		class="shrink-0 text-text-muted transition-transform duration-fast"
+		style:transform={open ? 'rotate(180deg)' : 'none'}
+		aria-hidden="true"
+	>
+		<path
+			d="M1 1 L5 5 L9 1"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="1.6"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>
+{/snippet}
+
 {#snippet footer()}
 	<footer
 		class="flex flex-none items-center justify-between gap-3 border-t border-border-faint px-6 py-2"
@@ -1623,10 +1698,11 @@
 									{resultados}
 									{resultadoId}
 									{resultadosLoading}
+									{resultadosErro}
 									{indicadores}
 									{indicadoresLoading}
+									{indicadoresErro}
 									{selectedIndicadores}
-									{revealedIndicadores}
 									onObjetivoSelect={(id) => {
 										objetivoId = id;
 										void onObjetivoChange();
@@ -1724,7 +1800,7 @@
 											optionIcon={deliveryOptionIcon}
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-7">
+									<div class="flex flex-col gap-1.5 md:col-span-6">
 										<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
 										<SeiProcessField
 											fieldId="cp-sei"
@@ -1732,28 +1808,19 @@
 											onSave={(list) => (seiList = list)}
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-5">
-										<span id="cp-special-label" class={labelClass}>Projetos especiais</span>
-										<div
+									<div class="flex flex-col gap-1.5 md:col-span-6">
+										<label for="cp-special" class={labelClass}>Projetos especiais</label>
+										<SelectMenu
 											id="cp-special"
-											role="group"
-											aria-labelledby="cp-special-label"
-											class="flex flex-wrap items-center gap-2"
-										>
-											{#each SPECIAL_PROJECTS as sp (sp)}
-												{@const selected = specialProject === sp}
-												<button
-													type="button"
-													aria-pressed={selected}
-													onclick={() => (specialProject = selected ? '' : sp)}
-													class="inline-flex h-[var(--control-h-md)] flex-1 basis-auto items-center justify-center whitespace-nowrap rounded-control border px-3 text-sm font-semibold transition-colors duration-fast active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {selected
-														? 'border-brand bg-brand text-on-brand'
-														: 'border-border-strong bg-surface text-text-secondary hover:border-brand'}"
-												>
-													{sp}
-												</button>
-											{/each}
-										</div>
+											options={specialProjectMenuOptions}
+											value={specialProject || null}
+											onSelect={(v) => (specialProject = v ?? '')}
+											allowAll
+											allLabel="Selecione o projeto especial"
+											ariaLabel="Projetos especiais"
+											trigger={specialTrigger}
+											optionIcon={specialOptionIcon}
+										/>
 									</div>
 									<div class="flex flex-col gap-1.5 md:col-span-12">
 										<label for="cp-obs" class={labelClass}>Observações</label>

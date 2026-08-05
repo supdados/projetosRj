@@ -216,17 +216,57 @@ export interface TemplateOption {
  * Mantemos `credentials:'include'` para o cookie de sessão; sem corpo => `[]`.
  */
 async function fetchLegacyArray<T>(path: string, signal?: AbortSignal): Promise<T[]> {
+	try {
+		return await fetchLegacyArrayStrict<T>(path, signal);
+	} catch (err) {
+		if (err instanceof LegacyHttpError) return [];
+		throw err;
+	}
+}
+
+/** HTTP não-2xx numa rota legada de catálogo (distingue erro de lista vazia). */
+class LegacyHttpError extends Error {
+	constructor(
+		readonly status: number,
+		path: string
+	) {
+		super(`GET ${path} respondeu HTTP ${status}; esperado 200 com array JSON.`);
+		this.name = 'LegacyHttpError';
+	}
+}
+
+/**
+ * Igual a `fetchLegacyArray`, mas LANÇA em HTTP não-2xx — quem precisa
+ * diferenciar "vazio" de "falhou" (cascata EEGD do CriarProjetoModal) usa esta.
+ */
+async function fetchLegacyArrayStrict<T>(path: string, signal?: AbortSignal): Promise<T[]> {
 	const res = await fetch(path, {
 		method: 'GET',
 		credentials: 'include',
 		headers: { Accept: 'application/json' },
 		signal
 	});
-	if (!res.ok) return [];
+	if (!res.ok) throw new LegacyHttpError(res.status, path);
 	const text = await res.text();
 	if (!text) return [];
 	const parsed = JSON.parse(text) as unknown;
 	return Array.isArray(parsed) ? (parsed as T[]) : [];
+}
+
+/** Resultados de um objetivo EEGD; lança em falha (ver `fetchLegacyArrayStrict`). */
+export function fetchResultadosStrict(
+	objetivoId: number | string,
+	signal?: AbortSignal
+): Promise<ResultadoCatalogo[]> {
+	return fetchLegacyArrayStrict<ResultadoCatalogo>(`/api/resultados/${objetivoId}`, signal);
+}
+
+/** Indicadores de um resultado EEGD; lança em falha. */
+export function fetchIndicadoresStrict(
+	resultadoId: number | string,
+	signal?: AbortSignal
+): Promise<IndicadorCatalogo[]> {
+	return fetchLegacyArrayStrict<IndicadorCatalogo>(`/api/indicadores/${resultadoId}`, signal);
 }
 
 /** Resultados de um objetivo EEGD (cascata objetivo→resultado). */
