@@ -1185,7 +1185,7 @@
 										{#if project.delivery_type}
 											{@const deliveryIcon = deliveryIconId(project.delivery_type)}
 											<span
-												class="inline-flex items-center justify-center gap-1.5 text-md font-medium uppercase tracking-wide"
+												class="inline-flex items-center justify-center gap-1.5 text-md font-medium uppercase tracking-wide text-brand"
 											>
 												{#if deliveryIcon}
 													<ProjectIcon id={deliveryIcon} size={16} />
