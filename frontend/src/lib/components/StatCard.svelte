@@ -57,11 +57,11 @@
 			{@render icon()}
 		</span>
 	{/if}
-	<div class="flex min-w-0 flex-col gap-1.5">
-		<span class="order-1 font-heading text-3xl font-bold leading-tight {accent[tone]}">{value}</span>
-		<span class="order-2 text-base font-medium text-text-secondary">{label}</span>
+	<div class="flex min-w-0 flex-col gap-1 2xl:gap-1.5">
+		<span class="order-1 font-heading text-2xl font-bold leading-tight 2xl:text-3xl {accent[tone]}">{value}</span>
+		<span class="order-2 text-sm font-medium text-text-secondary 2xl:text-base">{label}</span>
 		{#if subtitle}
-			<span class="order-3 text-sm {accent[tone]}">{subtitle}</span>
+			<span class="order-3 text-xs 2xl:text-sm {accent[tone]}">{subtitle}</span>
 		{/if}
 	</div>
 {/snippet}
@@ -73,14 +73,14 @@
 	<a
 		{href}
 		aria-label={linkLabel ?? label}
-		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 no-underline shadow-sm transition-ui duration-slow hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 no-underline shadow-sm transition-ui duration-slow hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand 2xl:py-4"
 	>
 		{@render body()}
 	</a>
 {:else}
 	<div
 		role="group"
-		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-4 shadow-sm transition-shadow duration-slow hover:shadow-md"
+		class="group flex h-full items-center gap-3 rounded-lg border border-border-subtle bg-surface px-5 py-3 shadow-sm transition-shadow duration-slow hover:shadow-md 2xl:py-4"
 	>
 		{@render body()}
 	</div>
