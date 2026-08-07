@@ -53,6 +53,10 @@ from services.authorization import (
     lotacao_orgao_ids,
     project_visibility_criterion,
 )
+from services.notifications import (
+    collection_share_recipient_ids,
+    notify_collection_shared,
+)
 from time_utils import utc_now
 
 MAX_COLECOES_CUSTOM = 20
@@ -215,6 +219,13 @@ def criar_colecao(
 def _aplicar_shares_iniciais(
     colecao: ProjectCollection, owner: User, compartilhamentos: list[dict[str, Any]]
 ) -> None:
+    """Aplica os shares e notifica UMA vez por pessoa alcançada.
+
+    Shares sobrepostos (pessoa + órgão de lotação dela) geravam avisos
+    duplicados no mesmo instante, com papéis contraditórios; aqui vence o
+    papel mais alto, o mesmo que ``papel_do_usuario`` resolve.
+    """
+    papel_por_destinatario: dict[int, str] = {}
     for share_spec in compartilhamentos:
         compartilhar_colecao(
             colecao,
@@ -222,7 +233,33 @@ def _aplicar_shares_iniciais(
             user_id=share_spec.get("user_id"),
             orgao_id=share_spec.get("orgao_id"),
             papel=share_spec.get("papel"),
+            notificar=False,
         )
+        _acumular_destinatarios(papel_por_destinatario, share_spec)
+    _notificar_shares_iniciais(colecao, owner, papel_por_destinatario)
+
+
+def _acumular_destinatarios(
+    acumulado: dict[int, str], share_spec: dict[str, Any]
+) -> None:
+    papel = share_spec.get("papel")
+    for destinatario_id in collection_share_recipient_ids(
+        user_id=share_spec.get("user_id"), orgao_id=share_spec.get("orgao_id")
+    ):
+        registrado = acumulado.get(destinatario_id)
+        acumulado[destinatario_id] = (
+            papel if registrado is None else _papel_share_mais_alto(registrado, papel)
+        )
+
+
+def _notificar_shares_iniciais(
+    colecao: ProjectCollection, ator: User, papel_por_destinatario: dict[int, str]
+) -> None:
+    ids_por_papel: dict[str, set[int]] = {}
+    for destinatario_id, papel in papel_por_destinatario.items():
+        ids_por_papel.setdefault(papel, set()).add(destinatario_id)
+    for papel, destinatarios in ids_por_papel.items():
+        notify_collection_shared(colecao, ator.id, papel, recipient_ids=destinatarios)
 
 
 def editar_colecao(
@@ -350,12 +387,14 @@ def compartilhar_colecao(
     user_id: int | None = None,
     orgao_id: int | None = None,
     papel: Any,
+    notificar: bool = True,
 ) -> ProjectCollectionShare:
     """Cria o share (ou faz upsert do papel no duplicado) — SÓ o dono.
 
     Exatamente um de ``user_id``/``orgao_id``; Favoritos nunca compartilhável.
-    Exemplo: ``compartilhar_colecao(colecao, ator=g.user, user_id=7,
-    papel="editor")`` — o chamador commita.
+    ``notificar=False`` deixa o aviso a cargo do chamador (criação com vários
+    shares notifica agregado). Exemplo: ``compartilhar_colecao(colecao,
+    ator=g.user, user_id=7, papel="editor")`` — o chamador commita.
     """
     _exigir_dono(colecao, ator)
     _bloquear_favoritos(colecao, "compartilhar")
@@ -368,7 +407,7 @@ def compartilhar_colecao(
     existente = _share_existente(colecao.id, user_id, orgao_id)
     if existente is not None:
         return _atualizar_papel_share(colecao, existente, papel, ator)
-    return _criar_share(colecao, user_id, orgao_id, papel, ator)
+    return _criar_share(colecao, user_id, orgao_id, papel, ator, notificar)
 
 
 def revogar_share(colecao: ProjectCollection, share_id: int, *, ator: User) -> bool:
@@ -483,6 +522,7 @@ def _criar_share(
     orgao_id: int | None,
     papel: str,
     ator: User,
+    notificar: bool = True,
 ) -> ProjectCollectionShare:
     share = ProjectCollectionShare(
         collection_id=colecao.id,
@@ -502,6 +542,10 @@ def _criar_share(
             raise
         return _atualizar_papel_share(colecao, existente, papel, ator)
     _auditar_share(colecao, share, "colecao_share_concedido", ator)
+    if notificar:
+        notify_collection_shared(
+            colecao, ator.id, papel, user_id=user_id, orgao_id=orgao_id
+        )
     invalidate_collection_rank_cache()
     return share
 

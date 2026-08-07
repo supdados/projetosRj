@@ -5,6 +5,7 @@ from sqlalchemy import func
 
 from models import (
     Project,
+    ProjectCollection,
     ProjectHistory,
     Task,
     TaskComment,
@@ -15,6 +16,9 @@ from models import (
 )
 
 IGNORED_PROJECT_ACTION_TYPES = {"reorder_etapas", "cascade_update"}
+
+# Mesmos rótulos da SPA (routes/(app)/colecoes/[id]/+page.svelte::PAPEL_LABEL).
+ROTULO_PAPEL_SHARE = {"viewer": "leitor", "editor": "editor"}
 
 
 def _normalize_person_name(name):
@@ -258,6 +262,68 @@ def notify_project_invite(project, recipient_user_id, actor_user_id, papel):
         title=f'Você foi convidado para o projeto "{_truncate_text(project.titulo, 80)}"',
         message=f"Seu acesso é de {papel}: você verá todo o conteúdo deste projeto.",
         target_url=url_for("main.project_detail", project_id=project.id),
+    )
+
+
+def _orgao_active_user_ids(orgao_id: int) -> set[int]:
+    """Ativos com vínculo DIRETO no órgão — sem subárvore, como o share da coleção."""
+    rows = (
+        User.query.with_entities(User.id)
+        .join(UserOrgao, UserOrgao.user_id == User.id)
+        .filter(UserOrgao.orgao_id == orgao_id, User.deleted_at.is_(None))
+        .all()
+    )
+    return {user_id for (user_id,) in rows}
+
+
+def collection_share_recipient_ids(
+    *, user_id: int | None = None, orgao_id: int | None = None
+) -> set[int]:
+    """Quem um share alcança: a pessoa, ou os ativos do órgão EXATO de lotação."""
+    if user_id is not None:
+        return {int(user_id)}
+    if orgao_id is None:
+        return set()
+    return _orgao_active_user_ids(orgao_id)
+
+
+def notify_collection_shared(
+    colecao: ProjectCollection,
+    actor_user_id: int,
+    papel: str,
+    *,
+    user_id: int | None = None,
+    orgao_id: int | None = None,
+    recipient_ids: set[int] | None = None,
+) -> int:
+    """Avisa quem GANHOU acesso à coleção (Fase 4): só na concessão do share.
+
+    Share de pessoa avisa aquele usuário; share de órgão avisa os ativos com
+    vínculo no órgão EXATO. Upsert de papel e revogação não notificam.
+    ``recipient_ids`` explícito atende a criação com vários shares (uma
+    notificação por pessoa). Ex.:
+    `notify_collection_shared(colecao, g.user.id, "viewer", orgao_id=12)`.
+    """
+    if colecao is None:
+        return 0
+
+    destinatarios = (
+        collection_share_recipient_ids(user_id=user_id, orgao_id=orgao_id)
+        if recipient_ids is None
+        else set(recipient_ids)
+    )
+    if not destinatarios:
+        return 0
+    return create_user_notifications(
+        destinatarios,
+        actor_user_id=actor_user_id,
+        event_type="colecao_compartilhada",
+        title=f'Coleção "{_truncate_text(colecao.nome, 80)}" compartilhada com você',
+        message=(
+            f"Seu acesso é de {ROTULO_PAPEL_SHARE.get(papel, papel)}: "
+            "você verá os projetos desta coleção."
+        ),
+        target_url=f"/colecoes/{colecao.id}",
     )
 
 

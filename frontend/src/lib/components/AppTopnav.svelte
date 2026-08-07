@@ -200,7 +200,7 @@
 			return 'conclusao';
 		if (t === 'task_archived' || t === 'task_unarchived') return 'arquivo';
 		if (t === 'task_assignment' || t === 'task_item_assignment') return 'atribuicao';
-		if (t === 'projeto_convite') return 'convite';
+		if (t === 'projeto_convite' || t === 'colecao_compartilhada') return 'convite';
 		if (t === 'task_created' || t.endsWith('create')) return 'criacao';
 		if (
 			t === 'task_status_updated' ||
