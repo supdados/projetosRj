@@ -48,6 +48,7 @@ from models import (
     registrar_autorizacao,
 )
 from services.authorization import (
+    apply_project_visibility,
     invalidate_collection_rank_cache,
     lotacao_orgao_ids,
     project_visibility_criterion,
@@ -629,11 +630,11 @@ def projeto_visivel_para(
     ``incluir_derivada=False`` ignora a visibilidade que vem de share de
     coleção — exigência das mutações de coleção CUSTOM (anti re-share).
     """
-    query = Project.query.filter(Project.id == project_id)
-    if not ator.is_admin:
-        query = query.filter(
-            project_visibility_criterion(ator, include_collections=incluir_derivada)
-        )
+    query = apply_project_visibility(
+        Project.query.filter(Project.id == project_id),
+        ator,
+        include_collections=incluir_derivada,
+    )
     return db.session.query(query.exists()).scalar()
 
 
@@ -864,9 +865,7 @@ def _sum_case(condicao: Any) -> Any:
 
 
 def _com_visibilidade(query: Any, viewer: User) -> Any:
-    if viewer.is_admin:
-        return query
-    return query.filter(project_visibility_criterion(viewer))
+    return apply_project_visibility(query, viewer)
 
 
 def _rollup_zerado() -> dict[str, int]:
@@ -985,12 +984,12 @@ def _validar_projetos_visiveis(owner: User, project_ids: list[int]) -> list[int]
 
 
 def _ids_visiveis(ator: User, project_ids: list[int]) -> set[int]:
-    query = db.session.query(Project.id).filter(Project.id.in_(project_ids))
-    if not ator.is_admin:
-        # Coleção custom nasce só com visibilidade própria (anti re-share).
-        query = query.filter(
-            project_visibility_criterion(ator, include_collections=False)
-        )
+    # Coleção custom nasce só com visibilidade própria (anti re-share).
+    query = apply_project_visibility(
+        db.session.query(Project.id).filter(Project.id.in_(project_ids)),
+        ator,
+        include_collections=False,
+    )
     return {pid for (pid,) in query.all()}
 
 

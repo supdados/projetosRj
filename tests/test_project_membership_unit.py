@@ -254,14 +254,18 @@ def test_sem_convites_flags_equivalem_ao_comportamento_atual(app, arvore):
         assert flags["can_edit"] is user_can_edit_project(user, arvore["projeto"])
 
 
-def test_flags_de_n_projetos_custam_as_mesmas_duas_queries(app, arvore):
-    """Zero N+1: os dois mapas são cacheados em `g`, o resto é lookup em dict."""
+def test_flags_de_n_projetos_custam_queries_constantes(app, arvore):
+    """Zero N+1: os três mapas são cacheados em `g`, o resto é lookup em dict.
+
+    5 statements: 2 dos mapas originais + 3 do rank de coleções frio
+    (SAVEPOINT + SELECT + RELEASE do begin_nested) — constantes para 50 projetos.
+    """
     with app.test_request_context("/"):
         user = FakeViewer(13, vinculos=((arvore["sec"], PAPEL_EDITOR),))
         projetos = [FakeProjeto(numero, arvore["sub"]) for numero in range(1, 51)]
         with SqlQueryCounter(db.engine) as counter:
             flags = [project_permission_flags(user, projeto) for projeto in projetos]
-        assert counter.total == 2
+        assert counter.total == 5
         assert all(item["can_edit"] for item in flags)
 
 

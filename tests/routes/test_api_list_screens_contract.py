@@ -62,6 +62,7 @@ def test_api_projetos_returns_ok_envelope_with_expected_shape(client_user):
         "objetivo",
         "q",
         "selected_orgao",
+        "colecao",
     }
     # Sem ?status= na URL, o default "Vigente" é aplicado server-side.
     assert data["filters"]["status"] == "Vigente"

@@ -16,6 +16,7 @@ from routes.api.serializers import (
     serialize_user,
 )
 from services.authorization import (
+    COLLECTION_RANK_CACHE_ATTR,
     MEMBERSHIP_MAP_CACHE_ATTR,
     PAPEL_EDITOR,
     PAPEL_GESTOR,
@@ -174,6 +175,7 @@ def _custo_do_bloco_de_acesso(app, cenario, quantidade: int) -> int:
             serialize_project_card(projeto)
         g.pop(ROLE_MAP_CACHE_ATTR, None)
         g.pop(MEMBERSHIP_MAP_CACHE_ATTR, None)
+        g.pop(COLLECTION_RANK_CACHE_ATTR, None)
         with SqlQueryCounter(db.engine) as counter:
             cards = [serialize_project_card(p, viewer=gestor) for p in projetos]
         assert all(card["access_via"] == ACCESS_VIA_AREA for card in cards)

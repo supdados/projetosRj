@@ -12,7 +12,7 @@ já no request seguinte.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable, Literal
+from typing import TYPE_CHECKING, Any, Iterable, Literal
 
 from flask import g, has_request_context
 from sqlalchemy import false, or_
@@ -500,6 +500,17 @@ def project_visibility_criterion(
     if not clauses:
         return false()
     return or_(*clauses)
+
+
+def apply_project_visibility(
+    query: Any, user: "User | None", *, include_collections: bool = True
+) -> Any:
+    """Aplica o criterion de visibilidade com o bypass de admin centralizado."""
+    if getattr(user, "is_admin", False):
+        return query
+    return query.filter(
+        project_visibility_criterion(user, include_collections=include_collections)
+    )
 
 
 def _collection_visibility_exists(user: "User") -> "ColumnElement[bool]":

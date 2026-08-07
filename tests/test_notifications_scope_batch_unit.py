@@ -13,6 +13,7 @@ from flask import g
 from models import Project, User, db
 from routes.notifications import _accessible_project_ids
 from services.authorization import (
+    COLLECTION_RANK_CACHE_ATTR,
     MEMBERSHIP_MAP_CACHE_ATTR,
     ROLE_MAP_CACHE_ATTR,
 )
@@ -23,6 +24,7 @@ def _custo_com_cache_frio(project_ids: set[int]) -> tuple[set[int], int]:
     """Roda o filtro com os caches de ``g`` derrubados e conta os statements."""
     g.pop(ROLE_MAP_CACHE_ATTR, None)
     g.pop(MEMBERSHIP_MAP_CACHE_ATTR, None)
+    g.pop(COLLECTION_RANK_CACHE_ATTR, None)
     with SqlQueryCounter(db.engine) as counter:
         acessiveis = _accessible_project_ids(project_ids)
     return acessiveis, counter.total

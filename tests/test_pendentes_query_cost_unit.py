@@ -114,8 +114,9 @@ def _custo_de_responsaveis(app, qtd_projetos: int, etapas_por_projeto: int) -> i
 
 
 def test_responsaveis_das_etapas_nao_geram_um_select_por_etapa(app):
-    """1 SELECT (selectinload) independente de quantas etapas entram nos cards."""
-    assert _custo_de_responsaveis(app, qtd_projetos=6, etapas_por_projeto=8) <= 1
+    """3 SELECTs constantes (1 selectinload + 2 batch do filtro de responsáveis,
+    ambos com IN sobre os projetos), independente de quantas etapas entram."""
+    assert _custo_de_responsaveis(app, qtd_projetos=6, etapas_por_projeto=8) <= 3
 
 
 @pytest.mark.parametrize("etapas_por_projeto", [1, 8])
@@ -126,5 +127,5 @@ def test_custo_de_responsaveis_nao_cresce_com_o_numero_de_etapas(
         _custo_de_responsaveis(
             app, qtd_projetos=4, etapas_por_projeto=etapas_por_projeto
         )
-        <= 1
+        <= 3
     )

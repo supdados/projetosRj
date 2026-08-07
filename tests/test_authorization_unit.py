@@ -1248,7 +1248,17 @@ def test_share_com_papel_adulterado_nunca_vira_gestor(app, orgao_arvore):
     """Teto rígido: linha com papel fora da whitelist não passa de editor."""
     with app.app_context():
         owner = _add_owner("dono_rank_gestor")
-        _colecao_com_share(owner.id, 952, papel="gestor", user_id=72)
+        colecao = _colecao_com_share(
+            owner.id, 952, papel=PAPEL_SHARE_EDITOR, user_id=72
+        )
+        # Adultera direto no banco: o @validates do modelo barra a atribuição ORM.
+        db.session.execute(
+            text(
+                "UPDATE project_collection_share SET papel='gestor' WHERE collection_id=:cid"
+            ),
+            {"cid": colecao.id},
+        )
+        db.session.expire_all()
         convidado = FakeUser(user_id=72)
         projeto = FakeProject(orgao_arvore["outra"], project_id=952)
         assert effective_project_rank(convidado, projeto) <= PAPEL_RANK[PAPEL_EDITOR]
