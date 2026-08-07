@@ -192,6 +192,11 @@ export interface CollectionCreatePayload {
 	cor: CollectionColorId;
 	project_ids?: number[];
 	compartilhamentos?: ColecaoShareCreatePayload[];
+	/**
+	 * Sugestão de IA que originou a coleção — o backend marca aquela linha como
+	 * aceita (bookkeeping best-effort: id inválido nunca derruba a criação).
+	 */
+	sugestao_id?: number;
 }
 
 /** Corpo de PUT /api/colecoes/<id> — 422 no backend se a coleção for Favoritos. */
@@ -210,6 +215,51 @@ export interface AddProjectToCollectionPayload {
 /** Carga de POST /api/projetos/<id>/favorito (já desempacotada) — toggle. */
 export interface ToggleFavoritoData {
 	favorito: boolean;
+}
+
+/**
+ * Coleção PROPOSTA por IA (`GET`/`POST /api/colecoes/sugestoes`) — a linha
+ * existe no banco (lote pendente), mas NENHUMA coleção foi criada: é rascunho
+ * que o usuário aceita pelo fluxo normal de criação
+ * (`docs/plano-ia-fase2-cache-sugestoes.md` §3).
+ *
+ * `id` é a linha persistida — vai no descarte e no `sugestao_id` do aceite.
+ * `justificativa` é obrigatória e fica SEMPRE visível na UI (transparência de
+ * origem por IA). `project_ids` já vem validado contra os projetos visíveis ao
+ * ator (mín. 2; ids alucinados caem no backend). `icone`/`cor` não são pedidos
+ * ao modelo — o usuário escolhe no aceite.
+ */
+export interface ColecaoSugerida {
+	id: number;
+	nome: string;
+	descricao: string | null;
+	justificativa: string;
+	project_ids: number[];
+}
+
+/** Projeto analisado pela IA — resolve título dos chips sem busca extra. */
+export interface ProjetoAnalisado {
+	id: number;
+	titulo: string;
+}
+
+/**
+ * Carga de GET/POST /api/colecoes/sugestoes (já desempacotada) — o MESMO shape
+ * nos dois verbos: o GET serve o lote em cache (nunca chama o modelo) e o POST
+ * gera um lote novo.
+ *
+ * `gerado_em`/`lote_id` são `null` quando não há lote pendente (`sugestoes`
+ * vazio): a UI mostra o CTA "Gerar sugestões" e NÃO dispara o POST sozinha.
+ * `desatualizado` = a carteira de projetos mudou desde a geração — banner
+ * não-bloqueante, as sugestões antigas continuam válidas para aceite.
+ */
+export interface SugestoesResponse {
+	sugestoes: ColecaoSugerida[];
+	projetos: ProjetoAnalisado[];
+	/** ISO 8601 (UTC, sufixo `Z`); `null` = nenhum lote em cache. */
+	gerado_em: string | null;
+	lote_id: string | null;
+	desatualizado: boolean;
 }
 
 /** Carga de GET /api/colecoes/<id>/compartilhamentos (já desempacotada; só dono). */

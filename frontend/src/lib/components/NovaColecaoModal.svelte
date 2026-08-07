@@ -14,6 +14,12 @@
 	 * Versão compacta do formulário de `CompartilharColecaoModal.svelte`, que é
 	 * quem gerencia as concessões depois de a coleção existir (só o dono).
 	 * Favoritos nunca passa por aqui — este modal só cria coleções `custom`.
+	 *
+	 * Pode abrir PRÉ-PREENCHIDO (`nomeInicial`/`descricaoInicial`/
+	 * `projectIdsIniciais`) no aceite de uma sugestão de IA — daí em diante o
+	 * fluxo é o mesmo de sempre, com o usuário revisando ícone, cor e quem
+	 * enxerga antes de confirmar. Nesse caso `sugestaoId` viaja no POST para o
+	 * backend marcar a sugestão como aceita.
 	 */
 	import { tick } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
@@ -45,9 +51,25 @@
 		onClose: () => void;
 		/** Coleção criada com sucesso; o modal fecha sozinho em seguida. */
 		onCreated: (colecao: ColecaoResumo) => void;
+		/** Nome inicial (aceite de sugestão de IA); ausente = campo em branco. */
+		nomeInicial?: string;
+		/** Descrição inicial (aceite de sugestão de IA). */
+		descricaoInicial?: string;
+		/** Projetos já marcados no passo 2 (aceite de sugestão de IA). */
+		projectIdsIniciais?: number[];
+		/** Sugestão de IA que originou a coleção; ausente = criação avulsa. */
+		sugestaoId?: number;
 	}
 
-	let { open, onClose, onCreated }: Props = $props();
+	let {
+		open,
+		onClose,
+		onCreated,
+		nomeInicial,
+		descricaoInicial,
+		projectIdsIniciais,
+		sugestaoId
+	}: Props = $props();
 
 	const DESCRICAO_MAX = 200;
 
@@ -302,11 +324,11 @@
 
 	function resetar(): void {
 		fase = 'identidade';
-		nome = '';
-		descricao = '';
+		nome = nomeInicial ?? '';
+		descricao = descricaoInicial ?? '';
 		icone = 'camadas';
 		cor = 'primary';
-		selecionados = [];
+		selecionados = projectIdsIniciais ? [...projectIdsIniciais] : [];
 		triedNext = false;
 		submitting = false;
 		erro = null;
@@ -358,7 +380,8 @@
 				icone,
 				cor,
 				project_ids: selecionados.length > 0 ? selecionados : undefined,
-				compartilhamentos: compartilhamentosPayload()
+				compartilhamentos: compartilhamentosPayload(),
+				sugestao_id: sugestaoId
 			});
 			onCreated(colecao);
 			onClose();

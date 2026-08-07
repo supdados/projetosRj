@@ -27,6 +27,7 @@
 	import { ApiClientError } from '$lib/api/client';
 	import type {
 		ColecaoResumo,
+		ColecaoSugerida,
 		CollectionColorId,
 		CollectionIconId
 	} from '$lib/types/collections';
@@ -39,6 +40,7 @@
 	import ColecaoCard from '$lib/components/ColecaoCard.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
 	import NovaColecaoModal from '$lib/components/NovaColecaoModal.svelte';
+	import SugerirColecoesModal from '$lib/components/SugerirColecoesModal.svelte';
 	import CompartilharColecaoModal from '$lib/components/CompartilharColecaoModal.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
@@ -155,10 +157,30 @@
 
 	// ── Criar ────────────────────────────────────────────────────────────────
 	let createOpen = $state(false);
+	/** Sugestão de IA aceita: pré-preenche o modal de criação até ele fechar. */
+	let sugestaoAceita = $state<ColecaoSugerida | null>(null);
+
+	function fecharCriacao(): void {
+		createOpen = false;
+		sugestaoAceita = null;
+	}
 
 	function onColecaoCriada(colecao: ColecaoResumo): void {
 		flash.success(`Coleção "${colecao.nome}" criada.`);
+		// Aceite de sugestão: fecha o modal de sugestões; reabrir refaz o GET
+		// barato e o cartão aceito já não volta (deixou de ser pendente).
+		if (sugestaoAceita) sugerirOpen = false;
 		void load();
+	}
+
+	// ── Sugerir com IA ───────────────────────────────────────────────────────
+	let sugerirOpen = $state(false);
+	// 503 na 1ª chamada = feature desligada no servidor: o botão some da sessão.
+	let iaDisponivel = $state(true);
+
+	function criarDaSugestao(sugestao: ColecaoSugerida): void {
+		sugestaoAceita = sugestao;
+		createOpen = true;
 	}
 
 	// ── Editar (mesmo formulário do passo 1 do modal de criação) ─────────────
@@ -300,6 +322,14 @@
 				{/if}
 			{/snippet}
 			{#snippet actions()}
+				{#if iaDisponivel}
+					<Button variant="secondary" size="sm" onclick={() => (sugerirOpen = true)}>
+						{#snippet icon()}
+							<i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
+						{/snippet}
+						Sugerir com IA
+					</Button>
+				{/if}
 				<Button size="sm" onclick={() => (createOpen = true)}>
 					{#snippet icon()}
 						<i class="fas fa-plus" aria-hidden="true"></i>
@@ -446,9 +476,21 @@
 	{/if}
 </section>
 
+<!-- Antes do NovaColecaoModal no DOM: o de criação empilha por cima e fica com o Esc. -->
+<SugerirColecoesModal
+	open={sugerirOpen}
+	onClose={() => (sugerirOpen = false)}
+	onCriar={criarDaSugestao}
+	onIndisponivel={() => (iaDisponivel = false)}
+/>
+
 <NovaColecaoModal
 	open={createOpen}
-	onClose={() => (createOpen = false)}
+	nomeInicial={sugestaoAceita?.nome}
+	descricaoInicial={sugestaoAceita?.descricao ?? undefined}
+	projectIdsIniciais={sugestaoAceita?.project_ids}
+	sugestaoId={sugestaoAceita?.id}
+	onClose={fecharCriacao}
 	onCreated={onColecaoCriada}
 />
 

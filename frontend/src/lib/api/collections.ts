@@ -15,6 +15,9 @@
  *   POST   /api/colecoes/<id>/compartilhamentos              -> { compartilhamento } (upsert de papel, só dono)
  *   DELETE /api/colecoes/<id>/compartilhamentos/<sid>        -> ok (só dono)
  *   GET    /api/colecoes/<id>/cronograma                     -> { projetos } (Gantt, etapas de workflow)
+ *   GET    /api/colecoes/sugestoes                           -> lote em cache (nunca chama o modelo)
+ *   POST   /api/colecoes/sugestoes                           -> gera e persiste o lote (IA; 503 = desligada)
+ *   POST   /api/colecoes/sugestoes/<id>/descartar            -> ok (404 = já sumiu)
  *
  * Falhas chegam como `ApiClientError` (`client.ts`) com `code`/`status`:
  *   - 404 `not_found`  — coleção de outro usuário sem share, coleção inexistente
@@ -43,7 +46,7 @@
  *   await criarShare(7, { orgao_id: 3, papel: 'viewer' });
  */
 
-import { get, post, put, del } from './client';
+import { get, post, put, del, ApiClientError } from './client';
 import { createSwrCache } from './swrCache';
 import { invalidateProjects } from './projects';
 import type {
@@ -59,6 +62,7 @@ import type {
 	CollectionShareMutationData,
 	CollectionUpdatePayload,
 	CollectionsListData,
+	SugestoesResponse,
 	ToggleFavoritoData
 } from '$lib/types/collections';
 
@@ -189,6 +193,51 @@ export async function criarShare(
 export async function revogarShare(collectionId: number, shareId: number): Promise<void> {
 	await del<unknown>(`/api/colecoes/${collectionId}/compartilhamentos/${shareId}`);
 	invalidateColecoes();
+}
+
+/**
+ * Lote de sugestões em cache (`docs/plano-ia-fase2-cache-sugestoes.md` §3.3):
+ * resposta instantânea, NUNCA chama o modelo. Sem lote pendente vem
+ * `sugestoes: []` com `gerado_em: null` — a UI mostra o CTA de gerar em vez de
+ * disparar o POST sozinha.
+ *
+ * Exemplo:
+ *   const { sugestoes, desatualizado } = await getSugestoes(controller.signal);
+ */
+export async function getSugestoes(signal?: AbortSignal): Promise<SugestoesResponse> {
+	return get<SugestoesResponse>('/api/colecoes/sugestoes', signal);
+}
+
+/**
+ * Gera um lote NOVO com o modelo e o persiste, substituindo o pendente
+ * (`docs/plano-ia-fase2-cache-sugestoes.md` §3.3). Operação cara (~1min,
+ * cobrada por chamada): só rodar em clique explícito. Nenhuma coleção é criada
+ * — o aceite passa por `criarColecao` com `sugestao_id`, que revalida tudo.
+ *
+ * Falhas úteis à UI: 503 `sugestoes_indisponiveis` (feature desligada — use
+ * `isSugestoesIndisponivel` e esconda a entrada) e 502 (falha do modelo, vale
+ * "Tentar novamente").
+ *
+ * Exemplo:
+ *   const { sugestoes, projetos } = await sugerirColecoes(controller.signal);
+ */
+export async function sugerirColecoes(signal?: AbortSignal): Promise<SugestoesResponse> {
+	return post<SugestoesResponse>('/api/colecoes/sugestoes', undefined, signal);
+}
+
+/**
+ * Descarta a sugestão de vez: o agrupamento não volta em gerações futuras.
+ * 404 significa que a linha já sumiu (outra aba regenerou) — quem chama trata
+ * como sucesso e some com o cartão.
+ */
+export async function descartarSugestao(sugestaoId: number): Promise<void> {
+	await post<unknown>(`/api/colecoes/sugestoes/${sugestaoId}/descartar`);
+}
+
+/** Sugestões desligadas no servidor (sem credencial de IA) — a UI some com o botão. */
+export function isSugestoesIndisponivel(err: unknown): boolean {
+	if (!(err instanceof ApiClientError)) return false;
+	return err.status === 503 || err.code === 'sugestoes_indisponiveis';
 }
 
 /** Cronograma (Gantt) das etapas de workflow dos projetos da coleção. */
