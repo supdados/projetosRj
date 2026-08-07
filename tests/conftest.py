@@ -33,6 +33,13 @@ from routes.tasks.constants import _get_upload_folder
 TEST_PASSWORD = "senha123"
 
 
+@pytest.fixture(autouse=True)
+def _sem_credenciais_watsonx(monkeypatch):
+    """Suíte determinística mesmo com WATSONX_* no .env da máquina (rota → 503)."""
+    monkeypatch.delenv("WATSONX_API_KEY", raising=False)
+    monkeypatch.delenv("WATSONX_PROJECT_ID", raising=False)
+
+
 def _ensure_setd():
     setd = OrgaoUnidade.query.filter_by(sigla="SETD").first()
     if setd is None:
