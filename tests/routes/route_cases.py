@@ -2100,6 +2100,50 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # Colecoes de projetos (Fase 2): compartilhamentos (so dono) + cronograma.
+    # Mesmo id inexistente da Fase 1: sem colecao semeada, o gate responde 404
+    # anti-enumeracao antes de olhar papel ou payload.
+    {
+        "id": "api_colecao_shares_list_get",
+        "method": "GET",
+        "rule": "/api/colecoes/<int:collection_id>/compartilhamentos",
+        "path": "/api/colecoes/999999/compartilhamentos",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_share_criar_post",
+        "method": "POST",
+        "rule": "/api/colecoes/<int:collection_id>/compartilhamentos",
+        "path": "/api/colecoes/999999/compartilhamentos",
+        "role": "user",
+        "json": {"user_id": 999999, "papel": "viewer"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_share_revogar_delete",
+        "method": "DELETE",
+        "rule": "/api/colecoes/<int:collection_id>/compartilhamentos/<int:share_id>",
+        "path": "/api/colecoes/999999/compartilhamentos/999999",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_cronograma_get",
+        "method": "GET",
+        "rule": "/api/colecoes/<int:collection_id>/cronograma",
+        "path": "/api/colecoes/999999/cronograma",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
 
 # Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
@@ -2167,4 +2211,8 @@ ROUTE_CASES += [
 # /api/colecoes/<cid>, GET/POST /api/colecoes/<cid>/projetos, DELETE
 # /api/colecoes/<cid>/projetos/<pid> e POST /api/projetos/<pid>/favorito.
 # 166 + 8 = 174.
-assert len(ROUTE_CASES) == 174
+# +4 das colecoes de projetos (Fase 2): GET/POST
+# /api/colecoes/<cid>/compartilhamentos, DELETE
+# /api/colecoes/<cid>/compartilhamentos/<sid> e GET /api/colecoes/<cid>/cronograma.
+# 174 + 4 = 178.
+assert len(ROUTE_CASES) == 178

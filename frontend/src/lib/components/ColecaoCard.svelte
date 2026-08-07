@@ -10,6 +10,11 @@
 	 *
 	 * Variante Favoritos (`tipo === 'favoritos'`): badge "Padrão" no lugar do
 	 * kebab — coleção de sistema não é renomeável nem deletável.
+	 *
+	 * Fase 2 (compartilhamento): coleção MINHA e compartilhada ganha o chip
+	 * "Compartilhada"; coleção que chegou por share mostra a procedência
+	 * ("Compartilhada por Fulano · Leitura") e NÃO tem kebab — editar, apagar e
+	 * gerir acessos são só do dono.
 	 */
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
@@ -23,13 +28,16 @@
 		href: string;
 		/** Abre o modal de edição; ausente esconde o item do menu. */
 		onEditar?: () => void;
+		/** Abre o modal de compartilhamento; ausente esconde o item do menu. */
+		onCompartilhar?: () => void;
 		/** Pede confirmação e apaga; ausente esconde o item do menu. */
 		onApagar?: () => void;
 	}
 
-	let { colecao, href, onEditar, onApagar }: Props = $props();
+	let { colecao, href, onEditar, onCompartilhar, onApagar }: Props = $props();
 
 	const isFavoritos = $derived(colecao.tipo === 'favoritos');
+	const isDono = $derived(colecao.papel === 'dono');
 
 	const plural = (n: number, singular: string): string =>
 		`${n} ${n === 1 ? singular : `${singular}s`}`;
@@ -38,15 +46,26 @@
 		`${plural(colecao.projetos, 'projeto')} · ${plural(colecao.etapas_total, 'etapa')}`
 	);
 
+	const PAPEL_LABEL: Record<string, string> = { viewer: 'Leitura', editor: 'Edição' };
+
+	// Procedência de coleção alheia; `owner` só vem preenchido quando papel ≠ dono.
+	const procedencia = $derived(
+		isDono || !colecao.owner
+			? ''
+			: `Compartilhada por ${colecao.owner.nome} · ${PAPEL_LABEL[colecao.papel] ?? 'Leitura'}`
+	);
+
 	const acoes = $derived.by<SelectMenuOption[]>(() => {
 		const out: SelectMenuOption[] = [];
 		if (onEditar) out.push({ value: 'editar', label: 'Editar' });
+		if (onCompartilhar) out.push({ value: 'compartilhar', label: 'Compartilhar' });
 		if (onApagar) out.push({ value: 'apagar', label: 'Apagar' });
 		return out;
 	});
 
 	function executarAcao(acao: string | null): void {
 		if (acao === 'editar') onEditar?.();
+		if (acao === 'compartilhar') onCompartilhar?.();
 		if (acao === 'apagar') onApagar?.();
 	}
 </script>
@@ -62,17 +81,29 @@
 
 	<div class="flex items-center gap-3">
 		<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} />
-		<span class="min-w-0 truncate text-base font-bold text-text-primary" title={colecao.nome}>
-			{colecao.nome}
-		</span>
+		<div class="flex min-w-0 flex-1 flex-col">
+			<span class="min-w-0 truncate text-base font-bold text-text-primary" title={colecao.nome}>
+				{colecao.nome}
+			</span>
+			{#if procedencia}
+				<span class="min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
+			{/if}
+		</div>
+		{#if colecao.compartilhada && isDono}
+			<span
+				class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
+			>
+				Compartilhada
+			</span>
+		{/if}
 		{#if isFavoritos}
 			<span
-				class="ml-auto shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
+				class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
 			>
 				Padrão
 			</span>
-		{:else if acoes.length > 0}
-			<div class="relative z-20 ml-auto w-8 shrink-0">
+		{:else if isDono && acoes.length > 0}
+			<div class="relative z-20 w-8 shrink-0">
 				<SelectMenu
 					options={acoes}
 					value={null}

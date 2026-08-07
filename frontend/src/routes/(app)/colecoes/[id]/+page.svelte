@@ -7,10 +7,16 @@
 	 * (filtros client-side: busca e Todos/Atrasados). Sem Gantt no MVP.
 	 *
 	 * Mutações: editar identidade (mesmo formulário do passo 1 do modal de
-	 * criação), adicionar projetos (ColecaoProjectPicker num modal simples,
-	 * POST idempotente por projeto) e remover projeto da coleção com
-	 * confirmação. Erros 404 seguem o contrato anti-enumeração: coleção
-	 * inexistente e coleção de outro usuário são indistinguíveis.
+	 * criação), compartilhar (CompartilharColecaoModal), adicionar projetos
+	 * (ColecaoProjectPicker num modal simples, POST idempotente por projeto) e
+	 * remover projeto da coleção com confirmação. Erros 404 seguem o contrato
+	 * anti-enumeração: coleção inexistente e coleção de outro usuário são
+	 * indistinguíveis.
+	 *
+	 * Fase 2: a UI espelha o papel do ator vindo no payload — viewer só lê
+	 * (nem adicionar nem remover projetos), editor mexe nos itens e dono é o
+	 * único que edita a identidade, compartilha e apaga. O gate real é do
+	 * backend (403); aqui é só não oferecer o que vai falhar.
 	 */
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
@@ -20,16 +26,21 @@
 		adicionarProjeto,
 		editarColecao,
 		fetchColecaoProjetos,
+		fetchCronograma,
+		peekColecaoCronograma,
 		peekColecaoProjetos,
 		removerProjeto
 	} from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
 		CollectionColorId,
+		CollectionCronogramaData,
 		CollectionDetailData,
 		CollectionIconId,
 		ProjetoColecaoRow
 	} from '$lib/types/collections';
+	import CollectionGantt from '$lib/components/CollectionGantt.svelte';
+	import CompartilharColecaoModal from '$lib/components/CompartilharColecaoModal.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
@@ -39,6 +50,7 @@
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecaoDetalheSkeleton from '$lib/components/skeletons/ColecaoDetalheSkeleton.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
 	import { confirmAction } from '$lib/stores/confirm';
@@ -102,6 +114,31 @@
 		}
 	}
 
+	// ── Cronograma (Gantt): fetch próprio, mesmo padrão SWR da tabela ────────
+	let cronoState = $state<LoadState>('loading');
+	let cronoData = $state<CollectionCronogramaData | null>(null);
+	let cronoInFlight: AbortController | null = null;
+
+	async function loadCronograma(): Promise<void> {
+		const cached = peekColecaoCronograma(collectionId);
+		cronoData = cached;
+		cronoState = cached ? 'ready' : 'loading';
+		cronoInFlight?.abort();
+		const controller = new AbortController();
+		cronoInFlight = controller;
+		try {
+			const next = await fetchCronograma(collectionId, controller.signal);
+			if (controller.signal.aborted) return;
+			cronoData = next;
+			cronoState = 'ready';
+		} catch (err) {
+			if (controller.signal.aborted) return;
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			if (cronoData) return;
+			cronoState = 'error';
+		}
+	}
+
 	// Navegação client-side entre /colecoes/1 e /colecoes/2 reusa o componente:
 	// o id muda sem remontar, então o recarregamento mora num efeito guardado.
 	let idCarregado = -1;
@@ -113,14 +150,29 @@
 		data = cached;
 		loadState = cached ? 'ready' : 'loading';
 		void load();
+		void loadCronograma();
 	});
 
-	onMount(() => () => inFlight?.abort());
+	onMount(() => () => {
+		inFlight?.abort();
+		cronoInFlight?.abort();
+	});
 
 	// ── Derivados de meta/KPIs (tudo a partir dos rows + rollup) ─────────────
 	const colecao = $derived(data?.colecao ?? null);
 	const rows = $derived(data?.projetos ?? []);
 	const isFavoritos = $derived(colecao?.tipo === 'favoritos');
+
+	// ── Papel do ator: o que a tela pode oferecer ───────────────────────────
+	const isDono = $derived(colecao?.papel === 'dono');
+	const podeMexerNosItens = $derived(colecao?.papel === 'dono' || colecao?.papel === 'editor');
+
+	const PAPEL_LABEL: Record<string, string> = { viewer: 'leitor', editor: 'editor' };
+	const procedencia = $derived(
+		colecao && !isDono && colecao.owner
+			? `Compartilhada por ${colecao.owner.nome} · você é ${PAPEL_LABEL[colecao.papel] ?? 'leitor'}`
+			: ''
+	);
 
 	const tarefasTotal = $derived(rows.reduce((s, r) => s + r.tarefas_total, 0));
 	const areasCount = $derived(
@@ -199,6 +251,9 @@
 		void goto(`${base}/projetos/${projectId}`);
 	}
 
+	// ── Compartilhar (só dono; o modal cuida das concessões) ─────────────────
+	let shareOpen = $state(false);
+
 	// ── Adicionar projetos (picker num modal simples) ────────────────────────
 	let pickerOpen = $state(false);
 	let pickerSelecionados = $state<number[]>([]);
@@ -237,6 +292,7 @@
 				total === 1 ? '1 projeto adicionado à coleção.' : `${total} projetos adicionados à coleção.`
 			);
 			void load();
+			void loadCronograma();
 		} catch (err) {
 			adding = false;
 			const motivo =
@@ -247,6 +303,7 @@
 					: motivo;
 			// Falha no meio do lote: sem resync a tabela e os KPIs mentem até o F5.
 			void load();
+			void loadCronograma();
 		}
 	}
 
@@ -264,6 +321,7 @@
 		if (!ok) return;
 		flash.success(`Projeto removido da coleção.`);
 		void load();
+		void loadCronograma();
 	}
 
 	// ── Editar coleção (mesmo formulário do passo 1 do modal de criação) ─────
@@ -404,15 +462,20 @@
 					{/if}
 				{/snippet}
 				{#snippet actions()}
-					{#if !isFavoritos}
+					{#if !isFavoritos && isDono}
 						<Button size="sm" variant="secondary" onclick={abrirEdicao}>Editar coleção</Button>
+						<Button size="sm" variant="secondary" onclick={() => (shareOpen = true)}>
+							Compartilhar
+						</Button>
 					{/if}
-					<Button size="sm" onclick={abrirPicker}>
-						{#snippet icon()}
-							<i class="fas fa-plus" aria-hidden="true"></i>
-						{/snippet}
-						Adicionar projetos
-					</Button>
+					{#if podeMexerNosItens}
+						<Button size="sm" onclick={abrirPicker}>
+							{#snippet icon()}
+								<i class="fas fa-plus" aria-hidden="true"></i>
+							{/snippet}
+							Adicionar projetos
+						</Button>
+					{/if}
 				{/snippet}
 			</PageHeader>
 			<div
@@ -431,6 +494,9 @@
 							{formatDateBr(prazoMaisDistante)}
 						</time>
 					</span>
+				{/if}
+				{#if procedencia}
+					<span class="ml-auto text-xs text-text-muted">{procedencia}</span>
 				{/if}
 			</div>
 		</div>
@@ -543,16 +609,22 @@
 						{isFavoritos ? 'Nenhum projeto favoritado ainda' : 'Nenhum projeto nesta coleção'}
 					</h3>
 					<p class="mb-3.5 mt-1.5 text-sm text-text-muted">
-						{isFavoritos
-							? 'Marque a estrela em qualquer projeto e ele entra aqui.'
-							: 'Adicione projetos para acompanhar o andamento agrupado.'}
+						{#if isFavoritos}
+							Marque a estrela em qualquer projeto e ele entra aqui.
+						{:else if podeMexerNosItens}
+							Adicione projetos para acompanhar o andamento agrupado.
+						{:else}
+							Quem compartilhou esta coleção ainda não adicionou projetos a ela.
+						{/if}
 					</p>
-					<Button size="sm" onclick={abrirPicker}>
-						{#snippet icon()}
-							<i class="fas fa-plus" aria-hidden="true"></i>
-						{/snippet}
-						Adicionar projetos
-					</Button>
+					{#if podeMexerNosItens}
+						<Button size="sm" onclick={abrirPicker}>
+							{#snippet icon()}
+								<i class="fas fa-plus" aria-hidden="true"></i>
+							{/snippet}
+							Adicionar projetos
+						</Button>
+					{/if}
 				</div>
 			{:else if linhasVisiveis.length === 0}
 				<p
@@ -579,9 +651,11 @@
 								<th scope="col" class={thCls}>Início</th>
 								<th scope="col" class={thCls}>Fim previsto</th>
 								<th scope="col" class="{thCls} text-center">Status</th>
-								<th scope="col" class="w-16 {thCls}">
-									<span class="sr-only">Ações</span>
-								</th>
+								{#if podeMexerNosItens}
+									<th scope="col" class="w-16 {thCls}">
+										<span class="sr-only">Ações</span>
+									</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody>
@@ -656,17 +730,19 @@
 											<span class="chip {statusChipClass(row.status)}">{row.status}</span>
 										{/if}
 									</td>
-									<td class="{tdCls} text-center">
-										<button
-											type="button"
-											onclick={() => void confirmarRemocao(row)}
-											title="Remover da coleção"
-											aria-label={`Remover ${row.nome} da coleção`}
-											class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
-										>
-											<AppIcon id="exclusao" size={16} />
-										</button>
-									</td>
+									{#if podeMexerNosItens}
+										<td class="{tdCls} text-center">
+											<button
+												type="button"
+												onclick={() => void confirmarRemocao(row)}
+												title="Remover da coleção"
+												aria-label={`Remover ${row.nome} da coleção`}
+												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
+											>
+												<AppIcon id="exclusao" size={16} />
+											</button>
+										</td>
+									{/if}
 								</tr>
 							{/each}
 						</tbody>
@@ -674,8 +750,41 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- Cronograma das etapas (Gantt): fetch próprio, janela fixa de 7 meses. -->
+		<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+			{#if cronoState === 'loading' && !cronoData}
+				<div aria-hidden="true" class="flex flex-col gap-4 px-5 py-4">
+					<div class="flex items-center gap-3">
+						<Skeleton class="h-5 w-56 rounded" />
+						<Skeleton class="ml-auto h-3.5 w-80 rounded" />
+					</div>
+					{#each { length: 3 } as _, i (i)}
+						<div class="grid grid-cols-[280px_1fr] items-center gap-4">
+							<Skeleton class="h-8 w-4/5 rounded" />
+							<Skeleton class="h-3.5 w-full rounded" />
+						</div>
+					{/each}
+				</div>
+			{:else if cronoState === 'error'}
+				<p class="m-0 px-5 py-6 text-center text-sm text-text-muted">
+					Não foi possível carregar o cronograma das etapas.
+				</p>
+			{:else if cronoData}
+				<CollectionGantt projetos={cronoData.projetos} />
+			{/if}
+		</div>
 	{/if}
 </section>
+
+<!-- Compartilhar: gestão de acessos da coleção (só dono). -->
+{#if shareOpen && colecao}
+	<CompartilharColecaoModal
+		{colecao}
+		onClose={() => (shareOpen = false)}
+		onChanged={() => void load()}
+	/>
+{/if}
 
 <!-- Adicionar projetos: picker reutilizável num modal simples. -->
 {#if pickerOpen}

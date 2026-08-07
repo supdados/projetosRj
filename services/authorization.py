@@ -17,8 +17,20 @@ from typing import TYPE_CHECKING, Iterable, Literal
 from flask import g, has_request_context
 from sqlalchemy import false, or_
 from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.orm import aliased
 
-from models import OrgaoClosure, OrgaoUnidade, Project, ProjectMember, db
+from models import (
+    OrgaoClosure,
+    OrgaoUnidade,
+    PAPEL_SHARE_EDITOR,
+    Project,
+    ProjectCollection,
+    ProjectCollectionItem,
+    ProjectCollectionShare,
+    ProjectMember,
+    User,
+    db,
+)
 from services.orgao_tree import get_orgao_descendants
 from time_utils import utc_now
 
@@ -27,7 +39,7 @@ if TYPE_CHECKING:
 
     from flask import Response
 
-    from models import User, UserOrgao
+    from models import UserOrgao
 
 PAPEL_LEITOR = "leitor"
 PAPEL_EDITOR = "editor"
@@ -44,6 +56,7 @@ ADMIN_RANK: int = 100
 
 ROLE_MAP_CACHE_ATTR = "_authz_role_map"
 MEMBERSHIP_MAP_CACHE_ATTR = "_authz_membership_map"
+COLLECTION_RANK_CACHE_ATTR = "_authz_collection_rank_map"
 
 FORBIDDEN_PROJECT_MESSAGE = "Você não tem permissão para esta ação neste projeto."
 
@@ -139,6 +152,98 @@ def _active_membership_rows(user_id: int | None) -> "Iterable[tuple[int, str]]":
         return []
 
 
+def get_collection_project_rank_map(user: "User | None") -> dict[int, int]:
+    """Retorna ``{project_id: rank}`` derivado de shares de coleção (Fase 2, §5.1).
+
+    Alcança shares diretos no usuário OU no órgão EXATO de lotação (sem
+    subárvore — decisão 2026-08-07). Rank: viewer → leitor; editor → editor,
+    o MESMO rank intermediário de escrita concedido por convites
+    (``papeis_de_convite`` tem teto editor) — nunca gestor. Coleção cujo dono é
+    o próprio usuário NUNCA entra (anti auto-escalação: o dono não ganha rank
+    compartilhando consigo/seu órgão). Cache por request em ``g`` (TR-3):
+    revogar share vale já no request seguinte.
+    """
+    if user is None or getattr(user, "deleted_at", None) is not None:
+        return {}
+    cached = _read_user_scoped_cache(COLLECTION_RANK_CACHE_ATTR, user)
+    if cached is not None:
+        return cached
+    rank_map = _build_collection_rank_map(user)
+    _write_user_scoped_cache(COLLECTION_RANK_CACHE_ATTR, user, rank_map)
+    return rank_map
+
+
+def _build_collection_rank_map(user: "User") -> dict[int, int]:
+    rank_map: dict[int, int] = {}
+    for project_id, papel in _collection_share_rows(user):
+        rank = _share_papel_rank(papel)
+        rank_map[project_id] = max(rank_map.get(project_id, 0), rank)
+    return rank_map
+
+
+def _share_papel_rank(papel: str) -> int:
+    # Editor de coleção = rank de escrita dos convites (teto editor); resto lê.
+    if papel == PAPEL_SHARE_EDITOR:
+        return PAPEL_RANK[PAPEL_EDITOR]
+    return PAPEL_RANK[PAPEL_LEITOR]
+
+
+def _collection_share_rows(user: "User") -> "Iterable[tuple[int, str]]":
+    user_id = getattr(user, "id", None)
+    if not isinstance(user_id, int):
+        return []
+    destinos = [ProjectCollectionShare.user_id == user_id]
+    lotacao = lotacao_orgao_ids(user)
+    if lotacao:
+        destinos.append(ProjectCollectionShare.orgao_id.in_(lotacao))
+    try:
+        # Savepoint: em Postgres a query falhada invalida a transação; rollback
+        # global aqui descartaria mutações pendentes do request.
+        with db.session.begin_nested():
+            return (
+                db.session.query(
+                    ProjectCollectionItem.project_id, ProjectCollectionShare.papel
+                )
+                .join(
+                    ProjectCollectionShare,
+                    ProjectCollectionShare.collection_id
+                    == ProjectCollectionItem.collection_id,
+                )
+                .join(
+                    ProjectCollection,
+                    ProjectCollection.id == ProjectCollectionItem.collection_id,
+                )
+                .join(User, User.id == ProjectCollection.owner_user_id)
+                .filter(
+                    or_(*destinos),
+                    # Dono nunca deriva rank da própria coleção (anti auto-escalação).
+                    ProjectCollection.owner_user_id != user_id,
+                    User.deleted_at.is_(None),
+                )
+                .all()
+            )
+    except (OperationalError, ProgrammingError):
+        # Janela de deploy anterior ao step de migração: sem tabela, sem share.
+        return []
+
+
+def lotacao_orgao_ids(user: "User") -> set[int]:
+    """Órgãos EXATOS de lotação (linhas de ``user_orgao``), sem subárvore."""
+    return {vinculo.orgao_id for vinculo in getattr(user, "orgaos", None) or []}
+
+
+def invalidate_collection_rank_cache() -> None:
+    """Descarta o cache de acesso via coleção após mutação de share/item.
+
+    Mantém o cache por request coerente (TR-3): a próxima leitura no MESMO
+    request reflete o share/item recém-mutado.
+    """
+    if not has_request_context():
+        return
+    if hasattr(g, COLLECTION_RANK_CACHE_ATTR):
+        delattr(g, COLLECTION_RANK_CACHE_ATTR)
+
+
 def area_project_rank(user: "User | None", project: "Project | None") -> int:
     """Rank do usuario no projeto contando SO vinculo de area (e o piso do admin).
 
@@ -162,16 +267,30 @@ def area_project_rank(user: "User | None", project: "Project | None") -> int:
 def effective_project_rank(user: "User | None", project: "Project | None") -> int:
     """Retorna o rank efetivo do usuario no projeto (``0`` = sem acesso).
 
-    ``max(herdado, convite)`` da §5.2: admin recebe ``ADMIN_RANK``; o rank de
-    area propaga pela subarvore; o convite SOMA, nunca subtrai, com teto rigido
-    em editor. Projeto sem ``orgao_id`` so alcanca rank por admin ou convite.
+    ``max(herdado, convite, colecao)`` da §5.2 + Fase 2 §5.1: admin recebe
+    ``ADMIN_RANK``; o rank de area propaga pela subarvore; convite e share de
+    colecao SOMAM, nunca subtraem, ambos com teto rigido em editor. Projeto sem
+    ``orgao_id`` so alcanca rank por admin, convite ou colecao compartilhada.
 
     Exemplo: ``effective_project_rank(user, projeto) >= PAPEL_RANK["gestor"]``.
     """
     herdado = area_project_rank(user, project)
     if herdado >= ADMIN_RANK:
         return herdado
-    return max(herdado, _invited_project_rank(user, project))
+    return max(
+        herdado,
+        _invited_project_rank(user, project),
+        _collection_project_rank(user, project),
+    )
+
+
+def _collection_project_rank(user: "User | None", project: "Project | None") -> int:
+    project_id = getattr(project, "id", None)
+    if not isinstance(project_id, int):
+        return 0
+    derivado = get_collection_project_rank_map(user).get(project_id, 0)
+    # Defesa em profundidade: acesso via coleção nunca passa do teto de convite.
+    return min(derivado, PAPEL_RANK[PAPEL_EDITOR])
 
 
 def _invited_project_rank(user: "User | None", project: "Project | None") -> int:
@@ -353,12 +472,19 @@ def user_can_access_project(user: "User | None", project: "Project | None") -> b
     return effective_project_rank(user, project) >= PAPEL_RANK[PAPEL_LEITOR]
 
 
-def project_visibility_criterion(user: "User | None") -> "ColumnElement[bool]":
-    """Filtro §5.3 das listagens de NAO-admin: subtree de area OR convite ativo.
+def project_visibility_criterion(
+    user: "User | None", *, include_collections: bool = True
+) -> "ColumnElement[bool]":
+    """Filtro §5.3 das listagens de NAO-admin: subtree de area OR convite ativo
+    OR item de colecao compartilhada comigo/meu orgao exato (Fase 2, §5.1).
 
     Uso: ``query.filter(project_visibility_criterion(g.user))`` em query que ja
-    envolve ``Project``. Sem vinculo e sem convite devolve ``false()`` (lista
-    vazia), como o antigo ``Project.id == -1``.
+    envolve ``Project``. Sem vinculo, convite ou share devolve ``false()``
+    (lista vazia), como o antigo ``Project.id == -1``.
+
+    ``include_collections=False`` exige visibilidade PROPRIA (area/convite),
+    sem o ramo derivado de share de colecao — usado ao semear colecao custom,
+    fechando o re-share transitivo apos revogacao.
     """
     clauses = []
     subtree_ids = get_user_orgao_subtree_ids(user)
@@ -367,9 +493,41 @@ def project_visibility_criterion(user: "User | None") -> "ColumnElement[bool]":
     member_project_ids = set(get_active_membership_map(user))
     if member_project_ids:
         clauses.append(Project.id.in_(member_project_ids))
+    # O guard pelo rank map (cacheado) preserva o fallback de tabela ausente;
+    # o EXISTS correlacionado evita IN materializado de ate 30x200 ids.
+    if include_collections and get_collection_project_rank_map(user):
+        clauses.append(_collection_visibility_exists(user))
     if not clauses:
         return false()
     return or_(*clauses)
+
+
+def _collection_visibility_exists(user: "User") -> "ColumnElement[bool]":
+    """EXISTS correlacionado em ``Project.id``: item de colecao ALHEIA (dono
+    vivo) com share que alcanca o usuario/orgao exato. Aliases evitam colisao
+    quando a query externa ja envolve ``ProjectCollectionItem``/``User``."""
+    item = aliased(ProjectCollectionItem)
+    share = aliased(ProjectCollectionShare)
+    colecao = aliased(ProjectCollection)
+    dono = aliased(User)
+    destinos = [share.user_id == user.id]
+    lotacao = lotacao_orgao_ids(user)
+    if lotacao:
+        destinos.append(share.orgao_id.in_(lotacao))
+    return (
+        db.session.query(item.id)
+        .join(share, share.collection_id == item.collection_id)
+        .join(colecao, colecao.id == item.collection_id)
+        .join(dono, dono.id == colecao.owner_user_id)
+        .filter(
+            item.project_id == Project.id,
+            or_(*destinos),
+            colecao.owner_user_id != user.id,
+            dono.deleted_at.is_(None),
+        )
+        .correlate(Project)
+        .exists()
+    )
 
 
 def _build_role_map(user: "User") -> dict[int, int]:

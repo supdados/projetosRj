@@ -146,6 +146,7 @@ PROJECT_MEMBER_TABLE = "project_member"
 AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
 PROJECT_COLLECTION_TABLE = "project_collection"
 PROJECT_COLLECTION_ITEM_TABLE = "project_collection_item"
+PROJECT_COLLECTION_SHARE_TABLE = "project_collection_share"
 SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
     ("codigo_raiz", "INTEGER"),
     # TR-2: JSON dos usuários cujo escopo de área zerou no sync.
@@ -1860,14 +1861,20 @@ def ensure_autorizacao_audit_table(emit_output=True):
 
 
 def ensure_project_collection_tables(emit_output=True):
-    """Garante as tabelas de coleções de projetos (pastas personalizadas, Fase 1)."""
-    colecao = _ensure_table_from_models(PROJECT_COLLECTION_TABLE, emit_output)
-    item = _ensure_table_from_models(PROJECT_COLLECTION_ITEM_TABLE, emit_output)
+    """Garante as tabelas de coleções de projetos (Fases 1 e 2 — share incluso)."""
+    resultados = [
+        _ensure_table_from_models(tabela, emit_output)
+        for tabela in (
+            PROJECT_COLLECTION_TABLE,
+            PROJECT_COLLECTION_ITEM_TABLE,
+            PROJECT_COLLECTION_SHARE_TABLE,
+        )
+    ]
     resultado = {
-        "success": colecao["success"] and item["success"],
-        "created": bool(colecao.get("created") or item.get("created")),
+        "success": all(r["success"] for r in resultados),
+        "created": any(r.get("created") for r in resultados),
     }
-    erros = [r["error"] for r in (colecao, item) if r.get("error")]
+    erros = [r["error"] for r in resultados if r.get("error")]
     if erros:
         resultado["error"] = "; ".join(erros)
     return resultado

@@ -1,25 +1,41 @@
 <script lang="ts">
 	/**
 	 * Modal "Nova coleção" em 2 passos (design 3b): Identidade (nome, descrição,
-	 * ícone, cor) → Projetos (card-resumo editável + ColecaoProjectPicker).
-	 * A criação é ATÔMICA: "Criar coleção" faz um único POST /api/colecoes com
-	 * `project_ids`. Máquina de fases no molde de CriarProjetoModal: trocar de
-	 * passo desmonta o dono do foco, então cada transição re-foca um alvo
-	 * visível via tick(); chrome (backdrop/Esc/focus-trap) é o Modal base.
+	 * ícone, cor, "Quem enxerga") → Projetos (card-resumo editável +
+	 * ColecaoProjectPicker). A criação é ATÔMICA: "Criar coleção" faz um único
+	 * POST /api/colecoes com `project_ids` e `compartilhamentos`. Máquina de fases
+	 * no molde de CriarProjetoModal: trocar de passo desmonta o dono do foco,
+	 * então cada transição re-foca um alvo visível via tick(); chrome
+	 * (backdrop/Esc/focus-trap) é o Modal base.
+	 *
+	 * "Quem enxerga" (Fase 2): a coleção NASCE PESSOAL — o toggle "Só eu" começa
+	 * LIGADO e só quem o desliga escolhe destinatários (pessoa ou órgão exato).
+	 * Compartilhar concede acesso aos projetos da coleção, daí o aviso no bloco.
+	 * Versão compacta do formulário de `CompartilharColecaoModal.svelte`, que é
+	 * quem gerencia as concessões depois de a coleção existir (só o dono).
+	 * Favoritos nunca passa por aqui — este modal só cria coleções `custom`.
 	 */
 	import { tick } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
+	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
 	import ColecaoProjectPicker from '$lib/components/ColecaoProjectPicker.svelte';
 	import { criarColecao } from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
+	import { fetchAreas, type AreaOption } from '$lib/api/areas';
+	import { searchInvitableUsers } from '$lib/api/projectMembers';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
+	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
+	import type { SelectMenuOption } from '$lib/types/selectMenu';
+	import type { UsuarioConvidavel } from '$lib/types/projectMembers';
 	import type {
 		ColecaoResumo,
+		ColecaoShareCreatePayload,
 		CollectionColorId,
-		CollectionIconId
+		CollectionIconId,
+		PapelCompartilhamento
 	} from '$lib/types/collections';
 
 	interface Props {
@@ -92,6 +108,189 @@
 
 	const nomeInvalido = $derived(triedNext && !nome.trim());
 
+	// ── "Quem enxerga" ───────────────────────────────────────────────────────
+	/** Alvo da concessão: uma pessoa (busca) ou um órgão EXATO (sem subárvore). */
+	type AlvoModo = 'pessoa' | 'area';
+	/** `AreaOption` no formato que `buildOrgaoTree` espera (`value` + `pai_id`). */
+	type OrgaoCandidato = AreaOption & { value: number };
+
+	/** Destinatário já escolhido; vira um item de `compartilhamentos` no POST. */
+	interface Destinatario {
+		/** "u:12"/"o:3" — chave do `{#each}` e trava de duplicata. */
+		chave: string;
+		nome: string;
+		detalhe: string;
+		user_id: number | null;
+		orgao_id: number | null;
+		papel: PapelCompartilhamento;
+	}
+
+	const PAPEL_MENU: SelectMenuOption[] = [
+		{ value: 'viewer', label: 'Leitor' },
+		{ value: 'editor', label: 'Editor' }
+	];
+	const PAPEL_HINT: Record<PapelCompartilhamento, string> = {
+		viewer: 'Vê a coleção e seus projetos',
+		editor: 'Também adiciona e remove projetos'
+	};
+
+	let soEu = $state(true);
+	let destinatarios = $state<Destinatario[]>([]);
+	let alvoModo = $state<AlvoModo>('pessoa');
+	let alvoPapel = $state<PapelCompartilhamento>('viewer');
+
+	let termoPessoa = $state('');
+	let pessoas = $state<UsuarioConvidavel[]>([]);
+	let pessoaListaAberta = $state(false);
+	let pessoa = $state<UsuarioConvidavel | null>(null);
+
+	let orgaos = $state<AreaOption[]>([]);
+	let termoOrgao = $state('');
+	let orgaoListaAberta = $state(false);
+	let orgao = $state<AreaOption | null>(null);
+
+	let compartilharErro = $state('');
+	let alvoBoxEl = $state<HTMLDivElement | null>(null);
+
+	const orgaoCandidatos = $derived<OrgaoCandidato[]>(orgaos.map((a) => ({ ...a, value: a.id })));
+	const linhasOrgao = $derived.by<OrgaoTreeRow<OrgaoCandidato>[]>(() =>
+		flattenTreeWithPath(buildOrgaoTree(orgaoCandidatos), termoOrgao, { omitRootAncestor: true })
+	);
+	const alvoEscolhido = $derived(alvoModo === 'pessoa' ? pessoa !== null : orgao !== null);
+
+	// Autocomplete de pessoas: 250ms de folga e aborto da busca anterior a cada tecla.
+	$effect(() => {
+		const q = termoPessoa.trim();
+		if (soEu || alvoModo !== 'pessoa' || q.length < 2 || pessoa !== null) {
+			pessoas = [];
+			return;
+		}
+		const controller = new AbortController();
+		const timer = setTimeout(() => {
+			searchInvitableUsers(q, controller.signal)
+				.then((achados) => {
+					pessoas = achados;
+					pessoaListaAberta = true;
+				})
+				.catch(() => {
+					if (!controller.signal.aborted) pessoas = [];
+				});
+		}, 250);
+		return () => {
+			clearTimeout(timer);
+			controller.abort();
+		};
+	});
+
+	// Clique fora do campo fecha os dois autocompletes (pessoas e áreas).
+	$effect(() => {
+		if (!pessoaListaAberta && !orgaoListaAberta) return;
+		const fecharSeFora = (event: PointerEvent): void => {
+			if (alvoBoxEl?.contains(event.target as Node)) return;
+			pessoaListaAberta = false;
+			orgaoListaAberta = false;
+		};
+		window.addEventListener('pointerdown', fecharSeFora, true);
+		return () => window.removeEventListener('pointerdown', fecharSeFora, true);
+	});
+
+	function alternarSoEu(): void {
+		soEu = !soEu;
+		compartilharErro = '';
+		if (soEu) return;
+		void carregarOrgaos();
+	}
+
+	/** Catálogo completo de órgãos, uma vez por abertura do modal (busca client-side). */
+	async function carregarOrgaos(): Promise<void> {
+		if (orgaos.length > 0) return;
+		try {
+			orgaos = (await fetchAreas()).areas;
+		} catch {
+			compartilharErro = 'Não foi possível carregar as áreas.';
+		}
+	}
+
+	function trocarAlvoModo(alvo: AlvoModo): void {
+		if (alvoModo === alvo) return;
+		alvoModo = alvo;
+		compartilharErro = '';
+		pessoaListaAberta = false;
+		orgaoListaAberta = false;
+	}
+
+	function escolherPessoa(usuario: UsuarioConvidavel): void {
+		pessoa = usuario;
+		termoPessoa = usuario.name;
+		pessoas = [];
+		pessoaListaAberta = false;
+	}
+
+	function escolherOrgao(opcao: AreaOption): void {
+		orgao = opcao;
+		termoOrgao = opcao.sigla || opcao.nome;
+		orgaoListaAberta = false;
+	}
+
+	function limparAlvo(): void {
+		pessoa = null;
+		termoPessoa = '';
+		pessoas = [];
+		orgao = null;
+		termoOrgao = '';
+	}
+
+	/** Destinatário atual como linha da lista (XOR pessoa/órgão preservado). */
+	function novoDestinatario(): Destinatario | null {
+		if (alvoModo === 'pessoa' && pessoa) {
+			const detalhe = pessoa.orgao_sigla ? `Pessoa · ${pessoa.orgao_sigla}` : 'Pessoa';
+			return { chave: `u:${pessoa.id}`, nome: pessoa.name, detalhe, user_id: pessoa.id, orgao_id: null, papel: alvoPapel };
+		}
+		if (alvoModo === 'area' && orgao) {
+			const nome = orgao.sigla || orgao.nome;
+			return { chave: `o:${orgao.id}`, nome, detalhe: orgao.nome, user_id: null, orgao_id: orgao.id, papel: alvoPapel };
+		}
+		return null;
+	}
+
+	function adicionarDestinatario(): void {
+		const alvo = novoDestinatario();
+		if (!alvo) return;
+		if (destinatarios.some((d) => d.chave === alvo.chave)) {
+			compartilharErro = `${alvo.nome} já está na lista.`;
+			return;
+		}
+		destinatarios = [...destinatarios, alvo];
+		compartilharErro = '';
+		limparAlvo();
+	}
+
+	// Enter na busca adiciona o alvo escolhido — nunca avança o passo do formulário.
+	function onAlvoEnter(event: KeyboardEvent): void {
+		if (event.key !== 'Enter') return;
+		event.preventDefault();
+		adicionarDestinatario();
+	}
+
+	function removerDestinatario(chave: string): void {
+		destinatarios = destinatarios.filter((d) => d.chave !== chave);
+	}
+
+	function trocarPapelDestinatario(chave: string, valor: string | null): void {
+		const papel: PapelCompartilhamento = valor === 'editor' ? 'editor' : 'viewer';
+		destinatarios = destinatarios.map((d) => (d.chave === chave ? { ...d, papel } : d));
+	}
+
+	/** Nada escolhido (ou "Só eu" ligado) = coleção pessoal: o campo nem vai no POST. */
+	function compartilhamentosPayload(): ColecaoShareCreatePayload[] | undefined {
+		if (soEu || destinatarios.length === 0) return undefined;
+		return destinatarios.map((d) =>
+			d.user_id !== null
+				? { user_id: d.user_id, papel: d.papel }
+				: { orgao_id: d.orgao_id ?? 0, papel: d.papel }
+		);
+	}
+
 	let prevOpen = false;
 	$effect(() => {
 		if (open && !prevOpen) {
@@ -111,6 +310,12 @@
 		triedNext = false;
 		submitting = false;
 		erro = null;
+		soEu = true;
+		destinatarios = [];
+		alvoModo = 'pessoa';
+		alvoPapel = 'viewer';
+		compartilharErro = '';
+		limparAlvo();
 	}
 
 	// offsetParent null = display:none; focar alvo invisível derrubaria o trap.
@@ -152,7 +357,8 @@
 				descricao: descricao.trim() || null,
 				icone,
 				cor,
-				project_ids: selecionados.length > 0 ? selecionados : undefined
+				project_ids: selecionados.length > 0 ? selecionados : undefined,
+				compartilhamentos: compartilhamentosPayload()
 			});
 			onCreated(colecao);
 			onClose();
@@ -308,6 +514,238 @@
 								{/each}
 							</div>
 						</div>
+
+						<div class="flex flex-col gap-2">
+							<span class={labelCls}>Quem enxerga</span>
+							<div
+								class="flex items-center gap-3 rounded-control border border-border-subtle px-3 py-2.5"
+							>
+								<div class="flex min-w-0 flex-1 flex-col">
+									<span id="nc-soeu-label" class="text-sm font-medium text-text-primary">
+										Só eu
+									</span>
+									<span class="text-xs text-text-muted">
+										{soEu
+											? 'A coleção nasce pessoal — dá para compartilhar depois.'
+											: 'Escolha abaixo quem recebe acesso.'}
+									</span>
+								</div>
+								<button
+									type="button"
+									aria-pressed={soEu}
+									aria-labelledby="nc-soeu-label"
+									onclick={alternarSoEu}
+									class="grid h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 {soEu
+										? 'bg-brand'
+										: 'bg-border-strong'}"
+								>
+									<span
+										class="h-3.5 w-3.5 rounded-full bg-surface-elevated shadow-sm transition-transform duration-fast {soEu
+											? 'translate-x-[1.125rem]'
+											: 'translate-x-[0.1875rem]'}"
+										aria-hidden="true"
+									></span>
+								</button>
+							</div>
+
+							{#if !soEu}
+								<p class="rounded-control bg-wash-brand px-3 py-2 text-xs text-text-secondary">
+									Compartilhar concede acesso aos projetos da coleção: quem recebe passa a ver
+									todos eles.
+								</p>
+
+								<div bind:this={alvoBoxEl} class="relative flex flex-col gap-2">
+									<div
+										class="flex items-stretch overflow-hidden rounded-control border border-border-strong bg-surface transition-colors duration-fast focus-within:border-brand"
+									>
+										<div
+											class="flex shrink-0 items-stretch border-r border-border-subtle bg-surface-muted"
+											role="group"
+											aria-label="Compartilhar com"
+										>
+											{@render alvoModoBotao('pessoa', 'Pessoa')}
+											{@render alvoModoBotao('area', 'Área')}
+										</div>
+										{#if alvoModo === 'pessoa'}
+											<input
+												id="nc-pessoa"
+												type="text"
+												autocomplete="off"
+												role="combobox"
+												aria-expanded={pessoaListaAberta && pessoas.length > 0}
+												aria-controls="nc-pessoa-lista"
+												aria-autocomplete="list"
+												aria-label="Buscar pessoa"
+												placeholder="Nome ou usuário…"
+												bind:value={termoPessoa}
+												oninput={() => {
+													pessoa = null;
+													pessoaListaAberta = true;
+												}}
+												onkeydown={onAlvoEnter}
+												class="min-w-0 flex-1 border-none bg-transparent px-3 py-2 text-md text-text-primary outline-none placeholder:text-text-faint"
+											/>
+										{:else}
+											<input
+												id="nc-area"
+												type="text"
+												autocomplete="off"
+												role="combobox"
+												aria-expanded={orgaoListaAberta && linhasOrgao.length > 0}
+												aria-controls="nc-area-lista"
+												aria-autocomplete="list"
+												aria-label="Buscar área"
+												placeholder="Sigla ou nome do órgão…"
+												bind:value={termoOrgao}
+												oninput={() => {
+													orgao = null;
+													orgaoListaAberta = true;
+												}}
+												onclick={() => (orgaoListaAberta = true)}
+												onkeydown={onAlvoEnter}
+												class="min-w-0 flex-1 border-none bg-transparent px-3 py-2 text-md text-text-primary outline-none placeholder:text-text-faint"
+											/>
+										{/if}
+									</div>
+
+									{#if alvoModo === 'pessoa' && pessoaListaAberta && pessoas.length > 0}
+										<ul
+											id="nc-pessoa-lista"
+											role="listbox"
+											aria-label="Pessoas encontradas"
+											class="absolute left-0 right-0 top-[calc(var(--control-h-md)+0.25rem)] z-10 max-h-48 overflow-y-auto rounded-control border border-border-subtle bg-surface-elevated py-1 shadow-lg"
+										>
+											{#each pessoas as usuario (usuario.id)}
+												<li role="none">
+													<button
+														type="button"
+														role="option"
+														aria-selected={pessoa?.id === usuario.id}
+														onclick={() => escolherPessoa(usuario)}
+														class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-muted"
+													>
+														<span class="min-w-0 truncate">
+															{usuario.name}
+															<span class="text-text-muted">@{usuario.username}</span>
+														</span>
+														{#if usuario.orgao_sigla}
+															<span class="shrink-0 text-xs text-text-secondary">
+																{usuario.orgao_sigla}
+															</span>
+														{/if}
+													</button>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+
+									{#if alvoModo === 'area' && orgaoListaAberta && linhasOrgao.length > 0}
+										<ul
+											id="nc-area-lista"
+											role="listbox"
+											aria-label="Áreas encontradas"
+											class="absolute left-0 right-0 top-[calc(var(--control-h-md)+0.25rem)] z-10 max-h-48 overflow-y-auto rounded-control border border-border-subtle bg-surface-elevated py-1 shadow-lg"
+										>
+											{#each linhasOrgao as linha (linha.value)}
+												<li role="none">
+													<button
+														type="button"
+														role="option"
+														aria-selected={orgao?.id === linha.value}
+														onclick={() => escolherOrgao(linha.option)}
+														class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-muted"
+													>
+														<span class="shrink-0 truncate">
+															{#if linha.path}<span class="mr-1 text-xs text-text-muted"
+																	>{linha.path} ›</span
+																>{/if}<span class="text-xs font-semibold text-text-primary"
+																>{linha.option.sigla}</span
+															>
+														</span>
+														<span class="min-w-0 flex-1 truncate text-xs text-text-secondary">
+															{linha.option.nome}
+														</span>
+													</button>
+												</li>
+											{/each}
+										</ul>
+									{/if}
+
+									<div class="flex items-center gap-2">
+										<SelectMenu
+											options={PAPEL_MENU}
+											value={alvoPapel}
+											onSelect={(v) => (alvoPapel = v === 'editor' ? 'editor' : 'viewer')}
+											size="sm"
+											ariaLabel="Papel do compartilhamento"
+										/>
+										<span class="min-w-0 flex-1 truncate text-xs text-text-muted">
+											{PAPEL_HINT[alvoPapel]}
+										</span>
+										<Button
+											variant="secondary"
+											size="sm"
+											onclick={adicionarDestinatario}
+											disabled={!alvoEscolhido}
+										>
+											Adicionar
+										</Button>
+									</div>
+
+									{#if alvoModo === 'area'}
+										<p class="text-xs text-text-muted">
+											O acesso vale para o órgão exato — subordinados não entram junto.
+										</p>
+									{/if}
+
+									{#if compartilharErro}
+										<p role="alert" class="text-xs text-danger">{compartilharErro}</p>
+									{/if}
+								</div>
+
+								{#if destinatarios.length > 0}
+									<ul class="flex flex-col rounded-control border border-border-subtle">
+										{#each destinatarios as alvo (alvo.chave)}
+											<li
+												class="flex items-center gap-2 border-b border-border-hairline px-3 py-2 last:border-b-0"
+											>
+												<div class="flex min-w-0 flex-1 flex-col">
+													<span class="truncate text-sm font-medium text-text-primary">
+														{alvo.nome}
+													</span>
+													<span class="truncate text-xs text-text-muted">{alvo.detalhe}</span>
+												</div>
+												<SelectMenu
+													options={PAPEL_MENU}
+													value={alvo.papel}
+													onSelect={(v) => trocarPapelDestinatario(alvo.chave, v)}
+													size="sm"
+													align="right"
+													ariaLabel={`Papel de ${alvo.nome}`}
+												/>
+												<button
+													type="button"
+													onclick={() => removerDestinatario(alvo.chave)}
+													aria-label={`Remover ${alvo.nome}`}
+													class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+												>
+													<svg
+														viewBox="0 0 20 20"
+														class="h-3 w-3"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="1.8"
+														aria-hidden="true"
+													>
+														<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
+													</svg>
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							{/if}
+						</div>
 					</div>
 
 					<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
@@ -363,3 +801,18 @@
 		</div>
 	</Modal>
 {/if}
+
+<!-- Segmento do alvo do compartilhamento: pessoa | área, colado à borda do campo. -->
+{#snippet alvoModoBotao(alvo: AlvoModo, rotulo: string)}
+	<button
+		type="button"
+		aria-pressed={alvoModo === alvo}
+		onclick={() => trocarAlvoModo(alvo)}
+		class="grid w-[72px] place-items-center text-sm transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {alvoModo ===
+		alvo
+			? 'bg-brand font-semibold text-on-brand'
+			: 'font-medium text-text-muted hover:text-text-primary'}"
+	>
+		{rotulo}
+	</button>
+{/snippet}

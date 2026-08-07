@@ -24,6 +24,10 @@ TIPO_COLECAO_CUSTOM = "custom"
 TIPO_COLECAO_FAVORITOS = "favoritos"
 TIPOS_COLECAO: tuple[str, ...] = (TIPO_COLECAO_CUSTOM, TIPO_COLECAO_FAVORITOS)
 
+PAPEL_SHARE_VIEWER = "viewer"
+PAPEL_SHARE_EDITOR = "editor"
+PAPEIS_SHARE: tuple[str, ...] = (PAPEL_SHARE_VIEWER, PAPEL_SHARE_EDITOR)
+
 
 class ProjectCollection(db.Model):
     """Coleção de projetos (agrupamento livre criado pelo usuário).
@@ -119,4 +123,57 @@ class ProjectCollectionItem(db.Model):
         return (
             f"<ProjectCollectionItem collection={self.collection_id} "
             f"project={self.project_id}>"
+        )
+
+
+class ProjectCollectionShare(db.Model):
+    """Compartilhamento de coleção com pessoa OU órgão exato (§5 do doc).
+
+    Exatamente um de ``user_id``/``orgao_id`` (XOR validado no service — CHECK
+    não é portável). Share com órgão alcança SÓ o órgão exato de lotação, sem
+    subárvore SIORG. Exemplo: ``ProjectCollectionShare(collection_id=1,
+    user_id=7, papel="editor", created_by_user_id=2)``.
+    """
+
+    __tablename__ = "project_collection_share"
+
+    id = db.Column(db.Integer, primary_key=True)
+    collection_id = db.Column(
+        db.Integer,
+        db.ForeignKey("project_collection.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    orgao_id = db.Column(
+        db.Integer, db.ForeignKey("orgao_unidade.id"), nullable=True, index=True
+    )
+    papel = db.Column(db.String(20), nullable=False, default=PAPEL_SHARE_VIEWER)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now)
+
+    user = db.relationship("User", foreign_keys=[user_id])
+    orgao = db.relationship("OrgaoUnidade")
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "collection_id", "user_id", name="uq_collection_share_user"
+        ),
+        db.UniqueConstraint(
+            "collection_id", "orgao_id", name="uq_collection_share_orgao"
+        ),
+    )
+
+    @validates("papel")
+    def validate_papel(self, _key: str, value: str) -> str:
+        if value in PAPEIS_SHARE:
+            return value
+        esperados = "|".join(PAPEIS_SHARE)
+        raise ValueError(f"papel inválido: {value!r}; esperado um de {esperados}")
+
+    def __repr__(self) -> str:
+        destino = f"user={self.user_id}" if self.user_id else f"orgao={self.orgao_id}"
+        return (
+            f"<ProjectCollectionShare collection={self.collection_id} "
+            f"{destino} {self.papel}>"
         )

@@ -6,9 +6,15 @@
 	 * 30 coleções por usuário; não há filtro server-side).
 	 *
 	 * Mutações: criar via NovaColecaoModal (2 passos, POST atômico), editar
-	 * identidade num modal próprio (mesmo formulário do passo 1) e apagar com
-	 * confirmação destrutiva (`confirmAction`). Toda escrita invalida o cache
-	 * no client de API; a tela só re-busca.
+	 * identidade num modal próprio (mesmo formulário do passo 1), compartilhar
+	 * (CompartilharColecaoModal) e apagar com confirmação destrutiva
+	 * (`confirmAction`). Toda escrita invalida o cache no client de API; a tela
+	 * só re-busca.
+	 *
+	 * Fase 2: o GET já devolve as coleções compartilhadas comigo depois das
+	 * minhas — os chips de escopo apenas ESTREITAM a lista (nenhum ativo = tudo)
+	 * e só aparecem quando existe alguma coleção alheia. Editar/compartilhar/
+	 * apagar seguem exclusivos do dono.
 	 */
 	import { onMount, tick } from 'svelte';
 	import { base } from '$app/paths';
@@ -33,6 +39,7 @@
 	import ColecaoCard from '$lib/components/ColecaoCard.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
 	import NovaColecaoModal from '$lib/components/NovaColecaoModal.svelte';
+	import CompartilharColecaoModal from '$lib/components/CompartilharColecaoModal.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
@@ -44,6 +51,8 @@
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type Ordenacao = 'atualizadas' | 'nome';
+	/** `''` = nenhum chip ativo, isto é, minhas + compartilhadas comigo. */
+	type Escopo = '' | 'minhas' | 'compartilhadas';
 
 	const initialData = peekColecoes();
 	let loadState = $state<LoadState>(initialData ? 'ready' : 'loading');
@@ -53,14 +62,17 @@
 	// Filtros client-side (dataset completo já está na tela).
 	let busca = $state('');
 	let ordenacao = $state<Ordenacao>('atualizadas');
+	let escopo = $state<Escopo>('');
 
 	const ORDENACAO_OPTIONS: SelectMenuOption[] = [
 		{ value: 'atualizadas', label: 'Ordenar: atualizadas' },
 		{ value: 'nome', label: 'Ordenar: nome' }
 	];
 
-	// Único escopo do MVP — "Da minha área"/"Compartilhadas" chegam na Fase 2.
-	const ESCOPO_OPTIONS = [{ id: 'minhas', label: 'Minhas coleções' }];
+	const ESCOPO_OPTIONS = [
+		{ id: 'minhas', label: 'Minhas coleções' },
+		{ id: 'compartilhadas', label: 'Compartilhadas comigo' }
+	];
 
 	let inFlight: AbortController | null = null;
 
@@ -104,14 +116,24 @@
 	const norm = (s: string): string =>
 		s.normalize('NFD').replace(COMBINING_MARKS, '').toLowerCase();
 
+	const temCompartilhada = $derived((colecoes ?? []).some((c) => c.papel !== 'dono'));
+	// Sem coleção alheia não há o que estreitar: os chips somem e o escopo é neutro.
+	const escopoAtivo = $derived<Escopo>(temCompartilhada ? escopo : '');
+
+	function noEscopo(colecao: ColecaoResumo): boolean {
+		if (escopoAtivo === 'minhas') return colecao.papel === 'dono';
+		if (escopoAtivo === 'compartilhadas') return colecao.papel !== 'dono';
+		return true;
+	}
+
 	const visiveis = $derived.by<ColecaoResumo[]>(() => {
 		if (!colecoes) return [];
 		const termo = norm(busca.trim());
-		const filtradas = termo
-			? colecoes.filter(
-					(c) => norm(c.nome).includes(termo) || norm(c.descricao ?? '').includes(termo)
-				)
-			: [...colecoes];
+		const filtradas = colecoes.filter((c) => {
+			if (!noEscopo(c)) return false;
+			if (!termo) return true;
+			return norm(c.nome).includes(termo) || norm(c.descricao ?? '').includes(termo);
+		});
 		filtradas.sort((a, b) => {
 			// Favoritos sempre primeiro, independentemente da ordenação.
 			if (a.tipo !== b.tipo) return a.tipo === 'favoritos' ? -1 : 1;
@@ -125,7 +147,10 @@
 	const totalProjetos = $derived(
 		(colecoes ?? []).reduce((soma, c) => soma + c.projetos, 0)
 	);
-	const temColecaoCustom = $derived((colecoes ?? []).some((c) => c.tipo === 'custom'));
+	// Coleção alheia não conta: o onboarding é sobre criar a PRIMEIRA coleção própria.
+	const temColecaoCustom = $derived(
+		(colecoes ?? []).some((c) => c.tipo === 'custom' && c.papel === 'dono')
+	);
 
 	// ── Criar ────────────────────────────────────────────────────────────────
 	let createOpen = $state(false);
@@ -230,6 +255,9 @@
 		}
 	}
 
+	// ── Compartilhar (só dono; o modal cuida das concessões) ─────────────────
+	let shareTarget = $state<ColecaoResumo | null>(null);
+
 	// ── Apagar ───────────────────────────────────────────────────────────────
 	async function confirmarApagar(colecao: ColecaoResumo): Promise<void> {
 		const ok = await confirmAction({
@@ -314,14 +342,17 @@
 				/>
 			</div>
 
-			<div class="ml-auto">
-				<FilterChipGroup
-					label="Escopo das coleções"
-					options={ESCOPO_OPTIONS}
-					value="minhas"
-					onchange={() => {}}
-				/>
-			</div>
+			{#if temCompartilhada}
+				<div class="ml-auto">
+					<!-- Clicar no chip ativo desliga o filtro e volta a mostrar tudo. -->
+					<FilterChipGroup
+						label="Escopo das coleções"
+						options={ESCOPO_OPTIONS}
+						value={escopoAtivo}
+						onchange={(id) => (escopo = id === escopoAtivo ? '' : (id as Escopo))}
+					/>
+				</div>
+			{/if}
 		</form>
 	</div>
 
@@ -358,19 +389,25 @@
 					Nenhuma coleção encontrada
 				</h2>
 				<p class="mb-0 mt-1.5 text-sm text-text-muted">
-					Nenhuma coleção corresponde a "{busca.trim()}". Ajuste a busca ou crie uma nova.
+					{#if busca.trim()}
+						Nenhuma coleção corresponde a "{busca.trim()}". Ajuste a busca ou crie uma nova.
+					{:else if escopoAtivo === 'compartilhadas'}
+						Ninguém compartilhou uma coleção com você ainda.
+					{:else}
+						Você ainda não tem coleções próprias. Crie a primeira.
+					{/if}
 				</p>
 			</div>
 		{:else}
 			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy={loadState !== 'ready'}>
 				{#each visiveis as colecao (colecao.id)}
+					{@const gerenciavel = colecao.tipo === 'custom' && colecao.papel === 'dono'}
 					<ColecaoCard
 						{colecao}
 						href={`${base}/colecoes/${colecao.id}`}
-						onEditar={colecao.tipo === 'custom' ? () => abrirEdicao(colecao) : undefined}
-						onApagar={colecao.tipo === 'custom'
-							? () => void confirmarApagar(colecao)
-							: undefined}
+						onEditar={gerenciavel ? () => abrirEdicao(colecao) : undefined}
+						onCompartilhar={gerenciavel ? () => (shareTarget = colecao) : undefined}
+						onApagar={gerenciavel ? () => void confirmarApagar(colecao) : undefined}
 					/>
 				{/each}
 
@@ -413,6 +450,14 @@
 	onClose={() => (createOpen = false)}
 	onCreated={onColecaoCriada}
 />
+
+{#if shareTarget}
+	<CompartilharColecaoModal
+		colecao={shareTarget}
+		onClose={() => (shareTarget = null)}
+		onChanged={() => void load()}
+	/>
+{/if}
 
 <!-- Edição de identidade: mesmo formulário do passo 1 do modal de criação. -->
 {#if editTarget}

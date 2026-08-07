@@ -20,6 +20,7 @@ from flask import g, has_request_context
 from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
 from services.etapas_mutation import etapa_tem_responsavel
+from services.project_collections import PAPEL_COLECAO_DONO
 from services.project_membership import project_access_via, project_permission_flags
 from time_utils import iso_utc
 
@@ -880,7 +881,13 @@ def serialize_calendar_event(event: Any) -> dict[str, Any]:
     }
 
 
-def serialize_colecao_resumo(colecao: Any, rollup: dict[str, int]) -> dict[str, Any]:
+def serialize_colecao_resumo(
+    colecao: Any,
+    rollup: dict[str, int],
+    *,
+    papel: str,
+    compartilhada: bool,
+) -> dict[str, Any]:
     """Serializa uma coleção + rollup agregado (índice ``/api/colecoes``).
 
     Os números vêm prontos de ``services.project_collections.collection_rollups``
@@ -890,9 +897,15 @@ def serialize_colecao_resumo(colecao: Any, rollup: dict[str, int]) -> dict[str, 
     Args:
         colecao: Instância de ``ProjectCollection``.
         rollup: ``{projetos, etapas_total, etapas_concluidas, progresso_pct}``.
+        papel: Papel do viewer na coleção — ``"dono"``/``"viewer"``/``"editor"``.
+        compartilhada: ``True`` quando a coleção tem ≥ 1 compartilhamento.
 
     Returns:
-        ``dict`` JSON-safe no shape ``ColecaoResumo`` do contrato.
+        ``dict`` JSON-safe no shape ``ColecaoResumo`` do contrato (``owner`` só
+        é preenchido quando a coleção é de OUTRA pessoa).
+
+    Exemplo:
+        >>> serialize_colecao_resumo(c, rollup, papel="viewer", compartilhada=True)
     """
     return {
         "id": colecao.id,
@@ -901,11 +914,90 @@ def serialize_colecao_resumo(colecao: Any, rollup: dict[str, int]) -> dict[str, 
         "icone": colecao.icone,
         "cor": colecao.cor,
         "tipo": colecao.tipo,
+        "papel": papel,
+        "compartilhada": bool(compartilhada),
+        "owner": _colecao_owner_ref(colecao, papel),
         "projetos": int(rollup.get("projetos", 0)),
         "etapas_total": int(rollup.get("etapas_total", 0)),
         "etapas_concluidas": int(rollup.get("etapas_concluidas", 0)),
         "progresso_pct": int(rollup.get("progresso_pct", 0)),
         "updated_at": _iso_or_none(colecao.updated_at),
+    }
+
+
+def _colecao_owner_ref(colecao: Any, papel: str) -> Optional[dict[str, Any]]:
+    """Dono da coleção; ``None`` para a própria coleção (contrato do índice)."""
+    if papel == PAPEL_COLECAO_DONO:
+        return None
+    return _pessoa_ref(getattr(colecao, "owner", None))
+
+
+def _pessoa_ref(user: Any) -> Optional[dict[str, Any]]:
+    if user is None:
+        return None
+    return {"id": user.id, "nome": user.name}
+
+
+def serialize_colecao_share(share: Any) -> dict[str, Any]:
+    """Serializa um compartilhamento de coleção (``Share`` do contrato).
+
+    Destinatário é pessoa OU órgão exato (XOR garantido no service): o lado não
+    usado sai ``None`` em ambos os pares ``*_id``/objeto.
+
+    Args:
+        share: Instância de ``ProjectCollectionShare`` com ``user``/``orgao``.
+
+    Returns:
+        ``dict`` JSON-safe ``{id, user_id, orgao_id, papel, created_at, user,
+        orgao}``.
+
+    Exemplo:
+        >>> serialize_colecao_share(share)
+        {'id': 4, 'user_id': 7, 'orgao_id': None, 'papel': 'editor', ...}
+    """
+    orgao = getattr(share, "orgao", None)
+    return {
+        "id": share.id,
+        "user_id": share.user_id,
+        "orgao_id": share.orgao_id,
+        "papel": share.papel,
+        "created_at": _iso_or_none(share.created_at),
+        "user": _pessoa_ref(getattr(share, "user", None)),
+        "orgao": _orgao_ref_brief(orgao) if orgao is not None else None,
+    }
+
+
+def serialize_cronograma_projeto(row: dict[str, Any]) -> dict[str, Any]:
+    """Serializa uma linha do Gantt da coleção (``CronogramaProjeto``).
+
+    Recebe a linha pronta de
+    ``services.project_collections.colecao_cronograma_rows`` (2 queries fixas;
+    sem consulta a banco aqui) — inclusive a faixa ``barra`` de cada etapa, que
+    é decisão do backend. ``sem_data`` conta as etapas omitidas por não terem
+    nenhuma data.
+
+    Args:
+        row: ``dict`` com ``id``/``nome``/``orgao_sigla``/``sem_data``/``etapas``.
+
+    Returns:
+        ``dict`` JSON-safe no shape ``CronogramaProjeto`` do contrato.
+    """
+    return {
+        "id": row["id"],
+        "nome": row["nome"],
+        "orgao_sigla": row["orgao_sigla"],
+        "sem_data": int(row["sem_data"]),
+        "etapas": [_serialize_cronograma_etapa(etapa) for etapa in row["etapas"]],
+    }
+
+
+def _serialize_cronograma_etapa(etapa: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": etapa["id"],
+        "nome": etapa["nome"],
+        "data_inicio": _iso_or_none(etapa["data_inicio"]),
+        "data_fim": _iso_or_none(etapa["data_fim"]),
+        "barra": etapa["barra"],
     }
 
 

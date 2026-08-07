@@ -19,14 +19,19 @@ from .task import (
 from .siorg_sync import SiorgSyncLog, SIORG_SYNC_STATUSES
 from .project_member import ORIGEM_CONVITE, ProjectMember, papeis_de_convite
 from .project_collection import (
+    PAPEIS_SHARE,
+    PAPEL_SHARE_EDITOR,
+    PAPEL_SHARE_VIEWER,
     TIPO_COLECAO_CUSTOM,
     TIPO_COLECAO_FAVORITOS,
     TIPOS_COLECAO,
     ProjectCollection,
     ProjectCollectionItem,
+    ProjectCollectionShare,
 )
 from .authorization_audit import (
     ALVOS_AUTORIZACAO,
+    ALVO_COLECAO,
     ALVO_ORGAO,
     ALVO_PROJETO,
     EVENTOS_AUTORIZACAO,
@@ -85,12 +90,17 @@ __all__ = [
     "papeis_de_convite",
     "ProjectCollection",
     "ProjectCollectionItem",
+    "ProjectCollectionShare",
     "TIPO_COLECAO_CUSTOM",
     "TIPO_COLECAO_FAVORITOS",
     "TIPOS_COLECAO",
+    "PAPEIS_SHARE",
+    "PAPEL_SHARE_EDITOR",
+    "PAPEL_SHARE_VIEWER",
     "AutorizacaoAudit",
     "EVENTOS_AUTORIZACAO",
     "ALVOS_AUTORIZACAO",
+    "ALVO_COLECAO",
     "ALVO_ORGAO",
     "ALVO_PROJETO",
     "registrar_autorizacao",

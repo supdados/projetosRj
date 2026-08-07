@@ -11,7 +11,17 @@ import pytest
 from flask import g
 from sqlalchemy import text
 
-from models import OrgaoUnidade, ProjectMember, db
+from models import (
+    OrgaoUnidade,
+    PAPEL_SHARE_EDITOR,
+    PAPEL_SHARE_VIEWER,
+    ProjectCollection,
+    ProjectCollectionItem,
+    ProjectCollectionShare,
+    ProjectMember,
+    User,
+    db,
+)
 from routes import orgao_scope
 from routes.api.negotiation import api_admin_required
 from routes.tasks.permissions import (
@@ -33,6 +43,7 @@ from services.authorization import (
     can_assign_project_to_orgao,
     effective_project_rank,
     get_active_membership_map,
+    get_collection_project_rank_map,
     get_user_orgao_role_map,
     get_user_orgao_subtree_ids,
     project_access_verdict,
@@ -1171,3 +1182,90 @@ def test_wrapper_de_acesso_inclui_convite(app, orgao_arvore):
         assert orgao_scope.user_can_access_project(convidado, projeto) is False
         _convida(908, 57, PAPEL_LEITOR)
         assert orgao_scope.user_can_access_project(convidado, projeto) is True
+
+
+# ── Rank derivado de share de coleção (_collection_project_rank, Fase 2) ──────
+
+
+def _add_owner(username: str) -> User:
+    owner = User(username=username, name=username, password_hash="x")
+    db.session.add(owner)
+    db.session.flush()
+    return owner
+
+
+def _colecao_com_share(
+    owner_id: int,
+    project_id: int,
+    *,
+    papel: str,
+    user_id: int | None = None,
+    orgao_id: int | None = None,
+) -> ProjectCollection:
+    colecao = ProjectCollection(owner_user_id=owner_id, nome=f"Colecao {project_id}")
+    db.session.add(colecao)
+    db.session.flush()
+    db.session.add(
+        ProjectCollectionItem(collection_id=colecao.id, project_id=project_id, ordem=0)
+    )
+    db.session.add(
+        ProjectCollectionShare(
+            collection_id=colecao.id,
+            user_id=user_id,
+            orgao_id=orgao_id,
+            papel=papel,
+            created_by_user_id=owner_id,
+        )
+    )
+    db.session.flush()
+    return colecao
+
+
+def test_share_viewer_de_colecao_da_rank_leitor(app, orgao_arvore):
+    with app.app_context():
+        owner = _add_owner("dono_rank_viewer")
+        _colecao_com_share(owner.id, 950, papel=PAPEL_SHARE_VIEWER, user_id=70)
+        convidado = FakeUser(user_id=70)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=950)
+        assert get_collection_project_rank_map(convidado) == {
+            950: PAPEL_RANK[PAPEL_LEITOR]
+        }
+        assert effective_project_rank(convidado, projeto) == PAPEL_RANK[PAPEL_LEITOR]
+        assert user_can_edit_project(convidado, projeto) is False
+
+
+def test_share_editor_de_colecao_da_rank_editor_sem_gestao(app, orgao_arvore):
+    with app.app_context():
+        owner = _add_owner("dono_rank_editor")
+        _colecao_com_share(owner.id, 951, papel=PAPEL_SHARE_EDITOR, user_id=71)
+        convidado = FakeUser(user_id=71)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=951)
+        assert effective_project_rank(convidado, projeto) == PAPEL_RANK[PAPEL_EDITOR]
+        assert user_can_manage_project(convidado, projeto) is False
+
+
+def test_share_com_papel_adulterado_nunca_vira_gestor(app, orgao_arvore):
+    """Teto rígido: linha com papel fora da whitelist não passa de editor."""
+    with app.app_context():
+        owner = _add_owner("dono_rank_gestor")
+        _colecao_com_share(owner.id, 952, papel="gestor", user_id=72)
+        convidado = FakeUser(user_id=72)
+        projeto = FakeProject(orgao_arvore["outra"], project_id=952)
+        assert effective_project_rank(convidado, projeto) <= PAPEL_RANK[PAPEL_EDITOR]
+        assert user_can_manage_project(convidado, projeto) is False
+
+
+def test_dono_nao_deriva_rank_da_propria_colecao(app, orgao_arvore):
+    """Anti auto-escalação: share editor no próprio órgão não eleva o dono;
+    o colega lotado no mesmo órgão (uso legítimo) recebe o rank."""
+    with app.app_context():
+        owner = _add_owner("dono_rank_self")
+        _colecao_com_share(
+            owner.id, 953, papel=PAPEL_SHARE_EDITOR, orgao_id=orgao_arvore["outra"]
+        )
+        dono = FakeUser(user_id=owner.id, orgao_ids=(orgao_arvore["outra"],))
+        colega = FakeUser(user_id=owner.id + 1000, orgao_ids=(orgao_arvore["outra"],))
+        assert get_collection_project_rank_map(dono) == {}
+        assert get_collection_project_rank_map(colega) == {
+            953: PAPEL_RANK[PAPEL_EDITOR]
+        }

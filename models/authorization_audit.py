@@ -20,11 +20,17 @@ EVENTOS_AUTORIZACAO: tuple[str, ...] = (
     "convite_alterado",
     "convite_revogado",
     "convite_reativado",
+    "colecao_share_concedido",
+    "colecao_share_alterado",
+    "colecao_share_revogado",
+    "colecao_projeto_adicionado",
+    "colecao_projeto_removido",
 )
 
 ALVO_ORGAO = "orgao"
 ALVO_PROJETO = "project"
-ALVOS_AUTORIZACAO: tuple[str, ...] = (ALVO_ORGAO, ALVO_PROJETO)
+ALVO_COLECAO = "colecao"
+ALVOS_AUTORIZACAO: tuple[str, ...] = (ALVO_ORGAO, ALVO_PROJETO, ALVO_COLECAO)
 
 
 class AutorizacaoAudit(db.Model):
