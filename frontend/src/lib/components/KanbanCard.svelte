@@ -292,7 +292,7 @@
 >
 	<!-- max-height em vez de line-clamp: dentro de -webkit-box o float (que
 	     reserva o canto da 1ª linha p/ a lixeira) não flutua. -->
-	<p class="m-0 max-h-[3.75em] overflow-hidden break-words text-sm font-normal leading-snug text-text-primary 2xl:text-md">
+	<p class="m-0 max-h-[3lh] overflow-hidden break-words text-sm font-normal leading-snug text-text-primary 2xl:text-md">
 		{#if deleteTask}<span aria-hidden="true" class="float-right h-3.5 w-7"></span>{/if}{card.descricao}
 	</p>
 
