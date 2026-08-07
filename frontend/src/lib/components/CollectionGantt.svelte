@@ -16,6 +16,7 @@
 	 * cresce com o nº de lanes. Cada barra é focável e mostra tooltip com nome,
 	 * período e status no hover/focus.
 	 */
+	import { base } from '$app/paths';
 	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
 	import type { BarraEtapa, CronogramaEtapa, CronogramaProjeto } from '$lib/types/collections';
 
@@ -279,7 +280,12 @@
 					style:height={`${alturaLinha(linha.lanes)}px`}
 				>
 					<div class="min-w-0 pr-4">
-						<div class="truncate text-sm font-medium text-text-primary">{projeto.nome}</div>
+						<a
+							href={`${base}/projetos/${projeto.id}`}
+							class="block truncate text-sm font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						>
+							{projeto.nome}
+						</a>
 						<div class="truncate text-xs text-text-muted">
 							<span class="font-mono">{projeto.id}</span>
 							{#if projeto.orgao_sigla}
