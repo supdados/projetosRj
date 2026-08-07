@@ -147,6 +147,7 @@ AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
 PROJECT_COLLECTION_TABLE = "project_collection"
 PROJECT_COLLECTION_ITEM_TABLE = "project_collection_item"
 PROJECT_COLLECTION_SHARE_TABLE = "project_collection_share"
+COLECAO_SUGESTAO_IA_TABLE = "colecao_sugestao_ia"
 SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
     ("codigo_raiz", "INTEGER"),
     # TR-2: JSON dos usuários cujo escopo de área zerou no sync.
@@ -1880,6 +1881,11 @@ def ensure_project_collection_tables(emit_output=True):
     return resultado
 
 
+def ensure_colecao_sugestao_table(emit_output=True):
+    """Garante a tabela colecao_sugestao_ia (IA Fase 2 — cache de sugestões)."""
+    return _ensure_table_from_models(COLECAO_SUGESTAO_IA_TABLE, emit_output)
+
+
 def _ensure_table_from_models(table_name, emit_output):
     _emit(f"→ Garantindo tabela {table_name}...", emit_output)
     try:
@@ -1962,6 +1968,7 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
         ("ensure_project_member_table", ensure_project_member_table),
         ("ensure_autorizacao_audit_table", ensure_autorizacao_audit_table),
         ("ensure_project_collection_tables", ensure_project_collection_tables),
+        ("ensure_colecao_sugestao_table", ensure_colecao_sugestao_table),
     ]
     return [(name, step(emit_output=emit_output)) for name, step in steps]
 

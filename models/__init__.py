@@ -29,6 +29,13 @@ from .project_collection import (
     ProjectCollectionItem,
     ProjectCollectionShare,
 )
+from .colecao_sugestao import (
+    STATUS_SUGESTAO,
+    STATUS_SUGESTAO_ACEITA,
+    STATUS_SUGESTAO_DESCARTADA,
+    STATUS_SUGESTAO_PENDENTE,
+    ColecaoSugestaoIA,
+)
 from .authorization_audit import (
     ALVOS_AUTORIZACAO,
     ALVO_COLECAO,
@@ -97,6 +104,11 @@ __all__ = [
     "PAPEIS_SHARE",
     "PAPEL_SHARE_EDITOR",
     "PAPEL_SHARE_VIEWER",
+    "ColecaoSugestaoIA",
+    "STATUS_SUGESTAO",
+    "STATUS_SUGESTAO_PENDENTE",
+    "STATUS_SUGESTAO_ACEITA",
+    "STATUS_SUGESTAO_DESCARTADA",
     "AutorizacaoAudit",
     "EVENTOS_AUTORIZACAO",
     "ALVOS_AUTORIZACAO",

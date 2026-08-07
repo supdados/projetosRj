@@ -2144,6 +2144,42 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # Sugestao de colecoes por IA: a suite roda sem WATSONX_API_KEY, entao o gate
+    # de credencial responde 503 antes de qualquer chamada ao provedor (nenhum
+    # teste faz I/O de rede).
+    {
+        "id": "api_colecao_sugestoes_post",
+        "method": "POST",
+        "rule": "/api/colecoes/sugestoes",
+        "path": "/api/colecoes/sugestoes",
+        "role": "user",
+        "expected_status": 503,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    # Cache de sugestoes (IA Fase 2): o GET compartilha o gate 503 do POST; o
+    # descarte NAO tem gate de IA e responde 404 anti-enumeracao sem linha
+    # semeada (espelho de api_colecao_cronograma_get).
+    {
+        "id": "api_colecao_sugestoes_get",
+        "method": "GET",
+        "rule": "/api/colecoes/sugestoes",
+        "path": "/api/colecoes/sugestoes",
+        "role": "user",
+        "expected_status": 503,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_sugestao_descartar_post",
+        "method": "POST",
+        "rule": "/api/colecoes/sugestoes/<int:sugestao_id>/descartar",
+        "path": "/api/colecoes/sugestoes/999999/descartar",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
 
 # Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
@@ -2215,4 +2251,8 @@ ROUTE_CASES += [
 # /api/colecoes/<cid>/compartilhamentos, DELETE
 # /api/colecoes/<cid>/compartilhamentos/<sid> e GET /api/colecoes/<cid>/cronograma.
 # 174 + 4 = 178.
-assert len(ROUTE_CASES) == 178
+# +1 da sugestao de colecoes por IA (Fase 1 da feature de IA): POST
+# /api/colecoes/sugestoes. 178 + 1 = 179.
+# +2 do cache persistido de sugestoes (IA Fase 2): GET /api/colecoes/sugestoes
+# e POST /api/colecoes/sugestoes/<sid>/descartar. 179 + 2 = 181.
+assert len(ROUTE_CASES) == 181

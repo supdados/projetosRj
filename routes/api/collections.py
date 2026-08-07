@@ -1,10 +1,11 @@
 """Endpoints JSON das COLEÇÕES de projetos (Fases 1 e 2).
 
-As 12 rotas da §6 do plano, todas no envelope canônico e anexadas ao ``main_bp``
-ÚNICO (nenhuma URL existente muda):
+As rotas da §6 do plano de coleções, todas no envelope canônico e anexadas ao
+``main_bp`` ÚNICO (nenhuma URL existente muda):
 
     - ``GET    /api/colecoes``                        — índice (Favoritos 1ª).
-    - ``POST   /api/colecoes``                        — cria coleção + itens.
+    - ``POST   /api/colecoes``                        — cria coleção + itens
+      (``sugestao_id`` opcional marca a sugestão de IA como aceita).
     - ``PUT    /api/colecoes/<cid>``                  — renomeia/reestiliza.
     - ``DELETE /api/colecoes/<cid>``                  — apaga (itens junto).
     - ``GET    /api/colecoes/<cid>/projetos``         — página interna.
@@ -15,6 +16,9 @@ As 12 rotas da §6 do plano, todas no envelope canônico e anexadas ao ``main_bp
     - ``POST   /api/colecoes/<cid>/compartilhamentos``            — concede/upsert.
     - ``DELETE /api/colecoes/<cid>/compartilhamentos/<sid>``      — revoga.
     - ``GET    /api/colecoes/<cid>/cronograma``       — Gantt das etapas.
+
+As rotas de SUGESTÕES por IA (``/api/colecoes/sugestoes*``) moram em
+``routes/api/collection_suggestions.py`` (mesmo ``main_bp``).
 
 O toggle mora aqui (e não em ``projects_write``) por ser açúcar sobre a coleção
 Favoritos: o cliente nunca precisa conhecer o id dela.
@@ -30,13 +34,19 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from flask import Response, g, request
+from flask import Response, current_app, g, request
 
 from catalogs.collection_identity import (
     DEFAULT_COLLECTION_COLOR,
     DEFAULT_COLLECTION_ICON,
 )
-from models import PAPEL_SHARE_EDITOR, PAPEL_SHARE_VIEWER, ProjectCollection, db
+from models import (
+    PAPEL_SHARE_EDITOR,
+    PAPEL_SHARE_VIEWER,
+    ProjectCollection,
+    db,
+)
+from services.ai import marcar_aceita
 from services.project_collections import (
     ColecaoInvalida,
     ColecaoSemPermissao,
@@ -60,7 +70,6 @@ from services.project_collections import (
     revogar_share,
     toggle_favorito,
 )
-
 from ..blueprint import main_bp
 from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
@@ -236,21 +245,44 @@ def _indice_payload() -> list[dict[str, Any]]:
 @api_login_required
 def api_colecao_criar() -> _ApiResponse:
     """Cria coleção custom: ``{nome, descricao?, icone, cor, project_ids?[],
-    compartilhamentos?[]}``.
+    compartilhamentos?[], sugestao_id?}``.
 
     Um único POST cobre os dois passos do modal (identidade + seleção); sem
     ``compartilhamentos`` a coleção nasce pessoal ("Só eu"). Qualquer projeto
-    fora do escopo do ator invalida a criação inteira.
+    fora do escopo do ator invalida a criação inteira. ``sugestao_id`` marca a
+    sugestão de IA como aceita no mesmo commit; valor inválido só loga warning.
     """
     payload, invalid = _ler_json()
     if invalid:
         return invalid
     return _mutar(
         lambda: ok(
-            {"colecao": _resumo(_criar_da_payload(payload), PAPEL_COLECAO_DONO)}
+            {
+                "colecao": _resumo(
+                    _criar_e_vincular_sugestao(payload), PAPEL_COLECAO_DONO
+                )
+            }
         ),
         "criar coleção",
     )
+
+
+def _criar_e_vincular_sugestao(payload: dict[str, Any]) -> ProjectCollection:
+    colecao = _criar_da_payload(payload)
+    _marcar_sugestao_aceita(payload.get("sugestao_id"), colecao.id)
+    return colecao
+
+
+def _marcar_sugestao_aceita(raw: object, colecao_id: int) -> None:
+    """Bookkeeping tolerante (plano IA Fase 2 §3.3): nunca derruba a criação."""
+    if raw is None:
+        return
+    if not isinstance(raw, int) or isinstance(raw, bool):
+        current_app.logger.warning(
+            "sugestao_id inválido no aceite: %r; esperado id inteiro", raw
+        )
+        return
+    marcar_aceita(g.user.id, raw, colecao_id)
 
 
 def _criar_da_payload(payload: dict[str, Any]) -> ProjectCollection:

@@ -968,6 +968,29 @@ def serialize_colecao_share(share: Any) -> dict[str, Any]:
     }
 
 
+def serialize_colecao_sugestao(linha: Any) -> dict[str, Any]:
+    """Serializa uma sugestão de coleção por IA persistida (cache Fase 2).
+
+    Args:
+        linha: Instância de ``ColecaoSugestaoIA`` do lote pendente (já flushed —
+            precisa de ``id``).
+
+    Returns:
+        ``dict`` JSON-safe ``{id, nome, descricao, justificativa, project_ids}``.
+
+    Exemplo:
+        >>> serialize_colecao_sugestao(linha)
+        {'id': 3, 'nome': 'Saúde digital', 'descricao': None, ...}
+    """
+    return {
+        "id": linha.id,
+        "nome": linha.nome,
+        "descricao": linha.descricao,
+        "justificativa": linha.justificativa,
+        "project_ids": list(linha.project_ids),
+    }
+
+
 def serialize_cronograma_projeto(row: dict[str, Any]) -> dict[str, Any]:
     """Serializa uma linha do Gantt da coleção (``CronogramaProjeto``).
 
