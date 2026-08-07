@@ -28,12 +28,13 @@
 		'/projetos',
 		'/projetos/pendentes',
 		'/tarefas',
+		'/colecoes',
 		'/admin/usuarios',
 		'/calendarios'
 	]);
 	const footerInScroll = $derived(
 		SCROLL_FOOTER_ROUTES.has($page.url.pathname) ||
-			/^\/projetos\/\d+$/.test($page.url.pathname)
+			/^\/(projetos|colecoes)\/\d+$/.test($page.url.pathname)
 	);
 
 	// O scroller da pagina agora e o <main> (nao mais a janela), entao a
