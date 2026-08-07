@@ -1,5 +1,11 @@
 <script module lang="ts">
-	export type NavIconKind = 'inicio' | 'projetos' | 'pendentes' | 'tarefas' | 'calendario';
+	export type NavIconKind =
+		| 'inicio'
+		| 'projetos'
+		| 'colecoes'
+		| 'pendentes'
+		| 'tarefas'
+		| 'calendario';
 </script>
 
 <script lang="ts">
@@ -55,6 +61,24 @@
 		</g>
 		<path d={PROJETOS_PASTA_D} />
 	</svg>
+{:else if kind === 'colecoes'}
+	<svg
+		width="20"
+		height="20"
+		viewBox="0 0 24 24"
+		fill="currentColor"
+		class="shrink-0 overflow-visible"
+		aria-hidden="true"
+	>
+		<!-- Ativo: a tampa (losango) sobe, como caixa aberta puxada pelo topo. -->
+		<g class="nav-lift" style:transform={active ? 'translateY(-2.6px)' : 'translateY(0)'}>
+			<path d="M12 4L20.5 8.25L12 12.5L3.5 8.25Z" />
+		</g>
+		<g opacity=".48">
+			<path d="M3.5 12.4L12 16.6L20.5 12.4L20.5 14.4L12 18.6L3.5 14.4Z" />
+			<path d="M3.5 16.4L12 20.6L20.5 16.4L20.5 18.4L12 22.6L3.5 18.4Z" />
+		</g>
+	</svg>
 {:else if kind === 'pendentes'}
 	<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="shrink-0" aria-hidden="true">
 		<path
@@ -93,8 +117,14 @@
 	.nav-fade {
 		transition: opacity 0.22s;
 	}
+	.nav-lift {
+		transition: transform 0.22s cubic-bezier(0.34, 1.15, 0.64, 1);
+	}
 	@media (prefers-reduced-motion: reduce) {
 		.nav-fade {
+			transition: none;
+		}
+		.nav-lift {
 			transition: none;
 		}
 	}

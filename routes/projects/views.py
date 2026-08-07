@@ -19,8 +19,11 @@ from models import (
     Etapa,
     EtapaResponsavel,
     Project,
+    ProjectCollection,
+    ProjectCollectionItem,
     ProjectHistory,
     Task,
+    TIPO_COLECAO_FAVORITOS,
     db,
 )
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
@@ -58,6 +61,49 @@ def _safe_csv_text(value):
     return text
 
 
+def _colecao_project_ids_subquery(collection_id):
+    """Ids dos projetos da coleção, SÓ se ela pertence ao usuário corrente.
+
+    Coleção de outro dono devolve subquery vazia (filtro sem resultado) em vez de
+    erro — a existência da coleção alheia não vaza pela lista.
+    """
+    return (
+        db.session.query(ProjectCollectionItem.project_id)
+        .join(
+            ProjectCollection,
+            ProjectCollection.id == ProjectCollectionItem.collection_id,
+        )
+        .filter(
+            ProjectCollection.id == collection_id,
+            ProjectCollection.owner_user_id == g.user.id,
+        )
+    )
+
+
+def _favorito_project_ids(project_ids):
+    """Ids favoritados pelo usuário corrente, em UMA query e sem efeito colateral.
+
+    Não usa ``get_or_create_favoritos``: uma listagem (GET) não pode criar a
+    coleção de sistema — sem Favoritos, o conjunto é vazio.
+    """
+    if not project_ids:
+        return set()
+    rows = (
+        db.session.query(ProjectCollectionItem.project_id)
+        .join(
+            ProjectCollection,
+            ProjectCollection.id == ProjectCollectionItem.collection_id,
+        )
+        .filter(
+            ProjectCollection.owner_user_id == g.user.id,
+            ProjectCollection.tipo == TIPO_COLECAO_FAVORITOS,
+            ProjectCollectionItem.project_id.in_(project_ids),
+        )
+        .all()
+    )
+    return {project_id for (project_id,) in rows}
+
+
 def build_projects_list_context(
     *,
     selected_priority=None,
@@ -68,8 +114,11 @@ def build_projects_list_context(
     selected_delivery_type=None,
     selected_abep_indicator=None,
     selected_objetivo=None,
+    selected_colecao_id=None,
+    excluded_colecao_id=None,
     search_query="",
     page=1,
+    per_page=40,
 ):
     """Monta os dados da Lista de Projetos, respeitando o escopo de órgão.
 
@@ -89,16 +138,22 @@ def build_projects_list_context(
         selected_delivery_type: Tipo de entrega (ou "").
         selected_abep_indicator: Indicador ABEP (normalizado internamente).
         selected_objetivo: ID de objetivo como string (ou "").
+        selected_colecao_id: ID de coleção do próprio usuário (ou ``None``);
+            coleção de outro dono resulta em lista vazia, não em erro.
+        excluded_colecao_id: ID de coleção do próprio usuário cujos projetos
+            ficam FORA da lista (picker "adicionar projetos"); coleção de outro
+            dono não exclui nada.
         search_query: Texto de busca (título/órgão/indicador/ID).
         page: Página solicitada (1-based) da lista paginada.
+        per_page: Tamanho da página (default 40; o chamador é responsável por
+            limitar valores vindos do cliente).
 
     Returns:
-        ``dict`` com a lista paginada (``projects``), os filtros
-        aplicados/selecionados, as opções de filtro (incluindo ``orgaos_options``
-        e ``ABEP_INDICADORES_OPTIONS``) e os metadados de paginação.
+        ``dict`` com a lista paginada (``projects``), o conjunto
+        ``favorito_project_ids`` da página, os filtros aplicados/selecionados, as
+        opções de filtro (incluindo ``orgaos_options`` e
+        ``ABEP_INDICADORES_OPTIONS``) e os metadados de paginação.
     """
-    per_page = 40
-
     query = Project.query
 
     if not g.user.is_admin:
@@ -108,6 +163,16 @@ def build_projects_list_context(
         subtree_ids = expand_orgao_filter_ids(selected_orgao_id)
         if subtree_ids:
             query = query.filter(Project.orgao_id.in_(subtree_ids))
+
+    if selected_colecao_id is not None:
+        query = query.filter(
+            Project.id.in_(_colecao_project_ids_subquery(selected_colecao_id))
+        )
+
+    if excluded_colecao_id is not None:
+        query = query.filter(
+            ~Project.id.in_(_colecao_project_ids_subquery(excluded_colecao_id))
+        )
 
     if selected_priority and selected_priority != "":
         query = query.filter(Project.prioridade == selected_priority)
@@ -228,6 +293,8 @@ def build_projects_list_context(
         has_active_filters = True
     if selected_orgao_id:
         has_active_filters = True
+    if selected_colecao_id:
+        has_active_filters = True
 
     # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
     # <select> de filtro de órgão na SPA.
@@ -238,6 +305,9 @@ def build_projects_list_context(
 
     return {
         "projects": projects_paginated,
+        "favorito_project_ids": _favorito_project_ids(
+            [projeto.id for projeto in projects_paginated]
+        ),
         "page": page,
         "total_pages": total_pages,
         "total_projects": total_projects,
@@ -250,6 +320,7 @@ def build_projects_list_context(
         "selected_delivery_type": selected_delivery_type,
         "selected_abep_indicator": selected_abep_indicator,
         "selected_objetivo": selected_objetivo,
+        "selected_colecao": selected_colecao_id,
         "selected_orgao": selected_orgao_id,
         "priorities": priorities_options,
         "statuses": statuses_options,

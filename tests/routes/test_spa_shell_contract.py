@@ -61,6 +61,19 @@ def test_spa_subpath_dashboard_serves_same_shell(client):
     assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
 
 
+def test_colecoes_paths_serve_spa_shell(client):
+    """Índice e página interna de Coleções resolvem no deep-link/F5 (catch-all)."""
+    for path in ("/colecoes", "/colecoes/12"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+
+
+def test_colecoes_non_numeric_id_is_not_served(client):
+    """Só ``colecoes/<numero>`` é migrado; qualquer outro sufixo segue 404."""
+    assert client.get("/colecoes/abc").status_code == 404
+
+
 def test_spa_reserved_subpath_is_not_intercepted(client):
     """Um subpath reservado sob /spa é rejeitado (404), não servido como shell."""
     response = client.get("/spa/api/me")

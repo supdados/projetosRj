@@ -2008,6 +2008,98 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": True,
     },
+    # Colecoes de projetos (Fase 1). As rotas com <collection_id> usam um id
+    # inexistente: o seed nao semeia colecao e o contrato manda responder 404
+    # anti-enumeracao (colecao inexistente e colecao de outro dono sao
+    # indistinguiveis). Indice e toggle de favorito exercem o caminho feliz.
+    {
+        "id": "api_colecoes_list_get",
+        "method": "GET",
+        "rule": "/api/colecoes",
+        "path": "/api/colecoes",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_criar_post",
+        "method": "POST",
+        "rule": "/api/colecoes",
+        "path": "/api/colecoes",
+        "role": "user",
+        "json": {
+            "nome": "Colecao via API",
+            "descricao": "Criada no smoke",
+            "icone": "camadas",
+            "cor": "primary",
+        },
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_atualizar_put",
+        "method": "PUT",
+        "rule": "/api/colecoes/<int:collection_id>",
+        "path": "/api/colecoes/999999",
+        "role": "user",
+        "json": {"nome": "Colecao renomeada"},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_apagar_delete",
+        "method": "DELETE",
+        "rule": "/api/colecoes/<int:collection_id>",
+        "path": "/api/colecoes/999999",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_projetos_list_get",
+        "method": "GET",
+        "rule": "/api/colecoes/<int:collection_id>/projetos",
+        "path": "/api/colecoes/999999/projetos",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_projeto_adicionar_post",
+        "method": "POST",
+        "rule": "/api/colecoes/<int:collection_id>/projetos",
+        "path": "/api/colecoes/999999/projetos",
+        "role": "user",
+        "json": {"project_id": 999999},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_colecao_projeto_remover_delete",
+        "method": "DELETE",
+        "rule": "/api/colecoes/<int:collection_id>/projetos/<int:project_id>",
+        "path": "/api/colecoes/999999/projetos/{project_id}",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_projeto_favorito_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/favorito",
+        "path": "/api/projetos/{project_id}/favorito",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
 
 # Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
@@ -2071,4 +2163,8 @@ ROUTE_CASES += [
 # +1 do compartilhar com area (convite em lote/snapshot): POST
 # /api/projetos/<id>/membros/lote, mesmo 404 anti-enumeracao com a flag off.
 # 165 + 1 = 166.
-assert len(ROUTE_CASES) == 166
+# +8 das colecoes de projetos (Fase 1): GET/POST /api/colecoes, PUT/DELETE
+# /api/colecoes/<cid>, GET/POST /api/colecoes/<cid>/projetos, DELETE
+# /api/colecoes/<cid>/projetos/<pid> e POST /api/projetos/<pid>/favorito.
+# 166 + 8 = 174.
+assert len(ROUTE_CASES) == 174

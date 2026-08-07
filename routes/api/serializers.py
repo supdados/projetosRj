@@ -878,3 +878,71 @@ def serialize_calendar_event(event: Any) -> dict[str, Any]:
         "meet_link": event.meet_link or "",
         "is_all_day": bool(event.is_all_day),
     }
+
+
+def serialize_colecao_resumo(colecao: Any, rollup: dict[str, int]) -> dict[str, Any]:
+    """Serializa uma coleção + rollup agregado (índice ``/api/colecoes``).
+
+    Os números vêm prontos de ``services.project_collections.collection_rollups``
+    (nº fixo de queries, só projetos visíveis ao viewer) — este serializer NÃO
+    consulta banco. Progresso = % de etapas de workflow concluídas.
+
+    Args:
+        colecao: Instância de ``ProjectCollection``.
+        rollup: ``{projetos, etapas_total, etapas_concluidas, progresso_pct}``.
+
+    Returns:
+        ``dict`` JSON-safe no shape ``ColecaoResumo`` do contrato.
+    """
+    return {
+        "id": colecao.id,
+        "nome": colecao.nome,
+        "descricao": colecao.descricao,
+        "icone": colecao.icone,
+        "cor": colecao.cor,
+        "tipo": colecao.tipo,
+        "projetos": int(rollup.get("projetos", 0)),
+        "etapas_total": int(rollup.get("etapas_total", 0)),
+        "etapas_concluidas": int(rollup.get("etapas_concluidas", 0)),
+        "progresso_pct": int(rollup.get("progresso_pct", 0)),
+        "updated_at": _iso_or_none(colecao.updated_at),
+    }
+
+
+def serialize_project_collection_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Serializa uma linha da página interna da coleção (``ProjetoColecaoRow``).
+
+    Recebe a linha agregada de ``services.project_collections.colecao_project_rows``
+    (2 queries fixas; sem consulta a banco aqui). ``status`` é o status real do
+    projeto e ``atrasado`` é bool ORTOGONAL a ele — mesma regra da lista de
+    projetos (Vigente com etapa de workflow não concluída vencida).
+
+    Args:
+        row: ``dict`` com ``id``/``nome``/``orgao_sigla``/``status``/``atrasado``,
+            contadores de etapas/tarefas e ``data_inicio``/``data_fim`` (dates).
+
+    Returns:
+        ``dict`` JSON-safe no shape ``ProjetoColecaoRow`` do contrato.
+    """
+    etapas_total = int(row["etapas_total"])
+    etapas_concluidas = int(row["etapas_concluidas"])
+    return {
+        "id": row["id"],
+        "nome": row["nome"],
+        "orgao_sigla": row["orgao_sigla"],
+        "etapas_concluidas": etapas_concluidas,
+        "etapas_total": etapas_total,
+        "tarefas_concluidas": int(row["tarefas_concluidas"]),
+        "tarefas_total": int(row["tarefas_total"]),
+        "progresso_pct": _percentual_inteiro(etapas_concluidas, etapas_total),
+        "data_inicio": _iso_or_none(row["data_inicio"]),
+        "data_fim": _iso_or_none(row["data_fim"]),
+        "status": row["status"],
+        "atrasado": bool(row["atrasado"]),
+    }
+
+
+def _percentual_inteiro(parte: int, total: int) -> int:
+    if total <= 0:
+        return 0
+    return round(100 * parte / total)

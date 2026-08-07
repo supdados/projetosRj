@@ -39,6 +39,7 @@
 	const navLinks: { label: string; path: string; kind: NavIconKind }[] = [
 		{ label: 'Início', path: '/dashboard', kind: 'inicio' },
 		{ label: 'Projetos', path: '/projetos', kind: 'projetos' },
+		{ label: 'Coleções', path: '/colecoes', kind: 'colecoes' },
 		{ label: 'Pendentes', path: '/projetos/pendentes', kind: 'pendentes' },
 		{ label: 'Tarefas', path: '/tarefas', kind: 'tarefas' },
 		{ label: 'Calendário', path: '/calendarios', kind: 'calendario' }

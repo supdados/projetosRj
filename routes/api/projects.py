@@ -143,6 +143,13 @@ def api_projetos_pendentes() -> Response | tuple[Response, int]:
     return ok(_serialize_pending_context(context))
 
 
+def _card_com_favorito(project: Any, favoritos: set[int]) -> dict[str, Any]:
+    """Card da lista + ``favorito`` (estrela), resolvido do conjunto pré-carregado."""
+    card = serialize_project_card(project)
+    card["favorito"] = project.id in favoritos
+    return card
+
+
 def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
     """Converte o contexto da Lista de Projetos em payload JSON-safe.
 
@@ -158,9 +165,10 @@ def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
         ``dict`` JSON-safe com ``projetos`` serializados, ``filters``
         selecionados, ``options`` de filtro e ``pagination``.
     """
+    favoritos = context["favorito_project_ids"]
     return {
         "projetos": [
-            serialize_project_card(project) for project in context["projects"]
+            _card_com_favorito(project, favoritos) for project in context["projects"]
         ],
         "filters": {
             "status": context["selected_status"],
@@ -170,6 +178,7 @@ def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
             "delivery_type": context["selected_delivery_type"],
             "abep_indicator": context["selected_abep_indicator"],
             "objetivo": context["selected_objetivo"],
+            "colecao": context["selected_colecao"],
             "q": context["search_query"],
             "selected_orgao": context["selected_orgao"],
         },
@@ -211,7 +220,11 @@ def api_projetos() -> Response | tuple[Response, int]:
     Jinja. Os parâmetros ``?status=`` (default "Vigente"), ``?prioridade=``,
     ``?atraso=``, ``?special_project=``, ``?delivery_type=``,
     ``?abep_indicator=``, ``?objetivo=``, ``?q=`` (busca) e ``?page=`` espelham
-    os filtros da tela Jinja (``?q`` é o alias JSON de ``?search``).
+    os filtros da tela Jinja (``?q`` é o alias JSON de ``?search``). ``?colecao=``
+    restringe à coleção do PRÓPRIO usuário (id de outro dono = lista vazia) e
+    ``?excluir_colecao=`` faz o inverso — omite os projetos já pertencentes à
+    coleção (picker "adicionar projetos"). ``?per_page=`` ajusta o tamanho da
+    página entre 1 e 100 (default 40).
 
     Returns:
         Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
@@ -241,10 +254,14 @@ def api_projetos() -> Response | tuple[Response, int]:
         selected_delivery_type=request.args.get("delivery_type"),
         selected_abep_indicator=request.args.get("abep_indicator"),
         selected_objetivo=request.args.get("objetivo"),
+        selected_colecao_id=request.args.get("colecao", type=int),
+        excluded_colecao_id=request.args.get("excluir_colecao", type=int),
         search_query=(
             request.args.get("q") or request.args.get("search") or ""
         ).strip(),
         page=request.args.get("page", 1, type=int),
+        # Teto de 100: o picker precisa de uma janela maior, sem virar dump.
+        per_page=max(1, min(request.args.get("per_page", 40, type=int), 100)),
     )
     return ok(_serialize_projects_list_context(context))
 

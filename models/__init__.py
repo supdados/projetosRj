@@ -18,6 +18,13 @@ from .task import (
 )
 from .siorg_sync import SiorgSyncLog, SIORG_SYNC_STATUSES
 from .project_member import ORIGEM_CONVITE, ProjectMember, papeis_de_convite
+from .project_collection import (
+    TIPO_COLECAO_CUSTOM,
+    TIPO_COLECAO_FAVORITOS,
+    TIPOS_COLECAO,
+    ProjectCollection,
+    ProjectCollectionItem,
+)
 from .authorization_audit import (
     ALVOS_AUTORIZACAO,
     ALVO_ORGAO,
@@ -76,6 +83,11 @@ __all__ = [
     "ProjectMember",
     "ORIGEM_CONVITE",
     "papeis_de_convite",
+    "ProjectCollection",
+    "ProjectCollectionItem",
+    "TIPO_COLECAO_CUSTOM",
+    "TIPO_COLECAO_FAVORITOS",
+    "TIPOS_COLECAO",
     "AutorizacaoAudit",
     "EVENTOS_AUTORIZACAO",
     "ALVOS_AUTORIZACAO",

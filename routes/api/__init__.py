@@ -33,6 +33,7 @@ from .negotiation import (  # noqa: F401
 )
 from .serializers import (  # noqa: F401
     serialize_admin_user,
+    serialize_colecao_resumo,
     serialize_etapa_card,
     serialize_etapa_detail,
     serialize_orgao_form,
@@ -40,6 +41,7 @@ from .serializers import (  # noqa: F401
     serialize_orgao_option,
     serialize_pending_project_row,
     serialize_project_card,
+    serialize_project_collection_row,
     serialize_project_detail,
     serialize_project_history_entry,
     serialize_task_card,
@@ -59,6 +61,7 @@ from . import projects_write  # noqa: F401,E402
 from . import projects_import  # noqa: F401,E402
 from . import project_detail  # noqa: F401,E402
 from . import project_members  # noqa: F401,E402
+from . import collections  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
 from . import tasks_write  # noqa: F401,E402
@@ -91,7 +94,9 @@ __all__ = [
     "serialize_user",
     "serialize_admin_user",
     "serialize_project_card",
+    "serialize_project_collection_row",
     "serialize_project_detail",
+    "serialize_colecao_resumo",
     "serialize_task_card",
     "serialize_task_detail",
     "serialize_etapa_card",

@@ -26,7 +26,8 @@ export type AppIconId =
 	| 'sino'
 	| 'projetos'
 	| 'tarefas'
-	| 'calendario';
+	| 'calendario'
+	| 'kebab';
 
 export const APP_ICONS: Record<AppIconId, AppIconPath[]> = {
 	criacao: [{ d: 'M10 3.4H14V10H19.2L20.6 11.4V14H14V20.6H10V14H3.4V10H10Z' }],
@@ -103,5 +104,11 @@ export const APP_ICONS: Record<AppIconId, AppIconPath[]> = {
 			d: 'M2.6 5H19L21.4 7.4V21H2.6ZM4.7 9.4H19.3V10.4H4.7ZM6.2 12.6H8.3V14.7H6.2ZM10.9 12.6H13V14.7H10.9ZM15.6 12.6H17.7V14.7H15.6ZM6.2 16.4H8.3V18.5H6.2ZM10.9 16.4H13V18.5H10.9Z',
 			fillRule: 'evenodd'
 		}
+	],
+	// Menu contextual (3 pontos verticais); ponta e base a .48, centro sólido.
+	kebab: [
+		{ d: 'M13.8 5A1.8 1.8 0 1 1 10.2 5A1.8 1.8 0 1 1 13.8 5Z', opacity: '.48' },
+		{ d: 'M13.8 12A1.8 1.8 0 1 1 10.2 12A1.8 1.8 0 1 1 13.8 12Z' },
+		{ d: 'M13.8 19A1.8 1.8 0 1 1 10.2 19A1.8 1.8 0 1 1 13.8 19Z', opacity: '.48' }
 	]
 };

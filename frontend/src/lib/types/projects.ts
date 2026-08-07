@@ -105,6 +105,7 @@ export interface ProjectsListData {
 
 /** Filtros aceitos pelo endpoint (espelham os query params de /api/projetos). */
 export interface ProjectsListQuery {
+	/** Omitido = backend aplica "Vigente"; `''` = todos os status. */
 	status?: string;
 	prioridade?: string;
 	atraso?: string;
@@ -114,5 +115,9 @@ export interface ProjectsListQuery {
 	objetivo?: string;
 	q?: string;
 	orgao?: number | null;
+	/** Omite os projetos já pertencentes a esta coleção do próprio usuário. */
+	excluir_colecao?: number;
+	/** Tamanho da página; o backend limita a 100 (default 40). */
+	per_page?: number;
 	page?: number;
 }

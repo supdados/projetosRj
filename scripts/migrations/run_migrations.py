@@ -144,6 +144,8 @@ USER_DELETED_AT_INDEX = (
 )
 PROJECT_MEMBER_TABLE = "project_member"
 AUTORIZACAO_AUDIT_TABLE = "autorizacao_audit"
+PROJECT_COLLECTION_TABLE = "project_collection"
+PROJECT_COLLECTION_ITEM_TABLE = "project_collection_item"
 SIORG_SYNC_LOG_INCREMENTAL_COLUMNS = [
     ("codigo_raiz", "INTEGER"),
     # TR-2: JSON dos usuários cujo escopo de área zerou no sync.
@@ -1857,6 +1859,20 @@ def ensure_autorizacao_audit_table(emit_output=True):
     return _ensure_table_from_models(AUTORIZACAO_AUDIT_TABLE, emit_output)
 
 
+def ensure_project_collection_tables(emit_output=True):
+    """Garante as tabelas de coleções de projetos (pastas personalizadas, Fase 1)."""
+    colecao = _ensure_table_from_models(PROJECT_COLLECTION_TABLE, emit_output)
+    item = _ensure_table_from_models(PROJECT_COLLECTION_ITEM_TABLE, emit_output)
+    resultado = {
+        "success": colecao["success"] and item["success"],
+        "created": bool(colecao.get("created") or item.get("created")),
+    }
+    erros = [r["error"] for r in (colecao, item) if r.get("error")]
+    if erros:
+        resultado["error"] = "; ".join(erros)
+    return resultado
+
+
 def _ensure_table_from_models(table_name, emit_output):
     _emit(f"→ Garantindo tabela {table_name}...", emit_output)
     try:
@@ -1938,6 +1954,7 @@ def _run_migration_steps(emit_output: bool) -> list[tuple[str, dict]]:
         ("ensure_codigo_externo_unique_index", ensure_codigo_externo_unique_index),
         ("ensure_project_member_table", ensure_project_member_table),
         ("ensure_autorizacao_audit_table", ensure_autorizacao_audit_table),
+        ("ensure_project_collection_tables", ensure_project_collection_tables),
     ]
     return [(name, step(emit_output=emit_output)) for name, step in steps]
 

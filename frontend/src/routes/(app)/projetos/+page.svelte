@@ -29,6 +29,8 @@
 		type ObjetivoCatalogo
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
+	import { toggleFavorito } from '$lib/api/collections';
+	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
@@ -361,6 +363,8 @@
 			const next = await fetchProjects(query, controller.signal);
 			if (controller.signal.aborted) return;
 			data = next;
+			// Payload novo é a verdade: descarta o estado otimista das estrelas.
+			favoritoOverrides = {};
 			// Reconcilia os filtros com o que o backend efetivamente aplicou.
 			status = next.filters.status ?? DEFAULT_STATUS;
 			prioridade = next.filters.prioridade ?? '';
@@ -585,6 +589,36 @@
 			removingIds = new Set([...removingIds].filter((x) => x !== id));
 			flash.success(`Projeto "${titulo}" excluído.`);
 		}, 280);
+	}
+
+	// --- Estrela de favorito (coleção de sistema "Favoritos") ---------------
+	// O payload de /api/projetos traz `favorito` por projeto; o override guarda o
+	// estado otimista do clique até a confirmação (ou o rollback) do POST.
+	type ProjetoComFavorito = Project & { favorito?: boolean };
+
+	const ESTRELA_SOLIDA_D = COLLECTION_ICONS.estrela[1].d;
+
+	let favoritoOverrides = $state<Record<number, boolean>>({});
+	let favoritoBusy = $state<Record<number, boolean>>({});
+
+	function isFavorito(project: Project): boolean {
+		return favoritoOverrides[project.id] ?? (project as ProjetoComFavorito).favorito ?? false;
+	}
+
+	async function toggleProjectFavorito(project: Project): Promise<void> {
+		if (favoritoBusy[project.id]) return;
+		const previous = isFavorito(project);
+		favoritoOverrides[project.id] = !previous;
+		favoritoBusy[project.id] = true;
+		try {
+			favoritoOverrides[project.id] = await toggleFavorito(project.id);
+		} catch (err) {
+			favoritoOverrides[project.id] = previous;
+			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
+			flash.danger(err instanceof Error ? err.message : 'Falha ao atualizar o favorito.');
+		} finally {
+			delete favoritoBusy[project.id];
+		}
 	}
 
 	/**
@@ -1045,6 +1079,12 @@
 							<tr class="text-left text-text-muted">
 								<th
 									scope="col"
+									class="w-10 border-b border-border-subtle bg-surface-muted px-1.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
+								>
+									<span class="sr-only">Favorito</span>
+								</th>
+								<th
+									scope="col"
 									class="w-16 border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-center text-sm font-bold uppercase tracking-caps whitespace-nowrap"
 								>
 									ID
@@ -1107,6 +1147,7 @@
 						</thead>
 						<tbody>
 							{#each data.projetos as project (project.id)}
+								{@const favorito = isFavorito(project)}
 								<!-- Linha com hover suave + fade-out na remoção (260ms). -->
 								<tr
 									class="group transition-[background-color,opacity] duration-fast hover:bg-surface-muted {removingIds.has(
@@ -1115,6 +1156,48 @@
 										? 'pointer-events-none opacity-0'
 										: 'opacity-100'}"
 								>
+									<td class="border-t border-border-subtle px-1.5 py-2.5 text-center align-middle">
+										<button
+											type="button"
+											onclick={() => void toggleProjectFavorito(project)}
+											disabled={favoritoBusy[project.id]}
+											aria-pressed={favorito}
+											aria-label={`${favorito ? 'Desfavoritar' : 'Favoritar'} ${project.titulo}`}
+											title={favorito ? 'Desfavoritar projeto' : 'Favoritar projeto'}
+											class="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors duration-fast hover:text-warning focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50 {favorito
+												? 'text-warning'
+												: 'text-text-faint'}"
+										>
+											{#if favorito}
+												<svg
+													width="18"
+													height="18"
+													viewBox="0 0 24 24"
+													fill="currentColor"
+													class="shrink-0"
+													aria-hidden="true"
+												>
+													{#each COLLECTION_ICONS.estrela as p (p.d)}
+														<path d={p.d} opacity={p.opacity} />
+													{/each}
+												</svg>
+											{:else}
+												<svg
+													width="18"
+													height="18"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="1.5"
+													stroke-linejoin="round"
+													class="shrink-0"
+													aria-hidden="true"
+												>
+													<path d={ESTRELA_SOLIDA_D} />
+												</svg>
+											{/if}
+										</button>
+									</td>
 									<td class="border-t border-border-subtle px-2.5 py-2.5 text-center align-middle">
 										<!-- ID em texto simples (sem chip/fundo). -->
 										<span class="text-sm font-bold text-text-muted">

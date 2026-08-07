@@ -46,10 +46,18 @@ export async function importProjectsCsv(formData: FormData): Promise<ImportProje
 }
 import type { Project } from '$lib/types/entities';
 
+/** Descarta TODAS as chaves do cache de listagem (escritas fora deste módulo). */
+export function invalidateProjects(): void {
+	projectsCache.invalidate();
+}
+
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(query: ProjectsListQuery): string {
 	const params = new URLSearchParams();
-	if (query.status) params.set('status', query.status);
+	// `status: ''` = "Todos os status": vai EXPLÍCITO, senão o backend defaulta "Vigente".
+	if (query.status !== undefined && query.status !== null) {
+		params.set('status', query.status);
+	}
 	if (query.prioridade) params.set('prioridade', query.prioridade);
 	if (query.atraso) params.set('atraso', query.atraso);
 	if (query.special_project) params.set('special_project', query.special_project);
@@ -60,6 +68,10 @@ function buildQuery(query: ProjectsListQuery): string {
 	if (query.orgao !== undefined && query.orgao !== null) {
 		params.set('orgao', String(query.orgao));
 	}
+	if (query.excluir_colecao !== undefined && query.excluir_colecao !== null) {
+		params.set('excluir_colecao', String(query.excluir_colecao));
+	}
+	if (query.per_page) params.set('per_page', String(query.per_page));
 	if (query.page && query.page > 1) params.set('page', String(query.page));
 	const qs = params.toString();
 	return qs ? `?${qs}` : '';
@@ -67,7 +79,8 @@ function buildQuery(query: ProjectsListQuery): string {
 
 /**
  * Busca a "Lista de Projetos" do usuário autenticado, respeitando o escopo de
- * órgão server-side. Sem `status` explícito o backend assume "Vigente".
+ * órgão server-side. Sem `status` explícito o backend assume "Vigente"; use
+ * `status: ''` para trazer todos os status.
  */
 export async function fetchProjects(
 	query: ProjectsListQuery = {},
