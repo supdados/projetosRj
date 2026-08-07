@@ -6,8 +6,9 @@
 	 * e compõe breadcrumb + header + linha de meta + 4 KPIs + tabela de projetos
 	 * (filtros client-side: busca e Todos/Atrasados). Sem Gantt no MVP.
 	 *
-	 * Mutações: editar identidade (mesmo formulário do passo 1 do modal de
-	 * criação), compartilhar (CompartilharColecaoModal), adicionar projetos
+	 * Mutações: renomear inline no título (caneta, padrão do ProjectHeader),
+	 * trocar ícone/cor num popover ancorado ao tile (a descrição não é editável
+	 * aqui), compartilhar (CompartilharColecaoModal), adicionar projetos
 	 * (ColecaoProjectPicker num modal simples, POST idempotente por projeto) e
 	 * remover projeto da coleção com confirmação. Erros 404 seguem o contrato
 	 * anti-enumeração: coleção inexistente e coleção de outro usuário são
@@ -324,9 +325,7 @@
 		void loadCronograma();
 	}
 
-	// ── Editar coleção (mesmo formulário do passo 1 do modal de criação) ─────
-	const DESCRICAO_MAX = 200;
-
+	// ── Identidade (nome inline no título; ícone/cor no popover do tile) ─────
 	const ICONE_OPTIONS: { id: CollectionIconId; label: string }[] = [
 		{ id: 'camadas', label: 'Camadas' },
 		{ id: 'servidores', label: 'Servidores' },
@@ -363,66 +362,138 @@
 		neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
 	};
 
-	let editOpen = $state(false);
-	let editNome = $state('');
-	let editDescricao = $state('');
-	let editIcone = $state<CollectionIconId>('camadas');
-	let editCor = $state<CollectionColorId>('primary');
-	let editTriedSave = $state(false);
-	let editSaving = $state(false);
-	let editErro = $state<string | null>(null);
-	let editNomeInputEl = $state<HTMLInputElement | null>(null);
+	const podeEditarIdentidade = $derived(isDono && !isFavoritos);
 
-	const editNomeInvalido = $derived(editTriedSave && !editNome.trim());
+	// ── Nome inline no título (padrão ProjectHeader: caneta⇄check⇄spinner) ───
+	let tituloEditando = $state(false);
+	let tituloDraft = $state('');
+	let tituloSaving = $state(false);
+	// Valor otimista entre o commit e a resposta do PUT (sem piscar o nome antigo).
+	let optNome = $state<string | null>(null);
+	let tituloInputEl = $state<HTMLInputElement | null>(null);
+	let tituloPenEl = $state<HTMLButtonElement | null>(null);
 
-	function abrirEdicao(): void {
-		if (!colecao) return;
-		editNome = colecao.nome;
-		editDescricao = colecao.descricao ?? '';
-		editIcone = colecao.icone;
-		editCor = colecao.cor;
-		editTriedSave = false;
-		editSaving = false;
-		editErro = null;
-		editOpen = true;
-		void tick().then(() => editNomeInputEl?.focus());
+	const shownNome = $derived(optNome ?? colecao?.nome ?? '');
+
+	async function entrarEdicaoTitulo(): Promise<void> {
+		if (tituloSaving || !colecao) return;
+		tituloDraft = shownNome;
+		tituloEditando = true;
+		await tick();
+		tituloInputEl?.focus();
+		const len = tituloInputEl?.value.length ?? 0;
+		tituloInputEl?.setSelectionRange(len, len);
 	}
 
-	function fecharEdicao(): void {
-		if (editSaving) return;
-		editOpen = false;
+	function cancelarEdicaoTitulo(): void {
+		tituloEditando = false;
+		void tick().then(() => tituloPenEl?.focus());
 	}
 
-	async function salvarEdicao(): Promise<void> {
-		if (editSaving) return;
-		editTriedSave = true;
-		if (!editNome.trim()) {
-			editNomeInputEl?.focus();
-			return;
-		}
-		editSaving = true;
-		editErro = null;
+	async function commitTitulo(): Promise<void> {
+		if (!tituloEditando) return;
+		tituloEditando = false;
+		const novoNome = tituloDraft.trim();
+		// Nome vazio ou igual = cancela silenciosamente (paridade ProjectHeader).
+		if (!colecao || !novoNome || novoNome === colecao.nome) return;
+		optNome = novoNome;
+		tituloSaving = true;
 		try {
-			const atualizada = await editarColecao(collectionId, {
-				nome: editNome.trim(),
-				descricao: editDescricao.trim() || null,
-				icone: editIcone,
-				cor: editCor
-			});
-			editSaving = false;
-			editOpen = false;
-			flash.success(`Coleção "${atualizada.nome}" atualizada.`);
+			const atualizada = await editarColecao(collectionId, { nome: novoNome });
+			if (data) data = { ...data, colecao: { ...data.colecao, nome: atualizada.nome } };
+			flash.success('Nome da coleção atualizado.');
 			void load();
 		} catch (err) {
-			editSaving = false;
-			editErro =
-				err instanceof ApiClientError ? err.message : 'Não foi possível salvar a coleção.';
+			flash.danger(
+				err instanceof ApiClientError ? err.message : 'Não foi possível renomear a coleção.'
+			);
+		} finally {
+			optNome = null;
+			tituloSaving = false;
+		}
+	}
+
+	function onTituloKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			cancelarEdicaoTitulo();
+			return;
+		}
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			void commitTitulo();
+		}
+	}
+
+	// preventDefault segura o foco no input: o clique na caneta vira "salvar" (não blur).
+	function onPenMousedown(event: MouseEvent): void {
+		if (tituloEditando) event.preventDefault();
+	}
+
+	function onPenClick(): void {
+		if (tituloEditando) void commitTitulo();
+		else void entrarEdicaoTitulo();
+	}
+
+	// ── Popover de ícone/cor ancorado ao tile ────────────────────────────────
+	let tileOpen = $state(false);
+	let tileSaving = $state(false);
+	let tileBtnEl = $state<HTMLButtonElement | null>(null);
+	let tilePopEl = $state<HTMLDivElement | null>(null);
+
+	function alternarTilePopover(): void {
+		tileOpen = !tileOpen;
+		if (tileOpen) void tick().then(() => tilePopEl?.focus());
+	}
+
+	function fecharTilePopover(): void {
+		tileOpen = false;
+		tileBtnEl?.focus();
+	}
+
+	$effect(() => {
+		if (!tileOpen) return;
+		const fecharSeFora = (event: PointerEvent): void => {
+			const alvo = event.target as Node;
+			if (tilePopEl?.contains(alvo) || tileBtnEl?.contains(alvo)) return;
+			tileOpen = false;
+		};
+		const fecharComEsc = (event: KeyboardEvent): void => {
+			if (event.key !== 'Escape') return;
+			event.stopPropagation();
+			fecharTilePopover();
+		};
+		window.addEventListener('pointerdown', fecharSeFora, true);
+		window.addEventListener('keydown', fecharComEsc, true);
+		return () => {
+			window.removeEventListener('pointerdown', fecharSeFora, true);
+			window.removeEventListener('keydown', fecharComEsc, true);
+		};
+	});
+
+	async function aplicarIdentidade(parcial: {
+		icone?: CollectionIconId;
+		cor?: CollectionColorId;
+	}): Promise<void> {
+		if (tileSaving || !data) return;
+		tileSaving = true;
+		try {
+			const atualizada = await editarColecao(collectionId, parcial);
+			data = {
+				...data,
+				colecao: { ...data.colecao, icone: atualizada.icone, cor: atualizada.cor }
+			};
+			void load();
+		} catch (err) {
+			flash.danger(
+				err instanceof ApiClientError ? err.message : 'Não foi possível atualizar a coleção.'
+			);
+		} finally {
+			tileSaving = false;
 		}
 	}
 
 	const labelCls = 'text-xs font-medium text-text-secondary';
-	const fieldCls =
-		'h-[var(--control-h-md)] w-full rounded-control border bg-surface px-3.5 text-md text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:outline-none';
 	const thCls =
 		'border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-sm font-bold uppercase tracking-caps whitespace-nowrap';
 	const tdCls = 'border-t border-border-subtle px-2.5 py-2.5 align-middle';
@@ -446,24 +517,71 @@
 		/>
 	{:else if colecao}
 		<!-- Header-card: tile + nome + ações; linha de meta embutida. -->
-		<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
+		<div class="relative rounded-xl border border-border-subtle bg-surface shadow-sm">
 			<PageHeader compact embedded class="min-h-[3.5rem]" labelId="colecao-title">
 				{#snippet titleContent()}
-					<span class="mr-2 inline-block align-middle">
-						<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} size={32} />
+					<span class="group/titulo inline-flex max-w-full items-center gap-2 align-middle">
+						{#if podeEditarIdentidade}
+							<button
+								type="button"
+								bind:this={tileBtnEl}
+								onclick={alternarTilePopover}
+								aria-haspopup="dialog"
+								aria-expanded={tileOpen}
+								aria-label="Alterar ícone e cor da coleção"
+								class="shrink-0 rounded-md transition-opacity duration-fast hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+							>
+								<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} size={32} />
+							</button>
+						{:else}
+							<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} size={32} />
+						{/if}
+						{#if tituloEditando}
+							<input
+								bind:this={tituloInputEl}
+								bind:value={tituloDraft}
+								type="text"
+								aria-label="Nome da coleção"
+								onkeydown={onTituloKeydown}
+								onblur={() => void commitTitulo()}
+								class="h-8 w-72 min-w-0 max-w-full rounded-md border border-brand bg-surface px-2 font-heading text-xl font-bold leading-tight text-brand focus:outline-none"
+							/>
+						{:else}
+							<span class="min-w-0 truncate">{shownNome}</span>
+						{/if}
+						{#if isFavoritos}
+							<span
+								class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
+							>
+								Padrão
+							</span>
+						{/if}
+						{#if podeEditarIdentidade}
+							<button
+								type="button"
+								bind:this={tituloPenEl}
+								disabled={tituloSaving}
+								aria-label={tituloEditando ? 'Salvar nome da coleção' : 'Editar nome da coleção'}
+								onmousedown={onPenMousedown}
+								onclick={onPenClick}
+								class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition-opacity duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand group-hover/titulo:opacity-100 group-focus-within/titulo:opacity-100 {tituloEditando ||
+								tituloSaving
+									? 'opacity-100'
+									: 'opacity-0'}"
+							>
+								{#if tituloSaving}
+									<i class="fas fa-spinner fa-spin text-xs" aria-hidden="true"></i>
+								{:else if tituloEditando}
+									<i class="fas fa-check text-xs" aria-hidden="true"></i>
+								{:else}
+									<AppIcon id="edicao" size={14} />
+								{/if}
+							</button>
+						{/if}
 					</span>
-					<span class="align-middle">{colecao.nome}</span>
-					{#if isFavoritos}
-						<span
-							class="ml-2 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 align-middle text-2xs font-medium text-text-secondary"
-						>
-							Padrão
-						</span>
-					{/if}
 				{/snippet}
 				{#snippet actions()}
 					{#if !isFavoritos && isDono}
-						<Button size="sm" variant="secondary" onclick={abrirEdicao}>Editar coleção</Button>
 						<Button size="sm" variant="secondary" onclick={() => (shareOpen = true)}>
 							Compartilhar
 						</Button>
@@ -478,8 +596,69 @@
 					{/if}
 				{/snippet}
 			</PageHeader>
+			{#if tileOpen}
+				<!-- Overlay absoluto abaixo do tile: não altera a altura da barra. -->
+				<div
+					bind:this={tilePopEl}
+					role="dialog"
+					aria-label="Alterar ícone e cor da coleção"
+					tabindex="-1"
+					class="absolute left-4 top-[3.25rem] z-30 flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-3 shadow-lg focus:outline-none"
+				>
+					<div class="flex flex-col gap-2">
+						<span id="tile-icone-label" class={labelCls}>Ícone</span>
+						<div role="group" aria-labelledby="tile-icone-label" class="grid grid-cols-4 gap-2">
+							{#each ICONE_OPTIONS as opcao (opcao.id)}
+								{@const ativo = colecao.icone === opcao.id}
+								<button
+									type="button"
+									aria-pressed={ativo}
+									aria-label={opcao.label}
+									disabled={tileSaving}
+									onclick={() => void aplicarIdentidade({ icone: opcao.id })}
+									class="grid h-9 w-9 place-items-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60 {ativo
+										? ICONE_ATIVO_CLASS[colecao.cor]
+										: 'border-border-subtle text-text-secondary hover:bg-surface-muted'}"
+								>
+									<svg
+										width="18"
+										height="18"
+										viewBox="0 0 24 24"
+										fill="currentColor"
+										aria-hidden="true"
+									>
+										{#each COLLECTION_ICONS[opcao.id] as p (p.d)}
+											<path d={p.d} opacity={p.opacity} fill-rule={p.fillRule} />
+										{/each}
+									</svg>
+								</button>
+							{/each}
+						</div>
+					</div>
+					<div class="flex flex-col gap-2">
+						<span id="tile-cor-label" class={labelCls}>Cor</span>
+						<div role="group" aria-labelledby="tile-cor-label" class="flex gap-2">
+							{#each COR_OPTIONS as opcao (opcao.id)}
+								{@const ativo = colecao.cor === opcao.id}
+								<button
+									type="button"
+									aria-pressed={ativo}
+									aria-label={opcao.label}
+									disabled={tileSaving}
+									onclick={() => void aplicarIdentidade({ cor: opcao.id })}
+									class="grid h-8 w-8 place-items-center rounded-md border-2 transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:opacity-60 {opcao.wash} {ativo
+										? opcao.ativo
+										: 'border-transparent hover:border-border-subtle'}"
+								>
+									<span class="h-3.5 w-3.5 rounded-full {opcao.dot}" aria-hidden="true"></span>
+								</button>
+							{/each}
+						</div>
+					</div>
+				</div>
+			{/if}
 			<div
-				class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle px-4 py-2.5 text-sm text-text-secondary"
+				class="flex min-h-[calc(var(--control-h-md)+1.25rem)] flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle px-4 py-2.5 text-sm text-text-secondary"
 			>
 				<span>{pluralizar(colecao.etapas_total, 'etapa', 'etapas')}</span>
 				<span class="text-text-faint" aria-hidden="true">|</span>
@@ -846,127 +1025,4 @@
 	</Modal>
 {/if}
 
-<!-- Edição de identidade: mesmo formulário do passo 1 do modal de criação. -->
-{#if editOpen && colecao}
-	<Modal labelId="editar-colecao-title" maxWidth="max-w-[540px]" onBackdrop={fecharEdicao}>
-		<form
-			class="flex flex-col gap-4"
-			onsubmit={(e) => {
-				e.preventDefault();
-				void salvarEdicao();
-			}}
-		>
-			<div class="flex items-center gap-3">
-				<h2 id="editar-colecao-title" class="font-heading text-xl font-bold text-text-primary">
-					Editar coleção
-				</h2>
-				<button
-					type="button"
-					onclick={fecharEdicao}
-					disabled={editSaving}
-					aria-label="Fechar"
-					class="ml-auto grid h-8 w-8 place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<svg
-						viewBox="0 0 20 20"
-						class="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"
-						aria-hidden="true"
-					>
-						<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
-					</svg>
-				</button>
-			</div>
 
-			<div class="flex items-end gap-3">
-				<ColecaoIconTile icone={editIcone} cor={editCor} size={52} />
-				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-					<label for="ec-nome" class={labelCls}>Nome da coleção</label>
-					<input
-						id="ec-nome"
-						bind:this={editNomeInputEl}
-						bind:value={editNome}
-						type="text"
-						aria-invalid={editNomeInvalido}
-						placeholder="Ex.: Modernização Digital 2026"
-						class="{fieldCls} {editNomeInvalido
-							? 'border-danger'
-							: 'border-border-strong focus:border-brand'}"
-					/>
-				</div>
-			</div>
-			{#if editNomeInvalido}
-				<p class="text-xs text-danger">Informe o nome da coleção.</p>
-			{/if}
-
-			<div class="flex flex-col gap-1.5">
-				<label for="ec-descricao" class={labelCls}>Descrição (opcional)</label>
-				<input
-					id="ec-descricao"
-					bind:value={editDescricao}
-					type="text"
-					maxlength={DESCRICAO_MAX}
-					placeholder="Para que serve esta coleção"
-					class="{fieldCls} border-border-strong focus:border-brand"
-				/>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<span id="ec-icone-label" class={labelCls}>Ícone</span>
-				<div role="group" aria-labelledby="ec-icone-label" class="grid grid-cols-8 gap-2">
-					{#each ICONE_OPTIONS as opcao (opcao.id)}
-						{@const ativo = editIcone === opcao.id}
-						<button
-							type="button"
-							aria-pressed={ativo}
-							aria-label={opcao.label}
-							onclick={() => (editIcone = opcao.id)}
-							class="grid aspect-square place-items-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {ativo
-								? ICONE_ATIVO_CLASS[editCor]
-								: 'border-border-subtle text-text-secondary hover:bg-surface-muted'}"
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-								{#each COLLECTION_ICONS[opcao.id] as p (p.d)}
-									<path d={p.d} opacity={p.opacity} fill-rule={p.fillRule} />
-								{/each}
-							</svg>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<span id="ec-cor-label" class={labelCls}>Cor</span>
-				<div role="group" aria-labelledby="ec-cor-label" class="flex gap-2">
-					{#each COR_OPTIONS as opcao (opcao.id)}
-						{@const ativo = editCor === opcao.id}
-						<button
-							type="button"
-							aria-pressed={ativo}
-							aria-label={opcao.label}
-							onclick={() => (editCor = opcao.id)}
-							class="grid h-8 w-8 place-items-center rounded-md border-2 transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 {opcao.wash} {ativo
-								? opcao.ativo
-								: 'border-transparent hover:border-border-subtle'}"
-						>
-							<span class="h-3.5 w-3.5 rounded-full {opcao.dot}" aria-hidden="true"></span>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			{#if editErro}
-				<StateBanner tone="danger" title={editErro} />
-			{/if}
-
-			<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
-				<Button variant="secondary" onclick={fecharEdicao} disabled={editSaving}>Cancelar</Button>
-				<Button type="submit" disabled={editSaving}>
-					{editSaving ? 'Salvando…' : 'Salvar alterações'}
-				</Button>
-			</footer>
-		</form>
-	</Modal>
-{/if}
