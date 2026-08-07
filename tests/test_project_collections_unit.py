@@ -47,7 +47,6 @@ from services.project_collections import (
     BARRA_VENCIDA,
     FAVORITOS_NOME,
     MAX_COLECOES_CUSTOM,
-    MAX_ITENS_POR_COLECAO,
     PAPEL_COLECAO_DONO,
     ColecaoInvalida,
     ColecaoSemPermissao,
@@ -443,18 +442,6 @@ def test_adicionar_projeto_invisivel_ao_ator_e_recusado(app, cenario, dono):
         db.session.commit()
         with pytest.raises(ProjetoForaDoEscopo):
             adicionar_projeto(colecao, cenario["invisivel_id"], ator=dono)
-
-
-def test_adicionar_projeto_recusa_acima_do_limite_de_itens(app, cenario, dono):
-    with app.test_request_context("/"):
-        colecao = criar_colecao(dono, "Obras", None, "camadas", "primary", None)
-        db.session.commit()
-        # Itens sintéticos: o limite conta linhas, não valida o projeto de novo.
-        for indice in range(MAX_ITENS_POR_COLECAO):
-            _add_item(colecao.id, 900000 + indice, ordem=indice)
-        db.session.commit()
-        with pytest.raises(ColecaoInvalida):
-            adicionar_projeto(colecao, cenario["visivel_id"], ator=dono)
 
 
 def _envelhece(colecao: ProjectCollection) -> datetime.datetime:

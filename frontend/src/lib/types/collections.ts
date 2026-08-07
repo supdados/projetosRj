@@ -87,6 +87,8 @@ export interface ColecaoResumo {
 	etapas_total: number;
 	etapas_concluidas: number;
 	progresso_pct: number;
+	/** ISO 8601. */
+	created_at: string;
 	/** ISO 8601, `null` em linha legada; bumpado à mão nas mutações de item. */
 	updated_at: string | null;
 	papel: PapelColecao;

@@ -71,6 +71,7 @@ export interface ProjectsListFilters {
 	delivery_type: string | null;
 	abep_indicator: string | null;
 	objetivo: string | null;
+	colecao: number | null;
 	q: string;
 	selected_orgao: number | null;
 }
@@ -115,6 +116,8 @@ export interface ProjectsListQuery {
 	objetivo?: string;
 	q?: string;
 	orgao?: number | null;
+	/** Restringe aos projetos desta coleção do próprio usuário. */
+	colecao?: number;
 	/** Omite os projetos já pertencentes a esta coleção do próprio usuário. */
 	excluir_colecao?: number;
 	/** Tamanho da página; o backend limita a 100 (default 40). */

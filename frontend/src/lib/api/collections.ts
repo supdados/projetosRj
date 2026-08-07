@@ -24,7 +24,7 @@
  *     (ex.: viewer tentando escrever, ou qualquer share tentando gerenciar
  *     compartilhamentos — isso é só do dono);
  *   - 422 `validation` — nome vazio/duplicado, ícone/cor fora da whitelist,
- *     limite de coleções/itens atingido, mutação em Favoritos, ou XOR/papel
+ *     limite de coleções atingido, mutação em Favoritos, ou XOR/papel
  *     inválido no compartilhamento;
  *   - 401 já redireciona para /login dentro do `client.ts`.
  *

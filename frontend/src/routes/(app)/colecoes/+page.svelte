@@ -3,7 +3,7 @@
 	 * Índice de Coleções (tela 3a). Consome `GET /api/colecoes` via
 	 * `$lib/api/collections` (SWR) e renderiza o grid de ColecaoCard —
 	 * Favoritos sempre primeiro — com busca e ordenação client-side (o teto é
-	 * 30 coleções por usuário; não há filtro server-side).
+	 * 20 coleções por usuário; não há filtro server-side).
 	 *
 	 * Mutações: criar via NovaColecaoModal (2 passos, POST atômico), editar
 	 * identidade num modal próprio (mesmo formulário do passo 1), compartilhar
@@ -50,7 +50,7 @@
 	import { flash } from '$lib/stores/flash';
 
 	type LoadState = 'loading' | 'ready' | 'error';
-	type Ordenacao = 'atualizadas' | 'nome';
+	type Ordenacao = 'criacao' | 'nome';
 	/** `''` = nenhum chip ativo, isto é, minhas + compartilhadas comigo. */
 	type Escopo = '' | 'minhas' | 'compartilhadas';
 
@@ -61,12 +61,12 @@
 
 	// Filtros client-side (dataset completo já está na tela).
 	let busca = $state('');
-	let ordenacao = $state<Ordenacao>('atualizadas');
+	let ordenacao = $state<Ordenacao>('criacao');
 	let escopo = $state<Escopo>('');
 
 	const ORDENACAO_OPTIONS: SelectMenuOption[] = [
-		{ value: 'atualizadas', label: 'Ordenar: atualizadas' },
-		{ value: 'nome', label: 'Ordenar: nome' }
+		{ value: 'criacao', label: 'Data de criação' },
+		{ value: 'nome', label: 'Nome' }
 	];
 
 	const ESCOPO_OPTIONS = [
@@ -138,7 +138,8 @@
 			// Favoritos sempre primeiro, independentemente da ordenação.
 			if (a.tipo !== b.tipo) return a.tipo === 'favoritos' ? -1 : 1;
 			if (ordenacao === 'nome') return a.nome.localeCompare(b.nome, 'pt-BR');
-			return (b.updated_at ?? '').localeCompare(a.updated_at ?? '');
+			const porCriacao = b.created_at.localeCompare(a.created_at);
+			return porCriacao !== 0 ? porCriacao : b.id - a.id;
 		});
 		return filtradas;
 	});
@@ -337,7 +338,7 @@
 					id="colecoesOrdenacao"
 					options={ORDENACAO_OPTIONS}
 					value={ordenacao}
-					onSelect={(v) => (ordenacao = (v ?? 'atualizadas') as Ordenacao)}
+					onSelect={(v) => (ordenacao = (v ?? 'criacao') as Ordenacao)}
 					ariaLabel="Ordenar coleções"
 				/>
 			</div>

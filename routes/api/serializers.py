@@ -921,6 +921,7 @@ def serialize_colecao_resumo(
         "etapas_total": int(rollup.get("etapas_total", 0)),
         "etapas_concluidas": int(rollup.get("etapas_concluidas", 0)),
         "progresso_pct": int(rollup.get("progresso_pct", 0)),
+        "created_at": _iso_or_none(colecao.created_at),
         "updated_at": _iso_or_none(colecao.updated_at),
     }
 

@@ -2,7 +2,7 @@
 
 Domínio de ``ProjectCollection``/``ProjectCollectionItem``/
 ``ProjectCollectionShare``: criação atômica, edição/remoção (com bloqueio de
-Favoritos), itens idempotentes com limite, compartilhamento com pessoa/órgão
+Favoritos), itens idempotentes, compartilhamento com pessoa/órgão
 exato (papéis viewer|editor, auditoria em ``AutorizacaoAudit``) e os rollups
 agregados em NÚMERO FIXO de queries. Nada de ``request``/``g`` aqui — o
 HTTP (gates, envelope, anti-enumeração) fica em ``routes/api/collections.py``.
@@ -55,8 +55,7 @@ from services.authorization import (
 )
 from time_utils import utc_now
 
-MAX_COLECOES_CUSTOM = 30
-MAX_ITENS_POR_COLECAO = 200
+MAX_COLECOES_CUSTOM = 20
 NOME_MAX_COLECAO = 100
 DESCRICAO_MAX_COLECAO = 200
 FAVORITOS_NOME = "Favoritos"
@@ -290,7 +289,6 @@ def adicionar_projeto(
     ).first()
     if ja_existe is not None:
         return False
-    _validar_limite_itens(colecao.id)
     db.session.add(
         ProjectCollectionItem(
             collection_id=colecao.id,
@@ -958,20 +956,8 @@ def _validar_limite_colecoes(owner_id: int) -> None:
         )
 
 
-def _validar_limite_itens(collection_id: int) -> None:
-    total = ProjectCollectionItem.query.filter_by(collection_id=collection_id).count()
-    if total >= MAX_ITENS_POR_COLECAO:
-        raise ColecaoInvalida(
-            f"limite de {MAX_ITENS_POR_COLECAO} projetos por coleção atingido"
-        )
-
-
 def _validar_projetos_visiveis(owner: User, project_ids: list[int]) -> list[int]:
     ids_unicos = list(dict.fromkeys(int(pid) for pid in project_ids))
-    if len(ids_unicos) > MAX_ITENS_POR_COLECAO:
-        raise ColecaoInvalida(
-            f"{len(ids_unicos)} projetos informados; máximo {MAX_ITENS_POR_COLECAO}"
-        )
     if not ids_unicos:
         return []
     visiveis = _ids_visiveis(owner, ids_unicos)

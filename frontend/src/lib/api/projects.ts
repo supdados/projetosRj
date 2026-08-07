@@ -68,6 +68,9 @@ function buildQuery(query: ProjectsListQuery): string {
 	if (query.orgao !== undefined && query.orgao !== null) {
 		params.set('orgao', String(query.orgao));
 	}
+	if (query.colecao !== undefined && query.colecao !== null) {
+		params.set('colecao', String(query.colecao));
+	}
 	if (query.excluir_colecao !== undefined && query.excluir_colecao !== null) {
 		params.set('excluir_colecao', String(query.excluir_colecao));
 	}

@@ -10,7 +10,7 @@
 	 *
 	 * CLICK-THROUGH dos KPIs do Dashboard: os query params da URL
 	 * (`?status=`/`?atraso=`/`?prioridade=`/`?orgao=`/`?special_project=`/
-	 * `?delivery_type=`/`?objetivo=`/`?abep_indicator=`/`?search=`/`?page=`)
+	 * `?delivery_type=`/`?objetivo=`/`?colecao=`/`?abep_indicator=`/`?search=`/`?page=`)
 	 * são lidos no mount e populam os filtros — abrindo o painel avançado se
 	 * houver filtro avançado ativo. Os filtros são refletidos de volta na URL
 	 * (replaceState) para deep-link / voltar / reload preservarem o estado,
@@ -29,7 +29,8 @@
 		type ObjetivoCatalogo
 	} from '$lib/api/projects';
 	import { ApiClientError } from '$lib/api/client';
-	import { toggleFavorito } from '$lib/api/collections';
+	import { fetchColecoes, peekColecoes, toggleFavorito } from '$lib/api/collections';
+	import type { ColecaoResumo } from '$lib/types/collections';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
 	import { orgaoScopeQuery } from '$lib/stores/orgaoScope';
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
@@ -78,6 +79,7 @@
 	let deliveryType = $state<string>('');
 	let atraso = $state<string>('');
 	let objetivo = $state<string>(''); // id como string
+	let colecao = $state<string>(''); // id como string
 	let specialProject = $state<string>('');
 	let abepIndicator = $state<string>(''); // value canônico (hidden)
 	let abepLabel = $state<string>(''); // texto exibido no combobox
@@ -90,6 +92,11 @@
 	// o payload de /api/projetos NÃO traz a lista de objetivos).
 	let objetivosCatalog = $state<ObjetivoCatalogo[]>([]);
 	let objetivosLoaded = $state<boolean>(false);
+
+	// Coleções do usuário (minhas + compartilhadas comigo) para o select de
+	// coleção; o payload de /api/projetos também NÃO traz essa lista.
+	let colecoesCatalog = $state<ColecaoResumo[]>(peekColecoes() ?? []);
+	let colecoesLoaded = $state<boolean>(false);
 
 	// Combobox ABEP: estado de abertura e item destacado por teclado.
 	let abepOpen = $state<boolean>(false);
@@ -163,13 +170,18 @@
 			deliveryType !== '' ||
 			atraso !== '' ||
 			objetivo !== '' ||
+			colecao !== '' ||
 			specialProject !== '' ||
 			abepIndicator !== ''
 	);
 
 	/** Há algum filtro AVANÇADO ativo? (controla a abertura inicial do painel) */
 	const hasAdvancedActive = $derived(
-		deliveryType !== '' || atraso !== '' || objetivo !== '' || abepIndicator !== ''
+		deliveryType !== '' ||
+			atraso !== '' ||
+			objetivo !== '' ||
+			colecao !== '' ||
+			abepIndicator !== ''
 	);
 
 	/** Subconjunto de indicadores ABEP que casa com o texto digitado. */
@@ -197,6 +209,7 @@
 		deliveryType = params.get('delivery_type') ?? '';
 		atraso = params.get('atraso') ?? '';
 		objetivo = params.get('objetivo') ?? '';
+		colecao = params.get('colecao') ?? '';
 		specialProject = params.get('special_project') ?? '';
 		abepIndicator = params.get('abep_indicator') ?? '';
 		const pageParam = Number.parseInt(params.get('page') ?? '1', 10);
@@ -205,6 +218,7 @@
 		if (hasAdvancedActive) {
 			advancedOpen = true;
 			void ensureObjetivos();
+			void ensureColecoes();
 		}
 	}
 
@@ -222,6 +236,7 @@
 			delivery_type: deliveryType || undefined,
 			atraso: atraso || undefined,
 			objetivo: objetivo || undefined,
+			colecao: colecao ? Number.parseInt(colecao, 10) : undefined,
 			special_project: specialProject || undefined,
 			abep_indicator: abepIndicator || undefined,
 			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
@@ -317,6 +332,12 @@
 	const objetivoMenuOptions = $derived<SelectMenuOption[]>(
 		objetivosCatalog.map((o) => ({ value: String(o.id), label: o.descricao }))
 	);
+	// Só coleções próprias: o filtro server-side ignora coleções compartilhadas (anti-enumeração).
+	const colecaoMenuOptions = $derived<SelectMenuOption[]>(
+		colecoesCatalog
+			.filter((c) => c.papel === 'dono')
+			.map((c) => ({ value: String(c.id), label: c.nome }))
+	);
 
 	/** Reflete os filtros ativos na URL (replaceState) para reload/voltar/deep-link. */
 	function syncUrlFromFilters(): void {
@@ -329,6 +350,7 @@
 		if (deliveryType) params.set('delivery_type', deliveryType);
 		if (atraso) params.set('atraso', atraso);
 		if (objetivo) params.set('objetivo', objetivo);
+		if (colecao) params.set('colecao', colecao);
 		if (specialProject) params.set('special_project', specialProject);
 		if (abepIndicator) params.set('abep_indicator', abepIndicator);
 		if (page > 1) params.set('page', String(page));
@@ -371,6 +393,7 @@
 			deliveryType = next.filters.delivery_type ?? '';
 			atraso = next.filters.atraso ?? '';
 			objetivo = next.filters.objetivo ?? '';
+			colecao = next.filters.colecao != null ? String(next.filters.colecao) : '';
 			specialProject = next.filters.special_project ?? '';
 			abepIndicator = next.filters.abep_indicator ?? '';
 			orgao = next.filters.selected_orgao != null ? String(next.filters.selected_orgao) : '';
@@ -402,6 +425,17 @@
 			objetivosCatalog = await fetchObjetivosCatalogo();
 		} catch {
 			objetivosLoaded = false; // permite nova tentativa ao reabrir o painel
+		}
+	}
+
+	/** Carrega as coleções visíveis ao usuário uma única vez (select de coleção). */
+	async function ensureColecoes(): Promise<void> {
+		if (colecoesLoaded) return;
+		colecoesLoaded = true;
+		try {
+			colecoesCatalog = await fetchColecoes();
+		} catch {
+			colecoesLoaded = false; // permite nova tentativa ao reabrir o painel
 		}
 	}
 
@@ -451,7 +485,9 @@
 	/** Alterna o painel "Mais filtros" (slide animado + inert/aria). */
 	function toggleAdvanced(): void {
 		advancedOpen = !advancedOpen;
-		if (advancedOpen) void ensureObjetivos();
+		if (!advancedOpen) return;
+		void ensureObjetivos();
+		void ensureColecoes();
 	}
 
 	function clearFilters(): void {
@@ -463,6 +499,7 @@
 		deliveryType = '';
 		atraso = '';
 		objetivo = '';
+		colecao = '';
 		specialProject = '';
 		abepIndicator = '';
 		abepLabel = '';
@@ -921,6 +958,21 @@
 							allowAll
 							allLabel="Todos os prazos"
 							ariaLabel="Filtrar por prazo"
+						/>
+					</div>
+
+					<div class="min-w-[11rem] flex-1">
+						<SelectMenu
+							id="projetosColecao"
+							options={colecaoMenuOptions}
+							value={colecao || null}
+							onSelect={(v) => {
+								colecao = v ?? '';
+								applyFilterChange();
+							}}
+							allowAll
+							allLabel="Todas as coleções"
+							ariaLabel="Filtrar por coleção"
 						/>
 					</div>
 
