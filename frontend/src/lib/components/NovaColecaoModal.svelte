@@ -1,14 +1,12 @@
 <script lang="ts">
 	/**
-	 * Modal "Nova coleção" em 2 passos (design 3b): Identidade (nome, descrição,
-	 * ícone, cor, "Quem enxerga") → Projetos (card-resumo editável +
-	 * ColecaoProjectPicker). A criação é ATÔMICA: "Criar coleção" faz um único
-	 * POST /api/colecoes com `project_ids` e `compartilhamentos`. Máquina de fases
-	 * no molde de CriarProjetoModal: trocar de passo desmonta o dono do foco,
-	 * então cada transição re-foca um alvo visível via tick(); chrome
-	 * (backdrop/Esc/focus-trap) é o Modal base.
+	 * Modal "Nova coleção" em TELA ÚNICA, duas colunas: identidade à esquerda
+	 * (nome, descrição, ícone, cor, "Quem enxerga") e ColecaoProjectPicker à
+	 * direita, com contador "N de M · Limpar". A criação é ATÔMICA: "Criar
+	 * coleção" faz um único POST /api/colecoes com `project_ids` e
+	 * `compartilhamentos`. Chrome (backdrop/Esc/focus-trap) é o Modal base.
 	 *
-	 * "Quem enxerga" (Fase 2): a coleção NASCE PESSOAL — o toggle "Só eu" começa
+	 * "Quem enxerga": a coleção NASCE PESSOAL — o toggle "Só eu" começa
 	 * LIGADO e só quem o desliga escolhe destinatários (pessoa ou órgão exato).
 	 * Compartilhar concede acesso aos projetos da coleção, daí o aviso no bloco.
 	 * Versão compacta do formulário de `CompartilharColecaoModal.svelte`, que é
@@ -73,12 +71,6 @@
 
 	const DESCRICAO_MAX = 200;
 
-	type Fase = 'identidade' | 'projetos';
-	const PASSOS: { id: Fase; label: string }[] = [
-		{ id: 'identidade', label: 'Identidade' },
-		{ id: 'projetos', label: 'Projetos' }
-	];
-
 	const ICONE_OPTIONS: { id: CollectionIconId; label: string }[] = [
 		{ id: 'camadas', label: 'Camadas' },
 		{ id: 'servidores', label: 'Servidores' },
@@ -115,20 +107,19 @@
 		neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
 	};
 
-	let fase = $state<Fase>('identidade');
 	let nome = $state('');
 	let descricao = $state('');
 	let icone = $state<CollectionIconId>('camadas');
 	let cor = $state<CollectionColorId>('primary');
 	let selecionados = $state<number[]>([]);
-	let triedNext = $state(false);
+	let totalProjetos = $state<number | null>(null);
+	let triedSubmit = $state(false);
 	let submitting = $state(false);
 	let erro = $state<string | null>(null);
 
 	let nomeInputEl = $state<HTMLInputElement | null>(null);
-	let passo2HeadingEl = $state<HTMLHeadingElement | null>(null);
 
-	const nomeInvalido = $derived(triedNext && !nome.trim());
+	const nomeInvalido = $derived(triedSubmit && !nome.trim());
 
 	// ── "Quem enxerga" ───────────────────────────────────────────────────────
 	/** Alvo da concessão: uma pessoa (busca) ou um órgão EXATO (sem subárvore). */
@@ -323,13 +314,12 @@
 	});
 
 	function resetar(): void {
-		fase = 'identidade';
 		nome = nomeInicial ?? '';
 		descricao = descricaoInicial ?? '';
 		icone = 'camadas';
 		cor = 'primary';
 		selecionados = projectIdsIniciais ? [...projectIdsIniciais] : [];
-		triedNext = false;
+		triedSubmit = false;
 		submitting = false;
 		erro = null;
 		soEu = true;
@@ -348,22 +338,6 @@
 		});
 	}
 
-	function irParaProjetos(): void {
-		triedNext = true;
-		if (!nome.trim()) {
-			nomeInputEl?.focus();
-			return;
-		}
-		fase = 'projetos';
-		focusAfterTick(() => passo2HeadingEl);
-	}
-
-	function voltarParaIdentidade(): void {
-		erro = null;
-		fase = 'identidade';
-		focusAfterTick(() => nomeInputEl);
-	}
-
 	function requestClose(): void {
 		if (submitting) return;
 		onClose();
@@ -371,6 +345,11 @@
 
 	async function criar(): Promise<void> {
 		if (submitting) return;
+		triedSubmit = true;
+		if (!nome.trim()) {
+			nomeInputEl?.focus();
+			return;
+		}
 		submitting = true;
 		erro = null;
 		try {
@@ -399,15 +378,12 @@
 </script>
 
 {#if open}
-	<Modal labelId="nova-colecao-title" maxWidth="max-w-[540px]" onBackdrop={requestClose}>
-		<div class="flex max-h-[80vh] flex-col gap-4">
+	<Modal labelId="nova-colecao-title" maxWidth="max-w-[880px]" onBackdrop={requestClose}>
+		<div class="flex max-h-[85vh] flex-col gap-4">
 			<div class="flex items-center gap-3">
 				<h2 id="nova-colecao-title" class="font-heading text-xl font-bold text-text-primary">
-					{fase === 'identidade' ? 'Nova coleção' : 'Adicionar projetos'}
+					Nova coleção
 				</h2>
-				<span class="text-2xs font-medium uppercase tracking-caps text-text-muted">
-					Passo {fase === 'identidade' ? 1 : 2} de 2
-				</span>
 				<button
 					type="button"
 					onclick={requestClose}
@@ -428,39 +404,9 @@
 				</button>
 			</div>
 
-			<ol class="flex items-center gap-3" aria-label="Passos do cadastro">
-				{#each PASSOS as passo, i (passo.id)}
-					{@const ativo = fase === passo.id}
-					{#if i > 0}
-						<li role="presentation" class="h-px flex-1 bg-border-subtle"></li>
-					{/if}
-					<li
-						aria-current={ativo ? 'step' : undefined}
-						class="flex items-center gap-2 text-xs {ativo
-							? 'font-medium text-brand'
-							: 'text-text-muted'}"
-					>
-						<span
-							class="grid h-[22px] w-[22px] place-items-center rounded-sm text-2xs font-semibold {ativo
-								? 'bg-brand text-on-brand'
-								: 'border border-border-subtle'}"
-						>
-							{i + 1}
-						</span>
-						{passo.label}
-					</li>
-				{/each}
-			</ol>
-
-			{#if fase === 'identidade'}
-				<form
-					class="flex min-h-0 flex-1 flex-col gap-4"
-					onsubmit={(e) => {
-						e.preventDefault();
-						irParaProjetos();
-					}}
-				>
-					<div class="thin-scroll flex min-h-0 flex-col gap-4 overflow-y-auto">
+			<div class="thin-scroll min-h-0 flex-1 overflow-y-auto">
+				<div class="grid gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+					<div class="flex min-w-0 flex-col gap-4">
 						<div class="flex items-end gap-3">
 							<ColecaoIconTile {icone} {cor} size={52} />
 							<div class="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -771,56 +717,53 @@
 						</div>
 					</div>
 
-					<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
-						<Button variant="secondary" onclick={requestClose}>Cancelar</Button>
-						<Button type="submit">Próximo</Button>
-					</footer>
-				</form>
-			{:else}
-				<div class="flex min-h-0 flex-1 flex-col gap-4">
-					<div class="thin-scroll flex min-h-0 flex-col gap-4 overflow-y-auto">
-						<div
-							class="flex items-center gap-3 rounded-control border border-border-subtle bg-surface-muted p-3"
-						>
-							<ColecaoIconTile {icone} {cor} size={40} />
-							<div class="min-w-0 flex-1">
-								<h3
-									bind:this={passo2HeadingEl}
-									tabindex="-1"
-									class="truncate text-sm font-semibold text-text-primary focus:outline-none"
-								>
-									{nome.trim()}
-								</h3>
-								<p class="truncate text-xs text-text-muted">
-									{descricao.trim() || 'Sem descrição'}
-								</p>
+					<!-- md+: conteúdo fora do fluxo para a lista não inflar a linha do grid — a altura vem só da coluna esquerda e as bases alinham. -->
+					<div class="relative min-w-0 md:border-l md:border-border-subtle">
+						<div class="flex min-w-0 flex-col gap-1.5 md:absolute md:inset-0 md:pl-6">
+							<div class="flex items-baseline justify-between gap-3">
+								<span class={labelCls}>Projetos da sua área</span>
+								<span class="shrink-0 text-xs text-text-muted">
+									{selecionados.length}{totalProjetos !== null ? ` de ${totalProjetos}` : ''}
+									{#if selecionados.length > 0}
+										·
+										<button
+											type="button"
+											onclick={() => (selecionados = [])}
+											class="font-semibold text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+										>
+											Limpar
+										</button>
+									{/if}
+								</span>
 							</div>
-							<Button variant="secondary" size="sm" onclick={voltarParaIdentidade}>Editar</Button>
-						</div>
-
-						<div class="flex flex-col gap-1.5">
-							<span class={labelCls}>Projetos da sua área</span>
 							<ColecaoProjectPicker
 								{selecionados}
+								preencher
 								onchange={(ids) => (selecionados = ids)}
+								ontotal={(total) => (totalProjetos = total)}
 							/>
 						</div>
-
-						{#if erro}
-							<StateBanner tone="danger" title={erro} />
-						{/if}
 					</div>
-
-					<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
-						<Button variant="secondary" onclick={voltarParaIdentidade} disabled={submitting}>
-							Voltar
-						</Button>
-						<Button onclick={() => void criar()} disabled={submitting}>
-							{submitting ? 'Criando…' : 'Criar coleção'}
-						</Button>
-					</footer>
 				</div>
+			</div>
+
+			{#if erro}
+				<StateBanner tone="danger" title={erro} />
 			{/if}
+
+			<footer class="flex items-center gap-3 border-t border-border-hairline pt-4">
+				<p class="min-w-0 flex-1 text-xs text-text-muted">
+					Dá para criar vazia e adicionar projetos depois.
+				</p>
+				<Button variant="secondary" onclick={requestClose} disabled={submitting}>Cancelar</Button>
+				<Button onclick={() => void criar()} disabled={submitting}>
+					{submitting
+						? 'Criando…'
+						: selecionados.length > 0
+							? `Criar coleção · ${selecionados.length}`
+							: 'Criar coleção'}
+				</Button>
+			</footer>
 		</div>
 	</Modal>
 {/if}

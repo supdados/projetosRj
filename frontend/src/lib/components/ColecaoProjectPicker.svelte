@@ -26,9 +26,25 @@
 		exclude?: number[];
 		/** Recebe a lista COMPLETA de ids a cada toque. */
 		onchange: (ids: number[]) => void;
+		/** Total de projetos disponíveis (sem filtro de busca) — para "N de M". */
+		ontotal?: (total: number) => void;
+		/**
+		 * Cresce até o fim do pai — que precisa ser uma coluna flex de altura
+		 * definida — em vez do teto fixo de 15rem; a lista rola por dentro.
+		 * Só a partir de `md`: empilhado no mobile o teto continua valendo,
+		 * senão 100 projetos esticariam a página inteira.
+		 */
+		preencher?: boolean;
 	}
 
-	let { selecionados, colecaoId, exclude = [], onchange }: Props = $props();
+	let {
+		selecionados,
+		colecaoId,
+		exclude = [],
+		onchange,
+		ontotal,
+		preencher = false
+	}: Props = $props();
 
 	const DEBOUNCE_MS = 300;
 	const PER_PAGE = 100;
@@ -59,6 +75,7 @@
 			const data = await fetchProjects(query, abortController.signal);
 			if (minhaGen !== gen) return;
 			projetos = data.projetos;
+			if (!q) ontotal?.(data.pagination.total);
 			carregando = false;
 		} catch (err) {
 			if (minhaGen !== gen) return;
@@ -99,7 +116,7 @@
 	});
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2 {preencher ? 'md:min-h-0 md:flex-1' : ''}">
 	<div class="relative">
 		<i
 			class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
@@ -116,7 +133,11 @@
 		/>
 	</div>
 
-	<div class="overflow-hidden rounded-control border border-border-subtle">
+	<div
+		class="overflow-hidden rounded-control border border-border-subtle {preencher
+			? 'md:flex md:min-h-0 md:flex-1 md:flex-col'
+			: ''}"
+	>
 		{#if carregando}
 			<p class="px-3 py-4 text-center text-sm text-text-muted" aria-live="polite">
 				Carregando projetos…
@@ -143,7 +164,9 @@
 				role="listbox"
 				aria-multiselectable="true"
 				aria-label="Projetos disponíveis"
-				class="thin-scroll max-h-60 overflow-y-auto"
+				class="thin-scroll max-h-60 overflow-y-auto {preencher
+					? 'md:max-h-none md:min-h-0 md:flex-1'
+					: ''}"
 			>
 				{#each visiveis as projeto (projeto.id)}
 					{@const marcado = selecionadosSet.has(projeto.id)}
