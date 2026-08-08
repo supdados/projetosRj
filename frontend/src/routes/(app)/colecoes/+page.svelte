@@ -47,6 +47,7 @@
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecoesSkeleton from '$lib/components/skeletons/ColecoesSkeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import TopnavIcon from '$lib/components/TopnavIcon.svelte';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
@@ -149,10 +150,6 @@
 	const totalColecoes = $derived(colecoes?.length ?? 0);
 	const totalProjetos = $derived(
 		(colecoes ?? []).reduce((soma, c) => soma + c.projetos, 0)
-	);
-	// Coleção alheia não conta: o onboarding é sobre criar a PRIMEIRA coleção própria.
-	const temColecaoCustom = $derived(
-		(colecoes ?? []).some((c) => c.tipo === 'custom' && c.papel === 'dono')
 	);
 
 	// ── Criar ────────────────────────────────────────────────────────────────
@@ -393,17 +390,6 @@
 	{:else if loadState === 'error'}
 		<LoadErrorState message={errorMessage} onRetry={() => load()} />
 	{:else if colecoes}
-		{#if !temColecaoCustom && !busca.trim()}
-			<!-- Primeira visita: onboarding instrucional com CTA único. -->
-			<StateBanner
-				tone="info"
-				title="Organize seus projetos em coleções"
-				description="Agrupe projetos por tema, prioridade ou frente de trabalho — o mesmo projeto pode estar em várias coleções. A coleção Favoritos já está pronta: marque a estrela em qualquer projeto e ele entra nela."
-				actionLabel="Criar minha primeira coleção"
-				onAction={() => (createOpen = true)}
-			/>
-		{/if}
-
 		{#if visiveis.length === 0}
 			<!-- Busca sem resultado (mesmo quadro do estado vazio de Projetos). -->
 			<div
@@ -446,30 +432,15 @@
 				<button
 					type="button"
 					onclick={() => (createOpen = true)}
-					class="flex items-center gap-3.5 rounded-lg border border-dashed border-border-strong bg-surface p-4 text-left transition-ui duration-fast hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					class="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-strong bg-surface p-4 text-center transition-ui duration-fast hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<span
 						class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-wash-brand text-brand"
 						aria-hidden="true"
 					>
-						<svg
-							width="20"
-							height="20"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-						>
-							<path d="M12 5v14M5 12h14" />
-						</svg>
+						<TopnavIcon kind="colecoes" active={false} />
 					</span>
-					<span class="flex min-w-0 flex-col">
-						<span class="text-sm font-semibold text-text-primary">Criar uma nova coleção</span>
-						<span class="text-sm text-text-secondary">
-							Escolha ícone, cor e os projetos que entram nela.
-						</span>
-					</span>
+					<span class="text-sm font-semibold text-text-primary">Criar uma nova coleção</span>
 				</button>
 			</div>
 		{/if}

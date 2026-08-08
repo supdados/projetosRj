@@ -32,14 +32,11 @@
 		</div>
 	{/each}
 
-	<!-- Card fantasma "Criar uma nova coleção" (span 2, tracejado). -->
+	<!-- Card fantasma "Criar uma nova coleção" (1 coluna, tracejado, centralizado). -->
 	<div
-		class="col-span-2 flex items-center gap-3.5 rounded-lg border border-dashed border-border-strong bg-surface p-4"
+		class="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-strong bg-surface p-4"
 	>
 		<Skeleton class="h-10 w-10 shrink-0 rounded-md" />
-		<div class="flex flex-col gap-1.5">
-			<Skeleton class="h-3.5 w-44 rounded" />
-			<Skeleton class="h-3 w-64 rounded" />
-		</div>
+		<Skeleton class="h-3.5 w-40 rounded" />
 	</div>
 </div>
