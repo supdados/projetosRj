@@ -1,5 +1,6 @@
 import datetime
 import os
+import time
 import uuid
 
 import pytest
@@ -100,6 +101,7 @@ def _create_user(
 def _login(client, user_id):
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
 
 @pytest.fixture

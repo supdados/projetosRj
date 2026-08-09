@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+import time
 
 from models import ProjectMember, User, db
 from services.authorization import PAPEL_LEITOR
@@ -54,6 +55,7 @@ def client_convidado_leitor(app, seed_data):
     http_client = app.test_client()
     with http_client.session_transaction() as session:
         session["user_id"] = convidado_id
+        session["login_at"] = time.time()
     return http_client
 
 

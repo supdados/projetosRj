@@ -1,4 +1,5 @@
 import pytest
+import time
 
 from models import User, UserOrgao, db
 from routes.api.envelope import NOT_FOUND_MESSAGE
@@ -413,6 +414,7 @@ def client_leitor(app, seed_data):
     http_client = app.test_client()
     with http_client.session_transaction() as session:
         session["user_id"] = leitor_id
+        session["login_at"] = time.time()
     return http_client
 
 

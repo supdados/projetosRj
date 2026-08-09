@@ -17,6 +17,7 @@ veem a tarefa e tentam ação acima do rank.
 """
 
 import pytest
+import time
 
 from models import Task, User, UserOrgao, db
 from routes.tasks.crud import DELETE_DENIED_MESSAGE
@@ -50,6 +51,7 @@ def _cliente_com_papel(app, seed_data, username: str, papel: str):
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
     return client, user_id
 
 

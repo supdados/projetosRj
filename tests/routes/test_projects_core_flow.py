@@ -8,6 +8,7 @@ vivo) e o fail-closed por órgão nas telas de leitura (dashboard SPA + busca).
 
 import csv
 import io
+import time
 
 from models import Project, ProjectSeiProcess, User, db
 
@@ -29,6 +30,7 @@ def _create_no_orgao_user(app, username="user_sem_orgao"):
 def _login_user(client, user_id):
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
 
 def test_no_orgao_user_metadata_routes_fail_closed(app, client, seed_data):

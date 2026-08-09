@@ -13,6 +13,7 @@ constrói o cliente real sozinha, então a injeção precisa ser no nome importa
 import json
 
 import pytest
+import time
 
 from models import ColecaoSugestaoIA, OrgaoUnidade, Project, User, UserOrgao, db
 from models.colecao_sugestao import (
@@ -125,6 +126,7 @@ def _client_logado(app, user_id: int):
     cliente = app.test_client()
     with cliente.session_transaction() as sessao:
         sessao["user_id"] = user_id
+        sessao["login_at"] = time.time()
     return cliente
 
 

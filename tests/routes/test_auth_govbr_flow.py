@@ -1,3 +1,5 @@
+import time
+
 import routes.auth as auth_routes
 from models import User, db
 
@@ -409,6 +411,7 @@ def test_logout_for_govbr_session_defaults_to_local_login_redirect(
 
     with client.session_transaction() as session:
         session["user_id"] = seed_data["user_id"]
+        session["login_at"] = time.time()
         session["auth_provider"] = "govbr"
         session["govbr_id_token"] = "id-token"
 
@@ -434,6 +437,7 @@ def test_logout_for_govbr_session_redirects_to_federated_when_enabled(
 
     with client.session_transaction() as session:
         session["user_id"] = seed_data["user_id"]
+        session["login_at"] = time.time()
         session["auth_provider"] = "govbr"
         session["govbr_id_token"] = "id-token"
 
@@ -455,6 +459,7 @@ def test_logout_for_local_session_keeps_regular_redirect(
 
     with client.session_transaction() as session:
         session["user_id"] = seed_data["user_id"]
+        session["login_at"] = time.time()
         session["auth_provider"] = "local"
 
     response = client.get("/logout", follow_redirects=False)

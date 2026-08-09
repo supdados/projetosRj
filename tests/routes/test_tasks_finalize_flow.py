@@ -1,3 +1,5 @@
+import time
+
 from models import Task, TaskAccessAudit, db
 from time_utils import utc_now
 
@@ -400,12 +402,14 @@ def test_tasks_hub_serves_spa_shell_for_user_and_admin(client, seed_data):
     # papeis recebem a shell da SPA no path nativo.
     with client.session_transaction() as session:
         session["user_id"] = seed_data["user_id"]
+        session["login_at"] = time.time()
     user_response = client.get("/tarefas")
     assert user_response.status_code == 200
     assert "data-sveltekit-preload-data" in user_response.get_data(as_text=True)
 
     with client.session_transaction() as session:
         session["user_id"] = seed_data["admin_id"]
+        session["login_at"] = time.time()
     admin_response = client.get("/tarefas")
     assert admin_response.status_code == 200
     assert "data-sveltekit-preload-data" in admin_response.get_data(as_text=True)

@@ -1,4 +1,5 @@
 import json
+import time
 
 from models import StageTemplate, StageTemplateItem, db
 
@@ -7,6 +8,7 @@ def _client_for_user(app, user_id):
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
     return client
 
 

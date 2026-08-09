@@ -5,7 +5,17 @@ import time
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
-from flask import Flask, g, redirect, request, session, url_for
+from flask import (
+    Flask,
+    Response,
+    current_app,
+    flash,
+    g,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 
 from config import build_app_config, _env_flag_is_true
 from extensions import (
@@ -65,6 +75,34 @@ def _build_csp_header(nonce, chatbot_origin):
     )
 
 
+def _sessao_expirou_teto_absoluto() -> bool:
+    """Teto absoluto de login: o refresh deslizante do cookie não o estende.
+
+    Sessão sem ``login_at`` (criada antes deste deploy) conta como expirada —
+    força um único re-login após o deploy.
+    """
+    teto_segundos = current_app.permanent_session_lifetime.total_seconds()
+    return time.time() - session.get("login_at", 0) > teto_segundos
+
+
+def _resposta_sessao_expirada() -> Response | tuple[Response, int]:
+    """401 JSON p/ API (evita loop de 302 na SPA); redirect p/ login no resto."""
+    from routes.api import fail, wants_json
+
+    e_api = request.path.startswith("/api/") or wants_json()
+    # Só GET vira next: reenviar o usuário a uma URL de POST daria 405 após o login.
+    proximo = request.url if request.method == "GET" else None
+    # Lido antes do clear: expulsão Gov.br deve apagar o refresh cookie no after_request.
+    if session.get("auth_provider") == "govbr":
+        g.apagar_govbr_refresh_cookie = True
+    session.clear()
+    g.user = None
+    if e_api:
+        return fail("Sessão expirada.", status=401, code="unauthenticated")
+    flash("Sessão expirada. Faça login novamente.", "warning")
+    return redirect(url_for("main.login_page", next=proximo))
+
+
 def _register_request_hooks(app):
     @app.before_request
     def assign_csp_nonce():
@@ -77,6 +115,8 @@ def _register_request_hooks(app):
         g.user = None
         if user_id is None:
             return
+        if _sessao_expirou_teto_absoluto():
+            return _resposta_sessao_expirada()
         g.user = db.session.get(User, user_id)
         if g.user is None:
             session.clear()
@@ -133,6 +173,9 @@ def _register_request_hooks(app):
         refresh_expires_in = new_tokens.get("refresh_expires_in")
         if expires_in:
             session["govbr_access_token_exp"] = int(time.time()) + int(expires_in)
+        else:
+            # Sem expires_in a exp vencida sobreviveria e rechamaria o IdP a cada request.
+            session.pop("govbr_access_token_exp", None)
         if refresh_expires_in:
             session["govbr_refresh_exp"] = int(time.time()) + int(refresh_expires_in)
 
@@ -172,6 +215,9 @@ def _register_request_hooks(app):
                 samesite="Strict",
                 max_age=getattr(g, "govbr_new_refresh_max_age", None),
             )
+        elif getattr(g, "apagar_govbr_refresh_cookie", False):
+            # Mesmos parâmetros do delete_cookie do /logout (routes/auth.py).
+            response.delete_cookie("govbr_refresh_token", samesite="Strict")
         return response
 
 

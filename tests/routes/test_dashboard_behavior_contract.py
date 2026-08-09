@@ -1,4 +1,5 @@
 import datetime
+import time
 
 import routes.dashboard as dashboard_routes
 from models import CalendarEvent, Etapa, Project, ProjectStageMeeting, Task, User, db
@@ -22,6 +23,7 @@ def _dashboard_context_for_request(app, client, *, query_string=None):
         from flask import g, session as flask_session
 
         flask_session["user_id"] = user_id
+        flask_session["login_at"] = time.time()
         app.preprocess_request()
         selected_orgao_id, invalid = sanitize_orgao_filter_for_current_user(
             (query_string or {}).get("orgao")
@@ -132,6 +134,7 @@ def test_dashboard_fails_closed_for_non_admin_without_orgao_links(
 
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
     response = client.get("/dashboard")
     assert response.status_code == 200
@@ -185,6 +188,7 @@ def test_dashboard_admin_area_filter_restricts_projects_and_tasks(
 def test_dashboard_redirects_when_non_admin_forces_foreign_area(client, seed_data):
     with client.session_transaction() as session:
         session["user_id"] = seed_data["deletable_user_id"]
+        session["login_at"] = time.time()
 
     response = client.get(
         "/dashboard",

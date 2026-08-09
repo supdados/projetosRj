@@ -14,6 +14,7 @@ de rede: os endpoints operam sobre a sessão e o banco de teste já semeado.
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from models import User, UserOrgao, db
@@ -159,6 +160,7 @@ def test_api_projetos_orgaos_assignable_options_vazio_para_leitor(app, seed_data
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
     data = _assert_ok_envelope(client.get("/api/projetos").get_json())
     options = data["options"]

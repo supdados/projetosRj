@@ -21,6 +21,7 @@ e ``test_rank_zero_no_projeto_nao_captura_projeto_para_a_propria_area``
 from __future__ import annotations
 
 import pytest
+import time
 from flask import g
 
 from models import OrgaoUnidade, Project, User, UserOrgao, db
@@ -55,6 +56,7 @@ def _cliente_logado(app, user_id: int):
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
     return client
 
 

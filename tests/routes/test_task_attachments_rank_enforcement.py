@@ -15,6 +15,7 @@ não-autor na exclusão).
 """
 
 import io
+import time
 import uuid
 
 import pytest
@@ -49,6 +50,7 @@ def _cliente_com_papel(app, seed_data, username: str, papel: str):
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
     return client, user_id
 
 

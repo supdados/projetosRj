@@ -18,6 +18,7 @@ para rank 0 e está coberto em ``test_api_error_envelope_contract.py``.
 """
 
 import pytest
+import time
 
 from models import Task, User, UserOrgao, db
 from services.authorization import PAPEL_EDITOR, PAPEL_GESTOR, PAPEL_LEITOR
@@ -47,6 +48,7 @@ def _cliente_com_papel(app, seed_data, username: str, papel: str):
     client = app.test_client()
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
     return client, user_id
 
 

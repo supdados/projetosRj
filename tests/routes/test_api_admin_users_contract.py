@@ -10,6 +10,7 @@ não-admin e ``client_admin``). NUNCA deve vazar ``password_hash``/``govbr_sub``
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 
@@ -578,6 +579,7 @@ def test_requisicao_de_usuario_removido_e_barrada(app, seed_data):
     c = app.test_client()
     with c.session_transaction() as sess:
         sess["user_id"] = user_id
+        sess["login_at"] = time.time()
 
     response = c.get("/api/admin/usuarios")
     assert response.status_code == 401

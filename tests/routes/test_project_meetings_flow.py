@@ -1,4 +1,5 @@
 import datetime
+import time
 
 import routes.etapas.meetings as etapa_meetings  # noqa: F401  (mantido p/ outras refs)
 import services.project_meetings as project_meetings
@@ -23,6 +24,7 @@ AJAX_HEADERS = {
 def _login(client, user_id):
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
 
 def _create_area_user(username, name, area):

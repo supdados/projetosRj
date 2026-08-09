@@ -1,6 +1,7 @@
 from io import BytesIO
 
 import pytest
+import time
 
 from tests.routes.route_cases import ROUTE_CASES
 
@@ -37,6 +38,7 @@ def _resolve_request(case, seed_data):
 def _login(client, user_id):
     with client.session_transaction() as session:
         session["user_id"] = user_id
+        session["login_at"] = time.time()
 
 
 def _build_client(case, app, seed_data):
