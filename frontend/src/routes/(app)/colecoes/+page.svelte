@@ -22,7 +22,8 @@
 		apagarColecao,
 		editarColecao,
 		fetchColecoes,
-		peekColecoes
+		peekColecoes,
+		peekIaSugestoesDisponivel
 	} from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
@@ -95,6 +96,7 @@
 			const next = await fetchColecoes(controller.signal);
 			if (controller.signal.aborted) return;
 			colecoes = next;
+			iaDisponivel = peekIaSugestoesDisponivel() ?? false;
 			loadState = 'ready';
 		} catch (err) {
 			if (controller.signal.aborted) return;
@@ -172,8 +174,9 @@
 
 	// ── Sugerir com IA ───────────────────────────────────────────────────────
 	let sugerirOpen = $state(false);
-	// 503 na 1ª chamada = feature desligada no servidor: o botão some da sessão.
-	let iaDisponivel = $state(true);
+	// Flag vem do GET /api/colecoes; oculto até o servidor confirmar. O 503 em
+	// runtime (onIndisponivel) segue como fallback caso a feature caia no meio.
+	let iaDisponivel = $state(peekIaSugestoesDisponivel() ?? false);
 
 	function criarDaSugestao(sugestao: ColecaoSugerida): void {
 		sugestaoAceita = sugestao;

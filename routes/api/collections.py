@@ -46,7 +46,7 @@ from models import (
     ProjectCollection,
     db,
 )
-from services.ai import marcar_aceita
+from services.ai import ia_habilitada, marcar_aceita
 from services.project_collections import (
     ColecaoInvalida,
     ColecaoSemPermissao,
@@ -212,7 +212,7 @@ def api_colecoes_list() -> _ApiResponse:
     """
     try:
         _garantir_favoritos()
-        return ok({"colecoes": _indice_payload()})
+        return ok({"colecoes": _indice_payload(), "ia_disponivel": ia_habilitada()})
     except Exception as exc:
         db.session.rollback()
         return fail_internal(exc, "listar coleções")

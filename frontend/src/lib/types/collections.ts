@@ -126,6 +126,8 @@ export interface ProjetoColecaoRow {
 /** Carga de GET /api/colecoes (já desempacotada). Favoritos sempre presente e primeiro. */
 export interface CollectionsListData {
 	colecoes: ColecaoResumo[];
+	/** Sugestões por IA habilitadas no servidor (credenciais watsonx presentes). */
+	ia_disponivel: boolean;
 }
 
 /** Carga de GET /api/colecoes/<id>/projetos (já desempacotada). */

@@ -95,10 +95,19 @@ export function peekColecaoCronograma(collectionId: number): CollectionCronogram
 	return colecaoCronogramaCache.peek(String(collectionId));
 }
 
+// Flag do servidor (GET /api/colecoes); null = índice ainda não carregado.
+let iaSugestoesDisponivel: boolean | null = null;
+
+/** Sugestões por IA habilitadas no servidor, ou null antes do 1º índice. */
+export function peekIaSugestoesDisponivel(): boolean | null {
+	return iaSugestoesDisponivel;
+}
+
 /** Coleções do usuário; Favoritos vem get-or-create do backend, sempre em 1º. */
 export async function fetchColecoes(signal?: AbortSignal): Promise<ColecaoResumo[]> {
 	const data = await get<CollectionsListData>('/api/colecoes', signal);
 	colecoesCache.store(INDEX_KEY, data.colecoes);
+	iaSugestoesDisponivel = data.ia_disponivel;
 	return data.colecoes;
 }
 
