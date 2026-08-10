@@ -432,12 +432,6 @@
 				<Button variant="secondary" onclick={onClose}>Fechar</Button>
 			</footer>
 		{:else}
-			<StateBanner
-				tone="info"
-				title="Compartilhar concede acesso aos projetos da coleção"
-				description="Quem recebe passa a ver todos os projetos desta coleção, sem precisar de convite em cada um. Revogar corta o acesso na hora."
-			/>
-
 			<form
 				class="flex flex-col gap-3"
 				onsubmit={(e) => {
@@ -590,11 +584,6 @@
 						{/if}
 					</div>
 
-					{#if modo === 'area'}
-						<p class="text-xs text-text-muted">
-							O acesso vale para o órgão exato escolhido — subordinados não entram junto.
-						</p>
-					{/if}
 				</div>
 
 				<fieldset class="flex flex-col gap-1.5">

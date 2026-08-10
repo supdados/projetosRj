@@ -8,7 +8,6 @@
 	 *
 	 * "Quem enxerga": a coleção NASCE PESSOAL — o toggle "Só eu" começa
 	 * LIGADO e só quem o desliga escolhe destinatários (pessoa ou órgão exato).
-	 * Compartilhar concede acesso aos projetos da coleção, daí o aviso no bloco.
 	 * Versão compacta do formulário de `CompartilharColecaoModal.svelte`, que é
 	 * quem gerencia as concessões depois de a coleção existir (só o dono).
 	 * Favoritos nunca passa por aqui — este modal só cria coleções `custom`.
@@ -493,11 +492,9 @@
 									<span id="nc-soeu-label" class="text-sm font-medium text-text-primary">
 										Só eu
 									</span>
-									<span class="text-xs text-text-muted">
-										{soEu
-											? 'A coleção nasce pessoal — dá para compartilhar depois.'
-											: 'Escolha abaixo quem recebe acesso.'}
-									</span>
+									{#if !soEu}
+										<span class="text-xs text-text-muted">Escolha abaixo quem recebe acesso.</span>
+									{/if}
 								</div>
 								<button
 									type="button"
@@ -518,11 +515,6 @@
 							</div>
 
 							{#if !soEu}
-								<p class="rounded-control bg-wash-brand px-3 py-2 text-xs text-text-secondary">
-									Compartilhar concede acesso aos projetos da coleção: quem recebe passa a ver
-									todos eles.
-								</p>
-
 								<div bind:this={alvoBoxEl} class="relative flex flex-col gap-2">
 									<div
 										class="flex items-stretch overflow-hidden rounded-control border border-border-strong bg-surface transition-colors duration-fast focus-within:border-brand"
@@ -661,12 +653,6 @@
 										</Button>
 									</div>
 
-									{#if alvoModo === 'area'}
-										<p class="text-xs text-text-muted">
-											O acesso vale para o órgão exato — subordinados não entram junto.
-										</p>
-									{/if}
-
 									{#if compartilharErro}
 										<p role="alert" class="text-xs text-danger">{compartilharErro}</p>
 									{/if}
@@ -751,10 +737,7 @@
 				<StateBanner tone="danger" title={erro} />
 			{/if}
 
-			<footer class="flex items-center gap-3 border-t border-border-hairline pt-4">
-				<p class="min-w-0 flex-1 text-xs text-text-muted">
-					Dá para criar vazia e adicionar projetos depois.
-				</p>
+			<footer class="flex items-center justify-end gap-3 border-t border-border-hairline pt-4">
 				<Button variant="secondary" onclick={requestClose} disabled={submitting}>Cancelar</Button>
 				<Button onclick={() => void criar()} disabled={submitting}>
 					{submitting
