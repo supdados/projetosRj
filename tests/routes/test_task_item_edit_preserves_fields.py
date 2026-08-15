@@ -13,26 +13,21 @@ def test_edit_task_item_preserves_prioridade_and_tipo_when_fields_are_omitted(
         item.tipo_pedido = "bug"
         db.session.commit()
         descricao = item.descricao
-        status = item.status
 
     response = client_user.post(
-        f"/tarefas/{item_id}/edit",
-        data={
+        f"/api/tarefas/{item_id}/campos",
+        json={
             "descricao": descricao,
-            "status": status,
             "responsavel": "Usuario Auditoria",
-        },
-        headers={
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
         },
     )
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["item"]["prioridade"] == "alta"
-    assert payload["item"]["tipo_pedido"] == "bug"
+    assert payload["ok"] is True, payload
+    task_payload = payload["data"]["task"]
+    assert task_payload["prioridade"] == "alta"
+    assert task_payload["tipo_pedido"] == "bug"
 
     with app.app_context():
         refreshed = db.session.get(TaskItem, item_id)

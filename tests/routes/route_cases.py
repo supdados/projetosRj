@@ -143,22 +143,6 @@ ROUTE_CASES = [
     },
     # Etapas
     {
-        "id": "etapa_add_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/etapa/add",
-        "path": "/project/{project_id}/etapa/add",
-        "role": "user",
-        "data": {
-            "etapa_descricao": "Nova etapa de teste",
-            "etapa_data_inicio": "2026-03-01",
-            "etapa_data_fim": "2026-03-05",
-            "etapa_responsavel": "Usuario Auditoria",
-        },
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "project_meeting_add_post",
         "method": "POST",
         "rule": "/project/<int:project_id>/meeting/add",
@@ -192,80 +176,6 @@ ROUTE_CASES = [
         "role": "user",
         "data": {"template_id": "{template_id}", "start_date": "2026-03-10"},
         "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_delete_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/delete",
-        "path": "/etapa/{etapa_id}/delete",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapas_reorder_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/etapas/reordenar",
-        "path": "/project/{project_id}/etapas/reordenar",
-        "role": "user",
-        "json": {"etapa_ids": ["{etapa_id}", "{etapa_started_id}"]},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_toggle_iniciada_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/toggle_iniciada",
-        "path": "/etapa/{etapa_id}/toggle_iniciada",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_toggle_done_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/toggle",
-        "path": "/etapa/{etapa_started_id}/toggle",
-        "role": "user",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_update_field_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/update_field",
-        "path": "/etapa/{etapa_id}/update_field",
-        "role": "user",
-        "json": {"field": "descricao", "value": "Descricao inline"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "etapa_comment_post",
-        "method": "POST",
-        "rule": "/etapa/<int:etapa_id>/comentario",
-        "path": "/etapa/{etapa_id}/comentario",
-        "role": "user",
-        "json": {"comentario": "Comentario via modal"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "cascade_update_post",
-        "method": "POST",
-        "rule": "/project/<int:project_id>/cascade_update",
-        "path": "/project/{project_id}/cascade_update",
-        "role": "user",
-        "json": {"etapa_id": "{etapa_id}", "days_diff": 2},
-        "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -303,120 +213,12 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
-        "id": "task_add_post",
-        "method": "POST",
-        "rule": "/tarefas/add",
-        "path": "/tarefas/add",
-        "role": "user",
-        "data": {"titulo": "Tarefa criada no teste", "project_id": "{project_id}"},
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "task_detail_get",
         "method": "GET",
         "rule": "/tarefas/<int:task_id>",
         "path": "/tarefas/{task_id}",
         "role": "user",
         "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_edit_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/edit",
-        "path": "/tarefas/{task_id}/edit",
-        "role": "user",
-        "data": {"titulo": "Tarefa editada", "project_id": "{project_id}"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_move_etapa_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/mover-etapa",
-        "path": "/tarefas/{task_id}/mover-etapa",
-        "role": "user",
-        "headers": {"X-Requested-With": "XMLHttpRequest"},
-        "json": {"etapa_id": "sem_etapa"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_delete_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/delete",
-        "path": "/tarefas/{task_id}/delete",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_finalize_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/finalizar",
-        "path": "/tarefas/{task_id}/finalizar",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_reactivate_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/reativar",
-        "path": "/tarefas/{task_id}/reativar",
-        "role": "user",
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_update_status_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/update_status",
-        "path": "/tarefas/{task_item_id}/update_status",
-        "role": "user",
-        "json": {"status": "em_andamento"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_update_prioridade_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/update_prioridade",
-        "path": "/tarefas/{task_item_id}/update_prioridade",
-        "role": "user",
-        "json": {"prioridade": "alta"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_update_tipo_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/update_tipo",
-        "path": "/tarefas/{task_item_id}/update_tipo",
-        "role": "user",
-        "json": {"tipo_pedido": "bug"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "tasks_reorder_post",
-        "method": "POST",
-        "rule": "/tarefas/reordenar",
-        "path": "/tarefas/reordenar",
-        "role": "user",
-        "json": {"ordem": ["{task_id}"]},
-        "expected_status": 200,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -477,28 +279,6 @@ ROUTE_CASES = [
         "requires_admin": False,
     },
     {
-        "id": "task_assignable_users_get",
-        "method": "GET",
-        "rule": "/tarefas/<int:task_id>/sugestoes-responsavel",
-        "path": "/tarefas/{task_id}/sugestoes-responsavel",
-        "role": "user",
-        "query_string": {"q": "Usuario"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_hub_assignable_users_get",
-        "method": "GET",
-        "rule": "/tarefas/sugestoes-responsavel",
-        "path": "/tarefas/sugestoes-responsavel",
-        "role": "user",
-        "query_string": {"project": "{project_id}", "q": "Usuario"},
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
         "id": "task_anexos_list_get",
         "method": "GET",
         "rule": "/tarefas/<int:task_id>/anexos",
@@ -515,27 +295,6 @@ ROUTE_CASES = [
         "path": "/tarefas/{task_item_id}/anexos/add",
         "role": "user",
         "expected_status": 400,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_archive_finalizadas_post",
-        "method": "POST",
-        "rule": "/tarefas/arquivar-finalizadas",
-        "path": "/tarefas/arquivar-finalizadas",
-        "role": "user",
-        "data": {"project": "{project_id}"},
-        "expected_status": 302,
-        "requires_login": True,
-        "requires_admin": False,
-    },
-    {
-        "id": "task_desarquivar_post",
-        "method": "POST",
-        "rule": "/tarefas/<int:task_id>/desarquivar",
-        "path": "/tarefas/{task_item_id}/desarquivar",
-        "role": "user",
-        "expected_status": 302,
         "requires_login": True,
         "requires_admin": False,
     },
@@ -1221,9 +980,6 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
-    # /busca: rota Jinja canonica CORTADA (Grupo B). Agora servida pela SPA via
-    # catch-all (_MIGRATED_EXACT_PATHS); a API de busca permanece em /api/busca e
-    # /api/busca-global (widget da topnav).
     {
         "id": "notifications_dropdown_post",
         "method": "POST",
@@ -1234,13 +990,6 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
-    # Admin users (Jinja): rotas CORTADAS na migracao SPA — o CRUD vive em
-    # /admin/usuarios* (SPA) + /api/admin/usuarios* (envelope).
-    # Admin templates/orgaos: rotas Jinja canonicas CORTADAS (Grupo B).
-    # Só /admin/templates e /admin/orgaos estao em _MIGRATED_EXACT_PATHS
-    # (routes/spa.py) e sao servidos pelo catch-all; /admin/orgaos/tipos NAO tem
-    # tela nem rota (o catalogo local de tipos foi cortado com o SIORG). O CRUD
-    # restante vive em /api/admin/templates* e /api/admin/orgaos*.
     # Maintenance
     {
         "id": "favicon_get",
@@ -1512,140 +1261,6 @@ ROUTE_CASES = [
 LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
 ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 
-# Segurança adicional para garantir escopo fechado do plano.
-# 134 rotas originais + 6 endpoints JSON da SPA da Fase 2 (/api/me,
-# /api/csrf-token, /api/dashboard, /api/projetos-pendentes,
-# /api/projetos/<id>/historico, /api/busca) + 2 endpoints JSON da Fase 3
-# (/api/projetos, /api/tarefas) + 2 rotas do shell SPA (/spa e
-# /spa/<path:subpath>).
-# As telas /spa/* (Lista de Projetos e Hub de Tarefas em modo lista) NAO
-# adicionam rota Flask: são servidas pelo catch-all /spa/<path:subpath>
-# (client-side routing). O filtro de orgao de Pendentes também NAO adiciona rota
-# (só estende o payload de /api/projetos-pendentes com orgaos_options).
-# + 6 endpoints JSON da Fase 4 (Admin Usuarios): GET /api/admin/usuarios,
-# GET /api/admin/usuarios/<id>, POST /api/admin/usuarios (criar),
-# PUT /api/admin/usuarios/<id> (editar — RESTificado), POST .../remover-cpf
-# (acao) e DELETE /api/admin/usuarios/<id> (excluir — RESTificado).
-# + 14 endpoints JSON da Fase 4 (Admin Orgaos/Tipos): GET /api/admin/orgaos
-# (arvore), GET /api/admin/orgaos/<id>, POST /api/admin/orgaos (criar), PUT
-# /api/admin/orgaos/<id> (editar), DELETE /api/admin/orgaos/<id> (excluir),
-# POST .../move, .../reorder, .../toggle-ativo (acoes); GET /api/admin/orgaos/
-# tipos (lista), GET .../tipos/<id>, POST .../tipos (criar), PUT .../tipos/<id>
-# (editar), POST .../tipos/<id>/toggle-ativo (acao) e DELETE .../tipos/<id>
-# (excluir). CRUD de recurso RESTificado (PUT/DELETE); reorder/move/toggle-ativo
-# permanecem POST (acoes/comandos).
-# + 6 endpoints JSON da Fase 4 (Admin Templates de etapas): GET
-# /api/admin/templates (lista com metricas + ?order=/?q=/?page=), GET
-# /api/admin/templates/<id> (form + etapas), POST /api/admin/templates (criar),
-# PUT /api/admin/templates/<id> (editar — RESTificado), POST .../duplicate
-# (acao) e DELETE /api/admin/templates/<id> (excluir — RESTificado).
-# + 3 endpoints JSON da Fase 5a (Detalhe de Projeto): GET
-# /api/projetos/<id>/detalhe (payload completo do detalhe: projeto + etapas com
-# contagem de tarefas read-only + derivados + opcoes + permissions), POST
-# /api/projetos/<id>/inline (edicao inline reusando apply_project_inline_changes;
-# 422 validation / 403 forbidden) e GET /api/projetos/<id>/tarefas-etapa (lista
-# SOMENTE LEITURA das tarefas de uma etapa).
-# + 10 endpoints JSON da Fase 5a (Etapas — mutacao): POST
-# /api/projetos/<id>/etapas (adicionar), POST /api/etapas/<id> (editar), POST
-# /api/etapas/<id>/delete, POST /api/etapas/<id>/update-field (inline; cascata
-# de datas em dias uteis server-side), POST /api/etapas/<id>/comentario, POST
-# /api/etapas/<id>/toggle-iniciada, POST /api/etapas/<id>/toggle, POST
-# /api/projetos/<id>/etapas/reordenar (reordena e dispara cascade_subsequent_dates
-# server-side; devolve as etapas atualizadas), POST /api/projetos/<id>/cascade
-# (recalculo de datas em cascata) e POST /api/projetos/<id>/importar-modelo
-# (aplica template reusando import_template_stages). Todos no envelope, com
-# api_login_required + user_can_access_project (404/403).
-#
-# Fase 5b-1 (Kanban): GET /api/tarefas/board (5 colunas por status), POST
-# /api/tarefas/<id>/status (transição autoritativa via _can_transition_task_to_status)
-# e POST /api/tarefas/board/reordenar (ordem + status entre colunas). Anexados ao
-# main_bp em routes/api/board.py, no envelope, com api_login_required + escopo de
-# órgão. Total: 186.
-#
-# Fase 5b-2 (Drawer de Tarefa): GET /api/tarefas/<id>/detalhe (payload completo do
-# drawer: campos editaveis + status/prioridade/tipo/responsavel + contexto
-# etapa/projeto + comentarios + anexos + permissions), POST /api/tarefas/<id>/campos
-# (edicao inline AUTOSAVE de descricao/prioridade/tipo/responsavel; status continua
-# em /api/tarefas/<id>/status da 5b-1), POST /api/tarefas/<id>/finalizar (respeita
-# _can_manage_task_restricted_actions -> 403), POST /api/tarefas/<id>/arquivar, POST
-# /api/tarefas/<id>/desarquivar, POST /api/tarefas/<id>/reativar (alias) e GET
-# /api/tarefas/<id>/sugestoes-responsavel (picker). Anexados ao main_bp em
-# routes/api/task_drawer.py, no envelope, com api_login_required + permissoes
-# server-side (reusa _can_view_task / _can_manage_task_restricted_actions). +7.
-#
-# Fase 5b-2 (etapa backend 2/2 — Comentarios + Anexos): POST
-# /api/tarefas/<id>/comentarios (add), POST /api/comentarios/<id> (editar autor),
-# POST /api/comentarios/<id>/delete (excluir autor); GET /api/tarefas/<id>/anexos
-# (listar), POST /api/tarefas/<id>/anexos (UPLOAD multipart request.files["file"],
-# valida tipo/conteudo + limite 10MB -> 413), GET /api/anexos/<id> (DOWNLOAD
-# binario send_file — NAO envelopado, mas api_login_required + _can_view_task) e
-# POST /api/anexos/<id>/delete (excluir; autor/admin). Anexados ao main_bp em
-# routes/api/task_comments.py e routes/api/task_attachments.py, reusando as regras
-# legadas (_can_view_task para comentar; autoria para editar/excluir comentario;
-# _can_manage_task_restricted_actions para excluir anexo). +7.
-#
-# Fase 6 (Google Calendar): GET /api/calendarios (hub: eventos do usuario
-# ordenados + estado da conexao SEM tokens + google_calendar_enabled +
-# last_sync_display) e tres acoes de conexao que reusam EXATAMENTE os helpers do
-# fluxo Jinja (routes/calendars/helpers.py), porem no envelope: POST
-# /api/calendarios/google/disconnect (_stop_watch_channel + delete), POST
-# /api/calendarios/google/sync (_sync_events_from_google -> summary
-# {upserted,deleted,ignored}) e POST /api/calendarios/google/watch/renew
-# (_renew_watch_channel -> {expires_at_display}). Token expirado e tratado igual
-# ao legado (_describe_calendar_issue + _EXPIRED_TOKEN_CODES -> _auto_disconnect).
-# O CRUD de evento NAO ganha endpoint /api: o frontend reusa POST
-# /calendarios/eventos[/...] com Accept: application/json. Anexados ao main_bp em
-# routes/api/calendars.py, com api_login_required. +4.
-#
-# Debito tecnico de backend (enveloped, aditivos; nao alteram os legados):
-# + GET /api/etapas/templates (#13): espelho enveloped do legado GET /api/templates
-#   (que devolve array cru e HTML em 401) para o modal de importacao de modelos;
-#   reusa a MESMA query/serializacao (_stage_templates_payload em
-#   routes/api/etapas.py), com api_login_required. role=user.
-# + GET /api/admin/orgaos/opcoes (#10): opcoes de orgaos ATIVOS ja achatadas
-#   (id/sigla/nome/pai_id) para o seletor do form de usuario, reusando
-#   _list_orgaos_with_parent (routes/admin_users.py). Anexado em
-#   routes/api/admin_orgaos.py, com api_admin_required. role=admin.
-# Total: 206.
-#
-# Fase 0a (corte SPA): removidas as 11 rotas shim orfas /tarefas/itens/* (legacy.py
-# deletado). 206 - 11 = 195. Cobertura preservada nas rotas canonicas /tarefas/<id>/*.
-#
-# Item #1 (SPA em PATHS NATIVOS): +2 rotas em routes/spa.py.
-# + GET /<path:spa_path>: catch-all dinamico (rank < rotas estaticas) que serve o
-#   index da SPA (Jinja + csp_nonce) nos paths nativos das telas migradas SEM rota
-#   Jinja propria (/projetos, /projetos/pendentes, /projetos/<id>, /admin/usuarios,
-#   /admin/orgaos/novo, /admin/orgaos/<id>, /admin). Paths nao migrados -> 404.
-# + GET /_app/<path:asset_path>: serve os assets imutaveis do SvelteKit a partir
-#   de static/spa/_app/ (com paths.base='' o cliente os pede em /_app/...).
-# Os paths migrados que ja tinham rota estatica registrada (/dashboard, /tarefas,
-# /calendarios) NAO adicionam rota: os endpoints Flask viraram KEEP-ENDPOINT e
-# devolvem _render_spa() direto (rank maior que o catch-all no Werkzeug). Os
-# demais (/busca, /admin/orgaos, /admin/templates) caem no catch-all.
-# 195 + 2 = 197.
-#
-# Features de paridade (mutacoes da SPA no envelope canonico, aditivas; NAO
-# alteram os legados Jinja, que continuam servindo flash+redirect):
-# + POST /api/projetos (criar projeto, reusa services/project_creation).
-# + POST /api/projetos/<id>/concluir (concluir projeto, reusa
-#   services/project_completion).
-# + GET  /api/catalogos/objetivos (catalogo de objetivos para o modal).
-# + GET  /api/projetos/<pid>/etapas/<eid>/tarefas (tarefas da etapa, quick-add).
-# + POST /api/tarefas (criar tarefa; corpo proprio, NAO reusa _create_task_common —
-#   compartilha so os helpers de validacao de routes/tasks/creation.py).
-# + POST /api/tarefas/<id>/excluir (excluir tarefa, reusa notify_task_deleted).
-# + POST /api/tarefas/<id>/mover-etapa (mover etapa, reusa move_task_to_etapa).
-# + POST /api/tarefas/arquivar-finalizadas (lote, reusa bulk_archive_finalized).
-# + GET  /api/tarefas/sugestoes-responsavel (picker do hub).
-# Reunioes Google (Detalhe do Projeto) + CRUD de evento dedicado (#20):
-# + POST /api/projetos/<id>/reunioes (criar reuniao, reusa create_stage_meeting).
-# + POST /api/etapas/<id>/reuniao (editar reuniao, reusa update_stage_meeting).
-# + POST /api/etapas/<id>/reuniao/excluir (excluir reuniao, reusa delete_meeting_etapa).
-# + POST /api/calendarios/eventos (criar evento, reusa helpers de events.py).
-# + POST /api/calendarios/eventos/<id>/editar (editar evento).
-# + POST /api/calendarios/eventos/<id>/excluir (excluir evento).
-# + POST /api/calendarios/eventos/<id>/gerar-meet (gerar link do Meet).
-# 197 + 16 = 213.
 ROUTE_CASES += [
     {
         "id": "api_projeto_criar_post",
@@ -2153,83 +1768,3 @@ ROUTE_CASES += [
         "requires_admin": False,
     },
 ]
-
-# Corte Grupo B (rotas Jinja canonicas -> SPA via catch-all):
-# - Admin Tipos de orgao: 7 casos removidos (/admin/orgaos/tipos*).
-# - Admin Templates de etapa: 7 casos removidos (/admin/templates*).
-# - Admin Orgaos (arvore): 9 casos removidos (/admin/orgaos*, exceto /api/*).
-# - Busca: 1 caso removido (/busca).
-# Total removido: 24. 205 - 24 = 181. Cobertura de regras de negocio preservada
-# nos contratos /api/admin/* e /api/busca. As telas Dashboard, Tarefas/Hub e
-# Calendarios Hub NAO foram cortadas: seus endpoints (main.dashboard,
-# main.list_tasks*/task_detail/project_tasks, main.calendars_hub) sao alvo de
-# url_for vivos em arquivos IMUTAVEIS (auth.py/decorators.py/calendars/oauth.py)
-# e em rotas/templates Jinja ainda vivos.
-#
-# +4 aditivos da SPA (Fase atual): DELETE /api/projetos/<id> (exclusao real),
-# GET /api/notificacoes, POST /api/notificacoes/marcar-lidas e GET
-# /api/orgaos/escopo. 181 + 4 = 185.
-# +2 rotas antes sem cobertura: POST /api/tarefas/<id>/responsaveis e
-# GET /api/calendarios/membros. 186 + 2 = 188.
-# -1 da lane de limpeza de codigo morto: GET /api/projetos_usuario removido
-# (rota sem consumidor em static/, templates/ ou frontend/). 188 - 1 = 187.
-# -2 da lane de migracao SPA (corte de duplicata Jinja): GET/POST
-# /etapa/<id>/edit removidos (edicao de etapa 100% coberta inline na SPA via
-# /api/etapas/<id>). 187 - 2 = 185.
-# -1 da lane 2: GET /project/<id>/history removido (historico vira modal na SPA
-# via /api/projetos/<id>/historico; build_project_history_context preservada).
-# 185 - 1 = 184.
-# -7 da lane 3: /admin/users* (Jinja) cortado — list/add(GET+POST)/edit(GET+POST)/
-# delete/remove-cpf. CRUD 100% na SPA (/admin/usuarios* + /api/admin/usuarios*).
-# 184 - 7 = 177.
-# -2 da lane 4 (sub-passo edit): GET/POST /project/<id>/edit removidos (edição de
-# projeto 100% inline na SPA via /api/projetos/<id>/inline, que reusa
-# apply_project_inline_changes). 177 - 2 = 175.
-# -1 da lane 4 (sub-passo pendentes): GET /projetos_pendentes removido (tela SPA
-# /projetos/pendentes via /api/projetos/pendentes; build_projetos_pendentes_context
-# preservada). 175 - 1 = 174.
-# +1 da lane 4 (migração CSV import p/ SPA): POST /api/projetos/importar-csv
-# (sucessor de /projects/import). 174 + 1 = 175.
-# -8 da varredura final do /projects (cluster Jinja cortado): import_projects,
-# add_project, project_edit_data, project_update_inline, project_delete,
-# project_concluir, project_stage_tasks_panel, project_legacy_tasks_panel.
-# /projects vira redirect (projects_get permanece, status 200->302). 175 - 8 = 167.
-# +2 da mudança #3 (responsáveis de etapa por área): GET /api/areas e
-# POST /api/etapas/<id>/responsaveis. 167 + 2 = 169.
-# -10 da integração SIORG (estrutura vira espelho read-only): rotas de escrita
-# de /api/admin/orgaos* cortadas — POST/PUT/DELETE de unidades, /move, /reorder,
-# /toggle-ativo e POST/PUT/DELETE//toggle-ativo de tipos (GETs preservados).
-# +2 endpoints SIORG: GET /api/admin/siorg/status e POST /api/admin/siorg/sync.
-# 169 - 10 + 2 = 161.
-# -2 do corte do catálogo local de tipos (sem consumidor em frontend/src): GET
-# /api/admin/orgaos/tipos e GET /api/admin/orgaos/tipos/<id>. 161 - 2 = 159.
-# +5 da S4 (convites por projeto, F3-27): GET/POST /api/projetos/<id>/membros,
-# PUT/DELETE /api/projetos/<id>/membros/<mid> e GET /api/usuarios/busca.
-# 159 + 5 = 164.
-# +1 da verificacao da S4 (F3-25): GET /api/admin/relatorios/grants-orfaos —
-# superficie do relatorio de grants orfaos que estava sem consumidor.
-# 164 + 1 = 165.
-# S5/F4-4b: a sprint do contrato 404 anti-enumeracao nao cria nem remove rota, e
-# nenhum caso desta matriz roda com rank 0 (papeis "user"/"admin"/"anon" veem os
-# recursos semeados), entao nenhum status esperado mudou. 165.
-# +1 do compartilhar com area (convite em lote/snapshot): POST
-# /api/projetos/<id>/membros/lote, mesmo 404 anti-enumeracao com a flag off.
-# 165 + 1 = 166.
-# +8 das colecoes de projetos (Fase 1): GET/POST /api/colecoes, PUT/DELETE
-# /api/colecoes/<cid>, GET/POST /api/colecoes/<cid>/projetos, DELETE
-# /api/colecoes/<cid>/projetos/<pid> e POST /api/projetos/<pid>/favorito.
-# 166 + 8 = 174.
-# +4 das colecoes de projetos (Fase 2): GET/POST
-# /api/colecoes/<cid>/compartilhamentos, DELETE
-# /api/colecoes/<cid>/compartilhamentos/<sid> e GET /api/colecoes/<cid>/cronograma.
-# 174 + 4 = 178.
-# +1 da sugestao de colecoes por IA (Fase 1 da feature de IA): POST
-# /api/colecoes/sugestoes. 178 + 1 = 179.
-# +2 do cache persistido de sugestoes (IA Fase 2): GET /api/colecoes/sugestoes
-# e POST /api/colecoes/sugestoes/<sid>/descartar. 179 + 2 = 181.
-# -2 da faxina de legado (item 0.4): GET /spa e GET /spa/<path:subpath> removidos
-# (rota de compat sem consumidor — zero target_url '/spa%' nos bancos; os paths
-# nativos ja sao servidos pelo catch-all). 181 - 2 = 179.
-# -1 da faxina de legado (item 0.8): GET /setup_db removido (expunha db.create_all()
-# e ALTER TABLE via GET; migracoes vivem em scripts/migrations/). 179 - 1 = 178.
-assert len(ROUTE_CASES) == 178

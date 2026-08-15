@@ -182,92 +182,37 @@ def test_api_projeto_inexistente_continua_404(app, client_editor):
     assert _erro(response)["code"] == "not_found"
 
 
-# ── Rotas ajax/Jinja (routes/etapas/crud.py) ─────────────────────────────────
-
-
-def test_ajax_add_etapa_negado_para_leitor(app, client_leitor, seed_data):
-    response = client_leitor.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={"etapa_descricao": "Etapa leitor"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["success"] is False
-
-
-def test_ajax_add_etapa_permitido_para_editor(app, client_editor, seed_data):
-    response = client_editor.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={"etapa_descricao": "Etapa editor"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["success"] is True
-
-
-def test_ajax_delete_etapa_negado_para_leitor(app, client_leitor, seed_data):
-    response = client_leitor.post(
-        f"/etapa/{seed_data['etapa_id']}/delete", headers=AJAX_HEADERS
-    )
-
-    assert response.status_code == 403
-
-
-def test_ajax_reordenar_negado_para_leitor(app, client_leitor, seed_data):
-    """Antes da S3 bastava ter vínculo (``user_can_access_project``)."""
-    response = client_leitor.post(
-        f"/project/{seed_data['project_id']}/etapas/reordenar",
-        json={"etapa_ids": [seed_data["etapa_id"]]},
-    )
-
-    assert response.status_code == 403
-
-
-def test_ajax_reordenar_permitido_para_gestor(app, client_gestor, seed_data):
+def test_api_reordenar_permitido_para_gestor(app, client_gestor, seed_data):
     response = client_gestor.post(
-        f"/project/{seed_data['project_id']}/etapas/reordenar",
+        f"/api/projetos/{seed_data['project_id']}/etapas/reordenar",
         json={"etapa_ids": [seed_data["etapa_id"]]},
     )
 
     assert response.status_code == 200
-    assert response.get_json()["success"] is True
+    assert response.get_json()["ok"] is True
 
 
-def test_ajax_toggle_iniciada_negado_para_leitor(app, client_leitor, seed_data):
-    response = client_leitor.post(f"/etapa/{seed_data['etapa_id']}/toggle_iniciada")
+def test_api_toggle_iniciada_negado_para_leitor(app, client_leitor, seed_data):
+    response = client_leitor.post(
+        f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada"
+    )
 
     assert response.status_code == 403
+    assert _erro(response)["code"] == "forbidden"
 
 
-def test_ajax_toggle_iniciada_permitido_para_editor(app, client_editor, seed_data):
-    response = client_editor.post(f"/etapa/{seed_data['etapa_id']}/toggle_iniciada")
+def test_api_toggle_iniciada_permitido_para_editor(app, client_editor, seed_data):
+    response = client_editor.post(
+        f"/api/etapas/{seed_data['etapa_id']}/toggle-iniciada"
+    )
 
     assert response.status_code == 200
-    assert response.get_json()["success"] is True
+    assert response.get_json()["data"]["etapa"]["iniciada"] is True
 
 
-def test_ajax_update_field_negado_para_leitor(app, client_leitor, seed_data):
+def test_api_cascade_negado_para_leitor(app, client_leitor, seed_data):
     response = client_leitor.post(
-        f"/etapa/{seed_data['etapa_id']}/update_field",
-        json={"field": "descricao", "value": "x"},
-    )
-
-    assert response.status_code == 403
-
-
-def test_ajax_comentario_negado_para_leitor(app, client_leitor, seed_data):
-    response = client_leitor.post(
-        f"/etapa/{seed_data['etapa_id']}/comentario", json={"comentario": "x"}
-    )
-
-    assert response.status_code == 403
-
-
-def test_ajax_cascade_update_negado_para_leitor(app, client_leitor, seed_data):
-    response = client_leitor.post(
-        f"/project/{seed_data['project_id']}/cascade_update",
+        f"/api/projetos/{seed_data['project_id']}/cascade",
         json={"etapa_id": seed_data["etapa_id"], "days_diff": 2},
     )
 

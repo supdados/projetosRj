@@ -213,22 +213,24 @@ def test_same_google_account_on_another_internal_user_can_reschedule_project_mee
     )
 
     response = client.post(
-        f"/etapa/{meeting_etapa_id}/update_field",
-        json={"field": "data_inicio", "value": "2026-03-21"},
+        f"/api/etapas/{meeting_etapa_id}/reuniao",
+        json={
+            "title": "Reunião vinculada",
+            "starts_at": "2026-03-23T13:00",
+            "ends_at": "2026-03-23T14:00",
+        },
         headers=AJAX_HEADERS,
     )
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["isMeeting"] is True
-    assert payload["newValue"] == "2026-03-21"
-    assert payload["updatedEndDate"] == "2026-03-21"
+    assert payload["ok"] is True
+    assert payload["data"]["etapa"]["entry_type"] == "google_meeting"
 
     with app.app_context():
         etapa = db.session.get(Etapa, meeting_etapa_id)
-        assert etapa.data_inicio == datetime.date(2026, 3, 21)
-        assert etapa.data_fim == datetime.date(2026, 3, 21)
+        assert etapa.data_inicio == datetime.date(2026, 3, 23)
+        assert etapa.data_fim == datetime.date(2026, 3, 23)
 
 
 def test_same_google_account_can_edit_project_meeting_via_modal_route(
@@ -358,19 +360,23 @@ def test_different_google_account_cannot_update_or_delete_project_meeting(
     _login(client, other_user_id)
 
     update_response = client.post(
-        f"/etapa/{meeting_etapa_id}/update_field",
-        json={"field": "data_inicio", "value": "2026-03-22"},
+        f"/api/etapas/{meeting_etapa_id}/reuniao",
+        json={
+            "title": "Reunião vinculada",
+            "starts_at": "2026-03-24T13:00",
+            "ends_at": "2026-03-24T14:00",
+        },
         headers=AJAX_HEADERS,
     )
     delete_response = client.post(
-        f"/etapa/{meeting_etapa_id}/delete",
+        f"/api/etapas/{meeting_etapa_id}/reuniao/excluir",
         headers=AJAX_HEADERS,
     )
 
     assert update_response.status_code == 403
-    assert update_response.get_json()["success"] is False
+    assert update_response.get_json()["error"]["code"] == "forbidden"
     assert delete_response.status_code == 403
-    assert delete_response.get_json()["success"] is False
+    assert delete_response.get_json()["error"]["code"] == "forbidden"
 
     with app.app_context():
         assert db.session.get(Etapa, meeting_etapa_id) is not None

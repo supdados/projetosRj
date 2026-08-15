@@ -21,9 +21,8 @@ tarefas visíveis do Hub, ``_build_visible_tasks_query``):
       mudança de status SÓ a esse card — sujeita à mesma validação de transição.
 
 ADITIVO: anexa ao ``main_bp`` ÚNICO (``routes/blueprint.py``); NÃO cria blueprint
-novo, NÃO altera as rotas Jinja/JSON legadas (``update_task_status``,
-``reorder_tasks_hub``, ``mover-etapa`` em ``routes/tasks/crud.py``) nem o JS
-legado — elas coexistem (strangler). O estado canônico vive na store Svelte; o
+novo. As rotas Jinja legadas equivalentes foram cortadas (``routes/tasks/crud.py``
+morreu na sprint 2 pós-auditoria). O estado canônico vive na store Svelte; o
 backend é a fonte de verdade para a validação de transição.
 """
 

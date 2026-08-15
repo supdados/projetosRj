@@ -573,29 +573,6 @@ def test_rank_zero_responde_404_e_nunca_403(client_outsider, seed_data):
     _fail(historico.get_json(), code="not_found")
 
 
-def test_paridade_do_contrato_entre_superficie_api_e_legada(client_outsider, seed_data):
-    """A MESMA negativa nas duas superfícies: 404 no envelope e no jsonify legado.
-
-    A SPA usa `/api/*` e as telas antigas usam `jsonify` — o contrato S5 vale
-    nos dois, com a mesma mensagem canônica (`NOT_FOUND_MESSAGE`).
-    """
-    from routes.api.envelope import NOT_FOUND_MESSAGE
-
-    api = client_outsider.post(
-        f"/api/etapas/{seed_data['etapa_id']}/update-field",
-        json={"field": "descricao", "value": "Bloqueado"},
-    )
-    legada = client_outsider.post(
-        f"/etapa/{seed_data['etapa_id']}/update_field",
-        json={"field": "descricao", "value": "Bloqueado"},
-    )
-
-    assert api.status_code == legada.status_code == 404
-    assert api.get_json()["error"]["message"] == NOT_FOUND_MESSAGE
-    assert legada.get_json()["message"] == NOT_FOUND_MESSAGE
-    assert legada.get_json()["success"] is False
-
-
 def test_editor_nao_cria_projeto_em_orgao_fora_do_vinculo(app, client_user, seed_data):
     """Condição (a) da §5.4: rank >= editor no órgão DESTINO, não só visibilidade."""
     _rebaixar_vinculo(

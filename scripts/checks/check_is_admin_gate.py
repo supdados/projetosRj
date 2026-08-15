@@ -53,7 +53,6 @@ BASELINE: dict[str, int] = {
     "routes/projects/views.py": 5,
     "routes/search.py": 1,
     "routes/tasks/creation.py": 1,
-    "routes/tasks/crud.py": 1,
     "routes/tasks/hub.py": 1,
     "routes/tasks/permissions.py": 1,
     "routes/tasks/queries.py": 1,

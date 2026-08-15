@@ -1,10 +1,10 @@
-"""Testes de proteção CSRF nos endpoints POST do hub de tarefas.
+"""Testes de proteção CSRF global nos endpoints POST da API da SPA.
 
-Contexto do bug:
+Contexto do bug original (era no JS do kanban legado, hoje cortado):
   Flask-WTF 1.2.2 NÃO isenta requests com Content-Type: application/json — CSRF é
-  exigido para todo POST. Endpoints que enviavam POST sem X-CSRFToken (delete de tarefa,
-  comentário, anexo) eram bloqueados com 400. O fix foi adicionar X-CSRFToken explícito
-  via getCsrfToken() nos três arquivos JS do kanban.
+  exigido para todo POST. Endpoints chamados sem X-CSRFToken eram bloqueados com 400.
+  A propriedade continua valendo para a superfície /api/* consumida pela SPA
+  (nenhum blueprint de API é csrf.exempt; só o webhook de calendário é).
 
 O que esses testes verificam:
   1. POST sem token (form-urlencoded) → rejeitado com 400.
@@ -92,25 +92,24 @@ def _is_csrf_error(response) -> bool:
 
 # ── Endpoints com o padrão que tinha o bug ────────────────────────────────────
 #
-# Esses endpoints recebiam POST sem Content-Type: application/json e sem token CSRF
-# quando chamados pelo JavaScript do kanban.
+# POSTs de exclusão que o front pode disparar sem corpo JSON (sem content-type).
 
 _ENDPOINTS_SEM_JSON = [
-    "/tarefas/1/delete",
-    "/tarefas/comentarios/1/delete",
-    "/tarefas/anexos/1/delete",
+    "/api/tarefas/1/excluir",
+    "/api/comentarios/1/delete",
+    "/api/anexos/1/delete",
 ]
 
-# Endpoints que sempre enviaram Content-Type: application/json (referência)
+# Endpoints que sempre recebem Content-Type: application/json (referência)
 _ENDPOINTS_SEMPRE_JSON = [
-    "/tarefas/reordenar",
-    "/tarefas/1/update_status",
-    "/tarefas/1/update_prioridade",
-    "/tarefas/1/update_tipo",
-    "/tarefas/1/finalizar",
-    "/tarefas/1/desarquivar",
-    "/tarefas/arquivar-finalizadas",
-    "/tarefas/1/edit",
+    "/api/tarefas/board/reordenar",
+    "/api/tarefas/1/status",
+    "/api/tarefas/1/campos",
+    "/api/tarefas/1/finalizar",
+    "/api/tarefas/1/desarquivar",
+    "/api/tarefas/1/reativar",
+    "/api/tarefas/arquivar-finalizadas",
+    "/api/tarefas",
 ]
 
 
@@ -158,10 +157,10 @@ def test_post_com_content_type_json_sem_token_retorna_400(csrf_client, url):
 
 @pytest.mark.parametrize("url", _ENDPOINTS_SEM_JSON)
 def test_post_com_csrf_header_valido_passa_csrf(csrf_app, csrf_client, url):
-    """POST com X-CSRFToken válido não deve ser bloqueado — simula o interceptor do base.html.
+    """POST com X-CSRFToken válido não deve ser bloqueado — simula o fetch da SPA.
 
     Gera token via Flask-WTF e injeta a sessão correspondente no cliente, replicando
-    exatamente o que o browser faz após receber o token via meta[name=csrf-token].
+    o que o browser faz após ler a meta[name=csrf-token] do shell da SPA.
     """
     token = _csrf_token_for_client(csrf_app, csrf_client)
 
@@ -174,6 +173,6 @@ def test_post_com_csrf_header_valido_passa_csrf(csrf_app, csrf_client, url):
     )
     assert not _is_csrf_error(resp), (
         f"X-CSRFToken válido foi rejeitado em {url}. "
-        f"O interceptor do base.html injetaria esse header — deveria funcionar. "
+        f"O fetch da SPA injeta esse header — deveria passar do CSRF. "
         f"Corpo: {resp.get_data(as_text=True)[:200]}"
     )

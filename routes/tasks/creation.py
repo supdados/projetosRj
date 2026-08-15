@@ -1,26 +1,19 @@
-from flask import current_app, flash, g, jsonify, redirect, request, url_for
+from flask import g, redirect, request, url_for
 
 from routes.safe_redirect import safe_internal_path
 
 from models import (
     Etapa,
     Project,
-    Task,
     User,
     UserOrgao,
     db,
 )
-from services.notifications import notify_task_assignment_change, notify_task_event
 from routes.orgao_tree import get_orgao_ancestors
 from routes.tasks.constants import (
-    VALID_PRIORIDADES,
-    VALID_STATUSES,
-    VALID_TIPOS,
     _normalize_person_name,
     _normalize_responsavel_value,
-    _preview_text,
     _split_responsavel_names,
-    _task_status_label,
 )
 from routes.tasks.permissions import (
     task_permission_flags,
@@ -243,205 +236,3 @@ def _redirect_back_or(default_endpoint, **kwargs):
     if next_url:
         return redirect(next_url)
     return redirect(url_for(default_endpoint, **kwargs))
-
-
-def _extract_creation_payload(default_project=None):
-    payload = request.get_json(silent=True) or {}
-
-    project_raw = request.form.get("project")
-    if project_raw is None:
-        project_raw = request.form.get("project_id")
-    if project_raw is None:
-        project_raw = payload.get("project")
-    if project_raw is None:
-        project_raw = payload.get("project_id")
-
-    if project_raw is None and default_project is not None:
-        project_raw = str(default_project.id)
-
-    etapa_raw = request.form.get("etapa")
-    if etapa_raw is None:
-        etapa_raw = request.form.get("etapa_id")
-    if etapa_raw is None:
-        etapa_raw = payload.get("etapa")
-    if etapa_raw is None:
-        etapa_raw = payload.get("etapa_id")
-
-    descricao = (
-        request.form.get("descricao") or payload.get("descricao") or ""
-    ).strip()
-    if not descricao:
-        descricao = (request.form.get("titulo") or payload.get("titulo") or "").strip()
-
-    status = (
-        request.form.get("status") or payload.get("status") or "nao_iniciada"
-    ).strip()
-    responsavel = (
-        request.form.get("responsavel") or payload.get("responsavel") or ""
-    ).strip()
-    prioridade = (
-        request.form.get("prioridade") or payload.get("prioridade") or ""
-    ).strip() or None
-    tipo_pedido = (
-        request.form.get("tipo_pedido") or payload.get("tipo_pedido") or ""
-    ).strip() or None
-
-    raw_assignee_ids = payload.get("assignee_ids")
-    assignee_ids: list[int] = []
-    if isinstance(raw_assignee_ids, list):
-        for value in raw_assignee_ids:
-            try:
-                assignee_ids.append(int(value))
-            except (TypeError, ValueError):
-                continue
-
-    return {
-        "project_raw": project_raw,
-        "etapa_raw": etapa_raw,
-        "descricao": descricao,
-        "status": status,
-        "responsavel": responsavel,
-        "assignee_ids": assignee_ids,
-        "prioridade": prioridade,
-        "tipo_pedido": tipo_pedido,
-    }
-
-
-def _create_task_common(default_project=None):
-    is_ajax = (
-        request.headers.get("X-Requested-With") == "XMLHttpRequest"
-        or request.accept_mimetypes.best == "application/json"
-    )
-
-    payload = _extract_creation_payload(default_project=default_project)
-
-    project, project_error, status_code = _resolve_project_token(
-        payload["project_raw"], allow_empty=True, for_write=True
-    )
-    if project_error:
-        if is_ajax:
-            return jsonify({"success": False, "message": project_error}), status_code
-        flash(project_error, "danger")
-        return redirect(url_for("main.list_tasks"))
-
-    etapa, etapa_error, etapa_status = _resolve_etapa_token(
-        payload["etapa_raw"], project, allow_empty=True
-    )
-    if etapa_error:
-        if is_ajax:
-            return jsonify({"success": False, "message": etapa_error}), etapa_status
-        flash(etapa_error, "danger")
-        return redirect(url_for("main.list_tasks"))
-
-    status = (
-        payload["status"] if payload["status"] in VALID_STATUSES else "nao_iniciada"
-    )
-    prioridade = (
-        payload["prioridade"] if payload["prioridade"] in VALID_PRIORIDADES else None
-    )
-    tipo_pedido = (
-        payload["tipo_pedido"] if payload["tipo_pedido"] in VALID_TIPOS else None
-    )
-
-    if not payload["descricao"]:
-        message = "Descrição é obrigatória."
-        if is_ajax:
-            return jsonify({"success": False, "message": message}), 400
-        flash(message, "danger")
-        return redirect(url_for("main.list_tasks"))
-
-    is_valid_responsavel, canonical_responsavel, invalid_names = (
-        _validate_task_responsavel(project, payload["responsavel"])
-    )
-    if not is_valid_responsavel:
-        message = _format_invalid_responsavel_message(invalid_names)
-        if is_ajax:
-            return jsonify({"success": False, "message": message}), 400
-        flash(message, "danger")
-        return redirect(url_for("main.list_tasks"))
-
-    try:
-        max_ordem = (
-            db.session.query(db.func.max(Task.ordem))
-            .filter(
-                Task.project_id == (project.id if project else None),
-                Task.is_archived.is_(False),
-            )
-            .scalar()
-            or 0
-        )
-
-        task = Task(
-            descricao=payload["descricao"],
-            status=status,
-            responsavel=canonical_responsavel if canonical_responsavel else None,
-            prioridade=prioridade,
-            tipo_pedido=tipo_pedido,
-            project_id=project.id if project else None,
-            etapa_id=etapa.id if etapa else None,
-            created_by_id=g.user.id,
-            ordem=max_ordem + 1,
-        )
-
-        db.session.add(task)
-        db.session.flush()
-
-        # Responsáveis múltiplos (novo modelo). Valida cada id contra os
-        # candidatos com acesso ao projeto; notifica os adicionados (abaixo).
-        from routes.tasks.notifications import notify_assignee_change
-        from routes.tasks.queries import set_task_assignees
-
-        allowed_assignee_ids = {
-            user.id for user in _get_assignable_users_for_project(project)
-        }
-        desired_assignees = [
-            uid for uid in payload["assignee_ids"] if uid in allowed_assignee_ids
-        ]
-        added_assignees, removed_assignees = set_task_assignees(task, desired_assignees)
-
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type="task_created",
-            title="Nova tarefa",
-            message=(
-                f'{g.user.name} criou a tarefa "{_preview_text(task.descricao, 90)}" '
-                f"com status {_task_status_label(task.status)}."
-            ),
-        )
-        if task.responsavel:
-            notify_task_assignment_change(
-                task,
-                task,
-                g.user.id,
-                old_responsavel=None,
-                new_responsavel=task.responsavel,
-            )
-
-        notify_assignee_change(task, added_assignees, removed_assignees)
-
-        db.session.commit()
-
-        if is_ajax:
-            serialized = _serialize_task_payload(task)
-            return jsonify({"success": True, "task": serialized, "item": serialized})
-
-        flash("Tarefa adicionada com sucesso!", "success")
-        if project:
-            return redirect(url_for("main.project_tasks", project_id=project.id))
-        return redirect(url_for("main.list_tasks"))
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.exception("Falha ao adicionar tarefa: %s", type(e).__name__)
-        if is_ajax:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "Não foi possível adicionar a tarefa.",
-                    }
-                ),
-                500,
-            )
-        flash("Não foi possível adicionar a tarefa.", "danger")
-        return redirect(url_for("main.list_tasks"))

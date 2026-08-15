@@ -1,93 +1,70 @@
+"""Criação de etapa pela SPA: ``POST /api/projetos/<id>/etapas``."""
+
 from models import Etapa, Project, db
 
-AJAX_HEADERS = {
-    "X-Requested-With": "XMLHttpRequest",
-    "Accept": "application/json",
-}
+RESPONSAVEIS = [{"area_id": None, "label": "Outras"}]
 
 
-def test_add_etapa_inline_ajax_success_returns_json_payload(
-    app, client_user, seed_data
-):
+def _data(response):
+    payload = response.get_json()
+    assert payload["ok"] is True
+    return payload["data"]
+
+
+def test_add_etapa_success_returns_envelope_and_persists(app, client_user, seed_data):
     response = client_user.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={
-            "etapa_descricao": "Nova etapa inline",
-            "etapa_data_inicio": "2026-03-10",
-            "etapa_data_fim": "2026-03-15",
-            "etapa_responsavel": "Usuario Auditoria",
-            "etapa_iniciada": "on",
+        f"/api/projetos/{seed_data['project_id']}/etapas",
+        json={
+            "descricao": "Nova etapa inline",
+            "data_inicio": "2026-03-10",
+            "data_fim": "2026-03-15",
+            "responsaveis": RESPONSAVEIS,
+            "iniciada": True,
         },
-        headers=AJAX_HEADERS,
     )
 
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["etapa"]["descricao"] == "Nova etapa inline"
-    assert payload["etapa"]["data_inicio"] == "2026-03-10"
-    assert payload["etapa"]["data_inicio_display"] == "10/03/2026"
-    assert payload["etapa"]["ordem"] == 2
+    etapa_payload = _data(response)["etapa"]
+    assert etapa_payload["descricao"] == "Nova etapa inline"
+    assert etapa_payload["data_inicio"] == "2026-03-10"
+    assert etapa_payload["ordem"] == 2
 
     with app.app_context():
-        etapa = db.session.get(Etapa, payload["etapa"]["id"])
+        etapa = db.session.get(Etapa, etapa_payload["id"])
         assert etapa is not None
         assert etapa.project_id == seed_data["project_id"]
         assert etapa.descricao == "Nova etapa inline"
 
 
-def test_add_etapa_inline_ajax_requires_descricao(client_user, seed_data):
+def test_add_etapa_requires_descricao(client_user, seed_data):
     response = client_user.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={"etapa_descricao": "   "},
-        headers=AJAX_HEADERS,
+        f"/api/projetos/{seed_data['project_id']}/etapas",
+        json={"descricao": "   ", "responsaveis": RESPONSAVEIS},
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 422
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "descrição" in payload["message"].lower()
+    assert payload["ok"] is False
+    assert "descrição" in payload["error"]["message"].lower()
 
 
-def test_add_etapa_inline_ajax_not_found_without_area_access(
-    client_outsider, seed_data
-):
-    """S5/F4-2: rank 0 recebe o 404 canônico, idêntico ao do projeto inexistente."""
-    response = client_outsider.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={"etapa_descricao": "Tentativa sem permissão"},
-        headers=AJAX_HEADERS,
-    )
-    inexistente = client_outsider.post(
-        "/project/999999/etapa/add",
-        data={"etapa_descricao": "Tentativa sem permissão"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 404
-    assert response.get_json()["success"] is False
-    assert response.get_json() == inexistente.get_json()
-
-
-def test_add_etapa_inline_ajax_normalizes_done_when_not_started(client_user, seed_data):
+def test_add_etapa_normalizes_done_when_not_started(client_user, seed_data):
     response = client_user.post(
-        f"/project/{seed_data['project_id']}/etapa/add",
-        data={
-            "etapa_descricao": "Etapa com done inválido",
-            "etapa_done": "on",
+        f"/api/projetos/{seed_data['project_id']}/etapas",
+        json={
+            "descricao": "Etapa com done inválido",
+            "responsaveis": RESPONSAVEIS,
+            "done": True,
         },
-        headers=AJAX_HEADERS,
     )
 
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["etapa"]["iniciada"] is False
-    assert payload["etapa"]["done"] is False
-    assert payload["warning"]
+    etapa_payload = _data(response)["etapa"]
+    assert etapa_payload["iniciada"] is False
+    assert etapa_payload["done"] is False
 
 
-def test_add_etapa_inline_ajax_requires_confirmation_for_finalized_project(
+def test_add_etapa_requires_confirmation_for_finalized_project(
     app, client_user, seed_data
 ):
     with app.app_context():
@@ -96,15 +73,14 @@ def test_add_etapa_inline_ajax_requires_confirmation_for_finalized_project(
         db.session.commit()
 
     response = client_user.post(
-        f"/project/{seed_data['project_complete_id']}/etapa/add",
-        data={"etapa_descricao": "Nova etapa sem confirmar"},
-        headers=AJAX_HEADERS,
+        f"/api/projetos/{seed_data['project_complete_id']}/etapas",
+        json={"descricao": "Nova etapa sem confirmar", "responsaveis": RESPONSAVEIS},
     )
 
     assert response.status_code == 409
     payload = response.get_json()
-    assert payload["success"] is False
-    assert payload["confirmation_required"] is True
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "validation"
 
     with app.app_context():
         project = db.session.get(Project, seed_data["project_complete_id"])
@@ -116,7 +92,7 @@ def test_add_etapa_inline_ajax_requires_confirmation_for_finalized_project(
         assert etapa is None
 
 
-def test_add_etapa_inline_ajax_reactivates_project_when_confirmation_is_sent(
+def test_add_etapa_reactivates_project_when_confirmation_is_sent(
     app, client_user, seed_data
 ):
     with app.app_context():
@@ -125,20 +101,18 @@ def test_add_etapa_inline_ajax_reactivates_project_when_confirmation_is_sent(
         db.session.commit()
 
     response = client_user.post(
-        f"/project/{seed_data['project_complete_id']}/etapa/add",
-        data={
-            "etapa_descricao": "Nova etapa reativada",
-            "reactivate_project": "1",
+        f"/api/projetos/{seed_data['project_complete_id']}/etapas",
+        json={
+            "descricao": "Nova etapa reativada",
+            "responsaveis": RESPONSAVEIS,
+            "reactivate": True,
         },
-        headers=AJAX_HEADERS,
     )
 
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["project_reactivated"] is True
-    assert payload["project_status"] == "Vigente"
-    assert payload["reload_page"] is True
+    data = _data(response)
+    assert data["project_reactivated"] is True
+    assert data["project_status"] == "Vigente"
 
     with app.app_context():
         project = db.session.get(Project, seed_data["project_complete_id"])

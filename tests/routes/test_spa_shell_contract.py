@@ -60,7 +60,7 @@ def test_colecoes_non_numeric_id_is_not_served(client):
 
 
 def test_spa_reserved_subpath_is_not_intercepted(client):
-    """Um subpath reservado é rejeitado (404) pelo catch-all, não servido como shell."""
+    """Subpath com prefixo reservado é rejeitado (404) pelo catch-all da SPA."""
     response = client.get("/spa/api/me")
     assert response.status_code == 404
 

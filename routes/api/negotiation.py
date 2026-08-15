@@ -6,10 +6,9 @@ Jinja), respondem com 401/403 JSON no envelope canônico — comportamento exigi
 pela SPA, que precisa de erros estruturados, não de HTML de login.
 
 IMPORTANTE: ``routes/decorators.py`` NÃO é alterado (o Jinja depende do
-redirect). Os ``_wants_json`` divergentes existentes
-(``routes/tasks/crud.py:57``, ``routes/calendars/events.py:24``) permanecem
-como estão; ``wants_json`` aqui é a versão única que os unifica, consolidando
-as heurísticas:
+redirect). O ``_wants_json`` divergente de ``routes/calendars/events.py:24``
+permanece como está; ``wants_json`` aqui é a versão única que unifica as
+heurísticas:
 
     - Accept indica JSON (e não HTML); ou
     - cabeçalho ``X-Requested-With: XMLHttpRequest``; ou

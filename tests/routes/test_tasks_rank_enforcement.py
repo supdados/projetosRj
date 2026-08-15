@@ -20,7 +20,7 @@ import pytest
 import time
 
 from models import Task, User, UserOrgao, db
-from routes.tasks.crud import DELETE_DENIED_MESSAGE
+from routes.api.tasks_write import DELETE_DENIED_MESSAGE
 from routes.tasks.permissions import FINALIZE_DENIED_MESSAGE
 from services.authorization import PAPEL_EDITOR, PAPEL_GESTOR, PAPEL_LEITOR
 
@@ -103,45 +103,6 @@ def _erro(response) -> dict:
 # ── Criar tarefa de projeto (rank >= editor) ─────────────────────────────────
 
 
-def test_criar_tarefa_de_projeto_negado_para_leitor(app, leitor, seed_data):
-    client, _ = leitor
-
-    response = client.post(
-        "/tarefas/add",
-        data={"project": str(seed_data["project_id"]), "descricao": "Nao deveria"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["message"] == "Sem permissão para este projeto."
-
-
-def test_criar_tarefa_de_projeto_permitido_para_editor(app, editor, seed_data):
-    client, _ = editor
-
-    response = client.post(
-        "/tarefas/add",
-        data={"project": str(seed_data["project_id"]), "descricao": "Tarefa editor"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["success"] is True
-
-
-def test_criar_tarefa_de_projeto_permitido_para_gestor(app, gestor, seed_data):
-    client, _ = gestor
-
-    response = client.post(
-        "/tarefas/add",
-        data={"project": str(seed_data["project_id"]), "descricao": "Tarefa gestor"},
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["success"] is True
-
-
 def test_api_criar_tarefa_negado_para_leitor(app, leitor, seed_data):
     client, _ = leitor
 
@@ -194,107 +155,31 @@ def test_api_criar_tarefa_rank_zero_responde_404(app, client_outsider, seed_data
 # ── Editar tarefa de projeto (rank >= editor) ────────────────────────────────
 
 
-def test_editar_tarefa_negado_para_leitor(app, leitor, seed_data):
+def test_api_campos_prioridade_negado_para_leitor(app, leitor, seed_data):
     client, _ = leitor
 
     response = client.post(
-        f"/tarefas/{seed_data['task_id']}/edit",
-        json={"status": "em_andamento"},
-    )
-
-    assert response.status_code == 403
-    assert _status_da_tarefa(app, seed_data["task_id"]) == "nao_iniciada"
-
-
-def test_editar_tarefa_permitido_para_editor(app, editor, seed_data):
-    client, _ = editor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/edit",
-        json={"status": "em_andamento"},
-    )
-
-    assert response.status_code == 200
-    assert _status_da_tarefa(app, seed_data["task_id"]) == "em_andamento"
-
-
-def test_editar_tarefa_permitido_para_gestor(app, gestor, seed_data):
-    client, _ = gestor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/edit",
-        json={"status": "em_andamento"},
-    )
-
-    assert response.status_code == 200
-    assert _status_da_tarefa(app, seed_data["task_id"]) == "em_andamento"
-
-
-def test_update_status_negado_para_leitor(app, leitor, seed_data):
-    client, _ = leitor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/update_status",
-        json={"status": "em_andamento"},
-    )
-
-    assert response.status_code == 403
-    assert _status_da_tarefa(app, seed_data["task_id"]) == "nao_iniciada"
-
-
-def test_update_status_permitido_para_gestor(app, gestor, seed_data):
-    client, _ = gestor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/update_status",
-        json={"status": "em_andamento"},
-    )
-
-    assert response.status_code == 200
-
-
-def test_update_prioridade_negado_para_leitor(app, leitor, seed_data):
-    client, _ = leitor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/update_prioridade",
+        f"/api/tarefas/{seed_data['task_id']}/campos",
         json={"prioridade": "alta"},
     )
 
     assert response.status_code == 403
+    assert _erro(response)["code"] == "forbidden"
 
 
-def test_update_tipo_negado_para_leitor(app, leitor, seed_data):
-    client, _ = leitor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/update_tipo",
-        json={"tipo_pedido": "outros"},
-    )
-
-    assert response.status_code == 403
-
-
-def test_mover_etapa_negado_para_leitor(app, leitor, seed_data):
-    client, _ = leitor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/mover-etapa",
-        json={"etapa": seed_data["etapa_id"]},
-    )
-
-    assert response.status_code == 403
-
-
-def test_mover_etapa_permitido_para_editor(app, editor, seed_data):
+def test_api_mover_etapa_permitido_para_editor(app, editor, seed_data):
     client, _ = editor
 
     response = client.post(
-        f"/tarefas/{seed_data['task_id']}/mover-etapa",
-        json={"etapa": seed_data["etapa_id"]},
+        f"/api/tarefas/{seed_data['task_id']}/mover-etapa",
+        json={"etapa_id": seed_data["etapa_id"]},
     )
 
     assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(Task, seed_data["task_id"]).etapa_id == (
+            seed_data["etapa_id"]
+        )
 
 
 def test_api_mover_etapa_negado_para_leitor(app, leitor, seed_data):
@@ -323,23 +208,11 @@ def test_api_mover_etapa_permitido_para_gestor(app, gestor, seed_data):
 # ── Excluir/finalizar: rank ANTES da autoria (autor leitor perde a escrita) ──
 
 
-def test_excluir_propria_tarefa_negado_para_leitor(app, leitor, seed_data):
-    """Autor rebaixado a leitor perde a escrita — o rank vem antes da autoria."""
-    client, user_id = leitor
-    task_id = _criar_tarefa(app, project_id=seed_data["project_id"], autor_id=user_id)
-
-    response = client.post(f"/tarefas/{task_id}/delete", headers=AJAX_HEADERS)
-
-    assert response.status_code == 403
-    with app.app_context():
-        assert db.session.get(Task, task_id) is not None
-
-
-def test_excluir_propria_tarefa_permitido_para_editor(app, editor, seed_data):
+def test_api_excluir_propria_tarefa_permitido_para_editor(app, editor, seed_data):
     client, user_id = editor
     task_id = _criar_tarefa(app, project_id=seed_data["project_id"], autor_id=user_id)
 
-    response = client.post(f"/tarefas/{task_id}/delete", headers=AJAX_HEADERS)
+    response = client.post(f"/api/tarefas/{task_id}/excluir")
 
     assert response.status_code == 200
     with app.app_context():
@@ -367,53 +240,11 @@ def test_api_excluir_propria_tarefa_negado_para_leitor(app, leitor, seed_data):
     assert _erro(response)["code"] == "forbidden"
 
 
-def test_finalizar_propria_tarefa_permitido_para_editor(app, editor, seed_data):
-    client, user_id = editor
-    task_id = _criar_tarefa(app, project_id=seed_data["project_id"], autor_id=user_id)
-
-    response = client.post(f"/tarefas/{task_id}/finalizar", headers=AJAX_HEADERS)
-
-    assert response.status_code == 200
-    assert _status_da_tarefa(app, task_id) == "finalizada"
-
-
-def test_finalizar_propria_tarefa_negado_para_leitor(app, leitor, seed_data):
-    client, user_id = leitor
-    task_id = _criar_tarefa(app, project_id=seed_data["project_id"], autor_id=user_id)
-
-    response = client.post(f"/tarefas/{task_id}/finalizar", headers=AJAX_HEADERS)
-
-    assert response.status_code == 403
-    assert _status_da_tarefa(app, task_id) == "nao_iniciada"
-
-
 # ── INTOCADO: ações restritas seguem "admin ou autor" (gestor não herda) ─────
 
 
-def test_gestor_nao_exclui_tarefa_alheia(app, gestor, seed_data):
-    """``_can_manage_task_restricted_actions`` não foi estendido ao gestor (§9.1)."""
-    client, _ = gestor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/delete", headers=AJAX_HEADERS
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["message"] == DELETE_DENIED_MESSAGE
-
-
-def test_gestor_nao_finaliza_tarefa_alheia(app, gestor, seed_data):
-    client, _ = gestor
-
-    response = client.post(
-        f"/tarefas/{seed_data['task_id']}/finalizar", headers=AJAX_HEADERS
-    )
-
-    assert response.status_code == 403
-    assert response.get_json()["message"] == FINALIZE_DENIED_MESSAGE
-
-
 def test_api_gestor_nao_exclui_tarefa_alheia(app, gestor, seed_data):
+    """``_can_manage_task_restricted_actions`` não foi estendido ao gestor (§9.1)."""
     client, _ = gestor
 
     response = client.post(f"/api/tarefas/{seed_data['task_id']}/excluir")
@@ -422,15 +253,26 @@ def test_api_gestor_nao_exclui_tarefa_alheia(app, gestor, seed_data):
     assert _erro(response)["message"] == DELETE_DENIED_MESSAGE
 
 
-def test_gestor_nao_finaliza_via_edit_tarefa_alheia(app, gestor, seed_data):
+def test_api_gestor_nao_finaliza_tarefa_alheia(app, gestor, seed_data):
+    client, _ = gestor
+
+    response = client.post(f"/api/tarefas/{seed_data['task_id']}/finalizar")
+
+    assert response.status_code == 403
+    assert _erro(response)["message"] == FINALIZE_DENIED_MESSAGE
+    assert _status_da_tarefa(app, seed_data["task_id"]) == "nao_iniciada"
+
+
+def test_api_gestor_nao_finaliza_via_status_tarefa_alheia(app, gestor, seed_data):
     client, _ = gestor
 
     response = client.post(
-        f"/tarefas/{seed_data['task_id']}/edit", json={"status": "finalizada"}
+        f"/api/tarefas/{seed_data['task_id']}/status", json={"status": "finalizada"}
     )
 
     assert response.status_code == 403
-    assert response.get_json()["message"] == FINALIZE_DENIED_MESSAGE
+    assert _erro(response)["message"] == FINALIZE_DENIED_MESSAGE
+    assert _status_da_tarefa(app, seed_data["task_id"]) == "nao_iniciada"
 
 
 # ── INTOCADO: tarefa avulsa não depende de rank e não vaza ───────────────────
@@ -440,15 +282,13 @@ def test_leitor_cria_e_edita_tarefa_avulsa(app, leitor):
     """Sem projeto não há rank: a tarefa avulsa continua sendo do criador."""
     client, _ = leitor
 
-    criada = client.post(
-        "/tarefas/add",
-        data={"descricao": "Avulsa do leitor"},
-        headers=AJAX_HEADERS,
-    )
+    criada = client.post("/api/tarefas", json={"descricao": "Avulsa do leitor"})
     assert criada.status_code == 200
-    task_id = criada.get_json()["task"]["id"]
+    task_id = criada.get_json()["data"]["task"]["id"]
 
-    editada = client.post(f"/tarefas/{task_id}/edit", json={"status": "em_andamento"})
+    editada = client.post(
+        f"/api/tarefas/{task_id}/status", json={"status": "em_andamento"}
+    )
 
     assert editada.status_code == 200
     assert _status_da_tarefa(app, task_id) == "em_andamento"
@@ -457,28 +297,30 @@ def test_leitor_cria_e_edita_tarefa_avulsa(app, leitor):
 def test_leitor_exclui_a_propria_tarefa_avulsa(app, leitor):
     client, _ = leitor
 
-    criada = client.post(
-        "/tarefas/add", data={"descricao": "Avulsa"}, headers=AJAX_HEADERS
-    )
-    task_id = criada.get_json()["task"]["id"]
+    criada = client.post("/api/tarefas", json={"descricao": "Avulsa"})
+    task_id = criada.get_json()["data"]["task"]["id"]
 
-    response = client.post(f"/tarefas/{task_id}/delete", headers=AJAX_HEADERS)
+    response = client.post(f"/api/tarefas/{task_id}/excluir")
 
     assert response.status_code == 200
     with app.app_context():
         assert db.session.get(Task, task_id) is None
 
 
-def test_tarefa_avulsa_alheia_nao_vaza_para_gestor(app, gestor, seed_data):
+def test_api_tarefa_avulsa_alheia_nao_vaza_para_gestor(app, gestor, seed_data):
     """Avulsa de outro autor é invisível: 404, não 403 (S5/F4-2)."""
     client, _ = gestor
 
     response = client.post(
-        f"/tarefas/{seed_data['orphan_task_id']}/edit", json={"status": "em_andamento"}
+        f"/api/tarefas/{seed_data['orphan_task_id']}/status",
+        json={"status": "em_andamento"},
     )
-    inexistente = client.post("/tarefas/999999/edit", json={"status": "em_andamento"})
+    inexistente = client.post(
+        "/api/tarefas/999999/status", json={"status": "em_andamento"}
+    )
 
     assert response.status_code == 404
+    assert _erro(response)["code"] == "not_found"
     assert response.get_json() == inexistente.get_json()
 
 
@@ -513,11 +355,11 @@ def test_leitor_continua_vendo_sugestoes_de_responsavel(app, leitor, seed_data):
     client, _ = leitor
 
     response = client.get(
-        f"/tarefas/sugestoes-responsavel?project={seed_data['project_id']}"
+        f"/api/tarefas/sugestoes-responsavel?project={seed_data['project_id']}"
     )
 
     assert response.status_code == 200
-    assert "users" in response.get_json()
+    assert "users" in response.get_json()["data"]
 
 
 def test_leitor_continua_vendo_a_tarefa_no_drawer(app, leitor, seed_data):
@@ -528,27 +370,10 @@ def test_leitor_continua_vendo_a_tarefa_no_drawer(app, leitor, seed_data):
     assert response.status_code == 200
 
 
-# ── Lote e reordenação: escrita não escapa pelo caminho em massa ─────────────
+# ── Lote: escrita não escapa pelo caminho em massa ───────────────────────────
 
 
-def test_arquivar_finalizadas_ignora_tarefa_de_quem_so_le(app, leitor, seed_data):
-    client, user_id = leitor
-    task_id = _criar_tarefa(
-        app,
-        project_id=seed_data["project_id"],
-        autor_id=user_id,
-        status="finalizada",
-    )
-
-    response = client.post(
-        "/tarefas/arquivar-finalizadas", json={}, headers=AJAX_HEADERS
-    )
-
-    assert response.status_code == 200
-    assert _arquivada(app, task_id) is False
-
-
-def test_arquivar_finalizadas_mantido_para_gestor(app, gestor, seed_data):
+def test_api_arquivar_finalizadas_mantido_para_gestor(app, gestor, seed_data):
     client, user_id = gestor
     task_id = _criar_tarefa(
         app,
@@ -557,9 +382,7 @@ def test_arquivar_finalizadas_mantido_para_gestor(app, gestor, seed_data):
         status="finalizada",
     )
 
-    response = client.post(
-        "/tarefas/arquivar-finalizadas", json={}, headers=AJAX_HEADERS
-    )
+    response = client.post("/api/tarefas/arquivar-finalizadas", json={})
 
     assert response.status_code == 200
     assert _arquivada(app, task_id) is True
@@ -579,39 +402,3 @@ def test_api_arquivar_finalizadas_ignora_tarefa_de_quem_so_le(app, leitor, seed_
     assert response.status_code == 200
     assert response.get_json()["data"]["archived_count"] == 0
     assert _arquivada(app, task_id) is False
-
-
-def _ordem_das_tarefas(app, task_ids: list[int]) -> list[int]:
-    with app.app_context():
-        return [db.session.get(Task, task_id).ordem for task_id in task_ids]
-
-
-def test_reordenar_nao_altera_ordem_para_leitor(app, leitor, seed_data):
-    client, user_id = leitor
-    primeira = _criar_tarefa(
-        app, project_id=seed_data["project_id"], autor_id=user_id, ordem=1
-    )
-    segunda = _criar_tarefa(
-        app, project_id=seed_data["project_id"], autor_id=user_id, ordem=2
-    )
-
-    response = client.post("/tarefas/reordenar", json={"ordem": [segunda, primeira]})
-
-    assert response.status_code == 200
-    assert _ordem_das_tarefas(app, [primeira, segunda]) == [1, 2]
-
-
-def test_reordenar_mantido_para_gestor(app, gestor, seed_data):
-    client, user_id = gestor
-    primeira = _criar_tarefa(
-        app, project_id=seed_data["project_id"], autor_id=user_id, ordem=1
-    )
-    segunda = _criar_tarefa(
-        app, project_id=seed_data["project_id"], autor_id=user_id, ordem=2
-    )
-
-    response = client.post("/tarefas/reordenar", json={"ordem": [segunda, primeira]})
-
-    assert response.status_code == 200
-    ordem_primeira, ordem_segunda = _ordem_das_tarefas(app, [primeira, segunda])
-    assert ordem_segunda < ordem_primeira

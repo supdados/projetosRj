@@ -38,8 +38,8 @@ def test_finalize_keeps_task_active_and_only_updates_status(
 ):
     task_id = seed_data["task_id"]
 
-    response = client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
-    assert response.status_code == 302
+    response = client_user.post(f"/api/tarefas/{task_id}/finalizar")
+    assert response.status_code == 200
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -56,10 +56,10 @@ def test_finalize_keeps_task_active_and_only_updates_status(
 
 def test_archive_finalized_moves_task_to_archived_listing(app, client_user, seed_data):
     task_id = seed_data["task_id"]
-    client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
+    client_user.post(f"/api/tarefas/{task_id}/finalizar")
 
-    response = client_user.post("/tarefas/arquivar-finalizadas", follow_redirects=False)
-    assert response.status_code == 302
+    response = client_user.post("/api/tarefas/arquivar-finalizadas", json={})
+    assert response.status_code == 200
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -78,11 +78,11 @@ def test_reactivate_returns_archived_task_to_active_listing_as_programado(
     app, client_user, seed_data
 ):
     task_id = seed_data["task_id"]
-    client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
-    client_user.post("/tarefas/arquivar-finalizadas", follow_redirects=False)
+    client_user.post(f"/api/tarefas/{task_id}/finalizar")
+    client_user.post("/api/tarefas/arquivar-finalizadas", json={})
 
-    response = client_user.post(f"/tarefas/{task_id}/reativar", follow_redirects=False)
-    assert response.status_code == 302
+    response = client_user.post(f"/api/tarefas/{task_id}/reativar")
+    assert response.status_code == 200
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -97,43 +97,31 @@ def test_reactivate_returns_archived_task_to_active_listing_as_programado(
     )
 
 
-def test_archive_finalized_ajax_returns_archived_ids(app, client_user, seed_data):
+def test_archive_finalized_returns_archived_ids(app, client_user, seed_data):
     task_id = seed_data["task_id"]
-    client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
+    client_user.post(f"/api/tarefas/{task_id}/finalizar")
 
-    response = client_user.post(
-        "/tarefas/arquivar-finalizadas",
-        headers={
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
-        },
-    )
+    response = client_user.post("/api/tarefas/arquivar-finalizadas", json={})
     assert response.status_code == 200
     payload = response.get_json()
 
-    assert payload["success"] is True
-    assert payload["archived_count"] == 1
-    assert payload["archived_task_ids"] == [str(task_id)]
+    assert payload["ok"] is True
+    assert payload["data"]["archived_count"] == 1
+    assert payload["data"]["archived_task_ids"] == [str(task_id)]
 
 
-def test_unarchive_ajax_returns_programado_payload(app, client_user, seed_data):
+def test_unarchive_returns_programado_payload(app, client_user, seed_data):
     task_id = seed_data["task_id"]
-    client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
-    client_user.post("/tarefas/arquivar-finalizadas", follow_redirects=False)
+    client_user.post(f"/api/tarefas/{task_id}/finalizar")
+    client_user.post("/api/tarefas/arquivar-finalizadas", json={})
 
-    response = client_user.post(
-        f"/tarefas/{task_id}/desarquivar",
-        headers={
-            "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
-        },
-    )
+    response = client_user.post(f"/api/tarefas/{task_id}/desarquivar")
     assert response.status_code == 200
     payload = response.get_json()
 
-    assert payload["success"] is True
-    assert payload["task"]["status"] == "nao_iniciada"
-    assert payload["item"]["status"] == "nao_iniciada"
+    assert payload["ok"] is True
+    assert payload["data"]["task"]["status"] == "nao_iniciada"
+    assert payload["data"]["detail"]["status"] == "nao_iniciada"
 
 
 def test_archived_alias_redirects_to_archived_route(client_user):
@@ -149,11 +137,9 @@ def test_archived_alias_redirects_to_archived_route(client_user):
 def test_outsider_cannot_finalize_task(app, client_outsider, seed_data):
     task_id = seed_data["task_id"]
 
-    response = client_outsider.post(
-        f"/tarefas/{task_id}/finalizar", follow_redirects=False
-    )
-    assert response.status_code == 302
-    assert "/tarefas" in (response.headers.get("Location") or "")
+    response = client_outsider.post(f"/api/tarefas/{task_id}/finalizar")
+    assert response.status_code == 404
+    assert response.get_json()["error"]["code"] == "not_found"
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -169,14 +155,14 @@ def test_collaborator_cannot_move_task_to_finalizada_via_status_update_and_audit
     task_id = seed_data["task_id"]
 
     response = client_editable.post(
-        f"/tarefas/{task_id}/update_status",
+        f"/api/tarefas/{task_id}/status",
         json={"status": "finalizada"},
     )
 
     assert response.status_code == 403
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "Apenas o criador da tarefa" in payload["message"]
+    assert payload["ok"] is False
+    assert "Apenas o criador da tarefa" in payload["error"]["message"]
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -201,12 +187,10 @@ def test_collaborator_cannot_finalize_task_via_direct_route_and_audited(
 ):
     task_id = seed_data["task_id"]
 
-    response = client_editable.post(
-        f"/tarefas/{task_id}/finalizar", follow_redirects=False
-    )
+    response = client_editable.post(f"/api/tarefas/{task_id}/finalizar")
 
-    assert response.status_code == 302
-    assert "/tarefas" in (response.headers.get("Location") or "")
+    assert response.status_code == 403
+    assert response.get_json()["error"]["code"] == "forbidden"
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -224,26 +208,24 @@ def test_collaborator_cannot_finalize_task_via_direct_route_and_audited(
         assert audit.actor_user_id == seed_data["editable_user_id"]
 
 
-def test_collaborator_cannot_edit_restricted_fields_via_edit_route_and_audited(
+def test_collaborator_cannot_edit_restricted_fields_via_campos_and_audited(
     app, client_editable, seed_data
 ):
     task_id = seed_data["task_id"]
 
     response = client_editable.post(
-        f"/tarefas/{task_id}/edit",
-        data={
+        f"/api/tarefas/{task_id}/campos",
+        json={
             "descricao": "Descricao bloqueada para colaborador",
-            "status": "nao_iniciada",
             "responsavel": "Usuario Editavel",
             "prioridade": "alta",
-            "tipo_pedido": "",
         },
     )
 
     assert response.status_code == 403
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "Somente o autor da tarefa" in payload["message"]
+    assert payload["ok"] is False
+    assert "Somente o autor da tarefa" in payload["error"]["message"]
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -264,30 +246,22 @@ def test_collaborator_cannot_edit_restricted_fields_via_edit_route_and_audited(
         assert audit.task_author_user_id == seed_data["user_id"]
 
 
-def test_collaborator_can_still_edit_non_restricted_fields_via_edit_route(
+def test_collaborator_can_still_edit_non_restricted_fields(
     app, client_editable, seed_data
 ):
     task_id = seed_data["task_id"]
 
-    response = client_editable.post(
-        f"/tarefas/{task_id}/edit",
-        data={
-            "descricao": "Item Auditoria",
-            "status": "em_andamento",
-            "responsavel": "Usuario Auditoria",
-            "prioridade": "",
-            "tipo_pedido": "bug",
-        },
+    tipo_response = client_editable.post(
+        f"/api/tarefas/{task_id}/campos", json={"tipo_pedido": "bug"}
+    )
+    status_response = client_editable.post(
+        f"/api/tarefas/{task_id}/status", json={"status": "em_andamento"}
     )
 
-    assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["item"]["status"] == "em_andamento"
-    assert payload["item"]["tipo_pedido"] == "bug"
-    assert payload["item"]["descricao"] == "Item Auditoria"
-    assert payload["item"]["responsavel"] == "Usuario Auditoria"
-    assert payload["item"]["prioridade"] == ""
+    assert tipo_response.status_code == 200
+    assert tipo_response.get_json()["data"]["task"]["tipo_pedido"] == "bug"
+    assert status_response.status_code == 200
+    assert status_response.get_json()["data"]["task"]["status"] == "em_andamento"
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -299,20 +273,20 @@ def test_collaborator_can_still_edit_non_restricted_fields_via_edit_route(
         assert task.prioridade is None
 
 
-def test_collaborator_cannot_update_prioridade_direct_route_and_audited(
+def test_collaborator_cannot_update_prioridade_and_audited(
     app, client_editable, seed_data
 ):
     task_id = seed_data["task_id"]
 
     response = client_editable.post(
-        f"/tarefas/{task_id}/update_prioridade",
+        f"/api/tarefas/{task_id}/campos",
         json={"prioridade": "alta"},
     )
 
     assert response.status_code == 403
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "Somente o autor da tarefa" in payload["message"]
+    assert payload["ok"] is False
+    assert "Somente o autor da tarefa" in payload["error"]["message"]
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -335,22 +309,19 @@ def test_admin_can_edit_restricted_fields(app, client_admin, seed_data):
     task_id = seed_data["task_id"]
 
     response = client_admin.post(
-        f"/tarefas/{task_id}/edit",
-        data={
+        f"/api/tarefas/{task_id}/campos",
+        json={
             "descricao": "Descricao atualizada por admin",
-            "status": "nao_iniciada",
             "responsavel": "Administrador",
             "prioridade": "urgente",
-            "tipo_pedido": "",
         },
     )
 
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["item"]["descricao"] == "Descricao atualizada por admin"
-    assert payload["item"]["responsavel"] == "Administrador"
-    assert payload["item"]["prioridade"] == "urgente"
+    card = response.get_json()["data"]["task"]
+    assert card["descricao"] == "Descricao atualizada por admin"
+    assert card["responsavel"] == "Administrador"
+    assert card["prioridade"] == "urgente"
 
     with app.app_context():
         task = db.session.get(Task, task_id)
@@ -421,8 +392,8 @@ def test_finalized_task_is_hidden_from_project_tasks_and_dashboard(
     task_id = seed_data["task_id"]
     project_id = seed_data["project_id"]
 
-    client_user.post(f"/tarefas/{task_id}/finalizar", follow_redirects=False)
-    client_user.post("/tarefas/arquivar-finalizadas", follow_redirects=False)
+    client_user.post(f"/api/tarefas/{task_id}/finalizar")
+    client_user.post("/api/tarefas/arquivar-finalizadas", json={})
 
     # A listagem do projeto (via API, project filter) nao traz a tarefa arquivada.
     project_descriptions = _hub_descriptions(

@@ -16,10 +16,8 @@ from services.authorization import (
 )
 
 #: Mensagem canônica quando alguém sem permissão tenta mover uma tarefa para
-#: "finalizada". Definida aqui (junto de ``_can_transition_task_to_status``) para
-#: que tanto a rota Jinja legada (``routes/tasks/crud.py``) quanto o endpoint
-#: ``/api/*`` do Kanban (``routes/api/board.py``) compartilhem a MESMA string,
-#: sem duplicação. ``crud.py`` reexporta este nome — comportamento inalterado.
+#: "finalizada". Definida aqui (junto de ``_can_transition_task_to_status``)
+#: para o endpoint ``/api/*`` do Kanban (``routes/api/board.py``).
 FINALIZE_DENIED_MESSAGE = "Apenas o criador da tarefa pode movê-la para Finalizada."
 
 

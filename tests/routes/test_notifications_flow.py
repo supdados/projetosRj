@@ -37,7 +37,7 @@ def test_notifications_dropdown_marks_as_read(app, client_user, seed_data):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/{seed_data['task_item_id']}/update_status",
+        f"/api/tarefas/{seed_data['task_item_id']}/status",
         json={"status": "para_validacao"},
     )
     assert response.status_code == 200
@@ -162,7 +162,7 @@ def test_status_change_by_other_user_notifies_task_creator(app, seed_data):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/{seed_data['task_item_id']}/update_status",
+        f"/api/tarefas/{seed_data['task_item_id']}/status",
         json={"status": "em_andamento"},
     )
     assert response.status_code == 200
@@ -194,23 +194,18 @@ def test_assignment_change_notifies_assigned_user(app, seed_data):
 
         item = db.session.get(TaskItem, seed_data["task_item_id"])
         assert item is not None
-        current_status = item.status
         current_description = item.descricao
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/tarefas/{seed_data['task_item_id']}/edit",
-        data={
+        f"/api/tarefas/{seed_data['task_item_id']}/campos",
+        json={
             "descricao": current_description,
-            "status": current_status,
             "responsavel": "Notif Assignee 1",
-            "prioridade": "",
-            "tipo_pedido": "",
         },
     )
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
+    assert response.get_json()["ok"] is True
 
     with app.app_context():
         notification = (
@@ -232,12 +227,11 @@ def test_project_stage_change_notifies_project_owner(app, client_user, seed_data
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/etapa/{seed_data['etapa_id']}/update_field",
+        f"/api/etapas/{seed_data['etapa_id']}/update-field",
         json={"field": "descricao", "value": "Etapa alterada para notificar"},
     )
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
+    assert response.get_json()["ok"] is True
 
     with app.app_context():
         notification = (
@@ -286,11 +280,10 @@ def test_legacy_project_without_owner_notifies_area_admin(app):
 
     actor_client = _client_for_user(app, actor_id)
     response = actor_client.post(
-        f"/etapa/{legacy_stage_id}/toggle_iniciada",
+        f"/api/etapas/{legacy_stage_id}/toggle-iniciada",
     )
     assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
+    assert response.get_json()["ok"] is True
 
     with app.app_context():
         notification = (

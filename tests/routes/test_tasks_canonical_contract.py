@@ -6,24 +6,28 @@ AJAX_HEADERS = {
 }
 
 
-def test_add_task_canonical_creates_task_and_redirects_to_project_board(
-    app, client_user, seed_data
-):
+def _data(response):
+    payload = response.get_json()
+    assert payload["ok"] is True, payload
+    return payload["data"]
+
+
+def test_add_task_api_creates_task_with_all_fields(app, client_user, seed_data):
     response = client_user.post(
-        "/tarefas/add",
-        data={
+        "/api/tarefas",
+        json={
             "titulo": "Tarefa Canonica Nova",
-            "project_id": str(seed_data["project_id"]),
+            "project_id": seed_data["project_id"],
             "status": "em_andamento",
             "responsavel": "Usuario Auditoria",
             "prioridade": "alta",
             "tipo_pedido": "bug",
         },
-        follow_redirects=False,
     )
 
-    assert response.status_code == 302
-    assert f"/projeto/{seed_data['project_id']}/tarefas" in response.headers["Location"]
+    assert response.status_code == 200
+    task_card = _data(response)["task"]
+    assert task_card["descricao"] == "Tarefa Canonica Nova"
 
     with app.app_context():
         task = Task.query.filter_by(descricao="Tarefa Canonica Nova").first()
@@ -35,75 +39,44 @@ def test_add_task_canonical_creates_task_and_redirects_to_project_board(
         assert task.tipo_pedido == "bug"
 
 
-def test_edit_task_canonical_returns_updated_payload(app, client_user, seed_data):
-    response = client_user.post(
-        f"/tarefas/{seed_data['task_id']}/edit",
-        data={
+def test_edit_task_api_returns_updated_payload(app, client_user, seed_data):
+    task_id = seed_data["task_id"]
+
+    # Campos inline e status vivem em endpoints separados na API (status não é
+    # editável por /campos).
+    campos_response = client_user.post(
+        f"/api/tarefas/{task_id}/campos",
+        json={
             "descricao": "Item Auditoria Editado Canonico",
-            "status": "para_validacao",
             "responsavel": "Usuario Auditoria",
             "prioridade": "urgente",
             "tipo_pedido": "melhoria",
-            "project_id": str(seed_data["project_id"]),
         },
-        headers=AJAX_HEADERS,
     )
 
-    assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["task"]["descricao"] == "Item Auditoria Editado Canonico"
-    assert payload["task"]["status"] == "para_validacao"
-    assert payload["task"]["prioridade"] == "urgente"
-    assert payload["task"]["tipo_pedido"] == "melhoria"
-    assert payload["task"]["can_delete"] is True
-    assert payload["task"]["can_finalize"] is True
-    assert payload["item"]["id"] == seed_data["task_id"]
+    assert campos_response.status_code == 200
+    campos_data = _data(campos_response)
+    assert campos_data["task"]["id"] == task_id
+    assert campos_data["task"]["descricao"] == "Item Auditoria Editado Canonico"
+    assert campos_data["task"]["prioridade"] == "urgente"
+    assert campos_data["task"]["tipo_pedido"] == "melhoria"
+    assert campos_data["detail"]["permissions"]["can_delete"] is True
+    assert campos_data["detail"]["permissions"]["can_finalize"] is True
+
+    status_response = client_user.post(
+        f"/api/tarefas/{task_id}/status",
+        json={"status": "para_validacao"},
+    )
+    assert status_response.status_code == 200
+    assert _data(status_response)["task"]["status"] == "para_validacao"
 
     with app.app_context():
-        task = db.session.get(Task, seed_data["task_id"])
+        task = db.session.get(Task, task_id)
         assert task is not None
         assert task.descricao == "Item Auditoria Editado Canonico"
         assert task.status == "para_validacao"
-
-
-def test_delete_task_canonical_ajax_removes_task(app, client_user, seed_data):
-    response = client_user.post(
-        f"/tarefas/{seed_data['task_id']}/delete",
-        headers=AJAX_HEADERS,
-    )
-
-    assert response.status_code == 200
-    payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["item_id"] == seed_data["task_id"]
-
-    with app.app_context():
-        assert db.session.get(Task, seed_data["task_id"]) is None
-
-
-def test_update_task_status_and_prioridade_canonical_json(app, client_user, seed_data):
-    status_response = client_user.post(
-        f"/tarefas/{seed_data['task_id']}/update_status",
-        json={"status": "em_andamento"},
-    )
-    assert status_response.status_code == 200
-    assert status_response.get_json()["success"] is True
-
-    prioridade_response = client_user.post(
-        f"/tarefas/{seed_data['task_id']}/update_prioridade",
-        json={"prioridade": "alta"},
-    )
-    assert prioridade_response.status_code == 200
-    prioridade_payload = prioridade_response.get_json()
-    assert prioridade_payload["success"] is True
-    assert prioridade_payload["prioridade"] == "alta"
-
-    with app.app_context():
-        task = db.session.get(Task, seed_data["task_id"])
-        assert task is not None
-        assert task.status == "em_andamento"
-        assert task.prioridade == "alta"
+        assert task.prioridade == "urgente"
+        assert task.tipo_pedido == "melhoria"
 
 
 def test_add_and_edit_task_comment_on_canonical_routes(app, client_user, seed_data):
@@ -141,34 +114,33 @@ def test_add_and_edit_task_comment_on_canonical_routes(app, client_user, seed_da
 
 def test_task_assignable_users_routes_return_orgao_scoped_names(client_user, seed_data):
     task_response = client_user.get(
-        f"/tarefas/{seed_data['task_id']}/sugestoes-responsavel",
+        f"/api/tarefas/{seed_data['task_id']}/sugestoes-responsavel",
         query_string={"q": "Usuario"},
     )
 
     assert task_response.status_code == 200
-    task_payload = task_response.get_json()
-    task_names = [user["name"] for user in task_payload["users"]]
+    task_names = [user["name"] for user in _data(task_response)["users"]]
     assert "Usuario Auditoria" in task_names
     assert "Usuario VPD" not in task_names
 
     hub_response = client_user.get(
-        "/tarefas/sugestoes-responsavel",
+        "/api/tarefas/sugestoes-responsavel",
         query_string={"orgao": str(seed_data["auditoria_orgao_id"]), "q": "Admin"},
     )
 
     assert hub_response.status_code == 200
-    hub_payload = hub_response.get_json()
-    hub_names = [user["name"] for user in hub_payload["users"]]
+    hub_names = [user["name"] for user in _data(hub_response)["users"]]
     assert hub_names == ["Administrador"]
 
 
 def test_task_assignable_users_rejects_cross_orgao_lookup(client_user, seed_data):
     response = client_user.get(
-        "/tarefas/sugestoes-responsavel",
+        "/api/tarefas/sugestoes-responsavel",
         query_string={"orgao": str(seed_data["vpd_orgao_id"])},
     )
 
     assert response.status_code == 403
     payload = response.get_json()
-    assert payload["success"] is False
-    assert "Sem permissão" in payload["message"]
+    assert payload["ok"] is False
+    assert payload["error"]["code"] == "forbidden"
+    assert "Sem permissão" in payload["error"]["message"]

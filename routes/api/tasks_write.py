@@ -12,9 +12,9 @@ REUSO PARCIAL: exclusão, arquivamento em lote e mover-etapa chamam as MESMAS
 funções das rotas Jinja legadas (``_can_manage_task_restricted_actions``,
 ``move_task_to_etapa``, ``bulk_archive_finalized``, ``notify_*``) — só trocam a
 embalagem de resposta para o envelope ``ok``/``fail``. A criação (``POST
-/api/tarefas``) NÃO reusa ``_create_task_common``: tem corpo próprio, que
-duplica a regra do legado e compartilha apenas os helpers de validação de
-``routes/tasks/creation.py``.
+/api/tarefas``) tem corpo próprio e usa os helpers de validação de
+``routes/tasks/creation.py`` (o legado ``_create_task_common`` morreu com
+``routes/tasks/crud.py`` na sprint 2).
 
 Anexa ao ``main_bp`` ÚNICO; NÃO cria blueprint novo e NÃO altera os legados.
 """
@@ -56,7 +56,7 @@ from .serializers import serialize_task_card
 from services.notifications import notify_task_assignment_change, notify_task_event
 from services.task_mutation import bulk_archive_finalized, move_task_to_etapa
 
-#: Mesma string do legado ``delete_task`` (``routes/tasks/crud.py``).
+#: String herdada do legado ``delete_task`` (rota cortada na sprint 2).
 DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excluí-la."
 
 
@@ -80,11 +80,11 @@ def _load_task_or_error(
 @main_bp.route("/api/tarefas", methods=["POST"])
 @api_login_required
 def api_tarefa_criar() -> Response | tuple[Response, int]:
-    """Cria uma tarefa (envelope) com corpo próprio — NÃO chama ``_create_task_common``.
+    """Cria uma tarefa (envelope) com corpo próprio.
 
-    A regra de criação está duplicada em relação ao legado Jinja; só os helpers
-    de validação (``_resolve_project_token``, ``_resolve_etapa_token``,
-    ``_validate_task_responsavel``) são compartilhados.
+    Usa os helpers de validação de ``routes/tasks/creation.py``
+    (``_resolve_project_token``, ``_resolve_etapa_token``,
+    ``_validate_task_responsavel``); a extração para service fica na sprint 3.2.
 
     Body JSON: ``{project, etapa, descricao, status, responsavel, prioridade,
     tipo_pedido}`` (``project_id``/``etapa_id`` aceitos como alias). Valida
