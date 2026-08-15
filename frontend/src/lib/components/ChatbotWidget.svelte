@@ -44,8 +44,10 @@
 	});
 
 	onMount(() => {
-		baseUrl =
+		const metaContent =
 			document.querySelector<HTMLMetaElement>('meta[name="chatbot-base-url"]')?.content?.trim() ?? '';
+		// Em dev (vite) o placeholder do app.html fica literal = chatbot desligado.
+		baseUrl = metaContent === '%CHATBOT_BASE_URL%' ? '' : metaContent;
 	});
 
 	function setStatus(message: string, isError = false, isLoading = false): void {

@@ -2,45 +2,48 @@
 
 ABORDAGEM
 ---------
-1) ``frontend/svelte.config.js`` passa a usar ``paths.base = ''`` (RAIZ). Assim o
-   roteador client-side casa com os PATHS NATIVOS das telas migradas
-   (``/dashboard``, ``/projetos``, ``/projetos/pendentes``, ``/projetos/<id>``,
-   ``/tarefas``, ``/admin/*``, ``/busca``, ``/calendarios``). Com ``base=''`` o
-   bootstrap referencia os assets em ``/_app/...`` (raiz).
-2) Os ASSETS continuam fisicamente em ``static/spa/_app/`` (adapter-static). Como
-   o cliente os pede em ``/_app/...`` (raiz), esta rota serve ``/_app/<path>`` a
-   partir de ``static/spa/_app/`` (arquivos imutaveis e versionados por hash).
-3) O INDEX e servido via ``_render_spa()`` (Jinja, com ``%CSP_NONCE%``
-   substituido em runtime — NUNCA estatico cru, senao a CSP bloqueia o bootstrap)
-   nos paths nativos das telas migradas QUE NAO POSSUEM rota Jinja viva de mesma
-   URL: ``/projetos``, ``/projetos/pendentes``, ``/projetos/<id>``,
-   ``/projetos/<id>/historico``, ``/colecoes``, ``/colecoes/<id>``,
-   ``/admin``, ``/admin/usuarios``,
-   ``/admin/usuarios/novo``, ``/admin/usuarios/<id>`` e ``/admin/orgaos``
-   (read-only SIORG). Sao atendidos por um catch-all dinamico
-   ``/<path:spa_path>`` (rank MENOR que rotas estaticas — Werkzeug prioriza rotas
-   estaticas — entao so casa o que nenhuma rota Jinja atendeu), restrito ao
-   matcher de paths migrados; qualquer outro path -> 404 (preserva o comportamento
-   atual). Deep-link e F5 nesses paths resolvem a rota client-side correta.
+1) ``frontend/svelte.config.js`` usa ``paths.base = ''`` (RAIZ). O roteador
+   client-side casa com os PATHS NATIVOS das telas migradas (``/dashboard``,
+   ``/projetos``, ``/tarefas``, ``/admin/*``, ``/busca``, ``/calendarios``...).
+   Com ``base=''`` o bootstrap referencia os assets em ``/_app/...`` (raiz).
+2) Os ASSETS ficam fisicamente em ``static/spa/_app/`` (adapter-static); a rota
+   ``/_app/<path>`` faz a ponte (arquivos imutaveis, versionados por hash).
+3) O SHELL e FONTE UNICA: ``frontend/src/app.html``. O ``npm run build`` emite
+   ``static/spa/index.html`` (ja com o placeholder ``%CSP_NONCE%`` nas tags
+   inline via ``scripts/inject-csp-nonce.js``) e ``_render_spa()`` serve esse
+   arquivo substituindo os placeholders em runtime — ``%CSP_NONCE%`` (nonce da
+   CSP), ``%CSRF_TOKEN%`` (token da sessao p/ ``X-CSRFToken`` do client.ts) e
+   ``%CHATBOT_BASE_URL%`` (vazio = chatbot desligado). NADA de template Jinja
+   nem parsing de HTML por regex: o HTML do bundle vai integro para o cliente.
+4) O MATCHER vem do BUILD: ``scripts/emit-routes-manifest.js`` varre
+   ``frontend/src/routes/(app)/**`` e emite ``static/spa/routes.json``
+   (``exact`` + ``dynamic``, com ``[param]`` -> ``\\d+``). O catch-all
+   ``/<path:spa_path>`` (rank MENOR que rotas estaticas — Werkzeug prioriza
+   estaticas — entao so casa o que nenhuma rota Flask atendeu) serve a shell
+   apenas nos paths do manifesto; qualquer outro path -> 404 limpo do Flask.
+   Ex.: ``/admin`` NAO tem ``+page.svelte`` — fica fora do manifesto e responde
+   404 (antes servia a shell com o 404 do SvelteKit em HTTP 200).
+
+CLONE LIMPO (sem ``npm run build``)
+-----------------------------------
+``static/spa/`` e gitignored: sem build nao existem ``index.html`` nem
+``routes.json``. O catch-all responde 404 (manifesto ausente = nenhum path
+migrado) e as rotas KEEP-ENDPOINT (``/dashboard``, ``/tarefas``,
+``/calendarios``) respondem 503 com instrucao explicita de rodar o build.
+As telas de auth (``templates/auth/*``, ``base.html``) nao dependem do bundle.
 
 ESTADO ATUAL
 ------------
-A migração Jinja->SPA está COMPLETA: nenhuma tela de aplicação renderiza mais
-Jinja — só o fluxo de auth Gov.br (``templates/auth/*``, ``base.html`` no login/
-troca de senha) permanece (congelado). Os deep-links legados ``/projects`` e
-``/project/<id>`` viraram redirect 302 -> ``/projetos`` e ``/projetos/<id>``
-(KEEP-ENDPOINT: ``target_url`` persistido em notificacoes, links da busca e
-redirects de produção apontam pra ca). ``/dashboard``, ``/tarefas`` e
-``/calendarios`` seguem como KEEP-ENDPOINT servindo ``_render_spa()``; ``/busca``,
-``/admin/*`` sao servidos pelo catch-all. Cortadas na migração:
-``/etapa/<id>/edit``, ``/project/<id>/history``, ``/admin/users*``,
-``/project/<id>/edit``, ``/projetos_pendentes`` e o cluster ``/projects``
-(list/detail/add/edit/delete/concluir/import/stage-tasks) — tudo 100% SPA via
-``/api/*``.
+Migracao Jinja->SPA COMPLETA. Deep-links legados ``/projects`` e
+``/project/<id>`` sao redirect 302 -> ``/projetos`` e ``/projetos/<id>``
+(KEEP-ENDPOINT). ``/dashboard``, ``/tarefas`` e ``/calendarios`` seguem como
+rotas estaticas KEEP-ENDPOINT servindo ``_render_spa()`` (prioridade sobre o
+catch-all); tambem constam no manifesto como defesa em profundidade.
 
 EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
-``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,
-``/setup_db``, ``/_app/*`` e o prefixo ``/spa*`` (rota legada removida).
+``/auth/*``, ``/login``, ``/logout``, ``/static/*``, ``/favicon.ico``,
+``/setup_db``, ``/_app/*`` e ``/spa`` — reserva casa por SEGMENTO completo
+(``api`` bloqueia ``/api`` e ``/api/...``, nao ``/apiario``).
 
 A funcao e anexada ao ``main_bp`` UNICO; NAO criamos blueprint novo, para
 preservar os ``url_for("main.xxx")`` existentes.
@@ -48,11 +51,14 @@ preservar os ``url_for("main.xxx")`` existentes.
 
 from __future__ import annotations
 
+import json
 import os
 import re
-import secrets
+from typing import NamedTuple
 
-from flask import abort, g, render_template, send_from_directory
+from flask import abort, current_app, g, has_app_context, send_from_directory
+from flask_wtf.csrf import generate_csrf
+from markupsafe import escape
 
 from .blueprint import main_bp
 
@@ -63,153 +69,148 @@ _BUNDLE_DIR = os.path.join(
     "spa",
 )
 _BUNDLE_INDEX_PATH = os.path.join(_BUNDLE_DIR, "index.html")
+_ROUTE_MANIFEST_PATH = os.path.join(_BUNDLE_DIR, "routes.json")
 # Assets imutaveis do SvelteKit; com base='' o cliente os pede em /_app/...
 _BUNDLE_APP_DIR = os.path.join(_BUNDLE_DIR, "_app")
 
-# Prefixos que NUNCA sao servidos como SPA, mesmo via catch-all. Defesa em
+_MISSING_BUNDLE_HINT = (
+    "Bundle da SPA ausente (static/spa/index.html): rode 'npm run build' em frontend/."
+)
+
+# Segmentos que NUNCA sao servidos como SPA, mesmo via catch-all. Defesa em
 # profundidade alem das rotas estaticas dedicadas (api/auth/login/...).
 _RESERVED_SUBPATH_PREFIXES = (
-    "api/",
     "api",
     "webhook",
     "calendar/oauth",
-    "auth/",
+    "auth",
     "login",
     "logout",
     "favicon.ico",
     "setup_db",
-    "static/",
     "static",
-    "_app/",
     "_app",
-    "spa/",
     "spa",
 )
 
-# Conjunto exato (sem barra inicial) e padroes dinamicos. SO inclui paths
-# migrados que NAO possuem rota Jinja viva de mesma URL (os colidentes — ver
-# "ESTADO ATUAL" no docstring — continuam no Jinja e nao entram aqui).
-# Atualizar quando uma tela for migrada para um path nativo livre OU quando uma
-# rota Jinja colidente for cortada (entao seu path entra aqui e o catch-all passa
-# a servi-lo, pois sem a rota estatica o dinamico finalmente casa).
-_MIGRATED_EXACT_PATHS = frozenset(
-    {
-        "projetos",
-        "projetos/pendentes",
-        "admin",
-        "admin/usuarios",
-        "admin/usuarios/novo",
-        # Telas do Grupo B cujas rotas Jinja canonicas foram cortadas: agora o
-        # catch-all serve a SPA nesses paths nativos (deep-link/F5).
-        # Órgãos read-only (SIORG): subpáginas novo/<id>/tipos foram cortadas.
-        "admin/orgaos",
-        "admin/templates",
-        "busca",
-        "colecoes",
-        # Cut-over dashboard/tarefas/calendarios: as rotas Flask ESTATICAS
-        # dessas URLs permanecem registradas como KEEP-ENDPOINT servindo
-        # _render_spa() (routes/dashboard.py::dashboard,
-        # routes/tasks/views.py::list_tasks,
-        # routes/calendars/views.py::calendars_hub) e tem prioridade no
-        # Werkzeug sobre este catch-all — as entradas abaixo sao defesa em
-        # profundidade/documentacao do estado migrado, nao o caminho ativo.
-        # NAO adicionar "tarefas/arquivadas", padrao dinamico "tarefas/\d+"
-        # nem "projeto/\d+/tarefas": a SPA NAO tem rota client-side para esses
-        # paths (servir a shell neles cai no 404 do SvelteKit). Os endpoints
-        # Flask correspondentes (list_tasks_archived, task_detail,
-        # project_tasks) sao redirect resolvers 302 VIVOS (URLs persistidas em
-        # notificacoes no banco) que apontam para /tarefas com query params.
-        "dashboard",
-        "tarefas",
-        "calendarios",
-    }
-)
-# Segmentos dinamicos das telas migradas (``<id>`` numerico). re.fullmatch.
-_MIGRATED_DYNAMIC_PATTERNS = (
-    re.compile(r"projetos/\d+"),
-    re.compile(r"projetos/\d+/historico"),
-    re.compile(r"admin/usuarios/\d+"),
-    re.compile(r"colecoes/\d+"),
-)
 
-_HEAD_ASSETS_RE = re.compile(
-    r'<link\b[^>]*\brel="(?:modulepreload|stylesheet)"[^>]*>',
-    re.IGNORECASE,
-)
-_BODY_RE = re.compile(r"<body[^>]*>(?P<body>.*)</body>", re.IGNORECASE | re.DOTALL)
+class SpaRouteManifest(NamedTuple):
+    """Paths migrados emitidos pelo build (static/spa/routes.json)."""
+
+    exact: frozenset[str]
+    dynamic: tuple[re.Pattern[str], ...]
+
+
+_EMPTY_MANIFEST = SpaRouteManifest(exact=frozenset(), dynamic=())
+_manifest_cache: tuple[float, SpaRouteManifest] | None = None
+
+
+def _read_route_manifest(manifest_path: str) -> SpaRouteManifest:
+    """Le e compila o routes.json emitido pelo build (emit-routes-manifest.js).
+
+    Args:
+        manifest_path: Caminho absoluto do routes.json.
+
+    Returns:
+        Manifesto compilado; vazio (nenhum path migrado) quando o arquivo nao
+        existe (clone sem ``npm run build``) ou esta ilegivel — um JSON parcial
+        na janela do build nao pode derrubar todos os paths do catch-all.
+    """
+    try:
+        with open(manifest_path, encoding="utf-8") as manifest_file:
+            data = json.load(manifest_file)
+    except FileNotFoundError:
+        _log_manifest_problem(manifest_path, "ausente")
+        return _EMPTY_MANIFEST
+    except (OSError, json.JSONDecodeError, re.error) as exc:
+        _log_manifest_problem(manifest_path, f"ilegivel ({exc})")
+        return _EMPTY_MANIFEST
+    return SpaRouteManifest(
+        exact=frozenset(data.get("exact", [])),
+        dynamic=tuple(re.compile(pattern) for pattern in data.get("dynamic", [])),
+    )
+
+
+def _log_manifest_problem(manifest_path: str, motivo: str) -> None:
+    """Avisa que o catch-all esta inerte (fora de app context silencia)."""
+    if has_app_context():
+        current_app.logger.warning(
+            "routes.json %s em %s — nenhum path migrado; rode 'npm run build'.",
+            motivo,
+            manifest_path,
+        )
+
+
+def _load_route_manifest() -> SpaRouteManifest:
+    """Devolve o manifesto cacheado por mtime: rebuild vale sem reiniciar."""
+    global _manifest_cache
+    try:
+        mtime = os.path.getmtime(_ROUTE_MANIFEST_PATH)
+    except OSError:
+        _log_manifest_problem(_ROUTE_MANIFEST_PATH, "ausente")
+        return _EMPTY_MANIFEST
+    if _manifest_cache is None or _manifest_cache[0] != mtime:
+        _manifest_cache = (mtime, _read_route_manifest(_ROUTE_MANIFEST_PATH))
+    return _manifest_cache[1]
 
 
 def _is_migrated_spa_path(normalized: str) -> bool:
     """Indica se ``normalized`` (sem barra inicial) e um path de tela migrada."""
-    if normalized in _MIGRATED_EXACT_PATHS:
+    manifest = _load_route_manifest()
+    if normalized in manifest.exact:
         return True
-    return any(p.fullmatch(normalized) for p in _MIGRATED_DYNAMIC_PATTERNS)
+    return any(pattern.fullmatch(normalized) for pattern in manifest.dynamic)
 
 
 def _is_reserved(subpath: str) -> bool:
-    """Indica se o subpath pertence a uma area reservada (nao-SPA)."""
+    """Indica se o subpath pertence a area reservada — match por SEGMENTO completo."""
     normalized = subpath.lstrip("/")
-    return any(normalized.startswith(prefix) for prefix in _RESERVED_SUBPATH_PREFIXES)
+    return any(
+        normalized == prefix or normalized.startswith(prefix + "/")
+        for prefix in _RESERVED_SUBPATH_PREFIXES
+    )
 
 
-def _read_bundle_fragments(nonce: str) -> tuple[str, str]:
-    """Le o index buildado e extrai (head_assets, body) com o nonce injetado.
-
-    Os nomes de arquivo do bundle sao hasheados a cada build, entao as tags de
-    asset (modulepreload/stylesheet) e o script de bootstrap do SvelteKit sao
-    lidos do proprio bundle em vez de fixados no template Jinja. O placeholder
-    ``%CSP_NONCE%`` deixado pelo frontend e substituido pelo ``nonce`` vivo desta
-    requisicao.
-
-    Args:
-        nonce: O ``csp_nonce`` desta requisicao (de ``g.csp_nonce``).
-
-    Returns:
-        Tupla ``(head_assets_html, body_html)`` pronta para ``| safe`` no Jinja.
+def _require_csp_nonce() -> str:
+    """Devolve ``g.csp_nonce`` (fonte unica, hook assign_csp_nonce em app.py).
 
     Raises:
-        Aborta 404 quando o bundle ainda nao foi buildado (sem ``static/spa/``).
-    """
-    if not os.path.exists(_BUNDLE_INDEX_PATH):
-        # O bundle real vem do frontend (npm run build). Sem ele, nao ha SPA.
-        abort(404)
-
-    with open(_BUNDLE_INDEX_PATH, encoding="utf-8") as bundle_file:
-        raw = bundle_file.read()
-
-    raw = raw.replace("%CSP_NONCE%", nonce)
-
-    head_assets = "\n".join(_HEAD_ASSETS_RE.findall(raw))
-    body_match = _BODY_RE.search(raw)
-    body = body_match.group("body").strip() if body_match else ""
-    return head_assets, body
-
-
-def _ensure_csp_nonce() -> str:
-    """Garante um ``g.csp_nonce`` vivo e o devolve.
-
-    O override de paths migrados roda como ``before_app_request`` ANTES de
-    ``assign_csp_nonce`` (app.py) na ordem de registro; ao curto-circuitar a
-    request, ``assign_csp_nonce`` nem chega a rodar. Geramos o nonce aqui e o
-    gravamos em ``g`` para que o MESMO valor apareca no body e no header CSP
-    (``set_security_headers`` em ``after_request`` le ``g.csp_nonce``).
+        500 quando o nonce nao foi atribuido — gerar um segundo nonce aqui
+        divergiria do header CSP e mataria o bootstrap/anti-flash.
     """
     nonce = getattr(g, "csp_nonce", "") or ""
     if not nonce:
-        nonce = secrets.token_urlsafe(16)
-        g.csp_nonce = nonce
+        current_app.logger.error(
+            "g.csp_nonce ausente ao servir a shell da SPA; hook assign_csp_nonce nao rodou."
+        )
+        abort(500)
     return nonce
 
 
+def _chatbot_base_url() -> str:
+    """URL do chatbot quando habilitado; vazia = widget desligado."""
+    if not current_app.config.get("CHATBOT_ENABLED"):
+        return ""
+    return str(current_app.config.get("CHATBOT_BASE_URL", "")).strip().rstrip("/")
+
+
 def _render_spa() -> str:
-    """Renderiza o index da SPA injetando csp_nonce e a meta csrf-token."""
-    nonce = _ensure_csp_nonce()
-    head_assets, body = _read_bundle_fragments(nonce)
-    return render_template(
-        "spa/index.html",
-        spa_head_assets=head_assets,
-        spa_body=body,
-    )
+    """Serve o index buildado substituindo os placeholders do shell em runtime.
+
+    Returns:
+        HTML final do shell (nonce CSP, token CSRF e config do chatbot vivos).
+
+    Raises:
+        503 com instrucao explicita quando o bundle nao foi buildado.
+    """
+    if not os.path.exists(_BUNDLE_INDEX_PATH):
+        current_app.logger.error(_MISSING_BUNDLE_HINT)
+        abort(503, description=_MISSING_BUNDLE_HINT)
+    with open(_BUNDLE_INDEX_PATH, encoding="utf-8") as bundle_file:
+        html = bundle_file.read()
+    html = html.replace("%CSP_NONCE%", _require_csp_nonce())
+    html = html.replace("%CSRF_TOKEN%", generate_csrf())
+    return html.replace("%CHATBOT_BASE_URL%", str(escape(_chatbot_base_url())))
 
 
 @main_bp.route("/_app/<path:asset_path>", methods=["GET"])
@@ -232,23 +233,17 @@ def spa_app_asset(asset_path: str):
 
 @main_bp.route("/<path:spa_path>", methods=["GET"])
 def spa_native_path(spa_path: str) -> str:
-    """Catch-all dinamico: serve a SPA nos paths nativos migrados SEM rota Jinja.
+    """Catch-all dinamico: serve a SPA nos paths migrados do manifesto do build.
 
     Tem rank menor que as rotas estaticas (Werkzeug prioriza rotas estaticas),
-    entao so casa o que nenhuma rota Jinja existente atendeu: ``/projetos*``,
-    ``/colecoes*``, ``/admin``, ``/admin/usuarios*``, ``/admin/orgaos``,
-    ``/admin/templates`` e ``/busca``. ``/dashboard``, ``/tarefas`` e
-    ``/calendarios`` tambem constam no matcher, mas na
-    pratica sao atendidos pelas rotas estaticas KEEP-ENDPOINT que ja devolvem
-    ``_render_spa()`` (defesa em profundidade). Paths NAO migrados (ou
-    reservados) -> 404, preservando o comportamento atual (telas Jinja vivas
-    continuam nas suas rotas; URLs desconhecidas seguem 404).
+    entao so casa o que nenhuma rota Flask existente atendeu. Paths fora do
+    manifesto (ou reservados) -> 404, preservando o comportamento atual.
 
     Args:
         spa_path: Caminho apos a raiz (sem barra inicial).
 
     Returns:
-        O index da SPA renderizado via Jinja.
+        O HTML do shell da SPA com os placeholders substituidos.
     """
     if _is_reserved(spa_path) or not _is_migrated_spa_path(spa_path):
         abort(404)

@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite dev",
-        "build": "vite build && node scripts/inject-csp-nonce.js",
+        "build": "vite build && node scripts/inject-csp-nonce.js && node scripts/emit-routes-manifest.js",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
