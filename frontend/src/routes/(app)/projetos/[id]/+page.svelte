@@ -92,7 +92,6 @@
 		primeConcludeAudioContext,
 		playConcludeSuccessChime
 	} from '$lib/celebration/concludeChime';
-	import { triggerEpicConfetti } from '$lib/celebration/confettiEpic';
 	import '$lib/celebration/confetti.css';
 
 	type LoadState = 'loading' | 'ready' | 'error';
@@ -199,6 +198,7 @@
 	// --- Concluir projeto (aviso + som + confetes) ---------------------------
 	let concludeInFlight = $state<boolean>(false);
 	let celebrationActive = $state<boolean>(false);
+	let celebrationPhase = $state<'loading' | 'success'>('loading');
 	let celebrationTitle = $state<string>('Concluindo projeto...');
 	let celebrationMessage = $state<string>('Aguarde um instante.');
 
@@ -224,23 +224,24 @@
 	}
 
 	/**
-	 * Conclui o projeto reproduzindo FIELMENTE a UX do legado: overlay
-	 * "Concluindo projeto..." + spinner, depois (em sucesso) overlay "Objetivo
-	 * concluído" + chime (Web Audio) + confete épico (canvas), aguarda o delay e
-	 * navega via router. Em erro: esconde overlay + toast (danger/warning).
+	 * Conclui o projeto: overlay em fase "Concluindo projeto..." (spinner),
+	 * depois (em sucesso) fase de celebração com popper + confete (disparado
+	 * pelo próprio overlay a partir da imagem) + chime (Web Audio), aguarda o
+	 * delay e navega via router. Em erro: esconde overlay + toast.
 	 */
 	async function onConcludeProject(): Promise<void> {
 		if (!data || concludeInFlight || !canConclude) return;
 		concludeInFlight = true;
+		celebrationPhase = 'loading';
 		celebrationTitle = 'Concluindo projeto...';
 		celebrationMessage = 'Aguarde um instante.';
 		celebrationActive = true;
 		try {
 			const result = await concludeProject(projectId);
+			celebrationPhase = 'success';
 			celebrationTitle = 'Objetivo concluído';
 			celebrationMessage = result.message;
 			playConcludeSuccessChime();
-			triggerEpicConfetti();
 			await wait(reduceMotion() ? 450 : 2400);
 			await goto(`${base}${result.redirect_to}`);
 			// Recarrega o detalhe (agora Finalizado) caso o router mantenha a tela.
@@ -1750,9 +1751,10 @@
 	</ul>
 {/if}
 
-<!-- Aviso de conclusão (overlay) — o chime + confete são disparados na ação. -->
+<!-- Aviso de conclusão (overlay) — o chime é da ação; o confete, do overlay no sucesso. -->
 <ConcludeCelebrationOverlay
 	active={celebrationActive}
+	state={celebrationPhase}
 	title={celebrationTitle}
 	message={celebrationMessage}
 />

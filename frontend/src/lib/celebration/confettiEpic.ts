@@ -74,26 +74,6 @@ const CONFETTI_SHAPE_MIXES: ShapeMix[] = [
 	{ rect: 0.2, circle: 0.45, triangle: 0.05, streamer: 0.1, star: 0.2 }
 ];
 
-type BurstStyle = {
-	spread: number;
-	speedMin: number;
-	speedMax: number;
-	gravityMin: number;
-	gravityMax: number;
-	xJitter: number;
-	yJitter: number;
-};
-
-const BURST_STYLES: Record<string, BurstStyle> = {
-	explosive: { spread: 1.55, speedMin: 8.6, speedMax: 16.4, gravityMin: 0.2, gravityMax: 0.4, xJitter: 14, yJitter: 10 },
-	firework: { spread: 0.45, speedMin: 10.2, speedMax: 18.0, gravityMin: 0.17, gravityMax: 0.3, xJitter: 6, yJitter: 6 },
-	drift: { spread: 1.95, speedMin: 3.8, speedMax: 7.6, gravityMin: 0.06, gravityMax: 0.14, xJitter: 22, yJitter: 14 },
-	pop: { spread: 0.85, speedMin: 5.6, speedMax: 9.4, gravityMin: 0.22, gravityMax: 0.42, xJitter: 8, yJitter: 6 },
-	shower: { spread: 2.4, speedMin: 4.2, speedMax: 8.6, gravityMin: 0.26, gravityMax: 0.5, xJitter: 28, yJitter: 18 },
-	geyser: { spread: 0.32, speedMin: 11.4, speedMax: 17.6, gravityMin: 0.18, gravityMax: 0.32, xJitter: 4, yJitter: 8 }
-};
-const BURST_STYLE_KEYS = Object.keys(BURST_STYLES);
-
 let canvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let particles: Particle[] = [];
@@ -355,36 +335,6 @@ function tick(timestamp: number): void {
 	}, 320);
 }
 
-function shuffledStyleKeys(): string[] {
-	const keys = BURST_STYLE_KEYS.slice();
-	for (let i = keys.length - 1; i > 0; i -= 1) {
-		const j = Math.floor(Math.random() * (i + 1));
-		const tmp = keys[i];
-		keys[i] = keys[j];
-		keys[j] = tmp;
-	}
-	return keys;
-}
-
-function styledBurst(origin: Origin, count: number, styleKey: string, angleCenter: number): void {
-	const s = BURST_STYLES[styleKey] || BURST_STYLES.explosive;
-	const spread = s.spread * randomBetween(0.9, 1.12);
-	const speedMin = s.speedMin * randomBetween(0.92, 1.08);
-	const speedMax = s.speedMax * randomBetween(0.92, 1.1);
-	const gravityMin = s.gravityMin * randomBetween(0.88, 1.14);
-	const gravityMax = s.gravityMax * randomBetween(0.92, 1.12);
-	spawnBurst(origin, count, spread, speedMin, speedMax, gravityMin, gravityMax, {
-		angleCenter,
-		xJitter: s.xJitter,
-		yJitter: s.yJitter
-	});
-}
-
-function ensureRaf(): void {
-	if (particles.length > 1500) particles.splice(0, particles.length - 1500);
-	if (!rafId) rafId = window.requestAnimationFrame(tick);
-}
-
 /**
  * Origem da celebração quando o caller passa um elemento/rect/ponto (paridade
  * com `resolveOrigin`/`originFromRect` do legado). Aceita:
@@ -573,97 +523,10 @@ export function triggerTaskFinalizeConfetti(originLike?: CelebrationOriginLike):
 	canvas.classList.add('is-active');
 	runConfettiPattern(origin, patternKey);
 
-	if (particles.length > 420) {
-		particles.splice(0, particles.length - 420);
+	// Teto alto o bastante para as rajadas escalonadas da conclusão não se cortarem.
+	if (particles.length > 900) {
+		particles.splice(0, particles.length - 900);
 	}
 
 	if (!rafId) rafId = window.requestAnimationFrame(tick);
-}
-
-/**
- * Coreografia "épica" da conclusão de projeto — porte 1:1 de
- * `taskFinalizeCelebration.triggerEpic`. No-op com `prefers-reduced-motion`.
- */
-export function triggerEpicConfetti(): void {
-	if (typeof window === 'undefined') return;
-	if (prefersReducedMotion()) return;
-	ensureCanvas();
-	if (!canvas || !ctx) return;
-	if (hideTimer) {
-		clearTimeout(hideTimer);
-		hideTimer = null;
-	}
-	randomizeVibe();
-	canvas.classList.add('is-active');
-
-	const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
-	const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
-
-	const styles = shuffledStyleKeys();
-	let styleIndex = 0;
-	const nextStyle = (): string => {
-		const k = styles[styleIndex % styles.length];
-		styleIndex += 1;
-		return k;
-	};
-
-	const schedule = [
-		{ delay: 0, origin: { x: viewportWidth * 0.18, y: viewportHeight * 0.3 }, angle: -Math.PI / 2 + 0.05, count: 95, style: nextStyle() },
-		{ delay: 110, origin: { x: viewportWidth * 0.82, y: viewportHeight * 0.32 }, angle: -Math.PI / 2 - 0.06, count: 95, style: nextStyle() },
-		{ delay: 220, origin: { x: viewportWidth * 0.5, y: viewportHeight * 0.22 }, angle: -Math.PI / 2, count: 130, style: nextStyle() },
-		{ delay: 480, origin: { x: viewportWidth * 0.04, y: viewportHeight * 0.62 }, angle: -0.65, count: 110, style: nextStyle() },
-		{ delay: 540, origin: { x: viewportWidth * 0.96, y: viewportHeight * 0.62 }, angle: -2.49, count: 110, style: nextStyle() },
-		{ delay: 880, origin: { x: viewportWidth * 0.5, y: viewportHeight * 0.85 }, angle: -Math.PI / 2, count: 170, style: nextStyle() },
-		{ delay: 1040, origin: { x: viewportWidth * 0.32, y: viewportHeight * 0.78 }, angle: -Math.PI / 2 + 0.2, count: 70, style: nextStyle() },
-		{ delay: 1100, origin: { x: viewportWidth * 0.68, y: viewportHeight * 0.78 }, angle: -Math.PI / 2 - 0.2, count: 70, style: nextStyle() }
-	];
-
-	schedule.forEach((step) => {
-		if (step.delay === 0) {
-			styledBurst(step.origin, step.count, step.style, step.angle);
-		} else {
-			window.setTimeout(() => {
-				if (!canvas || !ctx) return;
-				styledBurst(step.origin, step.count, step.style, step.angle);
-				ensureRaf();
-			}, step.delay);
-		}
-	});
-
-	spawnCascade(
-		{ x: viewportWidth / 2, y: viewportHeight * 0.05 },
-		240,
-		{
-			xSpread: viewportWidth * 0.55,
-			yMin: 20,
-			yMax: 220,
-			vxMin: -2.6,
-			vxMax: 2.6,
-			vyMin: 2.6,
-			vyMax: 6.4,
-			gravityMin: 0.12,
-			gravityMax: 0.26
-		}
-	);
-	window.setTimeout(() => {
-		if (!canvas || !ctx) return;
-		spawnCascade(
-			{ x: viewportWidth / 2, y: viewportHeight * 0.06 },
-			180,
-			{
-				xSpread: viewportWidth * 0.48,
-				yMin: 30,
-				yMax: 200,
-				vxMin: -2.2,
-				vxMax: 2.2,
-				vyMin: 2.8,
-				vyMax: 6.8,
-				gravityMin: 0.13,
-				gravityMax: 0.26
-			}
-		);
-		ensureRaf();
-	}, 700);
-
-	ensureRaf();
 }
