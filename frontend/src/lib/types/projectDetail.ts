@@ -246,17 +246,6 @@ export interface EtapaAddResult {
 	project_reactivated: boolean;
 }
 
-/** Corpo de POST /api/etapas/<id> (editar etapa regular completa). */
-export interface EtapaEditPayload {
-	descricao?: string | null;
-	responsavel?: string | null;
-	comentarios?: string | null;
-	data_inicio?: string | null; // YYYY-MM-DD
-	data_fim?: string | null; // YYYY-MM-DD
-	iniciada?: boolean;
-	done?: boolean;
-}
-
 /** Resposta com a etapa atualizada (edit/comentario/toggle*). */
 export interface EtapaResult {
 	etapa: EtapaDetail;
@@ -270,7 +259,7 @@ export interface EtapaDeleteResult {
 }
 
 /** Campos aceitos pela edição inline de etapa (update-field). */
-export type EtapaInlineField = 'descricao' | 'data_inicio' | 'data_fim' | 'responsavel';
+export type EtapaInlineField = 'descricao' | 'data_inicio' | 'data_fim';
 
 /**
  * `field_update` devolvido por update_regular_field (services/etapas_mutation.py).

@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Tela "Admin > Órgãos" (árvore READ-ONLY). URL `/spa/admin/orgaos`.
+	 * Tela "Admin > Órgãos" (árvore READ-ONLY). URL `/admin/orgaos`.
 	 *
 	 * A estrutura organizacional é espelho do SIORG-RJ: nada se cria/edita/move
 	 * aqui. A tela renderiza a hierarquia (`GET /api/admin/orgaos`) com o

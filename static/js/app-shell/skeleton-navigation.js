@@ -51,19 +51,14 @@
                 return 'generic';
             }
 
-            // Só os kinds que AINDA possuem <template data-skeleton-template>
-            // em base.html (available_skeleton_types): login, projects, pending,
-            // project_detail. As demais telas migraram para a SPA e seus
-            // templates de skeleton foram removidos.
+            // Só paths de auth chegam a renderizar base.html; as demais telas
+            // migraram para a SPA (redirect 302 server-side).
             if (
                 pathname === '/' ||
                 pathname === '/login' ||
                 pathname === '/login/govbr' ||
                 pathname === '/auth/govbr/callback'
             ) return 'login';
-            if (pathname === '/projects') return 'projects';
-            if (pathname === '/projetos_pendentes') return 'pending';
-            if (/^\/project\/\d+$/.test(pathname)) return 'project_detail';
             return 'generic';
         }
 

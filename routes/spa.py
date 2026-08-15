@@ -40,7 +40,7 @@ redirects de produção apontam pra ca). ``/dashboard``, ``/tarefas`` e
 
 EXCLUSOES (nunca SPA): ``/api/*``, ``/webhook``, ``/calendar/oauth/*``,
 ``/auth/*``, ``/login*``, ``/logout``, ``/static/*``, ``/favicon.ico``,
-``/setup_db``, ``/_app/*`` e o proprio ``/spa`` legado.
+``/setup_db``, ``/_app/*`` e o prefixo ``/spa*`` (rota legada removida).
 
 A funcao e anexada ao ``main_bp`` UNICO; NAO criamos blueprint novo, para
 preservar os ``url_for("main.xxx")`` existentes.
@@ -228,25 +228,6 @@ def spa_app_asset(asset_path: str):
         O arquivo do bundle (404 se inexistente).
     """
     return send_from_directory(_BUNDLE_APP_DIR, asset_path)
-
-
-@main_bp.route("/spa", methods=["GET"])
-@main_bp.route("/spa/<path:subpath>", methods=["GET"])
-def spa_index(subpath: str = "") -> str:
-    """Compat: serve o index da SPA na raiz legada ``/spa`` e subpaths.
-
-    Mantida para nao quebrar links antigos para ``/spa``; o roteamento atual
-    usa os paths nativos. Areas reservadas sao rejeitadas com 404.
-
-    Args:
-        subpath: O caminho client-side apos ``/spa`` (vazio para a raiz).
-
-    Returns:
-        O HTML do index renderizado via Jinja (com ``csp_nonce`` e csrf-token).
-    """
-    if subpath and _is_reserved(subpath):
-        abort(404)
-    return _render_spa()
 
 
 @main_bp.route("/<path:spa_path>", methods=["GET"])

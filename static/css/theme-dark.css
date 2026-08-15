@@ -524,7 +524,6 @@ html[data-theme="dark"] body.is-authenticated .app-global-search-footer-link:foc
 html[data-theme="dark"] body.is-authenticated .card,
 html[data-theme="dark"] body.is-authenticated .glass-card,
 html[data-theme="dark"] body.is-authenticated .glass-modal,
-html[data-theme="dark"] body.is-authenticated .admin-users-table-card,
 html[data-theme="dark"] body.is-authenticated .account-form-card {
     background: var(--app-color-surface) !important;
     border-color: var(--app-color-border) !important;
@@ -564,7 +563,6 @@ html[data-theme="dark"] body.is-authenticated table {
 
 
 html[data-theme="dark"] body.is-authenticated .table thead th,
-html[data-theme="dark"] body.is-authenticated .admin-users-table thead th,
 html[data-theme="dark"] body.is-authenticated .pending-table th {
     background: #2f4057 !important;
     color: var(--app-color-text-muted);
@@ -574,8 +572,7 @@ html[data-theme="dark"] body.is-authenticated .pending-table th {
 
 html[data-theme="dark"] body.is-authenticated .table td,
 html[data-theme="dark"] body.is-authenticated .table th,
-html[data-theme="dark"] body.is-authenticated .pending-table td,
-html[data-theme="dark"] body.is-authenticated .admin-users-table tbody td {
+html[data-theme="dark"] body.is-authenticated .pending-table td {
     border-color: rgba(99, 166, 219, 0.18);
 }
 
@@ -830,55 +827,16 @@ html[data-theme="dark"] body.is-authenticated .project-create-modal .project-sea
 
 
 /* Misc authenticated pages */
-html[data-theme="dark"] body.is-authenticated .account-page-header,
-html[data-theme="dark"] body.is-authenticated .admin-users-header {
+html[data-theme="dark"] body.is-authenticated .account-page-header {
     background: var(--app-color-surface);
     border-color: var(--app-color-border);
     box-shadow: 0 8px 20px rgba(7, 11, 18, 0.32);
 }
 
-html[data-theme="dark"] body.is-authenticated .admin-users-shell .admin-users-header-icon {
-    background: rgba(77, 169, 249, 0.18);
-    border-color: rgba(77, 169, 249, 0.42);
-    color: #4DA9F9;
-}
-
 
 html[data-theme="dark"] body.is-authenticated .account-page-subtitle,
-html[data-theme="dark"] body.is-authenticated .account-help-text,
-html[data-theme="dark"] body.is-authenticated .admin-users-subtitle,
-html[data-theme="dark"] body.is-authenticated .admin-users-muted {
+html[data-theme="dark"] body.is-authenticated .account-help-text {
     color: var(--app-color-text-muted);
-}
-
-
-html[data-theme="dark"] body.is-authenticated .admin-users-id-chip,
-html[data-theme="dark"] body.is-authenticated .admin-users-area-chip,
-html[data-theme="dark"] body.is-authenticated .admin-users-role-badge.is-standard {
-    background: #2b3a4f;
-    border-color: var(--app-color-border);
-    color: var(--app-color-text-secondary);
-}
-
-
-html[data-theme="dark"] body.is-authenticated .admin-users-role-badge.is-admin {
-    background: rgba(73, 185, 135, 0.18);
-    border-color: rgba(73, 185, 135, 0.42);
-    color: #bcead5;
-}
-
-
-html[data-theme="dark"] body.is-authenticated .admin-users-action-btn.is-edit {
-    background: rgba(78, 149, 204, 0.16);
-    border-color: rgba(99, 166, 219, 0.36);
-    color: #d6e7f6;
-}
-
-
-html[data-theme="dark"] body.is-authenticated .admin-users-action-btn.is-delete {
-    background: rgba(217, 122, 122, 0.16);
-    border-color: rgba(217, 122, 122, 0.36);
-    color: #f2c2c2;
 }
 
 
@@ -1215,7 +1173,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .glass-btn-sm,
 html[data-theme="dark"] body.is-authenticated .main-content .account-btn,
 html[data-theme="dark"] body.is-authenticated .main-content .account-btn-primary,
 html[data-theme="dark"] body.is-authenticated .main-content .account-btn-secondary,
-html[data-theme="dark"] body.is-authenticated .main-content .admin-users-create-btn,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-action-clean,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-template-action,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-task-clean,
@@ -1230,7 +1187,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-sm,
 html[data-theme="dark"] body.is-authenticated .main-content .glass-close-btn,
 html[data-theme="dark"] body.is-authenticated .main-content .project-info-badge,
 html[data-theme="dark"] body.is-authenticated .main-content .pending-status-badge,
-html[data-theme="dark"] body.is-authenticated .main-content .admin-users-meta-chip,
 html[data-theme="dark"] body.is-authenticated .main-content .projects-v4-id-chip {
     background: #2b3a4f;
     border-color: var(--app-color-border);
@@ -1246,7 +1202,6 @@ html[data-theme="dark"] body.is-authenticated .main-content .btn-save-project:ho
 html[data-theme="dark"] body.is-authenticated .main-content .btn-comment-data:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .btn-action-clean:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .account-btn:hover,
-html[data-theme="dark"] body.is-authenticated .main-content .admin-users-create-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .glass-btn:hover,
 html[data-theme="dark"] body.is-authenticated .main-content .glass-close-btn:hover {
     background: rgba(78, 149, 204, 0.2);

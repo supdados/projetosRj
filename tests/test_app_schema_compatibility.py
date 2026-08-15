@@ -1,6 +1,6 @@
 from sqlalchemy import inspect, text
 
-from app import create_app, ensure_project_abep_indicator_column, initialize_database
+from app import create_app, initialize_database
 from models import db
 
 
@@ -95,9 +95,6 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
                 """))
         db.session.commit()
 
-        assert ensure_project_abep_indicator_column() is True
-        assert ensure_project_abep_indicator_column() is False
-
         summary = initialize_database()
 
         inspector = inspect(db.engine)
@@ -153,7 +150,7 @@ def test_schema_compatibility_upgrades_legacy_project_and_task_tables(tmp_path):
         # A coluna vira ESPELHO do primeiro filho (compat de rollback).
         assert legacy_sei_column == "SEI-380001/000664/2026"
 
-        assert summary["column_added"] is False
+        assert summary["column_added"] is True
         assert "project.product_link" in summary["project_columns_added"]
         assert "task.rebuilt_task_only" in summary["task_core_cols"]
 

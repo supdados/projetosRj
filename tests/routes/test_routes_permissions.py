@@ -4,42 +4,8 @@ import time
 from models import User, UserOrgao, db
 from routes.api.envelope import NOT_FOUND_MESSAGE
 from services.authorization import PAPEL_LEITOR
+from tests.routes.request_payloads import resolve_request
 from tests.routes.route_cases import ADMIN_REQUIRED_CASES, LOGIN_REQUIRED_CASES
-
-
-class _DummyIdContext(dict):
-    """Contexto de format() que devolve um id ficticio para chaves ausentes.
-
-    A negacao a anonimo/nao-admin nao depende do id concreto na URL (o guard
-    rejeita ANTES de qualquer lookup), entao um placeholder e suficiente quando
-    o ``seed_data`` nao expoe a chave (ex.: ``anexo_id`` vive em outra lane de
-    seed). Mantem o teste de permissao auto-suficiente sem tocar o seed.
-    """
-
-    def __missing__(self, key):
-        return "1"
-
-
-def _format_payload(value, context):
-    if isinstance(value, str):
-        return value.format_map(context)
-    if isinstance(value, list):
-        return [_format_payload(item, context) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_format_payload(item, context) for item in value)
-    if isinstance(value, dict):
-        return {key: _format_payload(item, context) for key, item in value.items()}
-    return value
-
-
-def _resolve_request(case, seed_data):
-    context = _DummyIdContext(seed_data)
-    path = case["path"].format_map(context)
-    request_kwargs = {}
-    for key in ("data", "json", "headers", "query_string"):
-        if key in case:
-            request_kwargs[key] = _format_payload(case[key], context)
-    return path, request_kwargs
 
 
 def _is_api_rule(case):
@@ -95,7 +61,7 @@ def test_login_required_routes_deny_anonymous(case, client, seed_data):
       - /api/* mutativo: 401 (harness CSRF OFF) ou 400 (CSRF ON em prod).
     Nunca 2xx/404/500 — a negacao tem que ser efetiva e a rota tem que existir.
     """
-    path, request_kwargs = _resolve_request(case, seed_data)
+    path, request_kwargs = resolve_request(case, seed_data, fallback_ids=True)
     response = client.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )
@@ -144,7 +110,7 @@ def test_admin_routes_deny_non_admin(case, client_user, seed_data):
     Intencao preservada (302 + /dashboard no Jinja); para /api/* o novo contrato
     e 403 JSON com code "forbidden".
     """
-    path, request_kwargs = _resolve_request(case, seed_data)
+    path, request_kwargs = resolve_request(case, seed_data, fallback_ids=True)
     response = client_user.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )
@@ -303,7 +269,7 @@ AREA_PROTECTED_CASES = [
 )
 def test_area_protected_routes_block_outsider(case, client_outsider, seed_data):
     """Rank 0 no projeto: 404 anti-enumeracao (ou redirect nas rotas hibridas)."""
-    path, request_kwargs = _resolve_request(case, seed_data)
+    path, request_kwargs = resolve_request(case, seed_data, fallback_ids=True)
     response = client_outsider.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )
@@ -425,7 +391,7 @@ def client_leitor(app, seed_data):
 )
 def test_area_protected_routes_forbid_leitor(case, client_leitor, seed_data):
     """Rank >= leitor com acao acima do rank: 403 `forbidden`, nunca 404."""
-    path, request_kwargs = _resolve_request(case, seed_data)
+    path, request_kwargs = resolve_request(case, seed_data, fallback_ids=True)
     response = client_leitor.open(
         path, method=case["method"], follow_redirects=False, **request_kwargs
     )

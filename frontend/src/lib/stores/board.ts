@@ -7,7 +7,7 @@
  * se o servidor recusar — ex.: 403 ao finalizar sem permissão.
  *
  * Projetada para 2 modos sem acoplar a UI:
- *   - 'board'  -> board completo (5 colunas), usado por /spa/tarefas (kanban).
+ *   - 'board'  -> board completo (5 colunas), usado por /tarefas (kanban).
  *   - 'drawer' -> mesma store carregada/operada para uma única tarefa.
  * O modo é metadado da store; a UI escolhe como renderizar. Sem libs externas
  * de estado (apenas `writable` do Svelte).

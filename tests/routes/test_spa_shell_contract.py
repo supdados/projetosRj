@@ -1,9 +1,9 @@
 """Testes de contrato do shell da SPA (routes/spa.py).
 
-Afirmam que ``/spa`` e ``/spa/<subpath>`` servem o index do bundle via Jinja
+Afirmam que os paths nativos migrados servem o index do bundle via Jinja
 (com ``<meta name="csrf-token">`` e o ``csp_nonce`` no script de bootstrap), e
-que a rota NÃO intercepta áreas reservadas (``/api/*``, ``/login``, ``/webhook``,
-etc.) — essas continuam respondendo nas suas rotas originais.
+que o catch-all NÃO intercepta áreas reservadas (``/api/*``, ``/login``,
+``/webhook``, etc.) — essas continuam respondendo nas suas rotas originais.
 """
 
 from __future__ import annotations
@@ -19,18 +19,8 @@ def _csp_script_src(response) -> str:
     return ""
 
 
-def test_spa_root_serves_html_with_csrf_meta(client):
-    response = client.get("/spa")
-
-    assert response.status_code == 200
-    assert response.mimetype == "text/html"
-    body = response.get_data(as_text=True)
-    assert '<meta name="csrf-token"' in body
-    assert "data-sveltekit-preload-data" in body
-
-
 def test_spa_bootstrap_script_uses_csp_nonce(client):
-    response = client.get("/spa")
+    response = client.get("/colecoes")
     body = response.get_data(as_text=True)
 
     script_src = _csp_script_src(response)
@@ -46,19 +36,11 @@ def test_spa_bootstrap_script_uses_csp_nonce(client):
 def test_response_sets_anti_clickjacking_headers(client):
     """Regressão do achado de Clickjacking (CWE-1021): X-Frame-Options: DENY e
     CSP com frame-ancestors 'none' — impedem a página de ser embutida em iframe."""
-    response = client.get("/spa")
+    response = client.get("/colecoes")
 
     assert response.headers.get("X-Frame-Options") == "DENY"
     csp = response.headers.get("Content-Security-Policy", "")
     assert "frame-ancestors 'none'" in csp
-
-
-def test_spa_subpath_dashboard_serves_same_shell(client):
-    response = client.get("/spa/dashboard")
-
-    assert response.status_code == 200
-    assert response.mimetype == "text/html"
-    assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
 
 
 def test_colecoes_paths_serve_spa_shell(client):
@@ -66,7 +48,10 @@ def test_colecoes_paths_serve_spa_shell(client):
     for path in ("/colecoes", "/colecoes/12"):
         response = client.get(path)
         assert response.status_code == 200, path
-        assert "data-sveltekit-preload-data" in response.get_data(as_text=True)
+        assert response.mimetype == "text/html", path
+        body = response.get_data(as_text=True)
+        assert '<meta name="csrf-token"' in body, path
+        assert "data-sveltekit-preload-data" in body, path
 
 
 def test_colecoes_non_numeric_id_is_not_served(client):
@@ -75,7 +60,7 @@ def test_colecoes_non_numeric_id_is_not_served(client):
 
 
 def test_spa_reserved_subpath_is_not_intercepted(client):
-    """Um subpath reservado sob /spa é rejeitado (404), não servido como shell."""
+    """Um subpath reservado é rejeitado (404) pelo catch-all, não servido como shell."""
     response = client.get("/spa/api/me")
     assert response.status_code == 404
 

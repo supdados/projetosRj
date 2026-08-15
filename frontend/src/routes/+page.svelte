@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Raiz da SPA. Usa `goto` com `base` para respeitar paths.base=/static/spa.
+	 * Raiz da SPA. Usa `goto` com `base` para respeitar o paths.base configurado.
 	 */
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';

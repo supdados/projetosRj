@@ -1142,29 +1142,8 @@ ROUTE_CASES = [
         "requires_login": True,
         "requires_admin": False,
     },
-    # SPA shell (catch-all servido via Jinja + csp_nonce; routes/spa.py).
-    # Raiz da SPA e subpaths client-side (ex.: /spa/dashboard) rendam o index.
+    # SPA shell (servido via Jinja + csp_nonce; routes/spa.py).
     # Nao exige login: o guard de auth e client-side (carrega /api/me no boot).
-    {
-        "id": "spa_index_get",
-        "method": "GET",
-        "rule": "/spa",
-        "path": "/spa",
-        "role": "anon",
-        "expected_status": 200,
-        "requires_login": False,
-        "requires_admin": False,
-    },
-    {
-        "id": "spa_index_subpath_get",
-        "method": "GET",
-        "rule": "/spa/<path:subpath>",
-        "path": "/spa/dashboard",
-        "role": "anon",
-        "expected_status": 200,
-        "requires_login": False,
-        "requires_admin": False,
-    },
     # SPA nos PATHS NATIVOS (item #1): catch-all dinamico que serve o index
     # (Jinja + csp_nonce) nos paths das telas migradas sem rota Jinja propria
     # (ex.: /projetos, /admin/usuarios). Paths nao migrados -> 404.
@@ -1257,10 +1236,11 @@ ROUTE_CASES = [
     },
     # Admin users (Jinja): rotas CORTADAS na migracao SPA — o CRUD vive em
     # /admin/usuarios* (SPA) + /api/admin/usuarios* (envelope).
-    # Admin templates/orgaos/tipos: rotas Jinja canonicas CORTADAS (Grupo B).
-    # /admin/templates, /admin/orgaos e /admin/orgaos/tipos agora servem a SPA via
-    # catch-all (_MIGRATED_EXACT_PATHS em routes/spa.py); o CRUD vive em
-    # /api/admin/templates*, /api/admin/orgaos* e /api/admin/orgaos/tipos*.
+    # Admin templates/orgaos: rotas Jinja canonicas CORTADAS (Grupo B).
+    # Só /admin/templates e /admin/orgaos estao em _MIGRATED_EXACT_PATHS
+    # (routes/spa.py) e sao servidos pelo catch-all; /admin/orgaos/tipos NAO tem
+    # tela nem rota (o catalogo local de tipos foi cortado com o SIORG). O CRUD
+    # restante vive em /api/admin/templates* e /api/admin/orgaos*.
     # Maintenance
     {
         "id": "favicon_get",
@@ -1271,16 +1251,6 @@ ROUTE_CASES = [
         "expected_status": [200, 404],
         "requires_login": False,
         "requires_admin": False,
-    },
-    {
-        "id": "setup_db_get",
-        "method": "GET",
-        "rule": "/setup_db",
-        "path": "/setup_db",
-        "role": "admin",
-        "expected_status": 200,
-        "requires_login": True,
-        "requires_admin": True,
     },
     {
         "id": "calendar_event_generate_meet_post",
@@ -1648,9 +1618,10 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 #   /admin/orgaos/novo, /admin/orgaos/<id>, /admin). Paths nao migrados -> 404.
 # + GET /_app/<path:asset_path>: serve os assets imutaveis do SvelteKit a partir
 #   de static/spa/_app/ (com paths.base='' o cliente os pede em /_app/...).
-# Os paths migrados que colidem com rotas Jinja de mesma URL (/dashboard, /tarefas,
-# /busca, /calendarios, /admin/orgaos, /admin/orgaos/tipos, /admin/templates) NAO
-# adicionam rota: sao servidos via before_app_request que curto-circuita o GET.
+# Os paths migrados que ja tinham rota estatica registrada (/dashboard, /tarefas,
+# /calendarios) NAO adicionam rota: os endpoints Flask viraram KEEP-ENDPOINT e
+# devolvem _render_spa() direto (rank maior que o catch-all no Werkzeug). Os
+# demais (/busca, /admin/orgaos, /admin/templates) caem no catch-all.
 # 195 + 2 = 197.
 #
 # Features de paridade (mutacoes da SPA no envelope canonico, aditivas; NAO
@@ -1660,7 +1631,8 @@ ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
 #   services/project_completion).
 # + GET  /api/catalogos/objetivos (catalogo de objetivos para o modal).
 # + GET  /api/projetos/<pid>/etapas/<eid>/tarefas (tarefas da etapa, quick-add).
-# + POST /api/tarefas (criar tarefa, reusa _create_task_common).
+# + POST /api/tarefas (criar tarefa; corpo proprio, NAO reusa _create_task_common —
+#   compartilha so os helpers de validacao de routes/tasks/creation.py).
 # + POST /api/tarefas/<id>/excluir (excluir tarefa, reusa notify_task_deleted).
 # + POST /api/tarefas/<id>/mover-etapa (mover etapa, reusa move_task_to_etapa).
 # + POST /api/tarefas/arquivar-finalizadas (lote, reusa bulk_archive_finalized).
@@ -2255,4 +2227,9 @@ ROUTE_CASES += [
 # /api/colecoes/sugestoes. 178 + 1 = 179.
 # +2 do cache persistido de sugestoes (IA Fase 2): GET /api/colecoes/sugestoes
 # e POST /api/colecoes/sugestoes/<sid>/descartar. 179 + 2 = 181.
-assert len(ROUTE_CASES) == 181
+# -2 da faxina de legado (item 0.4): GET /spa e GET /spa/<path:subpath> removidos
+# (rota de compat sem consumidor — zero target_url '/spa%' nos bancos; os paths
+# nativos ja sao servidos pelo catch-all). 181 - 2 = 179.
+# -1 da faxina de legado (item 0.8): GET /setup_db removido (expunha db.create_all()
+# e ALTER TABLE via GET; migracoes vivem em scripts/migrations/). 179 - 1 = 178.
+assert len(ROUTE_CASES) == 178

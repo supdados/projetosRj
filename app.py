@@ -34,12 +34,6 @@ from services.govbr_oidc import (
 from startup import initialize_database
 from time_utils import register_sqlite_adapters
 
-# Re-exportações para compatibilidade com scripts e testes existentes
-from startup import (
-    ensure_project_abep_indicator_column,
-    ensure_task_core_columns,
-)  # noqa: F401
-
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 
 

@@ -27,7 +27,6 @@ import type {
 	ProjectGoalsSelection,
 	EtapaAddPayload,
 	EtapaAddResult,
-	EtapaEditPayload,
 	EtapaResult,
 	EtapaDeleteResult,
 	EtapaInlineField,
@@ -136,15 +135,6 @@ export function addEtapa(
 	signal?: AbortSignal
 ): Promise<EtapaAddResult> {
 	return post<EtapaAddResult>(`/api/projetos/${projectId}/etapas`, payload, signal);
-}
-
-/** Edita uma etapa regular (completa); devolve a etapa atualizada. */
-export function editEtapa(
-	etapaId: number,
-	payload: EtapaEditPayload,
-	signal?: AbortSignal
-): Promise<EtapaResult> {
-	return post<EtapaResult>(`/api/etapas/${etapaId}`, payload, signal);
 }
 
 /** Exclui uma etapa regular; devolve o total de etapas do projeto. */

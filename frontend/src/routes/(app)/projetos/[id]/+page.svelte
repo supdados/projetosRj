@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Tela "Detalhe de Projeto". URL: /spa/projetos/<id>.
+	 * Tela "Detalhe de Projeto". URL: /projetos/<id>.
 	 *
 	 * Carrega `GET /api/projetos/<id>/detalhe` (modulo `$lib/api/projectDetail`) e
 	 * compoe ProjectHeader (sticky/compacto + edicao inline de titulo/status/
@@ -825,7 +825,7 @@
 	// --- Etapas: edicao inline de campo (cascata server-side) ----------------
 
 	/**
-	 * Edita um campo inline da etapa (descricao/data_inicio/data_fim/responsavel).
+	 * Edita um campo inline da etapa (descricao/data_inicio/data_fim).
 	 * Ao mudar uma DATA, o backend pode propagar a cascata para etapas seguintes;
 	 * por isso RE-BUSCAMOS o estado completo apos o sucesso. O front nao recalcula.
 	 *
