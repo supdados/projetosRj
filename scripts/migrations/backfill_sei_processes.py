@@ -2,7 +2,7 @@
 
 Contexto (2026-07-03): um projeto passou a aceitar MÚLTIPLOS números de
 processo SEI, guardados na tabela filha ``project_sei_process``. Este passo
-roda a cada boot (via ``run_all_migrations``) com semântica expand-contract:
+usa semântica expand-contract:
 
 - Escalar que ainda não existe entre os filhos vira um filho novo — cobre
   tanto o legado pré-feature quanto edições feitas por instância antiga
@@ -49,26 +49,31 @@ def _mirror_first_number(project: Project) -> None:
     )
 
 
-def backfill_sei_processes(emit_output: bool = True) -> dict:
+def _emit(message: str, emit_output: bool = True) -> None:
+    if emit_output:
+        print(message)
+
+
+def backfill_sei_processes(emit_output: bool = True, *, apply: bool = True) -> dict:
     """Passo de migração: coluna legada <-> ``project_sei_process`` (idempotente).
 
     Returns:
         ``{"success": bool, "migrated": int}``.
     """
-    from scripts.migrations.run_migrations import _emit
-
     _emit(
         "\n-- Backfill de processos SEI (coluna legada -> project_sei_process)...",
         emit_output,
     )
     try:
-        db.create_all()
         migrated = 0
         pending = Project.query.filter(Project.sei_process.isnot(None)).all()
         for project in pending:
             migrated += _absorb_legacy_scalar(project)
             _mirror_first_number(project)
-        db.session.commit()
+        if apply:
+            db.session.commit()
+        else:
+            db.session.rollback()
         if migrated:
             _emit(f"   ✓ {migrated} processos SEI migrados.", emit_output)
         else:
@@ -78,3 +83,32 @@ def backfill_sei_processes(emit_output: bool = True) -> dict:
         db.session.rollback()
         _emit(f"   ✗ ERRO no backfill de processos SEI: {exc}", emit_output)
         return {"success": False, "error": str(exc), "migrated": 0}
+
+
+def main() -> int:
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(
+        description="Converte Project.sei_process legado em linhas project_sei_process."
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Grava as alterações (default é dry-run, que só relata contagens).",
+    )
+    args = parser.parse_args()
+    # Backfill de dados puro: importar o app não deve rodar verificação de schema.
+    os.environ.setdefault("SKIP_STARTUP_DB_INIT", "true")
+    from app import app
+
+    with app.app_context():
+        print(f"Banco: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        result = backfill_sei_processes(apply=args.apply)
+        if not args.apply:
+            print("\nDry-run: nada gravado. Use --apply para gravar.")
+        return 0 if result["success"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

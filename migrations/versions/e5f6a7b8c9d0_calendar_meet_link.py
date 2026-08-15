@@ -24,6 +24,9 @@ def _column_exists(inspector, table_name, column_name):
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    # tabela ausente = instalação limpa: a baseline de catch-up cria tudo (Sprint 5.3)
+    if 'calendar_event' not in inspector.get_table_names():
+        return
     if not _column_exists(inspector, 'calendar_event', 'meet_link'):
         op.add_column('calendar_event', sa.Column('meet_link', sa.String(512), nullable=True))
 

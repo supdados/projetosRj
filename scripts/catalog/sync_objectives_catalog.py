@@ -2,10 +2,12 @@
 """
 Sincroniza o catalogo canonico de objetivos/resultados/indicadores no banco.
 
+Sincroniza DADOS, nunca schema: o banco precisa estar migrado (`alembic
+upgrade head`) antes. Até a Sprint 5.4 este script chamava `db.create_all()`.
+
 Uso:
     python3 scripts/catalog/sync_objectives_catalog.py
     python3 scripts/catalog/sync_objectives_catalog.py --dry-run
-    python3 scripts/catalog/sync_objectives_catalog.py --skip-create-all
 """
 
 import argparse
@@ -16,9 +18,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from sqlalchemy import inspect
+
 from app import app, db
 from models import Objetivo, ResultadoEsperado, Indicador
 from catalogs.objectives import sync_goal_catalog_to_db
+
+CATALOG_TABLES = ("objetivo", "resultado_esperado", "indicador")
 
 
 def _masked_db_uri(uri):
@@ -43,12 +49,13 @@ def parse_args():
         action="store_true",
         help="Executa validacao/sync sem persistir alteracoes.",
     )
-    parser.add_argument(
-        "--skip-create-all",
-        action="store_true",
-        help="Nao executa db.create_all() antes da sincronizacao.",
-    )
     return parser.parse_args()
+
+
+def missing_catalog_tables() -> list[str]:
+    """Lista as tabelas de catalogo ausentes no banco configurado."""
+    existing = set(inspect(db.engine).get_table_names())
+    return [table for table in CATALOG_TABLES if table not in existing]
 
 
 def main():
@@ -63,11 +70,15 @@ def main():
         print(f"Modo dry-run: {'SIM' if args.dry_run else 'NAO'}")
         print()
 
-        try:
-            if not args.skip_create_all:
-                db.create_all()
-                print("create_all: OK (tabelas faltantes criadas se necessario)")
+        missing = missing_catalog_tables()
+        if missing:
+            print(
+                f"\nERRO: tabelas ausentes: {', '.join(missing)}. "
+                "Rode `alembic upgrade head` (produtor unico de schema)."
+            )
+            return 1
 
+        try:
             summary = sync_goal_catalog_to_db(commit=not args.dry_run)
 
             if args.dry_run:

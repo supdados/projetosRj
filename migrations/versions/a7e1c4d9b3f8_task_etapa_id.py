@@ -31,6 +31,10 @@ def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
+    # tabela ausente = instalação limpa: a baseline de catch-up cria tudo (Sprint 5.3)
+    if "task" not in inspector.get_table_names():
+        return
+
     if not _column_exists(inspector, "task", "etapa_id"):
         with op.batch_alter_table("task") as batch_op:
             batch_op.add_column(sa.Column("etapa_id", sa.Integer(), nullable=True))

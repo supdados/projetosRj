@@ -58,6 +58,11 @@ def upgrade():
                         ['id'],
                     )
 
+    # StageTemplate ausente = instalação limpa: a baseline de catch-up cria tudo
+    # (Sprint 5.3); criar aqui quebraria os FKs no MySQL.
+    if not _table_exists(inspector, 'StageTemplate'):
+        return
+
     if not _table_exists(inspector, 'stage_template_usage'):
         op.create_table(
             'stage_template_usage',

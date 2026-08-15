@@ -22,6 +22,10 @@ def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
+    # tabela ausente = instalação limpa: a baseline de catch-up cria tudo (Sprint 5.3)
+    if 'project' not in inspector.get_table_names():
+        return
+
     project_columns = {col['name'] for col in inspector.get_columns('project')}
     if 'orgao_id' not in project_columns:
         with op.batch_alter_table('project') as batch_op:

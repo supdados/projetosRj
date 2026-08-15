@@ -24,6 +24,9 @@ def _column_exists(inspector, table_name, column_name):
 def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+    # tabela ausente = instalação limpa: a baseline de catch-up cria tudo (Sprint 5.3)
+    if "project" not in inspector.get_table_names():
+        return
     if not _column_exists(inspector, "project", "product_link"):
         op.add_column(
             "project", sa.Column("product_link", sa.String(length=500), nullable=True)

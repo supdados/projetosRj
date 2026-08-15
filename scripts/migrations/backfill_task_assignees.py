@@ -5,9 +5,8 @@ Contexto (2026-06-10): a SPA exibe responsáveis pela relação ``task_assignee`
 texto livre — o kanban mostrava o nome legado enquanto o drawer aparecia vazio.
 Este passo converte cada nome do texto em uma linha de ``task_assignee`` quando
 há exatamente UM usuário ativo com aquele nome, e REMOVE do texto os nomes
-convertidos. Remover é o que torna o passo idempotente: rodar de novo (a cada
-boot, via ``run_all_migrations``) não ressuscita atribuições que o usuário
-removeu depois pela UI. Nomes sem correspondência (ou ambíguos) permanecem no
+convertidos. Remover é o que torna o passo idempotente: rodar de novo não
+ressuscita atribuições que o usuário removeu depois pela UI. Nomes sem correspondência (ou ambíguos) permanecem no
 texto legado, sem perda de informação.
 """
 
@@ -79,14 +78,17 @@ def _convert_legacy_names(
     return matched_ids, unmatched_names
 
 
-def backfill_task_assignees(emit_output: bool = True) -> dict:
+def _emit(message: str, emit_output: bool = True) -> None:
+    if emit_output:
+        print(message)
+
+
+def backfill_task_assignees(emit_output: bool = True, *, apply: bool = True) -> dict:
     """Passo de migração: texto legado -> ``task_assignee`` (idempotente).
 
     Returns:
         ``{"success": bool, "converted_tasks": int, "assignees_created": int}``.
     """
-    from scripts.migrations.run_migrations import _emit
-
     _emit(
         "\n-- Backfill de responsáveis (texto legado -> task_assignee)...", emit_output
     )
@@ -108,7 +110,10 @@ def backfill_task_assignees(emit_output: bool = True) -> dict:
             converted_tasks += 1
             assignees_created += len(matched_ids)
 
-        db.session.commit()
+        if apply:
+            db.session.commit()
+        else:
+            db.session.rollback()
         if converted_tasks:
             _emit(
                 f"   ✓ {assignees_created} responsáveis criados em {converted_tasks} tarefas.",
@@ -130,3 +135,32 @@ def backfill_task_assignees(emit_output: bool = True) -> dict:
             "converted_tasks": 0,
             "assignees_created": 0,
         }
+
+
+def main() -> int:
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(
+        description="Converte Task.responsavel legado em linhas task_assignee."
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Grava as alterações (default é dry-run, que só relata contagens).",
+    )
+    args = parser.parse_args()
+    # Backfill de dados puro: importar o app não deve rodar verificação de schema.
+    os.environ.setdefault("SKIP_STARTUP_DB_INIT", "true")
+    from app import app
+
+    with app.app_context():
+        print(f"Banco: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        result = backfill_task_assignees(apply=args.apply)
+        if not args.apply:
+            print("\nDry-run: nada gravado. Use --apply para gravar.")
+        return 0 if result["success"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

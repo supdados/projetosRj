@@ -30,6 +30,11 @@ def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
+    # Guarda de instalação limpa (Sprint 5.3): sem `user` não há banco legado a
+    # reconstruir — o schema task-only nasce na revisão baseline de catch-up.
+    if not _table_exists(inspector, 'user'):
+        return
+
     # Novas tabelas temporárias do modelo final.
     op.create_table(
         'task_new',

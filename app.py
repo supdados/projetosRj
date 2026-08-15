@@ -1,4 +1,3 @@
-import json
 import os
 import secrets
 import time
@@ -31,7 +30,7 @@ from services.govbr_oidc import (
     is_govbr_oidc_enabled,
     refresh_access_token,
 )
-from startup import initialize_database
+from startup import verify_schema_version
 from time_utils import register_sqlite_adapters
 
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
@@ -266,30 +265,34 @@ def _register_context_processors(app):
         }
 
 
-def _abort_boot_on_migration_failure(summary: dict) -> None:
-    if summary.get("success"):
+_FLASK_DB_SUBCOMMANDS = frozenset(
+    {"upgrade", "downgrade", "stamp", "current", "check", "heads", "history",
+     "migrate", "revision", "merge", "show", "branches", "edit", "init"}
+)
+
+
+def _is_flask_db_cli() -> bool:
+    """`flask db upgrade` importa o app: verificar schema aqui criaria impasse
+    (impossível migrar um banco que impede o boot). Detecta por `db <sub>` no
+    argv para cobrir também `python -m flask ...` e flags extras."""
+    import sys
+
+    argv = sys.argv
+    if "db" not in argv:
+        return False
+    db_index = argv.index("db")
+    subcommand = argv[db_index + 1] if len(argv) > db_index + 1 else ""
+    return subcommand in _FLASK_DB_SUBCOMMANDS
+
+
+def _verify_schema_on_boot(app: Flask) -> None:
+    """Boot só VERIFICA o schema (Sprint 5.3); migrar é passo de deploy."""
+    if _is_flask_db_cli():
         return
-    detail = json.dumps(
-        {
-            "event": "schema_migration_failed",
-            "failed_steps": summary.get("failed_steps", []),
-            "step_errors": summary.get("step_errors", {}),
-        },
-        ensure_ascii=False,
-    )
-    raise RuntimeError(f"Migração de schema falhou no boot; app não sobe: {detail}")
-
-
-def _run_startup_db_init(app: Flask) -> None:
     with app.app_context():
-        startup_summary = initialize_database()
-        _abort_boot_on_migration_failure(startup_summary)
-        if startup_summary["column_added"]:
-            app.logger.info("Coluna project.abep_indicator criada com sucesso.")
-        app.logger.info(
-            "Catalogo de objetivos sincronizado: %s",
-            startup_summary["sync_summary"],
-        )
+        revision = verify_schema_version()
+        if revision:
+            app.logger.info("Schema verificado: alembic_version=%s", revision)
 
 
 def create_app(test_config=None):
@@ -321,8 +324,10 @@ def create_app(test_config=None):
     _register_template_filters(app)
     _register_context_processors(app)
 
-    if not app.config.get("SKIP_STARTUP_DB_INIT"):
-        _run_startup_db_init(app)
+    # TESTING usa create_all sem alembic_version; SKIP_STARTUP_DB_INIT cobre
+    # scripts de backfill que rodam contra banco em migração.
+    if not app.config.get("TESTING") and not app.config.get("SKIP_STARTUP_DB_INIT"):
+        _verify_schema_on_boot(app)
 
     return app
 

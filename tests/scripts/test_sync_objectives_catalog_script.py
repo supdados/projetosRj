@@ -1,5 +1,8 @@
 from types import SimpleNamespace
 
+from sqlalchemy import inspect
+
+from models import db
 from scripts.catalog import sync_objectives_catalog
 
 
@@ -16,13 +19,10 @@ def test_sync_objectives_catalog_main_supports_dry_run(app, monkeypatch, capsys)
     monkeypatch.setattr(
         sync_objectives_catalog,
         "parse_args",
-        lambda: SimpleNamespace(dry_run=True, skip_create_all=False),
+        lambda: SimpleNamespace(dry_run=True),
     )
 
-    calls = {"create_all": 0, "commit_flag": None}
-
-    def fake_create_all():
-        calls["create_all"] += 1
+    calls = {"commit_flag": None}
 
     def fake_sync_goal_catalog_to_db(*, commit):
         calls["commit_flag"] = commit
@@ -32,7 +32,6 @@ def test_sync_objectives_catalog_main_supports_dry_run(app, monkeypatch, capsys)
             "indicadores_upserted": 11,
         }
 
-    monkeypatch.setattr(sync_objectives_catalog.db, "create_all", fake_create_all)
     monkeypatch.setattr(
         sync_objectives_catalog, "sync_goal_catalog_to_db", fake_sync_goal_catalog_to_db
     )
@@ -41,7 +40,6 @@ def test_sync_objectives_catalog_main_supports_dry_run(app, monkeypatch, capsys)
 
     output = capsys.readouterr().out
     assert result == 0
-    assert calls["create_all"] == 1
     assert calls["commit_flag"] is False
     assert "Modo dry-run: SIM" in output
     assert "dry-run: rollback executado" in output
@@ -55,7 +53,7 @@ def test_sync_objectives_catalog_main_returns_error_code_on_failure(
     monkeypatch.setattr(
         sync_objectives_catalog,
         "parse_args",
-        lambda: SimpleNamespace(dry_run=False, skip_create_all=True),
+        lambda: SimpleNamespace(dry_run=False),
     )
     monkeypatch.setattr(
         sync_objectives_catalog,
@@ -68,3 +66,28 @@ def test_sync_objectives_catalog_main_returns_error_code_on_failure(
     output = capsys.readouterr().out
     assert result == 1
     assert "ERRO: falha controlada" in output
+
+
+def test_banco_sem_tabelas_de_catalogo_falha_mandando_rodar_alembic(
+    app, monkeypatch, capsys
+):
+    monkeypatch.setattr(sync_objectives_catalog, "app", app)
+    monkeypatch.setattr(
+        sync_objectives_catalog,
+        "parse_args",
+        lambda: SimpleNamespace(dry_run=False),
+    )
+
+    with app.app_context():
+        db.drop_all()
+
+    result = sync_objectives_catalog.main()
+
+    output = capsys.readouterr().out
+    assert result == 1
+    assert "tabelas ausentes" in output
+    assert "alembic upgrade head" in output
+
+    # nao pode ter criado nada: o produtor de schema e o alembic
+    with app.app_context():
+        assert "objetivo" not in inspect(db.engine).get_table_names()

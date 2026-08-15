@@ -1,75 +1,54 @@
 #!/usr/bin/env python3
-"""
-Wrapper de compatibilidade para produção.
+"""Migração de produção (MySQL) — fluxo Alembic da Sprint 5.3.
 
-Mantido apenas para preservar o comando histórico:
+Preserva o comando histórico:
     python3 scripts/migrations/migrate_production.py
 
-Toda a lógica real de migração agora vive em:
-    scripts/migrations/run_migrations.py
+Equivale a `alembic upgrade head` com guarda de dialeto MySQL. Em instalação
+LIMPA, rode depois os comandos de dados documentados no README:
+    python3 scripts/catalog/sync_objectives_catalog.py
+    python3 scripts/migrations/elect_super_admin.py --apply
+    python3 scripts/migrations/encrypt_oauth_tokens.py --apply
 """
 
 import os
 import sys
 from pathlib import Path
-from urllib.parse import quote_plus
-
-from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(PROJECT_ROOT / ".env")
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+# O upgrade roda ANTES de o schema estar no head: a verificação de boot pularia.
+os.environ.setdefault("SKIP_STARTUP_DB_INIT", "true")
 
 
-def build_engine():
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return create_engine(database_url)
-
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASSWORD")
-    name = os.getenv("DB_NAME")
-    host = os.getenv("DB_HOST", "localhost")
-    port = os.getenv("DB_PORT", "3306")
-
-    if not all([user, password, name]):
-        print("ERRO: Configure DATABASE_URL ou DB_USER / DB_PASSWORD / DB_NAME no .env")
-        sys.exit(1)
-
-    uri = f"mysql+pymysql://{user}:{quote_plus(password)}@{host}:{port}/{name}"
-    return create_engine(uri)
-
-
-def main():
-    engine = build_engine()
-
-    if engine.dialect.name != "mysql":
-        print(
-            f"ERRO: este wrapper é exclusivo para MySQL. Dialeto detectado: {engine.dialect.name}"
-        )
-        return 1
-
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-    except Exception as exc:
-        print(f"ERRO ao conectar: {exc}")
-        return 1
+def main() -> int:
+    from flask_migrate import upgrade
 
     from app import app
     from models import db
-    from scripts.migrations.run_migrations import run_all_migrations
+    from startup import alembic_head_revision, database_schema_revision
 
     with app.app_context():
         if db.engine.dialect.name != "mysql":
             print(
-                "ERRO: a aplicação não está conectada em MySQL. "
+                "ERRO: este wrapper é exclusivo para MySQL. "
                 f"Dialeto detectado no app: {db.engine.dialect.name}"
             )
             return 1
 
-        summary = run_all_migrations(emit_output=True, stamp_alembic=True)
-        return 0 if summary.get("success") else 1
+        head = alembic_head_revision()
+        print(f"Revisão atual do banco: {database_schema_revision() or 'nenhuma'}")
+        print(f"Head do código: {head}")
+        upgrade()
+        print(f"OK: banco em `alembic upgrade head` ({head}).")
+        print(
+            "Instalação limpa? Rode agora os comandos de dados do README "
+            "(sync_objectives_catalog, elect_super_admin --apply, "
+            "encrypt_oauth_tokens --apply)."
+        )
+    return 0
 
 
 if __name__ == "__main__":

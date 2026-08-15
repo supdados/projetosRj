@@ -12,7 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 # Importa a instância do app e do db, e o modelo User
 from app import app
 from models import db, User
-from scripts.migrations.run_migrations import elect_initial_super_admin
+from scripts.migrations.elect_super_admin import elect_initial_super_admin
 
 
 def create_admin_user():

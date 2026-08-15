@@ -21,6 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from sqlalchemy import inspect
+
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from app import create_app
 from models import (
@@ -38,7 +40,7 @@ from models import (
     db,
 )
 from catalogs.objectives import GOAL_CATALOG, sync_goal_catalog_to_db
-from scripts.migrations.run_migrations import elect_initial_super_admin
+from scripts.migrations.elect_super_admin import elect_initial_super_admin
 
 SEED_ORGAO_SIGLAS = [
     "Auditoria",
@@ -155,6 +157,11 @@ def _create_seed_users(orgaos):
     return admin, users_by_sigla
 
 
+def _existing_model_tables() -> set[str]:
+    """Tabelas de modelo ja presentes no banco (ignora `alembic_version`)."""
+    return set(inspect(db.engine).get_table_names()) & set(db.metadata.tables)
+
+
 def seed_fake_data(
     app,
     *,
@@ -182,7 +189,10 @@ def seed_fake_data(
         if reset:
             db.drop_all()
 
-        db.create_all()
+        # Unico DDL fora de tests/: seed de banco descartavel, e so em banco vazio
+        # (com --no-reset sobre banco povoado o schema e do `alembic upgrade head`).
+        if not _existing_model_tables():
+            db.create_all()
         sync_goal_catalog_to_db(commit=True)
 
         orgaos = _ensure_seed_orgaos()
