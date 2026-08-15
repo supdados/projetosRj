@@ -848,7 +848,7 @@
 	/* ----- Edição inline de título/descrição (lápis ⇄ ok) ----- */
 	/* A LINHA (*-row) é só um contêiner flex. No TÍTULO, o prefixo "ID - " e o botão
 	   ficam FORA da caixa; a caixa (.ph-title-field) envolve só o título editável. Na
-	   DESCRIÇÃO a caixa (.ph-description-field) envolve o texto e usa margem-esquerda
+	   DESCRIÇÃO a caixa (.ph-description-field) envolve o texto e a ROW usa margem-esquerda
 	   negativa p/ alinhar aos chips sem salto (a moldura/box-shadow não desloca nada). */
 	.ph-title-row,
 	.ph-description-row {
@@ -857,6 +857,12 @@
 		gap: 0.3rem;
 		width: fit-content;
 		max-width: 100%;
+	}
+	/* Margem negativa na row (não no field): margem em flex item entra no fit-content da
+	   row e o max-width:100% do field clampava roubando pad+border da coluna de quebra. */
+	.ph-description-row {
+		margin-left: calc(-1 * (var(--ph-desc-pad-x) + var(--ph-desc-border)));
+		max-width: calc(100% + var(--ph-desc-pad-x) + var(--ph-desc-border));
 	}
 	/* Slot da descrição: reserva SEMPRE a caixa de uma linha, então botão "Adicionar
 	   descrição", texto exibido e editor ocupam o mesmo espaço — o header não muda de
@@ -880,8 +886,8 @@
 	}
 	/* Caixa da DESCRIÇÃO: a MESMA caixa sempre — exibir e editar só trocam as cores da
 	   borda/fundo, nunca a geometria. A borda é real (não box-shadow) para o chip vazio
-	   poder repetir exatamente estas medidas; a margem negativa compensa padding+borda
-	   e mantém o texto alinhado ao título e aos chips. */
+	   poder repetir exatamente estas medidas; a margem negativa que compensa padding+borda
+	   e alinha o texto ao título e aos chips fica na row (ver .ph-description-row). */
 	.ph-description-field {
 		display: flex;
 		align-items: flex-start;
@@ -891,7 +897,6 @@
 		border-radius: 5px;
 		border: var(--ph-desc-border) solid transparent;
 		padding: var(--ph-desc-pad-y) var(--ph-desc-pad-x);
-		margin-left: calc(-1 * (var(--ph-desc-pad-x) + var(--ph-desc-border)));
 		background: transparent;
 		transition:
 			background-color 0.18s ease,
