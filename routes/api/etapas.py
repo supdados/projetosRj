@@ -36,13 +36,17 @@ from models import Etapa, Project, StageTemplate, StageTemplateItem, db
 from sqlalchemy import func
 from services.etapa_responsaveis import (
     apply_responsaveis_entries,
+    areas_from_responsavel_legado,
     parse_responsaveis_entries,
     replace_etapa_responsaveis,
 )
 from services.etapas_cascade import cascade_subsequent_dates
 from services.etapas_import import import_template_stages
 from services.etapas_mutation import (
+    EtapaNaoEditavelError,
     _validate_date_range,
+    assert_etapa_editavel,
+    assert_projeto_permite_mutacao_de_etapas,
     count_open_tasks_in_etapa,
     create_etapa_record,
     delete_regular_etapa,
@@ -61,7 +65,8 @@ from .negotiation import api_login_required
 from .serializers import serialize_etapa_detail, serialize_project_detail
 
 MAX_CASCADE_BUSINESS_DAYS = 365
-_REGULAR_FIELDS = {"descricao", "data_inicio", "data_fim", "responsavel"}
+# "responsavel" fora: o espelho só é escrito pela N:N (POST .../responsaveis).
+_REGULAR_FIELDS = {"descricao", "data_inicio", "data_fim"}
 
 
 def _load_project_or_error(project_id: int) -> tuple[Project | None, Any]:
@@ -92,14 +97,26 @@ def _load_etapa_or_error(etapa_id: int) -> tuple[Etapa | None, Any]:
     return etapa, None
 
 
-def _reject_etapa_de_projeto_finalizado(etapa: Etapa) -> Any | None:
-    """Projeto Finalizado congela as etapas — reabrir (ou add, que reativa) libera."""
-    if etapa.project.status == "Finalizado":
-        return fail(
-            "Projeto finalizado: reabra o projeto para alterar suas etapas.",
-            status=422,
-            code="validation",
-        )
+def _fail_nao_editavel(exc: EtapaNaoEditavelError) -> Any:
+    """Converte a exceção do service no 422 canônico do envelope da API."""
+    return fail(exc.motivo, status=422, code="validation")
+
+
+def _etapa_editavel_ou_422(etapa: Etapa, *, allow_done: bool = False) -> Any | None:
+    """Aplica ``assert_etapa_editavel``; devolve o 422 pronto ou ``None``."""
+    try:
+        assert_etapa_editavel(etapa, allow_done=allow_done)
+    except EtapaNaoEditavelError as exc:
+        return _fail_nao_editavel(exc)
+    return None
+
+
+def _projeto_editavel_ou_422(project: Project) -> Any | None:
+    """Aplica ``assert_projeto_permite_mutacao_de_etapas``; 422 pronto ou ``None``."""
+    try:
+        assert_projeto_permite_mutacao_de_etapas(project)
+    except EtapaNaoEditavelError as exc:
+        return _fail_nao_editavel(exc)
     return None
 
 
@@ -179,6 +196,7 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
     except ValueError as exc:
         return fail(str(exc), status=422, code="validation")
 
+    # Isenta de assert_etapa_editavel: adicionar etapa REATIVA o projeto Finalizado.
     reactivate = bool(data.get("reactivate"))
     if project.status == "Finalizado" and not reactivate:
         return fail(
@@ -226,15 +244,43 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
     )
 
 
+def _tem_responsavel_apos_edicao(etapa: Etapa, data: dict[str, Any]) -> bool:
+    """Estado de responsável RESULTANTE: o texto enviado substitui a lista atual."""
+    if "responsavel" not in data:
+        return etapa_tem_responsavel(etapa)
+    return bool(str(data.get("responsavel") or "").strip())
+
+
+def _aplicar_responsavel_legado(etapa: Etapa, data: dict[str, Any]) -> Any | None:
+    """Traduz o texto legado ``responsavel`` para a N:N; devolve o 422 pronto ou ``None``.
+
+    Sem a chave no corpo, responsáveis ficam INTOCADOS — escrever só o espelho
+    ``Etapa.responsavel`` dessincronizaria a N:N (auditoria 2026-08-15, item 1.2).
+    """
+    if "responsavel" not in data:
+        return None
+    try:
+        replace_etapa_responsaveis(
+            etapa, areas_from_responsavel_legado(data.get("responsavel"))
+        )
+    except EtapaNaoEditavelError as exc:
+        return _fail_nao_editavel(exc)
+    except ValueError as exc:
+        return fail(str(exc), status=422, code="validation")
+    return None
+
+
 @main_bp.route("/api/etapas/<int:etapa_id>", methods=["POST"])
 @api_login_required
 def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     """Edita uma etapa regular (envelope) — sucessora da extinta rota Jinja
     ``edit_etapa`` (``/etapa/<id>/edit``, cortada na migração SPA).
 
-    Atualiza descrição/responsável/comentários/datas/iniciada/done com as mesmas
-    regras: concluir exige iniciada e nenhuma tarefa aberta. Reuniões Google são
-    recusadas (Fase 6). Datas em ``YYYY-MM-DD``.
+    Atualiza descrição/comentários/datas/iniciada/done com as mesmas regras:
+    concluir exige iniciada e nenhuma tarefa aberta. Reuniões Google são
+    recusadas (Fase 6). Datas em ``YYYY-MM-DD``. O texto legado ``responsavel``,
+    quando vem no corpo, é traduzido para a N:N via ``replace_etapa_responsaveis``
+    (o espelho nunca é escrito sozinho); sem a chave, responsáveis não mudam.
 
     Returns:
         Envelope com a etapa atualizada; 404/403 de acesso; 422 validação.
@@ -242,9 +288,9 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
+    blocked = _etapa_editavel_ou_422(etapa, allow_done=True)
+    if blocked is not None:
+        return blocked
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões do Google devem ser editadas pelo fluxo de calendário.",
@@ -280,16 +326,21 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
         motivo = motivo_bloqueio_conclusao(
             data_inicio=data_inicio,
             data_fim=data_fim,
-            tem_responsavel=bool(etapa.responsaveis)
-            or bool(str(data.get("responsavel") or "").strip()),
+            tem_responsavel=_tem_responsavel_apos_edicao(etapa, data),
             tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
         )
         if motivo is not None:
             return fail(motivo, status=422, code="validation")
 
+    # Responsável antes de mutar `done`: o guard do caminho canônico lê o
+    # done em memória e recusaria concluir + informar responsável na mesma chamada.
+    responsavel_error = _aplicar_responsavel_legado(etapa, data)
+    if responsavel_error is not None:
+        db.session.rollback()
+        return responsavel_error
+
     old_descricao = etapa.descricao
     etapa.descricao = data.get("descricao")
-    etapa.responsavel = data.get("responsavel")
     etapa.comentarios = data.get("comentarios")
     etapa.iniciada = iniciada
     etapa.done = done_requested
@@ -325,9 +376,6 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões do Google são excluídas pelo fluxo de calendário.",
@@ -339,6 +387,9 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
     try:
         delete_regular_etapa(etapa)
         db.session.commit()
+    except EtapaNaoEditavelError as exc:
+        db.session.rollback()
+        return _fail_nao_editavel(exc)
     except Exception:
         db.session.rollback()
         return fail("Erro ao excluir etapa.", status=422, code="validation")
@@ -353,8 +404,9 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
 def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     """Edita um campo inline da etapa (envelope), reusando ``update_regular_field``.
 
-    Campos aceitos: ``descricao``/``data_inicio``/``data_fim``/``responsavel``.
-    Ao mudar ``data_inicio``, o serviço normaliza para dia útil e propaga o
+    Campos aceitos: ``descricao``/``data_inicio``/``data_fim`` — ``responsavel``
+    sai por aqui (só ``POST /api/etapas/<id>/responsaveis`` escreve responsáveis)
+    e responde "Campo inválido.". Ao mudar ``data_inicio``, o serviço normaliza para dia útil e propaga o
     ajuste à ``data_fim`` da própria etapa (dias úteis, server-side) — o ``front``
     NUNCA recalcula. Reuniões Google são recusadas (Fase 6).
 
@@ -365,18 +417,9 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Nesta reunião o ajuste de datas passa pelo fluxo de calendário.",
-            status=422,
-            code="validation",
-        )
-    if etapa.done:
-        return fail(
-            "Etapa concluída não pode ser modificada.",
             status=422,
             code="validation",
         )
@@ -429,12 +472,6 @@ def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
-    if etapa.done:
-        return fail(
-            "Não é possível editar comentários de uma etapa concluída.",
-            status=422,
-            code="validation",
-        )
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -444,6 +481,9 @@ def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
     try:
         message = save_etapa_comentario(etapa, comentario)
         db.session.commit()
+    except EtapaNaoEditavelError as exc:
+        db.session.rollback()
+        return _fail_nao_editavel(exc)
     except Exception:
         db.session.rollback()
         return fail("Erro ao salvar comentário.", status=422, code="validation")
@@ -467,18 +507,9 @@ def api_etapa_responsaveis(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões do Google não têm áreas responsáveis editáveis.",
-            status=422,
-            code="validation",
-        )
-    if etapa.done:
-        return fail(
-            "Não é possível editar responsáveis de uma etapa concluída.",
             status=422,
             code="validation",
         )
@@ -523,9 +554,9 @@ def api_etapa_toggle_iniciada(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
+    blocked = _etapa_editavel_ou_422(etapa, allow_done=True)
+    if blocked is not None:
+        return blocked
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões Google não participam do fluxo de início/conclusão.",
@@ -561,9 +592,9 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
     etapa, error = _load_etapa_or_error(etapa_id)
     if error is not None:
         return error
-    finalizado = _reject_etapa_de_projeto_finalizado(etapa)
-    if finalizado is not None:
-        return finalizado
+    blocked = _etapa_editavel_ou_422(etapa, allow_done=True)
+    if blocked is not None:
+        return blocked
     if is_google_meeting_stage(etapa):
         return fail(
             "Reuniões Google não participam do fluxo de início/conclusão.",
@@ -615,6 +646,9 @@ def api_etapas_reordenar(project_id: int) -> Response | tuple[Response, int]:
     project, error = _load_project_or_error(project_id)
     if error is not None:
         return error
+    blocked = _projeto_editavel_ou_422(project)
+    if blocked is not None:
+        return blocked
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -750,6 +784,9 @@ def api_projeto_cascade(project_id: int) -> Response | tuple[Response, int]:
     project, error = _load_project_or_error(project_id)
     if error is not None:
         return error
+    blocked = _projeto_editavel_ou_422(project)
+    if blocked is not None:
+        return blocked
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -877,6 +914,9 @@ def api_projeto_importar_modelo(project_id: int) -> Response | tuple[Response, i
             source="post_import",
         )
         db.session.commit()
+    except EtapaNaoEditavelError as exc:
+        db.session.rollback()
+        return _fail_nao_editavel(exc)
     except Exception:
         db.session.rollback()
         return fail("Erro ao importar modelo.", status=422, code="validation")

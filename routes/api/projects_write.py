@@ -38,7 +38,7 @@ from catalogs.objectives import (
 from models import Etapa, Project, Task, db
 
 from ..blueprint import main_bp
-from ..projects.crud import _resolve_orgao_from_form
+from ..projects.crud import OrgaoErrorCode, _resolve_orgao_from_form
 from ..shared import log_project_action
 from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
 from ..tasks.permissions import task_permission_flags
@@ -64,6 +64,13 @@ from services.project_custom_links import (
     replace_project_custom_links,
 )
 from services.sei_process import SEI_MAX_PER_PROJECT, SeiProcessValidationError
+
+_ORGAO_ERROR_RESPONSE: dict[OrgaoErrorCode, tuple[int, str]] = {
+    "forbidden": (403, "forbidden"),
+    "validation": (422, "validation"),
+    # Órgão inexistente é campo inválido do body (não rota inexistente): 422 desde sempre.
+    "not_found": (422, "validation"),
+}
 
 
 def _parse_sei_processes(data: dict) -> list[str]:
@@ -144,13 +151,8 @@ def api_projeto_criar() -> Response | tuple[Response, int]:
 
     orgao_unidade, orgao_error = _resolve_orgao_from_form(data.get("orgao_id"))
     if orgao_error:
-        # Órgão fora do escopo => 403; ausente/ inexistente => 422.
-        is_forbidden = "permissão" in orgao_error.lower()
-        return fail(
-            orgao_error,
-            status=403 if is_forbidden else 422,
-            code="forbidden" if is_forbidden else "validation",
-        )
+        status, code = _ORGAO_ERROR_RESPONSE[orgao_error.code]
+        return fail(orgao_error.message, status=status, code=code)
 
     try:
         objetivo_id, resultado_id, indicador_ids = normalize_goal_selection(

@@ -8,24 +8,22 @@ AJAX_HEADERS = {
 }
 
 
-def test_update_etapa_responsavel_empty_returns_sem_responsavel(
-    app, client_user, seed_data
-):
+def test_update_etapa_responsavel_agora_e_campo_invalido(app, client_user, seed_data):
+    # Auditoria 2026-08-15 (item 1.2): inline não escreve mais o espelho sozinho.
     response = client_user.post(
         f"/etapa/{seed_data['etapa_started_id']}/update_field",
         json={"field": "responsavel", "value": ""},
         headers=AJAX_HEADERS,
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 400
     payload = response.get_json()
-    assert payload["success"] is True
-    assert payload["newValue"] == ""
-    assert payload["displayValue"] == "Sem responsável"
+    assert payload["success"] is False
+    assert payload["message"] == "Campo inválido."
 
     with app.app_context():
         etapa = db.session.get(Etapa, seed_data["etapa_started_id"])
-        assert etapa.responsavel == ""
+        assert etapa.responsavel == "Usuario Auditoria"
 
 
 def test_update_etapa_data_inicio_empty_returns_sem_data(app, client_user, seed_data):

@@ -12,6 +12,7 @@ import datetime
 from models import Etapa, StageTemplate, StageTemplateUsage, db
 from routes.shared import log_project_action
 from services.etapas_dates import _add_business_days, _normalize_to_business_day
+from services.etapas_mutation import assert_projeto_permite_mutacao_de_etapas
 
 
 def import_template_stages(
@@ -40,7 +41,12 @@ def import_template_stages(
 
     Returns:
         Quantidade de etapas criadas.
+
+    Raises:
+        EtapaNaoEditavelError: quando o projeto está Finalizado (importar não
+            reativa o projeto, diferente de adicionar etapa manualmente).
     """
+    assert_projeto_permite_mutacao_de_etapas(project)
     ultima_etapa = (
         db.session.query(Etapa)
         .filter(Etapa.project_id == project.id)

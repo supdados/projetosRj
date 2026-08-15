@@ -577,7 +577,8 @@ def update_etapa_field(etapa_id):
             )
         return jsonify(response_data)
 
-    if field not in ["descricao", "data_inicio", "data_fim", "responsavel"]:
+    # "responsavel" fora: escrever o espelho sem a N:N dessincroniza os dois.
+    if field not in ["descricao", "data_inicio", "data_fim"]:
         return jsonify({"success": False, "message": "Campo inválido."}), 400
 
     try:

@@ -6,6 +6,7 @@ from models import (
 )
 from services.calendar_core import parse_event_form
 from services.etapas_import import import_template_stages
+from services.etapas_mutation import EtapaNaoEditavelError
 from services.project_meetings import (
     can_manage_project_meeting,
     create_stage_meeting,
@@ -249,6 +250,9 @@ def import_model_to_project(project_id):
             "success",
         )
 
+    except EtapaNaoEditavelError as exc:
+        db.session.rollback()
+        flash(exc.motivo, "warning")
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception(

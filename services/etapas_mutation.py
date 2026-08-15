@@ -40,6 +40,59 @@ MOTIVO_DATAS_AUSENTES = (
 MOTIVO_RESPONSAVEL_AUSENTE = (
     "Defina ao menos uma área responsável pela etapa antes de concluí-la."
 )
+MOTIVO_PROJETO_FINALIZADO = (
+    "Projeto finalizado: reabra o projeto para alterar suas etapas."
+)
+MOTIVO_ETAPA_CONCLUIDA = "Etapa concluída não pode ser modificada."
+MOTIVO_COMENTARIO_ETAPA_CONCLUIDA = (
+    "Não é possível editar comentários de uma etapa concluída."
+)
+
+
+class EtapaNaoEditavelError(ValueError):
+    """Mutação recusada: a etapa (ou o projeto dela) está congelada.
+
+    ``codigo`` identifica a regra violada (``"projeto_finalizado"`` ou
+    ``"etapa_concluida"``); ``motivo`` é a mensagem para o usuário. Herda de
+    ``ValueError`` para que rotas legadas que só tratam ``ValueError`` devolvam
+    a mensagem em vez de 500.
+    """
+
+    def __init__(self, motivo: str, codigo: str) -> None:
+        super().__init__(motivo)
+        self.motivo = motivo
+        self.codigo = codigo
+
+
+def assert_projeto_permite_mutacao_de_etapas(project) -> None:
+    """Projeto Finalizado congela as etapas — reabrir (ou add, que reativa) libera."""
+    if project.status == "Finalizado":
+        raise EtapaNaoEditavelError(MOTIVO_PROJETO_FINALIZADO, "projeto_finalizado")
+
+
+def assert_etapa_editavel(
+    etapa,
+    *,
+    allow_done: bool = False,
+    motivo_done: str = MOTIVO_ETAPA_CONCLUIDA,
+) -> None:
+    """Fonte única do invariante "etapa editável": levanta se a mutação é proibida.
+
+    Regras (na ordem): projeto Finalizado congela as etapas; etapa concluída é
+    imutável, exceto quando ``allow_done=True`` (fluxos que operam sobre etapa
+    concluída, como toggles e mover tarefa). ``motivo_done`` personaliza a
+    mensagem do bloqueio por conclusão sem duplicar a regra.
+
+    Exemplo::
+
+        try:
+            assert_etapa_editavel(etapa)
+        except EtapaNaoEditavelError as exc:
+            return fail(exc.motivo, status=422, code="validation")
+    """
+    assert_projeto_permite_mutacao_de_etapas(etapa.project)
+    if etapa.done and not allow_done:
+        raise EtapaNaoEditavelError(motivo_done, "etapa_concluida")
 
 
 def motivo_tarefas_pendentes(abertas: int) -> str:
@@ -182,6 +235,7 @@ def delete_meeting_etapa(etapa, connection):
 
 def delete_regular_etapa(etapa):
     """Exclui uma etapa normal (não-reunião). Não faz commit."""
+    assert_etapa_editavel(etapa, allow_done=True)
     log_project_action(
         project_id=etapa.project_id,
         action_type="delete_etapa",
@@ -283,7 +337,6 @@ _FIELD_DISPLAY_NAMES = {
     "descricao": "descrição",
     "data_inicio": "data de início",
     "data_fim": "data de fim",
-    "responsavel": "responsável",
 }
 
 
@@ -395,24 +448,12 @@ def _update_descricao(etapa, value: str | None, out: dict) -> None:
     out["displayValue"] = value if value else "-"
 
 
-def _update_responsavel(etapa, value: str | None, out: dict) -> None:
-    old_value = etapa.responsavel
-    _log_etapa_field_change(
-        etapa,
-        _FIELD_DISPLAY_NAMES["responsavel"],
-        old_value or "vazio",
-        value or "vazio",
-    )
-    etapa.responsavel = value
-    out["newValue"] = value
-    out["displayValue"] = value if value else "Sem responsável"
-
-
+# Sem "responsavel": o espelho Etapa.responsavel só é escrito junto da N:N
+# (services/etapa_responsaveis.py), nunca por edição inline.
 _FIELD_UPDATERS = {
     "data_inicio": _update_data_inicio,
     "data_fim": _update_data_fim,
     "descricao": _update_descricao,
-    "responsavel": _update_responsavel,
 }
 
 
@@ -422,6 +463,7 @@ def update_regular_field(etapa, field: str, value: str | None) -> dict:
     Não faz commit.
     Retorna ``response_data`` dict para jsonify.
     """
+    assert_etapa_editavel(etapa)
     response_data: dict = {"success": True}
     updater = _FIELD_UPDATERS.get(field)
     if updater:
@@ -434,6 +476,7 @@ def save_etapa_comentario(etapa, comentario):
 
     Retorna ``message`` string.
     """
+    assert_etapa_editavel(etapa, motivo_done=MOTIVO_COMENTARIO_ETAPA_CONCLUIDA)
     old_comentario = etapa.comentarios or "vazio"
     new_comentario = comentario if comentario else "vazio"
 

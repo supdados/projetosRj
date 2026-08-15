@@ -2,9 +2,15 @@
 
 import re
 
+from sqlalchemy import func
+
 from models import EtapaResponsavel, OrgaoUnidade, db
+from services.etapas_mutation import assert_etapa_editavel
 
 OUTRAS_LABEL = "Outras"
+MOTIVO_RESPONSAVEIS_ETAPA_CONCLUIDA = (
+    "Não é possível editar responsáveis de uma etapa concluída."
+)
 
 _SEPARADORES = re.compile(r"[,;/\n]+")
 
@@ -31,6 +37,36 @@ def split_responsavel_legado(raw: object) -> list[str]:
         vistos.add(nome.casefold())
         nomes.append(nome)
     return nomes
+
+
+def areas_from_responsavel_legado(raw: object) -> list[dict]:
+    """Converte o texto espelho ``Etapa.responsavel`` em áreas ``{area_id, label}``.
+
+    Ponte para quem só tem o texto legado (payloads antigos da API de edição):
+    cada rótulo vira a unidade viva de mesma sigla e o que não casa cai em
+    "Outras" (``area_id`` nulo), como no caminho canônico. A saída alimenta
+    ``replace_etapa_responsaveis``, que valida de novo e reescreve o espelho.
+
+    Exemplo:
+        >>> areas_from_responsavel_legado("SUBEXE, Time externo")
+        [{'area_id': 7, 'label': 'SUBEXE'}, {'area_id': None, 'label': 'Outras'}]
+    """
+    nomes = split_responsavel_legado(raw)
+    if not nomes:
+        return []
+    chaves = [nome.casefold() for nome in nomes]
+    ids_por_sigla: dict[str, int] = {}
+    unidades = (
+        OrgaoUnidade.query.filter(func.lower(OrgaoUnidade.sigla).in_(chaves))
+        .order_by(OrgaoUnidade.id.asc())
+        .all()
+    )
+    for unidade in unidades:
+        ids_por_sigla.setdefault(unidade.sigla.casefold(), unidade.id)
+    return [
+        {"area_id": ids_por_sigla.get(chave), "label": nome}
+        for nome, chave in zip(nomes, chaves)
+    ]
 
 
 def parse_responsaveis_entries(raw: object) -> list[dict]:
@@ -99,4 +135,5 @@ def apply_responsaveis_entries(etapa, entries: list[dict]) -> None:
 
 def replace_etapa_responsaveis(etapa, raw_areas: object) -> None:
     """Substitui as linhas N:N e reescreve o mirror legado. Não faz commit."""
+    assert_etapa_editavel(etapa, motivo_done=MOTIVO_RESPONSAVEIS_ETAPA_CONCLUIDA)
     apply_responsaveis_entries(etapa, parse_responsaveis_entries(raw_areas))

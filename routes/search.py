@@ -20,7 +20,7 @@ from flask import g, jsonify, request
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload
 
-from models import CalendarEvent, Etapa, Project, Task, db
+from models import CalendarEvent, Etapa, EtapaResponsavel, Project, Task, db
 from services.authorization import project_visibility_criterion
 
 from .blueprint import main_bp
@@ -114,6 +114,19 @@ def _project_search_query(term: str, user, scope: _SearchScope):
     )
 
 
+def _stage_responsavel_search_criterion(search_pattern: str):
+    """Casa etapas cujo responsável contém o termo, priorizando a N:N.
+
+    O espelho ``Etapa.responsavel`` é truncado em 100 chars, então uma etapa com
+    muitas áreas some da busca se só ele for consultado. Mesma precedência de
+    ``routes/projects/views.py::_responsavel_criterion`` (estruturado OU espelho
+    quando não há linhas N:N) — unificar os dois na Sprint 3.1.
+    """
+    estruturado = Etapa.responsaveis.any(EtapaResponsavel.label.ilike(search_pattern))
+    legado = and_(~Etapa.responsaveis.any(), Etapa.responsavel.ilike(search_pattern))
+    return or_(estruturado, legado)
+
+
 def _stage_search_query(term: str, user, scope: _SearchScope):
     search_pattern = f"%{term}%"
     stage_query = (
@@ -123,7 +136,7 @@ def _stage_search_query(term: str, user, scope: _SearchScope):
             or_(
                 Etapa.descricao.ilike(search_pattern),
                 Etapa.comentarios.ilike(search_pattern),
-                Etapa.responsavel.ilike(search_pattern),
+                _stage_responsavel_search_criterion(search_pattern),
             )
         )
     )
