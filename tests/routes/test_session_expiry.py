@@ -1,14 +1,12 @@
-"""Regressão do tempo de vida da sessão: refresh Gov.br best-effort + teto absoluto.
+"""Regressão do tempo de vida da sessão: teto absoluto de ``login_at``.
 
-Cobre dois comportamentos que se equilibram em ``app.py``:
+``load_logged_in_user`` aplica o teto absoluto de ``PERMANENT_SESSION_LIFETIME``
+sobre ``session["login_at"]``, respondendo 401 JSON em ``/api/*`` e, nas demais
+rotas, redirect ao login com ``next`` (só em GET) e flash de aviso.
 
-- ``refresh_govbr_token_best_effort`` NUNCA desloga — sem refresh token, com erro
-  do IdP ou com resposta sem ``expires_in``, ele desiste e apaga
-  ``govbr_access_token_exp`` da sessão (senão rechamaria o IdP a cada request).
-- ``load_logged_in_user`` aplica o teto absoluto de ``PERMANENT_SESSION_LIFETIME``
-  sobre ``session["login_at"]``, respondendo 401 JSON em ``/api/*`` e, nas demais
-  rotas, redirect ao login com ``next`` (só em GET) e flash de aviso. Se a sessão
-  expulsa era Gov.br, o cookie ``govbr_refresh_token`` é apagado no after_request.
+Sprint 6.2 apagou o refresh Gov.br: uma sessão Gov.br com token do IdP vencido
+segue viva até o teto e nenhuma requisição sai para o IdP (ver
+``test_auth_govbr_callback_contract.py`` para o contrato negativo do cookie).
 """
 
 from __future__ import annotations
@@ -16,88 +14,26 @@ from __future__ import annotations
 import time
 from urllib.parse import parse_qs, urlparse
 
-import app as app_module
 import routes.auth as auth_routes
 from flask import session as flask_session
 from models import User, db
-from services.govbr_oidc import GovBrOIDCError
 
 
-class _IdpRefreshQueFalha:
-    """Substitui ``refresh_access_token`` simulando IdP recusando o refresh."""
-
-    def __init__(self) -> None:
-        self.chamadas = 0
-
-    def __call__(self, _config, *, refresh_token: str) -> dict[str, str]:
-        self.chamadas += 1
-        raise GovBrOIDCError("refresh recusado pelo IdP")
-
-
-class _IdpRefreshSemExpiresIn:
-    """Refresh bem-sucedido, mas sem ``expires_in`` no payload."""
-
-    def __init__(self) -> None:
-        self.chamadas = 0
-
-    def __call__(self, _config, *, refresh_token: str) -> dict[str, str]:
-        self.chamadas += 1
-        return {"access_token": "novo-access-token"}
-
-
-def _logar_govbr_com_token_vencido(client, user_id: int) -> None:
+def test_sessao_govbr_antiga_segue_viva_sem_refresh(client, seed_data):
+    """Sessão Gov.br com o resquício da chave de expiração antiga não desloga."""
     with client.session_transaction() as sessao:
-        sessao["user_id"] = user_id
+        sessao["user_id"] = seed_data["user_id"]
         sessao["login_at"] = time.time()
         sessao["auth_provider"] = "govbr"
         sessao["govbr_access_token_exp"] = time.time() - 60
 
-
-def test_token_govbr_vencido_sem_refresh_token_mantem_sessao(client, seed_data):
-    _logar_govbr_com_token_vencido(client, seed_data["user_id"])
-
-    resposta = client.get("/api/me")
-
-    assert resposta.status_code == 200
-    with client.session_transaction() as sessao:
-        assert sessao["user_id"] == seed_data["user_id"]
-        assert "govbr_access_token_exp" not in sessao
-
-
-def test_falha_de_refresh_govbr_nao_desloga_e_para_de_tentar(
-    client, seed_data, monkeypatch
-):
-    idp = _IdpRefreshQueFalha()
-    monkeypatch.setattr(app_module, "refresh_access_token", idp)
-    client.set_cookie("govbr_refresh_token", "refresh-token-1")
-    _logar_govbr_com_token_vencido(client, seed_data["user_id"])
-
     primeira = client.get("/api/me")
     segunda = client.get("/api/me")
 
     assert primeira.status_code == 200
     assert segunda.status_code == 200
-    assert idp.chamadas == 1
     with client.session_transaction() as sessao:
         assert sessao["user_id"] == seed_data["user_id"]
-        assert "govbr_access_token_exp" not in sessao
-
-
-def test_refresh_govbr_sem_expires_in_nao_entra_em_loop(client, seed_data, monkeypatch):
-    idp = _IdpRefreshSemExpiresIn()
-    monkeypatch.setattr(app_module, "refresh_access_token", idp)
-    client.set_cookie("govbr_refresh_token", "refresh-token-2")
-    _logar_govbr_com_token_vencido(client, seed_data["user_id"])
-
-    primeira = client.get("/api/me")
-    segunda = client.get("/api/me")
-
-    assert primeira.status_code == 200
-    assert segunda.status_code == 200
-    assert idp.chamadas == 1
-    with client.session_transaction() as sessao:
-        assert sessao["user_id"] == seed_data["user_id"]
-        assert "govbr_access_token_exp" not in sessao
 
 
 def test_teto_absoluto_responde_401_json_na_api(app, client, seed_data):
@@ -187,35 +123,18 @@ def test_teto_absoluto_em_post_nao_propaga_next(app, client, seed_data):
     assert "next" not in parse_qs(destino.query)
 
 
-def test_teto_absoluto_govbr_apaga_refresh_cookie_na_api(app, client, seed_data):
+def test_teto_absoluto_govbr_nao_mexe_em_cookie_de_refresh(app, client, seed_data):
+    """6.2: a expulsão não emite mais Set-Cookie de refresh (nem set, nem delete)."""
     _expirar_sessao(app, client, seed_data["user_id"], provider="govbr")
-    client.set_cookie("govbr_refresh_token", "refresh-ainda-vivo")
+    client.set_cookie("govbr_refresh_token", "resquicio-legado")
 
-    resposta = client.get("/api/me")
+    na_api = client.get("/api/me")
+    na_pagina = client.get("/dashboard", follow_redirects=False)
 
-    assert resposta.status_code == 401
-    (cookie_apagado,) = _cookies_govbr_refresh(resposta)
-    assert "Max-Age=0" in cookie_apagado
-
-
-def test_teto_absoluto_govbr_apaga_refresh_cookie_no_redirect(app, client, seed_data):
-    _expirar_sessao(app, client, seed_data["user_id"], provider="govbr")
-    client.set_cookie("govbr_refresh_token", "refresh-ainda-vivo")
-
-    resposta = client.get("/dashboard", follow_redirects=False)
-
-    assert resposta.status_code == 302
-    (cookie_apagado,) = _cookies_govbr_refresh(resposta)
-    assert "Max-Age=0" in cookie_apagado
-
-
-def test_teto_absoluto_local_nao_mexe_no_cookie_govbr(app, client, seed_data):
-    _expirar_sessao(app, client, seed_data["user_id"])
-
-    resposta = client.get("/api/me")
-
-    assert resposta.status_code == 401
-    assert _cookies_govbr_refresh(resposta) == []
+    assert na_api.status_code == 401
+    assert na_pagina.status_code == 302
+    assert _cookies_govbr_refresh(na_api) == []
+    assert _cookies_govbr_refresh(na_pagina) == []
 
 
 def test_sessao_sem_login_at_conta_como_expirada(client, seed_data):

@@ -23,6 +23,19 @@ def _env_int(name, default=10):
     return value if value > 0 else default
 
 
+def _env_proxy_hops(name, default):
+    """Nº de proxies confiáveis para o ProxyFix. Diferente de _env_int, 0 é um
+    valor válido aqui (header correspondente passa a ser ignorado)."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return value if value >= 0 else default
+
+
 def _default_sqlite_uri():
     basedir = os.path.abspath(os.path.dirname(__file__))
     return "sqlite:///" + os.path.join(basedir, "instance", "projetosrj.db")
@@ -70,6 +83,13 @@ def build_app_config(*, is_testing=False, is_debug=False):
         SESSION_COOKIE_SAMESITE="Lax",
         PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
         SKIP_STARTUP_DB_INIT=_env_flag_is_true("SKIP_STARTUP_DB_INIT", default="false"),
+        # Default OFF: só ligar onde um proxy confiável REESCREVE os X-Forwarded-*.
+        PROXYFIX_ENABLED=_env_flag_is_true("PROXYFIX_ENABLED", default="false"),
+        PROXYFIX_X_FOR=_env_proxy_hops("PROXYFIX_X_FOR", default=1),
+        PROXYFIX_X_PROTO=_env_proxy_hops("PROXYFIX_X_PROTO", default=1),
+        PROXYFIX_X_HOST=_env_proxy_hops("PROXYFIX_X_HOST", default=1),
+        PROXYFIX_X_PORT=_env_proxy_hops("PROXYFIX_X_PORT", default=0),
+        PROXYFIX_X_PREFIX=_env_proxy_hops("PROXYFIX_X_PREFIX", default=0),
         GOVBR_OIDC_ENABLED=_env_flag_is_true("GOVBR_OIDC_ENABLED", default="false"),
         GOVBR_OIDC_BASE_URL=os.getenv("GOVBR_OIDC_BASE_URL", ""),
         GOVBR_OIDC_REALM=os.getenv("GOVBR_OIDC_REALM", ""),
@@ -78,6 +98,10 @@ def build_app_config(*, is_testing=False, is_debug=False):
         GOVBR_OIDC_REDIRECT_URI=os.getenv(
             "GOVBR_OIDC_REDIRECT_URI", "http://localhost:5002/auth/govbr/callback"
         ),
+        # Vazia = mantém a derivação legada por request; setada, é usada literal.
+        GOVBR_OIDC_REDIRECT_URI_FIXED=os.getenv(
+            "GOVBR_OIDC_REDIRECT_URI_FIXED", ""
+        ).strip(),
         GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI=os.getenv(
             "GOVBR_OIDC_POST_LOGOUT_REDIRECT_URI", "http://localhost:5002/login"
         ),

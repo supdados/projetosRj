@@ -1,4 +1,3 @@
-import base64
 import json
 import time
 from dataclasses import dataclass
@@ -145,20 +144,16 @@ def _get_jwks_client(jwks_uri):
     return client
 
 
-def decode_jwt_payload(token, *, config=None):
-    """Decodifica e valida o ID token JWT.
+def decode_jwt_payload(token, *, config):
+    """Decodifica e valida o ID token JWT com verificação completa.
 
-    Quando ``config`` é fornecido, realiza validação completa:
-    assinatura via JWKS, issuer, audience e expiração.
-    Sem ``config``, faz apenas decodificação básica do payload (fallback).
+    Sempre valida assinatura via JWKS, issuer, audience e expiração —
+    não existe caminho de decode sem verificação de assinatura.
     """
     if not token or token.count(".") < 2:
         raise GovBrOIDCError("ID token inválido.")
 
-    if config is not None:
-        return _decode_jwt_verified(token, config)
-
-    return _decode_jwt_unverified(token)
+    return _decode_jwt_verified(token, config)
 
 
 def _decode_jwt_verified(token, config):
@@ -195,31 +190,6 @@ def _decode_jwt_verified(token, config):
     except jwt.InvalidTokenError as exc:
         raise GovBrOIDCError(f"ID token inválido: {exc}") from exc
 
-    return payload
-
-
-def _decode_jwt_unverified(token):
-    """Fallback: decodifica apenas o payload sem verificar assinatura."""
-    payload_segment = token.split(".")[1]
-    if len(payload_segment) > 4096:
-        raise GovBrOIDCError("Payload do ID token excede tamanho esperado.")
-
-    padding = "=" * (-len(payload_segment) % 4)
-    try:
-        decoded = base64.urlsafe_b64decode(payload_segment + padding)
-    except Exception as exc:
-        raise GovBrOIDCError("Falha ao decodificar payload do ID token.") from exc
-
-    if len(decoded) > 16384:
-        raise GovBrOIDCError("Payload do ID token excede limite seguro.")
-
-    try:
-        payload = json.loads(decoded.decode("utf-8"))
-    except Exception as exc:
-        raise GovBrOIDCError("Payload do ID token não é um JSON válido.") from exc
-
-    if not isinstance(payload, dict):
-        raise GovBrOIDCError("Payload do ID token inválido.")
     return payload
 
 
@@ -311,24 +281,6 @@ def fetch_userinfo(config, *, access_token):
     )
     if "sub" not in payload:
         raise GovBrOIDCError("Resposta do userinfo sem claim sub.")
-    return payload
-
-
-def refresh_access_token(config, *, refresh_token):
-    settings = get_govbr_oidc_settings(config)
-    payload = _http_json_request(
-        method="POST",
-        url=settings.token_endpoint,
-        timeout_seconds=settings.timeout_seconds,
-        form_data={
-            "grant_type": "refresh_token",
-            "client_id": settings.client_id,
-            "client_secret": settings.client_secret,
-            "refresh_token": refresh_token,
-        },
-    )
-    if "access_token" not in payload:
-        raise GovBrOIDCError("Resposta de refresh sem access_token.")
     return payload
 
 

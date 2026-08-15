@@ -9,8 +9,8 @@
  *   - Desempacota o envelope `{ok, data}`; em `{ok:false}` lanca
  *     `ApiClientError`.
  *   - Em 401 (`unauthenticated`), navega top-level para `/login` (NAO fetch),
- *     porque o callback Gov.br depende do cookie `govbr_refresh_token`
- *     (SameSite=Strict) que so flui em navegacao de primeiro nivel.
+ *     porque o fluxo Gov.br e uma navegacao de primeiro nivel entre origens
+ *     (redirect ao IdP e volta no callback), impossivel por fetch.
  *   - 403/404 NAO sao tratados aqui: sobem como `ApiClientError` para a tela
  *     decidir a mensagem (contrato S5, ver `ApiClientError` abaixo).
  *

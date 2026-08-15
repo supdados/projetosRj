@@ -1,11 +1,9 @@
 """Testes unitários de services.govbr_oidc.
 
 Cobre as funções puras de normalização/formatação de CPF e o decodificador
-de JWT (modo verificado x fallback). Mocka PyJWKClient/jwt.decode para não
-depender de rede real."""
+de JWT (sempre verificado — o fallback sem assinatura morreu na sprint 6.3).
+Mocka PyJWKClient/jwt.decode para não depender de rede real."""
 
-import base64
-import json
 from types import SimpleNamespace
 
 import jwt as pyjwt
@@ -14,7 +12,6 @@ import pytest
 from services import govbr_oidc
 from services.govbr_oidc import (
     GovBrOIDCError,
-    _decode_jwt_unverified,
     _get_jwks_client,
     decode_jwt_payload,
     format_cpf,
@@ -62,57 +59,25 @@ def test_format_cpf_propagates_invalid_input():
 
 
 # ---------------------------------------------------------------------------
-# decode_jwt_payload (fallback, sem config)
+# decode_jwt_payload (sempre verificado)
 # ---------------------------------------------------------------------------
-
-
-def _make_unsigned_jwt(payload_dict):
-    header = {"alg": "none", "typ": "JWT"}
-
-    def _b64(obj):
-        raw = json.dumps(obj, separators=(",", ":")).encode("utf-8")
-        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
-
-    return f"{_b64(header)}.{_b64(payload_dict)}."
-
-
-def test_decode_jwt_payload_unverified_returns_payload():
-    token = _make_unsigned_jwt({"sub": "123", "email": "a@b.com"})
-    payload = decode_jwt_payload(token)
-
-    assert payload["sub"] == "123"
-    assert payload["email"] == "a@b.com"
 
 
 def test_decode_jwt_payload_rejects_malformed_token():
-    with pytest.raises(GovBrOIDCError):
-        decode_jwt_payload("apenas_uma_parte")
+    with pytest.raises(GovBrOIDCError, match="inválido"):
+        decode_jwt_payload("apenas_uma_parte", config=_make_config())
 
 
 def test_decode_jwt_payload_rejects_empty_token():
-    with pytest.raises(GovBrOIDCError):
-        decode_jwt_payload("")
+    with pytest.raises(GovBrOIDCError, match="inválido"):
+        decode_jwt_payload("", config=_make_config())
 
 
-def test_decode_jwt_payload_unverified_rejects_non_json_body():
-    header = base64.urlsafe_b64encode(b'{"alg":"none"}').rstrip(b"=").decode("ascii")
-    body = base64.urlsafe_b64encode(b"not-a-json").rstrip(b"=").decode("ascii")
-    token = f"{header}.{body}."
-    with pytest.raises(GovBrOIDCError):
-        _decode_jwt_unverified(token)
-
-
-def test_decode_jwt_payload_unverified_rejects_non_dict_body():
-    header = base64.urlsafe_b64encode(b'{"alg":"none"}').rstrip(b"=").decode("ascii")
-    body = base64.urlsafe_b64encode(b"[1, 2, 3]").rstrip(b"=").decode("ascii")
-    token = f"{header}.{body}."
-    with pytest.raises(GovBrOIDCError):
-        _decode_jwt_unverified(token)
-
-
-# ---------------------------------------------------------------------------
-# decode_jwt_payload (verificado, com config)
-# ---------------------------------------------------------------------------
+def test_decode_jwt_payload_has_no_unverified_fallback():
+    """O caminho _decode_jwt_unverified morreu: config é obrigatório."""
+    assert not hasattr(govbr_oidc, "_decode_jwt_unverified")
+    with pytest.raises(TypeError):
+        decode_jwt_payload("a.b.c")
 
 
 def _make_config(overrides=None):

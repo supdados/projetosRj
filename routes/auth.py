@@ -162,7 +162,13 @@ def _build_config_with_redirect_uri(redirect_uri):
     return config
 
 
-def _resolve_runtime_govbr_redirect_uri():
+def _derive_govbr_redirect_uri_from_request() -> str | None:
+    """Deriva o redirect_uri do host/scheme do request (comportamento legado).
+
+    Só existe como fallback de transição para ambientes sem
+    ``GOVBR_OIDC_REDIRECT_URI_FIXED``; atrás de proxy o Host visto aqui é o
+    interno, por isso o alvo é a config explícita + ProxyFix.
+    """
     configured_redirect_uri = str(
         current_app.config.get("GOVBR_OIDC_REDIRECT_URI", "")
     ).strip()
@@ -178,6 +184,23 @@ def _resolve_runtime_govbr_redirect_uri():
         return configured_redirect_uri
 
     return parsed._replace(scheme=request.scheme, netloc=request.host).geturl()
+
+
+def _resolve_runtime_govbr_redirect_uri() -> str | None:
+    """redirect_uri enviado ao IdP no authorize e reapresentado no token.
+
+    Config explícita por ambiente vence; sem ela, cai na derivação legada —
+    o valor gerado nos cenários de hoje permanece idêntico.
+
+    Ex.: com ``GOVBR_OIDC_REDIRECT_URI_FIXED=https://app.rj.gov.br/auth/govbr/callback``
+    devolve essa string literal, qualquer que seja o Host do request.
+    """
+    fixed_redirect_uri = str(
+        current_app.config.get("GOVBR_OIDC_REDIRECT_URI_FIXED", "")
+    ).strip()
+    if fixed_redirect_uri:
+        return fixed_redirect_uri
+    return _derive_govbr_redirect_uri_from_request()
 
 
 def _remember_auth_session(user, *, provider, id_token=None):
@@ -360,11 +383,11 @@ def login_govbr_callback():
             raise GovBrOIDCError("Resposta de token incompleta.")
 
         id_payload = decode_jwt_payload(id_token, config=auth_config)
-        token_nonce = id_payload.get("nonce")
-        # Alguns provedores RHSSO podem não incluir nonce no id_token em code flow.
-        if expected_nonce and token_nonce and token_nonce != expected_nonce:
+        # Nonce enviado na authorize é obrigatório no id_token: ausência ou
+        # divergência indica replay/injeção de token e derruba o login.
+        if expected_nonce and id_payload.get("nonce") != expected_nonce:
             raise GovBrOIDCError(
-                "Nonce do ID token não confere com a requisição original."
+                "Nonce do ID token ausente ou divergente da requisição original."
             )
 
         userinfo = fetch_userinfo(auth_config, access_token=access_token)
@@ -376,10 +399,23 @@ def login_govbr_callback():
     cpf_value = userinfo.get("preferred_username") or id_payload.get(
         "preferred_username"
     )
-    sub_value = userinfo.get("sub") or id_payload.get("sub")
+    # Identidade primária vem SEMPRE do id_token verificado; userinfo apenas
+    # complementa claims e nunca pode trocar o sub.
+    sub_value = id_payload.get("sub")
 
     if not sub_value:
         flash("Não foi possível identificar o usuário gov.br (sub ausente).", "danger")
+        return redirect(url_for("main.login_page"))
+
+    userinfo_sub = userinfo.get("sub")
+    if userinfo_sub is not None and userinfo_sub != sub_value:
+        current_app.logger.error(
+            "auth_event event=govbr_sub_mismatch id_token_sub=%s userinfo_sub=%s ip=%s",
+            sub_value,
+            userinfo_sub,
+            request.remote_addr,
+        )
+        flash("Falha na validação da identidade gov.br.", "danger")
         return redirect(url_for("main.login_page"))
 
     try:
@@ -435,24 +471,11 @@ def login_govbr_callback():
 
     _remember_auth_session(user, provider="govbr", id_token=id_token)
     _log_auth_event("login_success", user=user, provider="govbr")
-    expires_in = tokens.get("expires_in")
-    if expires_in:
-        session["govbr_access_token_exp"] = int(time.time()) + int(expires_in)
     g.user = user
     flash(f"Login gov.br bem-sucedido, {user.name}!", "success")
-    response = redirect(next_page or url_for("main.dashboard"))
-    refresh_token_value = tokens.get("refresh_token")
-    if refresh_token_value:
-        refresh_expires_in = tokens.get("refresh_expires_in")
-        response.set_cookie(
-            "govbr_refresh_token",
-            refresh_token_value,
-            httponly=True,
-            secure=current_app.config.get("SESSION_COOKIE_SECURE", False),
-            samesite="Strict",
-            max_age=int(refresh_expires_in) if refresh_expires_in else None,
-        )
-    return response
+    # O access/refresh token Gov.br morre aqui: a identidade já veio do par
+    # verificado e quem governa o login daqui em diante é a sessão Flask (8h).
+    return redirect(next_page or url_for("main.dashboard"))
 
 
 @main_bp.route("/logout")
@@ -483,7 +506,9 @@ def logout():
     g.user = None
     flash("Você foi desconectado.", "info")
     response = redirect(logout_url or url_for("main.login_page"))
-    response.delete_cookie("govbr_refresh_token", samesite="Strict")
+    # Higiene pós-sprint-6: navegadores logados antes do deploy ainda carregam o
+    # cookie legado com refresh token do IdP; remover este delete após um ciclo.
+    response.delete_cookie("govbr_refresh_token")
     return response
 
 

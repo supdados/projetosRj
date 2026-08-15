@@ -25,11 +25,7 @@ from extensions import (
 )  # noqa: F401 — db re-exported for scripts
 from models import User, UserNotification
 from routes import inject_current_year, main_bp
-from services.govbr_oidc import (
-    GovBrOIDCError,
-    is_govbr_oidc_enabled,
-    refresh_access_token,
-)
+from services.govbr_oidc import is_govbr_oidc_enabled
 from startup import verify_schema_version
 from time_utils import register_sqlite_adapters
 
@@ -85,9 +81,6 @@ def _resposta_sessao_expirada() -> Response | tuple[Response, int]:
     e_api = request.path.startswith("/api/") or wants_json()
     # Só GET vira next: reenviar o usuário a uma URL de POST daria 405 após o login.
     proximo = request.url if request.method == "GET" else None
-    # Lido antes do clear: expulsão Gov.br deve apagar o refresh cookie no after_request.
-    if session.get("auth_provider") == "govbr":
-        g.apagar_govbr_refresh_cookie = True
     session.clear()
     g.user = None
     if e_api:
@@ -121,64 +114,6 @@ def _register_request_hooks(app):
             session.clear()
             g.user = None
 
-    @app.before_request
-    def refresh_govbr_token_best_effort():
-        """Renova o access token Gov.br em background — mas NUNCA desloga.
-
-        O access token Gov.br é usado uma única vez, no callback de login
-        (``fetch_userinfo``), para obter a identidade; depois disso ele não é nem
-        guardado na sessão. Quem governa o tempo de login é o cookie Flask
-        (``PERMANENT_SESSION_LIFETIME`` = 8h). Por isso a expiração do token Gov.br
-        é best-effort: sem refresh token (escopo padrão não pede ``offline_access``)
-        ou se a renovação falhar, mantemos a sessão local em vez de deslogar — o
-        que antes derrubava o usuário em poucos minutos de inatividade.
-        """
-        if session.get("auth_provider") != "govbr":
-            return
-        if not getattr(g, "user", None):
-            return
-
-        access_token_exp = session.get("govbr_access_token_exp")
-        if not access_token_exp:
-            return
-
-        # Renova com 30s de antecedência para evitar expiração durante a requisição.
-        if time.time() < access_token_exp - 30:
-            return
-
-        govbr_refresh_token = request.cookies.get("govbr_refresh_token")
-        if not govbr_refresh_token:
-            # Sem refresh token não há o que renovar; para de checar e deixa a
-            # sessão local de 8h seguir.
-            session.pop("govbr_access_token_exp", None)
-            return
-
-        try:
-            new_tokens = refresh_access_token(
-                app.config, refresh_token=govbr_refresh_token
-            )
-        except GovBrOIDCError:
-            # Renovação falhou: não derruba a sessão local; só para de tentar.
-            session.pop("govbr_access_token_exp", None)
-            return
-
-        expires_in = new_tokens.get("expires_in")
-        refresh_expires_in = new_tokens.get("refresh_expires_in")
-        if expires_in:
-            session["govbr_access_token_exp"] = int(time.time()) + int(expires_in)
-        else:
-            # Sem expires_in a exp vencida sobreviveria e rechamaria o IdP a cada request.
-            session.pop("govbr_access_token_exp", None)
-        if refresh_expires_in:
-            session["govbr_refresh_exp"] = int(time.time()) + int(refresh_expires_in)
-
-        new_refresh_token = new_tokens.get("refresh_token")
-        if new_refresh_token:
-            g.govbr_new_refresh_token = new_refresh_token
-            g.govbr_new_refresh_max_age = (
-                int(refresh_expires_in) if refresh_expires_in else None
-            )
-
     @app.after_request
     def set_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -194,23 +129,6 @@ def _register_request_hooks(app):
             response.headers["Content-Security-Policy"] = _build_csp_header(
                 nonce, chatbot_origin
             )
-        return response
-
-    @app.after_request
-    def apply_govbr_refresh_cookie(response):
-        new_refresh_token = getattr(g, "govbr_new_refresh_token", None)
-        if new_refresh_token:
-            response.set_cookie(
-                "govbr_refresh_token",
-                new_refresh_token,
-                httponly=True,
-                secure=app.config.get("SESSION_COOKIE_SECURE", False),
-                samesite="Strict",
-                max_age=getattr(g, "govbr_new_refresh_max_age", None),
-            )
-        elif getattr(g, "apagar_govbr_refresh_cookie", False):
-            # Mesmos parâmetros do delete_cookie do /logout (routes/auth.py).
-            response.delete_cookie("govbr_refresh_token", samesite="Strict")
         return response
 
 
@@ -266,8 +184,22 @@ def _register_context_processors(app):
 
 
 _FLASK_DB_SUBCOMMANDS = frozenset(
-    {"upgrade", "downgrade", "stamp", "current", "check", "heads", "history",
-     "migrate", "revision", "merge", "show", "branches", "edit", "init"}
+    {
+        "upgrade",
+        "downgrade",
+        "stamp",
+        "current",
+        "check",
+        "heads",
+        "history",
+        "migrate",
+        "revision",
+        "merge",
+        "show",
+        "branches",
+        "edit",
+        "init",
+    }
 )
 
 
@@ -295,6 +227,25 @@ def _verify_schema_on_boot(app: Flask) -> None:
             app.logger.info("Schema verificado: alembic_version=%s", revision)
 
 
+def _apply_proxy_fix(app: Flask) -> None:
+    """Atrás de proxy o scheme/Host reais só chegam via X-Forwarded-*; sem isto
+    url_for(_external=True) e o redirect_uri derivado usam o host interno.
+    Só confiar nos headers onde o proxy os REESCREVE (daí o default OFF)."""
+    if not app.config.get("PROXYFIX_ENABLED"):
+        return
+
+    from werkzeug.middleware.proxy_fix import ProxyFix
+
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=int(app.config.get("PROXYFIX_X_FOR", 1)),
+        x_proto=int(app.config.get("PROXYFIX_X_PROTO", 1)),
+        x_host=int(app.config.get("PROXYFIX_X_HOST", 1)),
+        x_port=int(app.config.get("PROXYFIX_X_PORT", 0)),
+        x_prefix=int(app.config.get("PROXYFIX_X_PREFIX", 0)),
+    )
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
@@ -313,6 +264,8 @@ def create_app(test_config=None):
 
     if str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("sqlite:"):
         register_sqlite_adapters()
+
+    _apply_proxy_fix(app)
 
     db.init_app(app)
     migrate.init_app(app, db)
