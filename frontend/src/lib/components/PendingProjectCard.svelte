@@ -25,6 +25,7 @@
 	import { toggleEtapaIniciada, toggleEtapaDone } from '$lib/api/pendentesMutations';
 	import { normalizeStatus } from '$lib/utils/taskStatus';
 	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import type {
 		PendingProjectRow,
 		PendingEtapa,
@@ -138,18 +139,7 @@
 		return progressByEtapa[etapa.id] ?? { total: 0, done: 0 };
 	}
 
-	/** Formata uma data ISO (yyyy-mm-dd) em pt-BR; vazio vira travessão. */
-	function formatDateBr(iso: string | null): string {
-		if (!iso) return '—';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '—';
-		return parsed.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
+	const formatDateBr = (iso: string | null): string => formatIsoDateBR(iso, '—');
 
 	/** Rótulo de datas usado no cabeçalho do quick-add (paridade com o legado). */
 	function etapaDatasLabel(etapa: PendingEtapa): string {

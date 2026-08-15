@@ -59,10 +59,11 @@ from services.authorization import PAPEL_EDITOR, require_project_rank
 from services.project_meetings import is_google_meeting_stage
 
 from ..blueprint import main_bp
+from ..calendars.helpers import _connection_for_current_user
 from ..shared import log_project_action
 from .envelope import fail, fail_not_found, ok
+from .etapa_payload import etapa_detail_payload, project_etapas_payload
 from .negotiation import api_login_required
-from .serializers import serialize_etapa_detail, serialize_project_detail
 
 MAX_CASCADE_BUSINESS_DAYS = 365
 # "responsavel" fora: o espelho só é escrito pela N:N (POST .../responsaveis).
@@ -121,36 +122,13 @@ def _projeto_editavel_ou_422(project: Project) -> Any | None:
 
 
 def _etapa_payload(etapa: Etapa) -> dict[str, Any]:
-    """Serializa uma etapa para o detalhe, computando a contagem de tarefas.
-
-    Reusa ``serialize_etapa_detail`` (Fase 5a). As tarefas são SOMENTE LEITURA.
-    """
-    from .project_detail import _task_counts_by_etapa
-
-    counts = _task_counts_by_etapa(etapa.project).get(etapa.id, {})
-    return serialize_etapa_detail(
-        etapa,
-        task_total=counts.get("total", 0),
-        task_done=counts.get("done", 0),
-    )
+    """Serializa uma etapa no shape canônico (detalhe + tarefas + reunião)."""
+    return etapa_detail_payload(etapa, _connection_for_current_user())
 
 
 def _ordered_etapas_payload(project: Project) -> list[dict[str, Any]]:
-    """Lista as etapas do projeto ordenadas, serializadas para o detalhe."""
-    from .project_detail import _task_counts_by_etapa
-
-    counts = _task_counts_by_etapa(project)
-    etapas = sorted(
-        project.etapas, key=lambda e: (e.ordem if e.ordem is not None else 0)
-    )
-    return [
-        serialize_etapa_detail(
-            etapa,
-            task_total=counts.get(etapa.id, {}).get("total", 0),
-            task_done=counts.get(etapa.id, {}).get("done", 0),
-        )
-        for etapa in etapas
-    ]
+    """Lista as etapas do projeto ordenadas, no shape canônico do detalhe."""
+    return project_etapas_payload(project, _connection_for_current_user())
 
 
 def _parse_date(value: str | None) -> tuple[datetime.date | None, bool]:

@@ -60,6 +60,7 @@
 		saveLinksSection
 	} from '$lib/api/projectSections';
 	import { addBusinessDays, nextBusinessDay } from '$lib/utils/businessDays';
+	import { formatIsoDatePartsBR } from '$lib/utils/dateFormat';
 	import { ApiClientError } from '$lib/api/client';
 	import { triggerTaskFinalizeConfetti } from '$lib/celebration/confettiEpic';
 	import '$lib/celebration/confetti.css';
@@ -716,13 +717,6 @@
 		const d = String(date.getUTCDate()).padStart(2, '0');
 		const m = String(date.getUTCMonth() + 1).padStart(2, '0');
 		const y = date.getUTCFullYear();
-		return `${d}/${m}/${y}`;
-	}
-
-	/** dd/mm/aaaa para exibição no trigger; startDate continua ISO. */
-	function startDateLabel(iso: string): string {
-		if (!iso) return '';
-		const [y, m, d] = iso.split('-');
 		return `${d}/${m}/${y}`;
 	}
 
@@ -2003,7 +1997,7 @@
 											class="{fieldMdClass} flex items-center text-left"
 										>
 											<span class={startDate ? '' : 'text-text-faint'}>
-												{startDateLabel(startDate) || 'Selecionar data'}
+												{formatIsoDatePartsBR(startDate) || 'Selecionar data'}
 											</span>
 										</button>
 										{#if startDatePickerOpen && startDateAnchorEl}

@@ -49,7 +49,6 @@ from ..calendars.helpers import (
     _get_user_event_or_404,
     _sync_project_meeting_from_calendar_event,
 )
-from ..etapas.helpers import _serialize_etapa_payload
 from ..shared import log_project_action
 from services.authorization import (
     ACCESS_FORBIDDEN,
@@ -59,6 +58,7 @@ from services.authorization import (
     require_project_rank,
 )
 from .envelope import fail, fail_internal, fail_not_found, ok
+from .etapa_payload import etapa_detail_payload
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
 
@@ -424,7 +424,7 @@ def _meeting_response(
     )
     return ok(
         {
-            "etapa": _serialize_etapa_payload(etapa, connection=connection),
+            "etapa": etapa_detail_payload(etapa, connection),
             "warning": sync_warning,
             "weekend_shift_message": weekend_shift_message,
             "message": full_message,

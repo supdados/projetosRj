@@ -11,7 +11,6 @@ from services.etapas_dates import (
     _business_days_between,
     _next_etapa_order,
     _normalize_to_business_day,
-    _serialize_etapa_payload,
 )
 from services.calendar_core import to_local_datetime
 from services.calendar_sync import delete_remote_event, sync_local_event_to_google

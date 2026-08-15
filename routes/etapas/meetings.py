@@ -23,9 +23,16 @@ from routes.etapas.helpers import (
     _legacy_not_found,
     _load_etapa_for_write,
     _load_project_for_etapa_write,
-    _serialize_etapa_payload,
 )
 from services.authorization import ACCESS_FORBIDDEN, ACCESS_NOT_FOUND
+
+
+def _canonical_etapa_payload(etapa, connection):
+    """Payload de etapa da API (shape único) para a resposta AJAX legada."""
+    # Import tardio: routes.api já importa routes.etapas (ciclo em import-time).
+    from routes.api.etapa_payload import etapa_detail_payload
+
+    return etapa_detail_payload(etapa, connection)
 
 
 @main_bp.route("/project/<int:project_id>/meeting/add", methods=["POST"])
@@ -100,7 +107,7 @@ def add_project_meeting(project_id):
                 "message": success_message,
                 "warning": sync_warning,
                 "weekend_shift_message": weekend_shift_message,
-                "etapa": _serialize_etapa_payload(etapa, connection=connection),
+                "etapa": _canonical_etapa_payload(etapa, connection),
             }
         )
 
@@ -195,7 +202,7 @@ def edit_project_meeting(etapa_id):
                 "message": success_message,
                 "warning": sync_warning,
                 "weekend_shift_message": weekend_shift_message,
-                "etapa": _serialize_etapa_payload(etapa, connection=connection),
+                "etapa": _canonical_etapa_payload(etapa, connection),
             }
         )
 

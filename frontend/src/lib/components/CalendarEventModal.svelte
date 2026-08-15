@@ -83,6 +83,7 @@
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import StateBanner from './StateBanner.svelte';
 	import { tick } from 'svelte';
+	import { formatIsoDatePartsBR } from '$lib/utils/dateFormat';
 
 	interface Props {
 		open: boolean;
@@ -127,11 +128,6 @@
 	function todayStr(): string {
 		const d = new Date();
 		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-	}
-	function formatDateBR(iso: string): string {
-		if (!iso || iso.length !== 10) return iso || '';
-		const p = iso.split('-');
-		return `${p[2]}/${p[1]}/${p[0]}`;
 	}
 	function parseDateBR(display: string): string {
 		const raw = (display || '').trim();
@@ -639,7 +635,7 @@
 		const el = e.target as HTMLInputElement;
 		const iso = parseDateBR(el.value);
 		if (iso) setDateValue(field, iso);
-		else el.value = formatDateBR(dateValueOf(field));
+		else el.value = formatIsoDatePartsBR(dateValueOf(field));
 	}
 	function onTimeBlur(field: 'start' | 'end', e: Event): void {
 		const el = e.target as HTMLInputElement;
@@ -738,7 +734,7 @@
 											maxlength="10"
 											aria-label="Data de início"
 											disabled={busy}
-											value={formatDateBR(startDate)}
+											value={formatIsoDatePartsBR(startDate)}
 											oninput={(e) => onDateInput('start', e)}
 											onblur={(e) => onDateBlur('start', e)}
 											onclick={(e) => openDatePicker('start', e)}
@@ -768,7 +764,7 @@
 											maxlength="10"
 											aria-label="Data de fim"
 											disabled={busy}
-											value={formatDateBR(endDate)}
+											value={formatIsoDatePartsBR(endDate)}
 											oninput={(e) => onDateInput('end', e)}
 											onblur={(e) => onDateBlur('end', e)}
 											onclick={(e) => openDatePicker('end', e)}
@@ -800,7 +796,7 @@
 										maxlength="10"
 										aria-label="Data de início"
 										disabled={busy}
-										value={formatDateBR(allDayStartDate)}
+										value={formatIsoDatePartsBR(allDayStartDate)}
 										oninput={(e) => onDateInput('allDayStart', e)}
 										onblur={(e) => onDateBlur('allDayStart', e)}
 										onclick={(e) => openDatePicker('allDayStart', e)}
@@ -816,7 +812,7 @@
 										maxlength="10"
 										aria-label="Data de fim"
 										disabled={busy}
-										value={formatDateBR(allDayEndDate)}
+										value={formatIsoDatePartsBR(allDayEndDate)}
 										oninput={(e) => onDateInput('allDayEnd', e)}
 										onblur={(e) => onDateBlur('allDayEnd', e)}
 										onclick={(e) => openDatePicker('allDayEnd', e)}

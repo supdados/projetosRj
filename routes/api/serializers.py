@@ -19,6 +19,7 @@ from flask import g, has_request_context
 
 from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
+from services.etapa_responsaveis import responsavel_display
 from services.etapas_mutation import etapa_tem_responsavel
 from services.project_collections import PAPEL_COLECAO_DONO
 from services.project_membership import project_access_via, project_permission_flags
@@ -428,7 +429,8 @@ def serialize_etapa_card(etapa: Any) -> dict[str, Any]:
         "descricao": etapa.descricao,
         "data_inicio": _iso_or_none(etapa.data_inicio),
         "data_fim": _iso_or_none(etapa.data_fim),
-        "responsavel": etapa.responsavel,
+        # Derivada da N:N (fallback no espelho) — card e detalhe nunca divergem.
+        "responsavel": responsavel_display(etapa),
         # Precondição de conclusão computada no backend (lista nova OU texto
         # legado) — o card não recebe a lista `responsaveis` completa.
         "tem_responsavel": etapa_tem_responsavel(etapa),
@@ -470,7 +472,7 @@ def serialize_etapa_detail(
         "descricao": etapa.descricao,
         "data_inicio": _iso_or_none(etapa.data_inicio),
         "data_fim": _iso_or_none(etapa.data_fim),
-        "responsavel": etapa.responsavel,
+        "responsavel": responsavel_display(etapa),
         "responsaveis": [
             {
                 "area_id": r.area_id,
@@ -654,7 +656,12 @@ def serialize_template_row(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def serialize_task_card(task: Any) -> dict[str, Any]:
+def serialize_task_card(
+    task: Any,
+    *,
+    with_manage_permissions: bool = False,
+    with_context_labels: bool = False,
+) -> dict[str, Any]:
     """Serializa uma tarefa no formato de "card" para listas/dashboard/Kanban.
 
     Task e TaskItem são a MESMA tabela; existe um único tipo ``Task``. Usa
@@ -670,15 +677,35 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
 
     Args:
         task: Instância de ``Task``.
+        with_manage_permissions: soma ``permissions.can_delete``/``is_author``
+            (quick-add de etapa e criação de tarefa).
+        with_context_labels: soma os rótulos de contexto do composer
+            (``etapa_descricao``/``project_orgao_sigla``, ``project_titulo`` com
+            fallback ``"Sem projeto"``).
 
     Returns:
         ``dict`` JSON-safe com os campos do card da tarefa, incluindo
         ``permissions.can_finalize``.
+
+    Exemplo:
+        >>> serialize_task_card(task, with_manage_permissions=True)
     """
     from routes.tasks.permissions import task_permission_flags
-    from routes.tasks.queries import serialize_task_assignees
 
     flags = task_permission_flags(task)
+    card = _task_card_fields(task, flags)
+    if with_manage_permissions:
+        card["permissions"]["can_delete"] = bool(flags["can_delete"])
+        card["permissions"]["is_author"] = bool(flags["is_author"])
+    if with_context_labels:
+        card.update(_task_context_labels(task))
+    return card
+
+
+def _task_card_fields(task: Any, flags: dict[str, Any]) -> dict[str, Any]:
+    """Campos base do card (sem os opcionais de permissão/contexto)."""
+    from routes.tasks.queries import serialize_task_assignees
+
     # ``task.project`` é o relacionamento já carregado (backref em models/task.py);
     # a mini-lista "Recentes" mostra o nome do projeto em vez de "Projeto #id".
     project = getattr(task, "project", None)
@@ -704,6 +731,18 @@ def serialize_task_card(task: Any) -> dict[str, Any]:
         "comments_count": len(task.comments),
         "anexos_count": len(task.anexos),
         "permissions": {"can_finalize": bool(flags["can_finalize"])},
+    }
+
+
+def _task_context_labels(task: Any) -> dict[str, Any]:
+    """Rótulos de etapa/projeto do composer — ``project_titulo`` nunca vem nulo aqui."""
+    project = getattr(task, "project", None)
+    etapa = getattr(task, "etapa", None)
+    orgao_ref = getattr(project, "orgao_ref", None) if project is not None else None
+    return {
+        "etapa_descricao": etapa.descricao if etapa is not None else "",
+        "project_titulo": project.titulo if project is not None else "Sem projeto",
+        "project_orgao_sigla": orgao_ref.sigla if orgao_ref is not None else "",
     }
 
 

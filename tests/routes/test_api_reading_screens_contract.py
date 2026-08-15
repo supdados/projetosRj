@@ -94,25 +94,22 @@ def test_api_projetos_pendentes_responsaveis_options_sem_duplicatas(
     são linhas distintas no SQL mas idênticas após o trim; a opção deve
     aparecer UMA vez (each_key_duplicate derrubava a tela de pendentes).
     """
-    from models import Etapa, db
+    from models import Etapa, EtapaResponsavel, db
 
     with app.app_context():
-        db.session.add_all(
-            [
-                Etapa(
-                    descricao="Etapa dedup A",
-                    responsavel="Equipe Dedup",
-                    project_id=seed_data["project_id"],
-                    ordem=90,
-                ),
-                Etapa(
-                    descricao="Etapa dedup B",
-                    responsavel="Equipe Dedup ",
-                    project_id=seed_data["project_id"],
-                    ordem=91,
-                ),
-            ]
+        etapa_a = Etapa(
+            descricao="Etapa dedup A",
+            project_id=seed_data["project_id"],
+            ordem=90,
         )
+        etapa_a.responsaveis = [EtapaResponsavel(area_id=None, label="Equipe Dedup")]
+        etapa_b = Etapa(
+            descricao="Etapa dedup B",
+            project_id=seed_data["project_id"],
+            ordem=91,
+        )
+        etapa_b.responsaveis = [EtapaResponsavel(area_id=None, label="Equipe Dedup ")]
+        db.session.add_all([etapa_a, etapa_b])
         db.session.commit()
 
     data = _assert_ok_envelope(client_user.get("/api/projetos-pendentes").get_json())
@@ -508,7 +505,7 @@ def test_api_projetos_pendentes_filtro_responsavel_casa_area_isolada(
     ontem = datetime.date.today() - datetime.timedelta(days=1)
     with app.app_context():
         areas = [ensure_orgao(sigla) for sigla in ("SUBEXE", "COODADOS")]
-        # data_inicio no passado => bucket "atrasada", visível no período default.
+        # data_fim no passado => bucket "atrasada", visível no período default.
         etapa = Etapa(
             descricao="Etapa filtro area",
             project_id=seed_data["project_id"],

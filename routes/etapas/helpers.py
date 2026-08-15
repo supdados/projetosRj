@@ -14,7 +14,6 @@ from services.etapas_dates import (  # noqa: F401
     _is_business_day,
     _next_etapa_order,
     _normalize_to_business_day,
-    _serialize_etapa_payload,
 )
 from services.authorization import (
     AccessVerdict,

@@ -25,6 +25,7 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { fetchTemplateStages, type TemplateStage } from '$lib/api/projects';
 	import { addBusinessDays, nextBusinessDay } from '$lib/utils/businessDays';
+	import { formatDateBR, formatIsoDatePartsBR } from '$lib/utils/dateFormat';
 	import Modal from '$lib/components/Modal.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -127,22 +128,6 @@
 		return () => controller.abort();
 	});
 
-	function formatDateBr(date: Date): string {
-		return date.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
-	/** dd/mm/aaaa para exibição no trigger; startDate continua ISO. */
-	function startDateLabel(iso: string): string {
-		if (!iso) return '';
-		const [y, m, d] = iso.split('-');
-		return `${d}/${m}/${y}`;
-	}
-
 	/** Uma linha do preview: número, nome, datas calculadas e duração. */
 	interface PreviewStage {
 		order: number;
@@ -174,8 +159,8 @@
 				order: stage.order,
 				name: stage.name,
 				duration,
-				startLabel: formatDateBr(start),
-				endLabel: formatDateBr(end)
+				startLabel: formatDateBR(start),
+				endLabel: formatDateBR(end)
 			});
 			// Próxima etapa começa no dia útil seguinte ao fim desta.
 			cursor = addBusinessDays(end, 1);
@@ -270,7 +255,7 @@
 						class="flex w-full items-center rounded-md border border-border-subtle bg-surface px-3 py-2 text-left text-sm text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
 					>
 						<span class={startDate ? '' : 'text-text-muted'}>
-							{startDateLabel(startDate) || 'Selecionar data'}
+							{formatIsoDatePartsBR(startDate) || 'Selecionar data'}
 						</span>
 					</button>
 					{#if startDatePickerOpen && startDateAnchorEl}

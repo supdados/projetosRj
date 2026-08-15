@@ -103,6 +103,9 @@ def meeting_time_display(meeting, *, boundary="start"):
 
 
 def sync_etapa_from_meeting(etapa, meeting, *, title=None):
+    # Import tardio evita ciclo etapa_responsaveis -> etapas_mutation -> project_meetings.
+    from services.etapa_responsaveis import apply_responsaveis_entries
+
     if not etapa or not meeting:
         return etapa
 
@@ -111,7 +114,11 @@ def sync_etapa_from_meeting(etapa, meeting, *, title=None):
         etapa.descricao = title
     etapa.data_inicio = start_local.date() if start_local else None
     etapa.data_fim = end_local.date() if end_local else None
-    etapa.responsavel = meeting.google_owner_email or etapa.responsavel
+    if meeting.google_owner_email:
+        # apply (não replace/parse): parse colapsaria o e-mail em "Outras".
+        apply_responsaveis_entries(
+            etapa, [{"area_id": None, "label": meeting.google_owner_email}]
+        )
     etapa.iniciada = False
     etapa.done = False
     etapa.entry_type = MEETING_ENTRY_TYPE

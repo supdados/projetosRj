@@ -26,20 +26,6 @@ from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
 
 
-def _serialize_recent_task(task: Any) -> dict[str, Any]:
-    """Card de tarefa recente do Dashboard + indicadores de comentários/anexos.
-
-    Estende ``serialize_task_card`` com ``comments_count``/``anexos_count`` (mesmo
-    padrão de ``routes/api/tasks.py``), consumidos pelas linhas de "Recentes" do
-    painel de tarefas. As coleções já vêm do relacionamento carregado; como a
-    lista é pequena (limite de 9), o ``len`` é barato.
-    """
-    card = serialize_task_card(task)
-    card["comments_count"] = len(task.comments)
-    card["anexos_count"] = len(task.anexos)
-    return card
-
-
 def _serialize_dashboard(context: dict[str, Any]) -> dict[str, Any]:
     """Converte o contexto bruto do Dashboard em payload JSON-safe.
 
@@ -58,9 +44,7 @@ def _serialize_dashboard(context: dict[str, Any]) -> dict[str, Any]:
         "recent_projects": [
             serialize_project_card(project) for project in context["recent_projects"]
         ],
-        "recent_tasks": [
-            _serialize_recent_task(task) for task in context["recent_tasks"]
-        ],
+        "recent_tasks": [serialize_task_card(task) for task in context["recent_tasks"]],
         "objetivos": context["objetivos"],
         "selected_orgao": context["selected_orgao"],
         "counts": {

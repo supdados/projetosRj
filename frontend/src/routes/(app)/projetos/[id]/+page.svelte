@@ -74,6 +74,7 @@
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import { resolveFocusEtapaId } from '$lib/utils/focusEtapa';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
 	import Card from '$lib/components/Card.svelte';
@@ -172,23 +173,10 @@
 		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
 	);
 
-	/** Formata ISO em pt-BR (UTC) ou '' se vazio. */
-	function isoToBr(iso: string | null): string {
-		if (!iso) return '';
-		const d = new Date(iso);
-		if (Number.isNaN(d.getTime())) return '';
-		return d.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
 	/** Label de datas da etapa para o cabeçalho do quick-add (paridade legado). */
 	function etapaDatasLabel(etapa: EtapaDetail): string {
-		const ini = isoToBr(etapa.data_inicio);
-		const fim = isoToBr(etapa.data_fim);
+		const ini = formatIsoDateBR(etapa.data_inicio);
+		const fim = formatIsoDateBR(etapa.data_fim);
 		if (ini && fim) return `${ini} — ${fim}`;
 		if (ini) return `Início ${ini}`;
 		if (fim) return `Fim ${fim}`;

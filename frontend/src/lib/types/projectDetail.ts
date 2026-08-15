@@ -357,20 +357,7 @@ export interface MeetingPayload {
  * texto PT pronto para o toast de sucesso.
  */
 export interface MeetingMutationResult {
-	etapa: EtapaMeetingPayload;
+	etapa: EtapaDetail;
 	warning: string | null;
 	message: string;
-}
-
-/**
- * Payload de etapa devolvido pelos endpoints de reunião — shape do serializer
- * LEGADO (`_serialize_etapa_payload`), distinto de `EtapaDetail`. Após a
- * mutação a página RE-BUSCA o detalhe completo, então só usamos `id`/`meeting`
- * para feedback imediato; os campos restantes existem por compatibilidade.
- */
-export interface EtapaMeetingPayload {
-	id: number;
-	descricao: string | null;
-	entry_type: string | null;
-	meeting?: EtapaMeeting;
 }

@@ -29,6 +29,7 @@
 	import { searchInvitableUsers } from '$lib/api/projectMembers';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { UsuarioConvidavel } from '$lib/types/projectMembers';
 	import type {
@@ -363,14 +364,8 @@
 
 	function metaDoShare(share: ColecaoShare): string {
 		const origem = share.user ? 'Pessoa' : (share.orgao?.nome ?? 'Área');
-		const desde = formatarData(share.created_at);
+		const desde = formatIsoDateBR(share.created_at);
 		return desde ? `${origem} · desde ${desde}` : origem;
-	}
-
-	function formatarData(iso: string): string {
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '';
-		return parsed.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 	}
 
 	function iniciais(nome: string): string {

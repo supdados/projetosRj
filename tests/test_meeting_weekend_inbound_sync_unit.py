@@ -205,6 +205,7 @@ def test_shifted_event_propagates_business_day_to_etapa():
         data_inicio=None,
         data_fim=None,
         responsavel=None,
+        responsaveis=[],
         iniciada=True,
         done=True,
         entry_type="google_meeting",

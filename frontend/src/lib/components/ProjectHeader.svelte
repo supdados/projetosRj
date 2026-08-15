@@ -23,6 +23,7 @@
 	import StateIcon from '$lib/components/StateIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { priorityIconId } from '$lib/utils/taskLabels';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import {
 		deliveryIconId,
 		projectStatusIconId,
@@ -339,21 +340,8 @@
 		}))
 	);
 
-	/** Formata ISO (YYYY-MM-DD) em pt-BR; null => vazio. */
-	function formatDateBr(iso: string | null): string {
-		if (!iso) return '';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '';
-		return parsed.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
-	const startBr = $derived(formatDateBr(derivedData.data_inicio_projeto));
-	const endBr = $derived(formatDateBr(derivedData.data_fim_projeto));
+	const startBr = $derived(formatIsoDateBR(derivedData.data_inicio_projeto));
+	const endBr = $derived(formatIsoDateBR(derivedData.data_fim_projeto));
 
 	/** Duração total em dias (inclusiva como o legado: (fim - inicio).days). */
 	const durationLabel = $derived.by(() => {

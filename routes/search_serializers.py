@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 
 from flask import url_for
 
+from services.etapa_responsaveis import responsavel_display
+
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 
 _TASK_STATUS_LABELS = {
@@ -161,12 +163,13 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
     stage_results = []
     for stage in stages:
         project = stage.project
+        responsavel = responsavel_display(stage)
         stage_match = _resolve_match_info(
             term,
             [
                 ("descricao", "Descrição", stage.descricao),
                 ("comentarios", "Comentário", stage.comentarios),
-                ("responsavel", "Responsável", stage.responsavel),
+                ("responsavel", "Responsável", responsavel),
             ],
         )
         stage_results.append(
@@ -178,8 +181,8 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
                     f"Projeto: {_truncate_text(project.titulo, 95)}" if project else ""
                 ),
                 "meta": (
-                    f"Responsável: {_truncate_text(stage.responsavel, 80)}"
-                    if stage.responsavel
+                    f"Responsável: {_truncate_text(responsavel, 80)}"
+                    if responsavel
                     else "Responsável não informado"
                 ),
                 "url": url_for(

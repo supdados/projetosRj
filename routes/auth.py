@@ -142,13 +142,8 @@ def _find_user_by_cpf_for_govbr(cpf):
     if user is not None:
         return user, True
 
-    for candidate in User.query.filter(User.username.isnot(None)).all():
-        try:
-            if normalize_cpf(candidate.username) == cpf:
-                return candidate, True
-        except ValueError:
-            continue
-
+    # O scan O(n) por username normalizado saiu: scripts/migrations/backfill_cpf_govbr.py
+    # populou a coluna indexada acima (e o backfill on-demand cobre vínculos novos).
     return None, False
 
 

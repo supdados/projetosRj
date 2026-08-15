@@ -47,6 +47,7 @@ from models import (
     db,
     registrar_autorizacao,
 )
+from services.atraso import etapa_vencida_criterion, hoje_utc
 from services.authorization import (
     apply_project_visibility,
     invalidate_collection_rank_cache,
@@ -738,8 +739,8 @@ def colecao_cronograma_rows(
         for row in _cronograma_project_rows(colecao.id, viewer)
     ]
     por_id = {projeto["id"]: projeto for projeto in projetos}
-    # utc_now().date(): mesmo relógio UTC do resto do domínio, não o do processo.
-    hoje = utc_now().date()
+    # hoje_utc(): mesmo relógio UTC do critério de atraso, não o do processo.
+    hoje = hoje_utc()
     for etapa in _cronograma_etapas(list(por_id)):
         _acumular_etapa_no_cronograma(por_id[etapa.project_id], etapa, hoje)
     return projetos
@@ -832,7 +833,6 @@ def _rollup_rows(ids: list[int], viewer: User) -> list[Any]:
 
 def _project_rows(collection_id: int, viewer: User) -> list[Any]:
     workflow = Etapa.entry_type != "google_meeting"
-    hoje = utc_now().date()
     query = (
         db.session.query(
             Project.id,
@@ -841,7 +841,7 @@ def _project_rows(collection_id: int, viewer: User) -> list[Any]:
             OrgaoUnidade.sigla,
             _sum_case(workflow).label("etapas_total"),
             _sum_case(and_(workflow, Etapa.iniciada.is_(True), Etapa.done.is_(True))),
-            _sum_case(and_(workflow, Etapa.done.is_(False), Etapa.data_fim < hoje)),
+            _sum_case(etapa_vencida_criterion()),
             # Reunião Google fora do min/max: caso sem else vira NULL, ignorado.
             func.min(case((workflow, Etapa.data_inicio))),
             func.max(case((workflow, Etapa.data_fim))),

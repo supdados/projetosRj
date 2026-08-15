@@ -69,6 +69,28 @@ def areas_from_responsavel_legado(raw: object) -> list[dict]:
     ]
 
 
+def responsavel_display(etapa) -> str:
+    """String de exibição dos responsáveis da etapa, derivada da N:N.
+
+    Fonte canônica são as linhas ``etapa.responsaveis`` (sigla viva da área,
+    fallback no ``label`` congelado se o órgão sumiu) — mesma regra do detalhe,
+    então card e detalhe nunca divergem. Etapas ainda sem N:N (bancos não
+    backfillados) caem no espelho legado ``Etapa.responsavel``.
+
+    Exemplo:
+        >>> responsavel_display(etapa)
+        'SUBEXE, COODADOS'
+    """
+    labels = [
+        (item.area.sigla if item.area is not None else item.label) or ""
+        for item in etapa.responsaveis
+    ]
+    labels = [label.strip() for label in labels if label.strip()]
+    if labels:
+        return ", ".join(labels)
+    return (etapa.responsavel or "").strip()
+
+
 def parse_responsaveis_entries(raw: object) -> list[dict]:
     """Valida/normaliza a lista de {area_id, label}. Levanta ValueError com o valor recebido."""
     if not isinstance(raw, list) or not raw:

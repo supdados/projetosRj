@@ -13,6 +13,7 @@ from services.etapa_responsaveis import (
     OUTRAS_LABEL,
     parse_responsaveis_entries,
     replace_etapa_responsaveis,
+    responsavel_display,
     split_responsavel_legado,
 )
 
@@ -196,3 +197,48 @@ def test_split_legado_dedupe_case_insensitive_e_ignora_vazios():
     assert split_responsavel_legado("SEA, , sea,SEA ") == ["SEA"]
     assert split_responsavel_legado("") == []
     assert split_responsavel_legado(None) == []
+
+
+# ── responsavel_display ──────────────────────────────────────────────────────
+
+
+class FakeAreaViva:
+    def __init__(self, sigla: str):
+        self.sigla = sigla
+
+
+class FakeResponsavelRow:
+    def __init__(self, label: str, area: FakeAreaViva | None = None):
+        self.label = label
+        self.area = area
+
+
+class FakeEtapaDisplay:
+    def __init__(self, responsaveis: list, responsavel: str | None):
+        self.responsaveis = responsaveis
+        self.responsavel = responsavel
+
+
+def test_responsavel_display_deriva_da_nn_com_sigla_viva():
+    etapa = FakeEtapaDisplay(
+        responsaveis=[
+            FakeResponsavelRow("SIGLA-ANTIGA", area=FakeAreaViva("SIGLA-NOVA")),
+            FakeResponsavelRow("Time externo", area=None),
+        ],
+        responsavel="espelho truncad",
+    )
+    assert responsavel_display(etapa) == "SIGLA-NOVA, Time externo"
+
+
+def test_responsavel_display_fallback_no_espelho_sem_nn():
+    etapa = FakeEtapaDisplay(responsaveis=[], responsavel="  SUBEXE, COODADOS  ")
+    assert responsavel_display(etapa) == "SUBEXE, COODADOS"
+
+
+def test_responsavel_display_vazio_quando_nada_preenchido():
+    etapa = FakeEtapaDisplay(responsaveis=[], responsavel=None)
+    assert responsavel_display(etapa) == ""
+    so_brancos = FakeEtapaDisplay(
+        responsaveis=[FakeResponsavelRow("   ", area=None)], responsavel=None
+    )
+    assert responsavel_display(so_brancos) == ""

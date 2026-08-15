@@ -156,8 +156,8 @@ export interface CreateTarefaInput {
 }
 
 /**
- * Card devolvido por `POST /api/tarefas` (= `serialize_task_card` + extras de
- * contexto de projeto/etapa e permissões expostas por `_stage_card_payload`).
+ * Card devolvido por `POST /api/tarefas` (= `serialize_task_card` com
+ * `with_context_labels` + `with_manage_permissions`).
  */
 export interface CreatedTaskCard extends TaskCard {
 	etapa_descricao: string | null;

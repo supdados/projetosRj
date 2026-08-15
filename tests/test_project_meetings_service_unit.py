@@ -189,6 +189,7 @@ def test_sync_etapa_from_meeting_copies_dates_title_and_responsavel():
         data_inicio=None,
         data_fim=None,
         responsavel="original",
+        responsaveis=[],
         iniciada=True,
         done=True,
         entry_type="manual",
@@ -204,6 +205,10 @@ def test_sync_etapa_from_meeting_copies_dates_title_and_responsavel():
     assert etapa.descricao == "Reunião X"
     assert etapa.data_inicio == datetime.date(2026, 1, 15)
     assert etapa.data_fim == datetime.date(2026, 1, 16)
+    # Escrita via N:N (único escritor); o espelho vira derivado.
+    assert [(r.area_id, r.label) for r in etapa.responsaveis] == [
+        (None, "dono@example.com")
+    ]
     assert etapa.responsavel == "dono@example.com"
     assert etapa.iniciada is False
     assert etapa.done is False
@@ -216,6 +221,7 @@ def test_sync_etapa_from_meeting_preserves_responsavel_when_email_empty():
         data_inicio=None,
         data_fim=None,
         responsavel="keep",
+        responsaveis=[],
         iniciada=False,
         done=False,
         entry_type="manual",
@@ -223,6 +229,27 @@ def test_sync_etapa_from_meeting_preserves_responsavel_when_email_empty():
     meeting = _meeting(google_owner_email=None)
     sync_etapa_from_meeting(etapa, meeting)
     assert etapa.responsavel == "keep"
+    assert etapa.responsaveis == []
+
+
+def test_sync_etapa_from_meeting_replaces_previous_nn_rows_with_owner_email():
+    from models import EtapaResponsavel
+
+    etapa = SimpleNamespace(
+        descricao="x",
+        data_inicio=None,
+        data_fim=None,
+        responsavel="SUBEXE",
+        responsaveis=[EtapaResponsavel(area_id=None, label="SUBEXE")],
+        iniciada=False,
+        done=False,
+        entry_type="manual",
+    )
+    sync_etapa_from_meeting(etapa, _meeting(google_owner_email="dono@example.com"))
+    assert [(r.area_id, r.label) for r in etapa.responsaveis] == [
+        (None, "dono@example.com")
+    ]
+    assert etapa.responsavel == "dono@example.com"
 
 
 def test_sync_etapa_from_meeting_handles_missing_inputs():
@@ -246,6 +273,7 @@ def test_sync_etapa_from_meeting_preserves_existing_title_when_none():
         data_inicio=None,
         data_fim=None,
         responsavel="r",
+        responsaveis=[],
         iniciada=False,
         done=False,
         entry_type="manual",

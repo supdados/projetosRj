@@ -2,6 +2,7 @@ import time
 
 import routes.auth as auth_routes
 from models import User, db
+from tests.sql_query_counter import SqlQueryCounter
 
 
 def _enable_govbr(app):
@@ -466,3 +467,65 @@ def test_logout_for_local_session_keeps_regular_redirect(
 
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/login")
+
+
+def test_find_user_by_cpf_uses_indexed_column_without_scanning_users(app):
+    """Usuário legado com cpf_govbr populado (backfill) é achado em 1 query."""
+    with app.app_context():
+        for indice in range(5):
+            ruido = User(
+                username=f"ruido{indice}", name=f"Ruido {indice}", orgao="SETD"
+            )
+            ruido.set_password("senha123")
+            db.session.add(ruido)
+        legado = User(username="jhudson", name="Jose Hudson", orgao="SETD")
+        legado.set_password("senha123")
+        legado.cpf_govbr = "12345678901"
+        db.session.add(legado)
+        db.session.commit()
+
+        with SqlQueryCounter(db.engine) as counter:
+            user, matched_by_username = auth_routes._find_user_by_cpf_for_govbr(
+                "12345678901"
+            )
+
+        assert user is not None and user.username == "jhudson"
+        assert matched_by_username is False
+        assert counter.total == 1
+
+
+def test_find_user_by_cpf_matches_username_in_canonical_formats(app):
+    """Fallback 2 preservado: username com e sem pontuação ainda casa."""
+    with app.app_context():
+        for username in ("123.456.789-01", "98765432100"):
+            user = User(username=username, name="Legado", orgao="SETD")
+            user.set_password("senha123")
+            db.session.add(user)
+        db.session.commit()
+
+        formatado, por_username = auth_routes._find_user_by_cpf_for_govbr("12345678901")
+        digitos, _ = auth_routes._find_user_by_cpf_for_govbr("98765432100")
+
+        assert formatado.username == "123.456.789-01"
+        assert por_username is True
+        assert digitos.username == "98765432100"
+
+
+def test_find_user_by_cpf_ignores_exotic_username_without_backfill(app):
+    """Formato exótico só era achado pelo scan O(n) — agora depende do backfill."""
+    with app.app_context():
+        user = User(username="555 666 777 88", name="Exotico", orgao="SETD")
+        user.set_password("senha123")
+        db.session.add(user)
+        db.session.commit()
+
+        assert auth_routes._find_user_by_cpf_for_govbr("55566677788") == (None, False)
+
+        user = User.query.filter_by(username="555 666 777 88").one()
+        user.cpf_govbr = "55566677788"
+        db.session.commit()
+
+        achado, matched_by_username = auth_routes._find_user_by_cpf_for_govbr(
+            "55566677788"
+        )
+        assert achado.id == user.id and matched_by_username is False

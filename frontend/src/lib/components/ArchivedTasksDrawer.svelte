@@ -24,6 +24,7 @@
 	import CountBadge from './CountBadge.svelte';
 	import OrgaoTreeSelect from './OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
+	import { formatIsoDateBRLocalTz } from '$lib/utils/dateFormat';
 
 	interface Props {
 		open: boolean;
@@ -128,18 +129,6 @@
 			event.stopPropagation();
 			onClose();
 		}
-	}
-
-	const DATE_FMT = new Intl.DateTimeFormat('pt-BR', {
-		day: '2-digit',
-		month: '2-digit',
-		year: 'numeric'
-	});
-
-	function archivedAtLabel(task: TaskCard): string | null {
-		if (!task.archived_at) return null;
-		const parsed = new Date(task.archived_at);
-		return Number.isNaN(parsed.getTime()) ? null : DATE_FMT.format(parsed);
 	}
 
 	function selectOrgao(next: number | null): void {
@@ -305,7 +294,7 @@
 
 							<ul class="m-0 flex list-none flex-col overflow-hidden rounded-lg border border-border-subtle p-0">
 								{#each group.tasks as task (task.id)}
-									{@const archivedAt = archivedAtLabel(task)}
+									{@const archivedAt = formatIsoDateBRLocalTz(task.archived_at)}
 									<li class="flex items-center gap-3 border-b border-border-subtle px-3 py-2.5 last:border-0">
 										<div class="flex min-w-0 flex-1 flex-col gap-1">
 											<button

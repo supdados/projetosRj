@@ -57,6 +57,7 @@
 		normalizeConvitePapel
 	} from '$lib/utils/projectMembers';
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 
 	interface Props {
 		projectId: number;
@@ -493,18 +494,11 @@
 		return (primeira + segunda).toUpperCase();
 	}
 
-	function formatarData(iso: string | null): string {
-		if (!iso) return '';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '';
-		return parsed.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-	}
-
 	function textoExpiracao(membro: ProjectMemberDireto): string {
 		if (membro.status === 'revogado') return 'Revogado';
 		if (!membro.expires_at) return 'Sem expiração';
-		if (membro.status === 'expirado') return `Expirou em ${formatarData(membro.expires_at)}`;
-		return `Até ${formatarData(membro.expires_at)}`;
+		if (membro.status === 'expirado') return `Expirou em ${formatIsoDateBR(membro.expires_at)}`;
+		return `Até ${formatIsoDateBR(membro.expires_at)}`;
 	}
 
 	function corExpiracao(membro: ProjectMemberDireto): string {
@@ -780,7 +774,7 @@
 					</div>
 					{#if expiracaoPrevista}
 						<span class="text-xs tabular-nums text-text-muted"
-							>· até {formatarData(expiracaoPrevista)}</span
+							>· até {formatIsoDateBR(expiracaoPrevista)}</span
 						>
 					{/if}
 				</div>

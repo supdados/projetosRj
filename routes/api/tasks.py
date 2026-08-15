@@ -63,10 +63,6 @@ def _serialize_hub_group(group: dict[str, Any]) -> dict[str, Any]:
         card["etapa_titulo"] = getattr(task, "hub_stage_titulo", None)
         card["etapa_display_id"] = getattr(task, "hub_stage_display_id", None) or None
         card["is_first_of_stage"] = bool(getattr(task, "hub_is_first_of_stage", False))
-        # Contagens para os indicadores de comentário/anexo na linha da lista
-        # (mesma derivação de _stage_card_payload / quick-add).
-        card["comments_count"] = len(task.comments)
-        card["anexos_count"] = len(task.anexos)
         tasks.append(card)
     return {
         "key": group["key"],

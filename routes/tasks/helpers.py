@@ -61,6 +61,5 @@ from routes.tasks.creation import (  # noqa: F401
     _resolve_etapa_token,
     _resolve_project_token,
     _resolve_responsavel_for_edit,
-    _serialize_task_payload,
     _validate_task_responsavel,
 )

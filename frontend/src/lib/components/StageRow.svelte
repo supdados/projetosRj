@@ -24,6 +24,7 @@
 	import StageTaskPill from './StageTaskPill.svelte';
 	import type { EtapaDetail, EtapaInlineField } from '$lib/types/projectDetail';
 	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -151,17 +152,7 @@
 		commentDraft = shownComment ?? '';
 	}
 
-	function formatDateBr(iso: string | null): string {
-		if (!iso) return 'Sem data';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return 'Sem data';
-		return parsed.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
+	const formatDateBr = (iso: string | null): string => formatIsoDateBR(iso, 'Sem data');
 
 	function dateContext(field: 'data_inicio' | 'data_fim', event: MouseEvent): void {
 		if (locked || etapa.done) return;

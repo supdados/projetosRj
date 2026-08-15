@@ -29,6 +29,7 @@
 	import type { TaskAssignee } from '$lib/types/tasks';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
+	import { formatIsoDateBRLocalTz } from '$lib/utils/dateFormat';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
@@ -94,18 +95,6 @@
 					: ''
 	);
 	const autosaveFailed = $derived($store.autosave === 'error');
-
-	const DATE_FMT = new Intl.DateTimeFormat('pt-BR', {
-		day: '2-digit',
-		month: '2-digit',
-		year: 'numeric'
-	});
-
-	function formatDate(value: string | null): string | null {
-		if (!value) return null;
-		const parsed = new Date(value);
-		return Number.isNaN(parsed.getTime()) ? null : DATE_FMT.format(parsed);
-	}
 
 	// RESPONSÁVEIS: estado local sincronizado do detalhe (mesmo padrão do
 	// TaskHubTaskRow) — o picker persiste sozinho (modo taskId) e reconcilia
@@ -509,11 +498,11 @@
 					</div>
 				</section>
 
-				{#if formatDate(detail.created_at)}
+				{#if formatIsoDateBRLocalTz(detail.created_at)}
 					<p class="m-0 -mt-2 text-xs text-text-muted">
-						Criada em {formatDate(detail.created_at)}{detail.is_archived &&
-						formatDate(detail.archived_at)
-							? ` · arquivada em ${formatDate(detail.archived_at)}`
+						Criada em {formatIsoDateBRLocalTz(detail.created_at)}{detail.is_archived &&
+						formatIsoDateBRLocalTz(detail.archived_at)
+							? ` · arquivada em ${formatIsoDateBRLocalTz(detail.archived_at)}`
 							: ''}
 					</p>
 				{/if}

@@ -33,7 +33,6 @@ from catalogs.inventario import orgao_allows_inventario
 from models import Project, Task, db
 
 from services.authorization import PAPEL_LEITOR, require_project_rank
-from services.etapas_dates import meeting_payload_block
 from services.project_membership import project_permission_flags
 
 from ..blueprint import main_bp
@@ -42,12 +41,9 @@ from ..orgao_scope import scoped_orgao_options
 from ..projects.ajax import ProjectInlineError, apply_project_inline_changes
 from ..shared import log_project_action
 from .envelope import fail, ok
+from .etapa_payload import project_etapas_payload
 from .negotiation import api_login_required
-from .serializers import (
-    serialize_etapa_detail,
-    serialize_project_detail,
-    serialize_task_card,
-)
+from .serializers import serialize_project_detail, serialize_task_card
 
 # Status selecionáveis no dropdown. "Finalizado" NUNCA é ofertado aqui: a única
 # transição para Finalizado é POST /api/projetos/<id>/concluir (botão Concluir).
@@ -73,57 +69,6 @@ _DELIVERY_TYPE_OPTIONS = [
 ]
 
 
-def _task_counts_by_etapa(project: Project) -> dict[int, dict[str, int]]:
-    """Conta tarefas não arquivadas por etapa (total e finalizadas).
-
-    Espelha a agregação de ``project_detail`` (Jinja) usada na pílula "Tarefas"
-    de cada linha de etapa. SOMENTE LEITURA: apenas contagem, sem mutação.
-
-    Args:
-        project: Instância de ``Project``.
-
-    Returns:
-        ``{etapa_id: {"total": int, "done": int}}``.
-    """
-    total_rows = (
-        db.session.query(Task.etapa_id, db.func.count(Task.id))
-        .filter(
-            Task.project_id == project.id,
-            Task.etapa_id.isnot(None),
-            Task.is_archived.is_(False),
-        )
-        .group_by(Task.etapa_id)
-        .all()
-    )
-    done_rows = (
-        db.session.query(Task.etapa_id, db.func.count(Task.id))
-        .filter(
-            Task.project_id == project.id,
-            Task.etapa_id.isnot(None),
-            Task.is_archived.is_(False),
-            Task.status == "finalizada",
-        )
-        .group_by(Task.etapa_id)
-        .all()
-    )
-    totals = {etapa_id: int(count) for etapa_id, count in total_rows}
-    dones = {etapa_id: int(count) for etapa_id, count in done_rows}
-    return {
-        etapa_id: {"total": totals.get(etapa_id, 0), "done": dones.get(etapa_id, 0)}
-        for etapa_id in totals
-    }
-
-
-def _etapa_meeting_block(etapa: Any, connection: Any) -> dict[str, Any] | None:
-    """Bloco read-only da reunião Google da etapa para o payload do Detalhe.
-
-    Fina camada sobre ``meeting_payload_block`` (services/etapas_dates.py) — a
-    MESMA fonte usada pelas rotas de criar/editar reunião — para que o GET do
-    detalhe e as mutações de reunião devolvam exatamente o mesmo shape.
-    """
-    return meeting_payload_block(etapa, connection)
-
-
 def _serialize_detail(project: Project) -> dict[str, Any]:
     """Monta o payload completo do Detalhe de Projeto.
 
@@ -137,28 +82,15 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
     Returns:
         ``dict`` JSON-safe do detalhe.
     """
-    counts = _task_counts_by_etapa(project)
-    etapas = sorted(
-        project.etapas, key=lambda e: (e.ordem if e.ordem is not None else 0)
-    )
     # UX-only (autorização segue server-side por rota): leitor não deve ver
     # affordances de edição que responderiam 403 (F2-7).
     permissions = project_permission_flags(g.user, project)
-    connection = _connection_for_current_user()
     special_project_options = list(_SPECIAL_PROJECT_OPTIONS)
     if orgao_allows_inventario(project.orgao_ref.sigla if project.orgao_ref else None):
         special_project_options.append("Inventário")
     return {
         "project": serialize_project_detail(project),
-        "etapas": [
-            serialize_etapa_detail(
-                etapa,
-                task_total=counts.get(etapa.id, {}).get("total", 0),
-                task_done=counts.get(etapa.id, {}).get("done", 0),
-                meeting=_etapa_meeting_block(etapa, connection),
-            )
-            for etapa in etapas
-        ],
+        "etapas": project_etapas_payload(project, _connection_for_current_user()),
         # Derivados read-only computados no backend (NÃO recalcular no cliente).
         "derived": {
             "data_inicio_projeto": (

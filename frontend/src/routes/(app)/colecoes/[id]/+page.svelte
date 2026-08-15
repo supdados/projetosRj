@@ -61,6 +61,7 @@
 		accessErrorMessage,
 		type AccessErrorKind
 	} from '$lib/utils/accessErrorMessages';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type FiltroLinhas = 'todos' | 'atrasados';
@@ -220,18 +221,6 @@
 	});
 
 	// ── Apresentação ─────────────────────────────────────────────────────────
-	function formatDateBr(iso: string | null): string {
-		if (!iso) return '';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '';
-		return parsed.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
 	/** Família da pílula `.chip` conforme o status REAL (atraso é indicador à parte). */
 	function statusChipClass(status: string): string {
 		const key = statusKey(status);
@@ -670,7 +659,7 @@
 					<span>
 						Prazo mais distante:
 						<time datetime={prazoMaisDistante} class="font-mono text-text-primary">
-							{formatDateBr(prazoMaisDistante)}
+							{formatIsoDateBR(prazoMaisDistante)}
 						</time>
 					</span>
 				{/if}
@@ -889,14 +878,14 @@
 									</td>
 									<td class="{tdCls} whitespace-nowrap font-mono text-sm text-text-secondary">
 										{#if row.data_inicio}
-											<time datetime={row.data_inicio}>{formatDateBr(row.data_inicio)}</time>
+											<time datetime={row.data_inicio}>{formatIsoDateBR(row.data_inicio)}</time>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}
 									</td>
 									<td class="{tdCls} whitespace-nowrap font-mono text-sm text-text-secondary">
 										{#if row.data_fim}
-											<time datetime={row.data_fim}>{formatDateBr(row.data_fim)}</time>
+											<time datetime={row.data_fim}>{formatIsoDateBR(row.data_fim)}</time>
 										{:else}
 											<span class="italic text-text-muted">—</span>
 										{/if}

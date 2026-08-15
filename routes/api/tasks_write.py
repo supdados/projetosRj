@@ -12,9 +12,8 @@ REUSO PARCIAL: exclusão, arquivamento em lote e mover-etapa chamam as MESMAS
 funções das rotas Jinja legadas (``_can_manage_task_restricted_actions``,
 ``move_task_to_etapa``, ``bulk_archive_finalized``, ``notify_*``) — só trocam a
 embalagem de resposta para o envelope ``ok``/``fail``. A criação (``POST
-/api/tarefas``) tem corpo próprio e usa os helpers de validação de
-``routes/tasks/creation.py`` (o legado ``_create_task_common`` morreu com
-``routes/tasks/crud.py`` na sprint 2).
+/api/tarefas``) delega validação e montagem a ``services/task_creation.py``
+(o legado ``_create_task_common`` morreu com ``routes/tasks/crud.py`` na sprint 2).
 
 Anexa ao ``main_bp`` ÚNICO; NÃO cria blueprint novo e NÃO altera os legados.
 """
@@ -29,15 +28,11 @@ from models import OrgaoUnidade, Task, db
 
 from ..blueprint import main_bp
 from ..orgao_scope import sanitize_orgao_filter_for_current_user
-from ..tasks.constants import VALID_PRIORIDADES, VALID_STATUSES, VALID_TIPOS
 from ..tasks.creation import (
-    _format_invalid_responsavel_message,
     _get_assignable_users_for_orgao,
     _get_assignable_users_for_project,
     _resolve_etapa_token,
     _resolve_project_token,
-    _serialize_task_payload,
-    _validate_task_responsavel,
 )
 from ..tasks.notifications import (
     notify_task_archived_in_batch,
@@ -53,7 +48,7 @@ from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
 from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_task_card
-from services.notifications import notify_task_assignment_change, notify_task_event
+from services.task_creation import create_task_record, resolve_task_creation
 from services.task_mutation import bulk_archive_finalized, move_task_to_etapa
 
 #: String herdada do legado ``delete_task`` (rota cortada na sprint 2).
@@ -80,168 +75,37 @@ def _load_task_or_error(
 @main_bp.route("/api/tarefas", methods=["POST"])
 @api_login_required
 def api_tarefa_criar() -> Response | tuple[Response, int]:
-    """Cria uma tarefa (envelope) com corpo próprio.
-
-    Usa os helpers de validação de ``routes/tasks/creation.py``
-    (``_resolve_project_token``, ``_resolve_etapa_token``,
-    ``_validate_task_responsavel``); a extração para service fica na sprint 3.2.
+    """Cria uma tarefa (envelope) — casca sobre ``services/task_creation.py``.
 
     Body JSON: ``{project, etapa, descricao, status, responsavel, prioridade,
-    tipo_pedido}`` (``project_id``/``etapa_id`` aceitos como alias). Valida
-    projeto/etapa/descrição/responsável com as regras legadas. Em sucesso devolve
-    o card serializado (mesma forma do drawer/board) para inserção otimista.
+    tipo_pedido, assignee_ids}`` (``project_id``/``etapa_id``/``titulo`` aceitos
+    como alias). A validação e a montagem vivem no service; aqui ficam só o parse
+    do corpo, o commit e a embalagem. Em sucesso devolve o card serializado
+    (mesma forma do drawer/board) para inserção otimista.
 
     Returns:
         ``ok({task})`` (200); 422 validação (sem descrição/ responsável inválido);
         403/404 de projeto/etapa fora de escopo; 401 sem sessão.
     """
-    data = request.get_json(silent=True)
-    if not isinstance(data, dict):
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
         return fail("Corpo JSON inválido.", status=422, code="validation")
 
-    project_raw = data.get("project")
-    if project_raw is None:
-        project_raw = data.get("project_id")
-    etapa_raw = data.get("etapa")
-    if etapa_raw is None:
-        etapa_raw = data.get("etapa_id")
-    descricao = (data.get("descricao") or data.get("titulo") or "").strip()
-
-    project, project_error, status_code = _resolve_project_token(
-        project_raw, allow_empty=True, for_write=True
-    )
-    if project_error:
-        code = (
-            "forbidden"
-            if status_code == 403
-            else ("not_found" if status_code == 404 else "validation")
-        )
-        return fail(project_error, status=status_code, code=code)
-
-    etapa, etapa_error, etapa_status = _resolve_etapa_token(
-        etapa_raw, project, allow_empty=True
-    )
-    if etapa_error:
-        code = "not_found" if etapa_status == 404 else "validation"
-        return fail(etapa_error, status=etapa_status, code=code)
-
-    if not descricao:
-        return fail("Descrição é obrigatória.", status=422, code="validation")
-
-    status = (data.get("status") or "nao_iniciada").strip()
-    if status not in VALID_STATUSES:
-        status = "nao_iniciada"
-    prioridade = (data.get("prioridade") or "").strip() or None
-    if prioridade not in VALID_PRIORIDADES:
-        prioridade = None
-    tipo_pedido = (data.get("tipo_pedido") or "").strip() or None
-    if tipo_pedido not in VALID_TIPOS:
-        tipo_pedido = None
-
-    raw_assignee_ids = data.get("assignee_ids")
-    assignee_ids: list[int] = []
-    if isinstance(raw_assignee_ids, list):
-        for value in raw_assignee_ids:
-            try:
-                assignee_ids.append(int(value))
-            except (TypeError, ValueError):
-                continue
-
-    is_valid, canonical_responsavel, invalid_names = _validate_task_responsavel(
-        project, (data.get("responsavel") or "").strip()
-    )
-    if not is_valid:
-        return fail(
-            _format_invalid_responsavel_message(invalid_names),
-            status=422,
-            code="validation",
-        )
+    data, refusal = resolve_task_creation(body)
+    if refusal is not None:
+        return fail(refusal.message, status=refusal.status, code=refusal.code)
 
     try:
-        max_ordem = (
-            db.session.query(db.func.max(Task.ordem))
-            .filter(
-                Task.project_id == (project.id if project else None),
-                Task.is_archived.is_(False),
-            )
-            .scalar()
-            or 0
-        )
-        task = Task(
-            descricao=descricao,
-            status=status,
-            responsavel=canonical_responsavel or None,
-            prioridade=prioridade,
-            tipo_pedido=tipo_pedido,
-            project_id=project.id if project else None,
-            etapa_id=etapa.id if etapa else None,
-            created_by_id=g.user.id,
-            ordem=max_ordem + 1,
-        )
-        db.session.add(task)
-        db.session.flush()
-
-        from ..tasks.constants import _preview_text, _task_status_label
-        from ..tasks.notifications import notify_assignee_change
-        from ..tasks.queries import set_task_assignees
-
-        # Responsáveis múltiplos do quick-add: valida contra os candidatos com
-        # acesso ao projeto e notifica os adicionados (abaixo, antes do commit).
-        allowed_assignee_ids = {
-            user.id for user in _get_assignable_users_for_project(project)
-        }
-        desired_assignees = [uid for uid in assignee_ids if uid in allowed_assignee_ids]
-        added_assignees, removed_assignees = set_task_assignees(task, desired_assignees)
-
-        notify_task_event(
-            task,
-            actor_user_id=g.user.id,
-            event_type="task_created",
-            title="Nova tarefa",
-            message=(
-                f'{g.user.name} criou a tarefa "{_preview_text(task.descricao, 90)}" '
-                f"com status {_task_status_label(task.status)}."
-            ),
-        )
-        if task.responsavel:
-            notify_task_assignment_change(
-                task,
-                task,
-                g.user.id,
-                old_responsavel=None,
-                new_responsavel=task.responsavel,
-            )
-        notify_assignee_change(task, added_assignees, removed_assignees)
+        task = create_task_record(data, author=g.user)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
         return fail_internal(exc, "adicionar tarefa")
 
-    return ok(_stage_card_payload(task))
-
-
-def _stage_card_payload(task: Task) -> dict[str, Any]:
-    """Card canônico + campos legados (``_serialize_task_payload``) num só payload.
-
-    O composer/quick-add precisa do card (``serialize_task_card`` — base da board
-    store) e dos campos extras de contexto de projeto/etapa que o
-    ``_serialize_task_payload`` legado expõe; mesclamos ambos para o front
-    reconciliar sem duas chamadas.
-    """
-    card = serialize_task_card(task)
-    legacy = _serialize_task_payload(task)
-    card.update(
-        {
-            "etapa_descricao": legacy["etapa_descricao"],
-            "project_titulo": legacy["project_titulo"],
-            "project_orgao_sigla": legacy["project_orgao_sigla"],
-            "comments_count": legacy["comments_count"],
-            "anexos_count": legacy["anexos_count"],
-        }
+    card = serialize_task_card(
+        task, with_manage_permissions=True, with_context_labels=True
     )
-    card["permissions"]["can_delete"] = legacy["can_delete"]
-    card["permissions"]["is_author"] = legacy["is_author"]
-    return {"task": card}
+    return ok({"task": card})
 
 
 @main_bp.route("/api/tarefas/<int:task_id>/excluir", methods=["POST"])

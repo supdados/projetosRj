@@ -19,6 +19,7 @@
 	import { base } from '$app/paths';
 	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
 	import type { BarraEtapa, CronogramaEtapa, CronogramaProjeto } from '$lib/types/collections';
+	import { formatIsoDatePartsBR } from '$lib/utils/dateFormat';
 
 	const { projetos }: { projetos: CronogramaProjeto[] } = $props();
 
@@ -125,16 +126,11 @@
 	);
 	const hojeLeft = $derived(`calc(280px + (100% - 280px) * ${(hojePct / 100).toFixed(4)})`);
 
-	function formatBr(iso: string): string {
-		const [ano, mes, dia] = iso.split('-');
-		return `${dia}/${mes}/${ano}`;
-	}
-
 	function periodoEtapa(etapa: CronogramaEtapa): string {
 		if (etapa.data_inicio && etapa.data_fim) {
-			return `${formatBr(etapa.data_inicio)}–${formatBr(etapa.data_fim)}`;
+			return `${formatIsoDatePartsBR(etapa.data_inicio)}–${formatIsoDatePartsBR(etapa.data_fim)}`;
 		}
-		return formatBr((etapa.data_fim ?? etapa.data_inicio) as string);
+		return formatIsoDatePartsBR(etapa.data_fim ?? etapa.data_inicio);
 	}
 
 	interface BarraRender {

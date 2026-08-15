@@ -1,13 +1,13 @@
-import datetime
 from typing import Any, Optional
 
 from flask import g, request
 from sqlalchemy import and_, or_
 
-from models import Etapa, Project, Task, db
+from models import Project, Task, db
 
 from .blueprint import main_bp
 from .decorators import login_required
+from services.atraso import contar_projetos_atrasados
 from services.authorization import project_visibility_criterion
 
 from .orgao_scope import (
@@ -79,24 +79,10 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
     count_finalizado = count_projects_for_user(Project.status == "Finalizado")
     num_projects = count_projects_for_user()
 
-    data_atual = datetime.date.today()
-    projetos_em_atraso = 0
-
     projetos_vigentes_query = apply_project_scope(
         Project.query.filter(Project.status == "Vigente")
     )
-
-    for projeto in projetos_vigentes_query.all():
-        if (
-            Etapa.query.filter(
-                Etapa.project_id == projeto.id,
-                Etapa.done == False,
-                Etapa.entry_type != "google_meeting",
-                Etapa.data_fim < data_atual,
-            ).count()
-            > 0
-        ):
-            projetos_em_atraso += 1
+    projetos_em_atraso = contar_projetos_atrasados(projetos_vigentes_query)
 
     objetivos, _, _ = get_goal_catalog_context()
 

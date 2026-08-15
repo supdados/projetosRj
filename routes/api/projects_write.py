@@ -41,7 +41,6 @@ from ..blueprint import main_bp
 from ..projects.crud import OrgaoErrorCode, _resolve_orgao_from_form
 from ..shared import log_project_action
 from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
-from ..tasks.permissions import task_permission_flags
 from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
@@ -337,19 +336,11 @@ def api_catalogo_objetivos() -> Response | tuple[Response, int]:
 
 
 def _stage_task_card(task: Task) -> dict[str, Any]:
-    """Card de tarefa de etapa, acrescentando contadores e flags completos.
+    """Card de tarefa de etapa com ``can_delete``/``is_author`` (úteis ao quick-add).
 
-    Reusa ``serialize_task_card`` e enriquece com ``comments_count``/
-    ``anexos_count``/``can_delete``/``is_author`` (úteis ao quick-add), derivados
-    de ``task_permission_flags`` (mesma fonte autoritativa).
+    Contadores (``comments_count``/``anexos_count``) já vêm do card canônico.
     """
-    card = serialize_task_card(task)
-    flags = task_permission_flags(task)
-    card["comments_count"] = len(task.comments)
-    card["anexos_count"] = len(task.anexos)
-    card["permissions"]["can_delete"] = bool(flags["can_delete"])
-    card["permissions"]["is_author"] = bool(flags["is_author"])
-    return card
+    return serialize_task_card(task, with_manage_permissions=True)
 
 
 @main_bp.route(

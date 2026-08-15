@@ -15,9 +15,6 @@ from routes.tasks.constants import (
     _normalize_responsavel_value,
     _split_responsavel_names,
 )
-from routes.tasks.permissions import (
-    task_permission_flags,
-)
 from services.authorization import (
     ACCESS_FORBIDDEN,
     ACCESS_NOT_FOUND,
@@ -189,39 +186,6 @@ def _resolve_responsavel_for_edit(task, incoming_raw_value, project):
     if incoming_normalized == current_normalized:
         return True, (task.responsavel or ""), []
     return _validate_task_responsavel(project, incoming_raw_value)
-
-
-def _serialize_task_payload(task):
-    project = task.project
-    project_id = project.id if project else None
-    etapa = task.etapa
-    permission_flags = task_permission_flags(task)
-    return {
-        "id": task.id,
-        "descricao": task.descricao,
-        "status": task.status,
-        "responsavel": task.responsavel or "",
-        "prioridade": task.prioridade or "",
-        "tipo_pedido": task.tipo_pedido or "",
-        "task_id": task.id,
-        "task_titulo": task.descricao,
-        "project_id": project_id,
-        "project_titulo": project.titulo if project else "Sem projeto",
-        "project_orgao_sigla": (
-            (project.orgao_ref.sigla if project and project.orgao_ref else "")
-            if project
-            else ""
-        ),
-        "project_value": str(project_id) if project_id else "sem_projeto",
-        "etapa_id": etapa.id if etapa else None,
-        "etapa_descricao": etapa.descricao if etapa else "",
-        "etapa_value": str(etapa.id) if etapa else "sem_etapa",
-        "comments_count": len(task.comments),
-        "anexos_count": len(task.anexos),
-        "can_delete": permission_flags["can_delete"],
-        "can_finalize": permission_flags["can_finalize"],
-        "is_author": permission_flags["is_author"],
-    }
 
 
 def _get_safe_next_url():

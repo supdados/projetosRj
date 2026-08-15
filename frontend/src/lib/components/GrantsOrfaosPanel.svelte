@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { fetchGrantsOrfaos } from '$lib/api/adminReports';
 	import type { GrantOrfao, GrantOrfaoMotivo } from '$lib/types/adminReports';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import StateBanner from './StateBanner.svelte';
 
 	let grants = $state<GrantOrfao[]>([]);
@@ -16,18 +17,6 @@
 		concedente_removido: 'Concedente removido',
 		concedente_sem_gestao: 'Concedente sem gestão'
 	};
-
-	function isoToBr(iso: string | null): string {
-		if (!iso) return '—';
-		const d = new Date(iso);
-		if (Number.isNaN(d.getTime())) return '—';
-		return d.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
 
 	onMount(() => {
 		const controller = new AbortController();
@@ -92,8 +81,8 @@
 									{MOTIVO_LABEL[grant.motivo]}
 								</span>
 							</td>
-							<td class="whitespace-nowrap px-3 py-2 align-middle text-text-secondary">{isoToBr(grant.created_at)}</td>
-							<td class="whitespace-nowrap px-3 py-2 align-middle text-text-secondary">{isoToBr(grant.expires_at)}</td>
+							<td class="whitespace-nowrap px-3 py-2 align-middle text-text-secondary">{formatIsoDateBR(grant.created_at, '—')}</td>
+							<td class="whitespace-nowrap px-3 py-2 align-middle text-text-secondary">{formatIsoDateBR(grant.expires_at, '—')}</td>
 						</tr>
 					{/each}
 				</tbody>

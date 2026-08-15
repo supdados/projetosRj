@@ -28,6 +28,7 @@
 		EtapaResponsavelArea
 	} from '$lib/types/projectDetail';
 	import { dropStagePinningMeetings, moveStageSkippingMeetings } from '$lib/utils/stageReorder';
+	import { formatIsoDatePartsBR } from '$lib/utils/dateFormat';
 	import '$lib/styles/stage-chips.css';
 
 	interface FieldState {
@@ -362,13 +363,6 @@
 		composerDateField = null;
 	}
 
-	/** dd/mm/aaaa para exibição no trigger do composer; ISO fica no draft. */
-	function composerDateLabel(iso: string): string {
-		if (!iso) return '';
-		const [y, m, d] = iso.split('-');
-		return `${d}/${m}/${y}`;
-	}
-
 	const composerStatusState = $derived(draft.done ? 'done' : draft.iniciada ? 'started' : 'idle');
 	const composerStatusLabel = $derived(
 		composerStatusState === 'done'
@@ -687,7 +681,7 @@
 									class="composer-input composer-date-trigger"
 									class:composer-date-trigger--empty={!draft.data_inicio}
 								>
-									{composerDateLabel(draft.data_inicio) || 'Sem data'}
+									{formatIsoDatePartsBR(draft.data_inicio) || 'Sem data'}
 								</button>
 								{#if composerDateField === 'data_inicio' && composerDateAnchors.data_inicio}
 									<DatePickerPanel
@@ -714,7 +708,7 @@
 									class="composer-input composer-date-trigger"
 									class:composer-date-trigger--empty={!draft.data_fim}
 								>
-									{composerDateLabel(draft.data_fim) || 'Sem data'}
+									{formatIsoDatePartsBR(draft.data_fim) || 'Sem data'}
 								</button>
 								{#if composerDateField === 'data_fim' && composerDateAnchors.data_fim}
 									<DatePickerPanel

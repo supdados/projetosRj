@@ -36,6 +36,7 @@
 	import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 	import type { Project } from '$lib/types/entities';
 	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
+	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
@@ -702,19 +703,6 @@
 		return `${base}/projetos/${project.id}?edit=true`;
 	}
 
-	/** Formata uma data ISO em pt-BR; vazio vira travessão. */
-	function formatDateBr(iso: string | null): string {
-		if (!iso) return '—';
-		const parsed = new Date(iso);
-		if (Number.isNaN(parsed.getTime())) return '—';
-		return parsed.toLocaleDateString('pt-BR', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-			timeZone: 'UTC'
-		});
-	}
-
 	/** Tom do badge de prioridade conforme a severidade (paridade list.css). */
 	function priorityTone(
 		prioridade: string | null
@@ -1336,7 +1324,7 @@
 									>
 										{#if project.data_inicio_projeto}
 											<time datetime={project.data_inicio_projeto}>
-												{formatDateBr(project.data_inicio_projeto)}
+												{formatIsoDateBR(project.data_inicio_projeto, '—')}
 											</time>
 										{:else}
 											<span class="italic text-text-muted">—</span>
@@ -1347,7 +1335,7 @@
 									>
 										{#if project.data_fim_projeto}
 											<time datetime={project.data_fim_projeto}>
-												{formatDateBr(project.data_fim_projeto)}
+												{formatIsoDateBR(project.data_fim_projeto, '—')}
 											</time>
 										{:else}
 											<span class="italic text-text-muted">—</span>

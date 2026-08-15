@@ -3,7 +3,7 @@ import datetime
 import io
 from collections import defaultdict
 
-from sqlalchemy import and_, func, literal, or_
+from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 
 from flask import (
@@ -39,9 +39,9 @@ from routes.orgao_scope import (
     scoped_orgao_options,
     user_can_access_project,
 )
+from services.atraso import etapa_esta_vencida, hoje_utc, projeto_atrasado_criterion
 from services.authorization import project_visibility_criterion
 from services.etapa_positions import build_etapa_position_map
-from services.etapa_responsaveis import split_responsavel_legado
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
@@ -133,7 +133,8 @@ def build_projects_list_context(
         selected_status: Filtro de status; o chamador define o default "Vigente"
             (mantido aqui apenas como filtro, sem reescrever o default).
         selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
-        selected_atraso: "atrasado" | "no_prazo" | "" (filtro aplicado em Python).
+        selected_atraso: "atrasado" | "no_prazo" | "" (critério único de
+            ``services/atraso.py``, aplicado em SQL sobre projetos vigentes).
         selected_special_project: "ABEP" | "TCE" | "Fórum de simplificação" | "" .
         selected_delivery_type: Tipo de entrega (ou "").
         selected_abep_indicator: Indicador ABEP (normalizado internamente).
@@ -205,55 +206,42 @@ def build_projects_list_context(
             else text_filters
         )
 
-    # Aplicar filtros de DB antes de filtrar por atraso (que é feito em Python)
-    projects_after_db_filters = query.order_by(Project.id).all()
+    if selected_atraso in ("atrasado", "no_prazo"):
+        # Atraso só é definido para projetos vigentes (semântica preservada).
+        atrasado = projeto_atrasado_criterion()
+        query = query.filter(Project.status == "Vigente")
+        query = query.filter(atrasado if selected_atraso == "atrasado" else ~atrasado)
+    elif selected_atraso:
+        # Valor desconhecido preservava lista vazia na versão em Python.
+        query = query.filter(db.false())
 
-    # Filtro de Atraso (aplicado em Python)
-    if selected_atraso and selected_atraso != "":
-        data_atual = datetime.date.today()
-        filtered_by_delay = []
-        for projeto in projects_after_db_filters:
-            if (
-                projeto.status == "Vigente"
-            ):  # Apenas projetos vigentes são considerados para "atraso" ou "no prazo"
-                etapas_atrasadas_count = Etapa.query.filter(
-                    Etapa.project_id == projeto.id,
-                    Etapa.done == False,
-                    Etapa.entry_type != "google_meeting",
-                    Etapa.data_fim < data_atual,
-                ).count()
-                if selected_atraso == "atrasado" and etapas_atrasadas_count > 0:
-                    filtered_by_delay.append(projeto)
-                elif selected_atraso == "no_prazo" and etapas_atrasadas_count == 0:
-                    filtered_by_delay.append(projeto)
-        all_projects_filtered = filtered_by_delay
-    else:
-        all_projects_filtered = projects_after_db_filters
-
-    # Aplicar paginação manualmente (já que alguns filtros são em Python)
-    total_projects = len(all_projects_filtered)
+    total_projects = query.count()
     total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
 
-    # Clampar page fora do intervalo válido (evita slice negativo com page<=0)
+    # Clampar page fora do intervalo válido (evita offset negativo com page<=0)
     if total_pages == 0:
         page = 1
     else:
         page = max(1, min(page or 1, total_pages))
 
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-
-    projects_paginated = all_projects_filtered[start_idx:end_idx]
+    projects_paginated = (
+        query.order_by(Project.id).offset((page - 1) * per_page).limit(per_page).all()
+    )
 
     options_query = Project.query
     if not g.user.is_admin:
         options_query = options_query.filter(project_visibility_criterion(g.user))
 
-    scoped_option_projects = options_query.all()
     priorities_options = sorted(
-        {p.prioridade for p in scoped_option_projects if p.prioridade}
+        valor
+        for (valor,) in options_query.with_entities(Project.prioridade).distinct()
+        if valor
     )
-    statuses_options = sorted({p.status for p in scoped_option_projects if p.status})
+    statuses_options = sorted(
+        valor
+        for (valor,) in options_query.with_entities(Project.status).distinct()
+        if valor
+    )
     atrasos_options = [("no_prazo", "No prazo"), ("atrasado", "Atrasado")]
     objetivos, _, _ = (
         get_goal_catalog_context()
@@ -361,34 +349,21 @@ def _etapas_abertas_criterios(project_ids):
 def _build_responsaveis_options(project_ids):
     """Rótulos individuais para o filtro de responsável da tela de pendentes.
 
-    Uma etapa com várias áreas guarda "SUBEXE, COODADOS, COOACES" no espelho
-    legado ``Etapa.responsavel``; a fonte da verdade é a N:N ``EtapaResponsavel``.
-    Cada área vira UMA opção — a string inteira nunca é oferecida. Etapas antigas,
-    sem linhas na N:N, entram pelo espelho já quebrado em itens.
+    SELECT DISTINCT direto na N:N ``EtapaResponsavel`` (fonte da verdade desde
+    o backfill da Sprint 3.1) — cada área vira UMA opção, nunca a string
+    concatenada do espelho legado.
 
     Exemplo:
         >>> _build_responsaveis_options([1])
         ['COOACES', 'COODADOS', 'SUBEXE']
     """
-    criterios = _etapas_abertas_criterios(project_ids)
     rotulos = (
         db.session.query(EtapaResponsavel.label)
         .join(Etapa, Etapa.id == EtapaResponsavel.etapa_id)
-        .filter(*criterios)
+        .filter(*_etapas_abertas_criterios(project_ids))
         .distinct()
         .all()
     )
-    legado = (
-        Etapa.query.filter(
-            *criterios,
-            Etapa.responsavel.isnot(None),
-            ~Etapa.responsaveis.any(),
-        )
-        .with_entities(Etapa.responsavel)
-        .distinct()
-        .all()
-    )
-
     # Dedupe por casefold: o DISTINCT roda no banco ANTES do strip ("SUPIM" e
     # "SUPIM " são linhas distintas no SQL), e chave duplicada derruba o {#each}
     # do filtro na SPA (each_key_duplicate).
@@ -397,35 +372,17 @@ def _build_responsaveis_options(project_ids):
         nome = " ".join((rotulo or "").split())
         if nome:
             unicos.setdefault(nome.casefold(), nome)
-    for (mirror,) in legado:
-        for nome in split_responsavel_legado(mirror):
-            unicos.setdefault(nome.casefold(), nome)
     return sorted(unicos.values(), key=lambda value: value.casefold())
 
 
 def _responsavel_criterion(nome):
-    """Casa etapas cuja área responsável é EXATAMENTE ``nome``.
+    """Casa etapas cuja área responsável na N:N é EXATAMENTE ``nome``.
 
-    Substring não serve: "COO" casaria "COODADOS", e o espelho legado concatena
-    as áreas com vírgula. Na N:N a comparação é direta; no legado o LIKE é
-    ancorado nos separadores da própria string normalizada.
+    Substring não serve: "COO" casaria "COODADOS". Comparação direta no label
+    da N:N — o espelho legado saiu do filtro com o backfill da Sprint 3.1.
     """
     alvo = " ".join(nome.split()).casefold()
-    estruturado = Etapa.responsaveis.any(
-        func.lower(func.trim(EtapaResponsavel.label)) == alvo
-    )
-    mirror = func.replace(
-        func.lower(
-            literal(",").concat(func.coalesce(Etapa.responsavel, "")).concat(",")
-        ),
-        " ",
-        "",
-    )
-    legado = and_(
-        ~Etapa.responsaveis.any(),
-        mirror.like(f"%,{alvo.replace(' ', '')},%"),
-    )
-    return or_(estruturado, legado)
+    return Etapa.responsaveis.any(func.lower(func.trim(EtapaResponsavel.label)) == alvo)
 
 
 def build_projetos_pendentes_context(
@@ -472,25 +429,23 @@ def build_projetos_pendentes_context(
     if filtro_periodo not in valid_periods:
         filtro_periodo = "atrasados"
 
-    data_atual = datetime.date.today()
+    data_atual = hoje_utc()
     data_7_dias = data_atual + datetime.timedelta(days=7)
     data_14_dias = data_atual + datetime.timedelta(days=14)
     data_21_dias = data_atual + datetime.timedelta(days=21)
 
-    def resolve_reference_date(etapa):
-        return etapa.data_inicio if etapa.data_inicio else etapa.data_fim
-
     def classify_bucket(etapa):
-        reference_date = resolve_reference_date(etapa)
-        if not reference_date:
+        # Decisão de produto: buckets classificam por data_fim (services/atraso.py);
+        # data_inicio saiu do critério.
+        if etapa.data_fim is None:
             return "sem_data"
-        if reference_date < data_atual:
+        if etapa_esta_vencida(etapa, data_atual):
             return "atrasada"
-        if reference_date <= data_7_dias:
+        if etapa.data_fim <= data_7_dias:
             return "7dias"
-        if reference_date <= data_14_dias:
+        if etapa.data_fim <= data_14_dias:
             return "14dias"
-        if reference_date <= data_21_dias:
+        if etapa.data_fim <= data_21_dias:
             return "21dias"
         return "futuro"
 
@@ -693,11 +648,9 @@ def build_projetos_pendentes_context(
 
             if bucket == "atrasada":
                 counts["qtd_atrasadas"] += 1
-                reference_date = resolve_reference_date(etapa)
-                if reference_date:
-                    overdue_days = (data_atual - reference_date).days
-                    if overdue_days > max_overdue_days:
-                        max_overdue_days = overdue_days
+                overdue_days = (data_atual - etapa.data_fim).days
+                if overdue_days > max_overdue_days:
+                    max_overdue_days = overdue_days
             elif bucket == "7dias":
                 counts["bucket_7dias"] += 1
             elif bucket == "14dias":

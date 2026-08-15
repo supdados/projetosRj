@@ -15,7 +15,7 @@ import type { TaskAssignee } from './tasks';
 /**
  * Tarefa recente do Dashboard: card canônico + responsáveis vinculados
  * (`assignees`) + indicadores de comentários/anexos (servidos por
- * `_serialize_recent_task`/`serialize_task_card` no backend). Usado nas linhas de
+ * `serialize_task_card` no backend). Usado nas linhas de
  * "Recentes" do painel de tarefas.
  */
 export interface DashboardRecentTask extends Task {

@@ -9,8 +9,8 @@ re-exports finos para o código legado que ainda importa de lá.
 
 As funções de cálculo de dias úteis (``_add_business_days``,
 ``_normalize_to_business_day``, ``_business_days_between``) são PURAS. As de
-ordem/serialização (``_next_etapa_order``, ``_serialize_etapa_payload``) tocam o
-ORM mas não dependem de ``flask`` request/blueprint.
+ordem/reunião (``_next_etapa_order``, ``meeting_payload_block``) tocam o ORM mas
+não dependem de ``flask`` request/blueprint.
 """
 
 import datetime
@@ -96,40 +96,12 @@ def _next_etapa_order(project_id):
     return (ultima_etapa.ordem + 1) if ultima_etapa else 0
 
 
-def _serialize_etapa_payload(etapa, *, connection=None):
-    payload = {
-        "id": etapa.id,
-        "descricao": etapa.descricao,
-        "comentarios": etapa.comentarios or "",
-        "responsavel": etapa.responsavel or "",
-        "data_inicio": (
-            etapa.data_inicio.strftime("%Y-%m-%d") if etapa.data_inicio else ""
-        ),
-        "data_inicio_display": (
-            etapa.data_inicio.strftime("%d/%m/%Y") if etapa.data_inicio else "Sem data"
-        ),
-        "data_fim": etapa.data_fim.strftime("%Y-%m-%d") if etapa.data_fim else "",
-        "data_fim_display": (
-            etapa.data_fim.strftime("%d/%m/%Y") if etapa.data_fim else "Sem data"
-        ),
-        "iniciada": bool(etapa.iniciada),
-        "done": bool(etapa.done),
-        "ordem": int(etapa.ordem or 0),
-        "entry_type": etapa.entry_type or "manual",
-    }
-
-    meeting_block = meeting_payload_block(etapa, connection)
-    if meeting_block is not None:
-        payload["meeting"] = meeting_block
-    return payload
-
-
 def meeting_payload_block(etapa, connection):
     """Bloco read-only da reunião Google de uma etapa (ou ``None``).
 
-    Fonte ÚNICA de verdade do payload de reunião usado tanto pelo serializer
-    legado (``_serialize_etapa_payload``) quanto pelo serializer do Detalhe na
-    SPA (``serialize_etapa_detail``). NUNCA expõe tokens OAuth — apenas o e-mail
+    Fonte ÚNICA de verdade do payload de reunião, consumida pelo serializador
+    único de etapa (``routes/api/etapa_payload.py``) — GET do detalhe, mutações
+    de etapa e mutações de reunião. NUNCA expõe tokens OAuth — apenas o e-mail
     do dono já público no evento.
 
     Args:

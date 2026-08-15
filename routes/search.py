@@ -18,7 +18,7 @@ from math import ceil
 
 from flask import g, jsonify, request
 from sqlalchemy import and_, case, func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from models import CalendarEvent, Etapa, EtapaResponsavel, Project, Task, db
 from services.authorization import project_visibility_criterion
@@ -118,9 +118,10 @@ def _stage_responsavel_search_criterion(search_pattern: str):
     """Casa etapas cujo responsável contém o termo, priorizando a N:N.
 
     O espelho ``Etapa.responsavel`` é truncado em 100 chars, então uma etapa com
-    muitas áreas some da busca se só ele for consultado. Mesma precedência de
-    ``routes/projects/views.py::_responsavel_criterion`` (estruturado OU espelho
-    quando não há linhas N:N) — unificar os dois na Sprint 3.1.
+    muitas áreas some da busca se só ele for consultado. O fallback do espelho
+    cobre bancos ainda não backfillados
+    (scripts/migrations/backfill_etapa_responsaveis.py roda no deploy); quando o
+    backfill rodar em produção, este critério vira N:N-only.
     """
     estruturado = Etapa.responsaveis.any(EtapaResponsavel.label.ilike(search_pattern))
     legado = and_(~Etapa.responsaveis.any(), Etapa.responsavel.ilike(search_pattern))
@@ -131,8 +132,8 @@ def _stage_search_query(term: str, user, scope: _SearchScope):
     search_pattern = f"%{term}%"
     stage_query = (
         Etapa.query.join(Project, Etapa.project_id == Project.id)
-        .options(joinedload(Etapa.project))
-        .filter(
+        # selectinload: o serializer deriva o responsável da N:N (responsavel_display).
+        .options(joinedload(Etapa.project), selectinload(Etapa.responsaveis)).filter(
             or_(
                 Etapa.descricao.ilike(search_pattern),
                 Etapa.comentarios.ilike(search_pattern),
