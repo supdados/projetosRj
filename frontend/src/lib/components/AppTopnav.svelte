@@ -26,6 +26,7 @@
 	import AdminMenuIcon, { type AdminIconKind } from '$lib/components/AdminMenuIcon.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import { APP_ICONS, type AppIconId } from '$lib/icons/appIcons';
+	import { CALENDAR_ENABLED } from '$lib/config/features';
 	import type { User } from '$lib/types/entities';
 	import type { Notificacao } from '$lib/types/notifications';
 
@@ -36,14 +37,21 @@
 	let { user }: Props = $props();
 
 	// Ordem do v4.5 (sem item "Busca" — a busca virou o campo live a direita).
-	const navLinks: { label: string; path: string; kind: NavIconKind }[] = [
+	const allNavLinks: {
+		label: string;
+		path: string;
+		kind: NavIconKind;
+		enabled?: boolean;
+	}[] = [
 		{ label: 'Início', path: '/dashboard', kind: 'inicio' },
 		{ label: 'Projetos', path: '/projetos', kind: 'projetos' },
 		{ label: 'Coleções', path: '/colecoes', kind: 'colecoes' },
 		{ label: 'Pendentes', path: '/projetos/pendentes', kind: 'pendentes' },
 		{ label: 'Tarefas', path: '/tarefas', kind: 'tarefas' },
-		{ label: 'Calendário', path: '/calendarios', kind: 'calendario' }
+		{ label: 'Calendário', path: '/calendarios', kind: 'calendario', enabled: CALENDAR_ENABLED }
 	];
+
+	const navLinks = allNavLinks.filter((link) => link.enabled !== false);
 
 	// Indicador unico (pilula branca) que DESLIZA entre os itens da nav. Um so
 	// elemento persistente, posicionado por transform+width medindo o <a> ativo —

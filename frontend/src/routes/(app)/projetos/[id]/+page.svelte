@@ -89,6 +89,7 @@
 	} from '$lib/utils/accessErrorMessages';
 	import MeetingDisplay from '$lib/components/MeetingDisplay.svelte';
 	import CalendarEventModal from '$lib/components/CalendarEventModal.svelte';
+	import { CALENDAR_ENABLED } from '$lib/config/features';
 	import {
 		primeConcludeAudioContext,
 		playConcludeSuccessChime
@@ -1630,14 +1631,16 @@
 						<i class="fas fa-file-import" aria-hidden="true"></i>
 						Importar Modelo
 					</button>
-					<button
-						type="button"
-						onclick={openCreateMeeting}
-						class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						<i class="fab fa-google" aria-hidden="true"></i>
-						Adicionar reunião
-					</button>
+					{#if CALENDAR_ENABLED}
+						<button
+							type="button"
+							onclick={openCreateMeeting}
+							class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						>
+							<i class="fab fa-google" aria-hidden="true"></i>
+							Adicionar reunião
+						</button>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -1669,6 +1672,7 @@
 					<MeetingDisplay
 						meeting={etapa.meeting}
 						busy={meetingDeleting[etapa.id] ?? false}
+						actionsHidden={!CALENDAR_ENABLED}
 						onEdit={() => openEditMeeting(etapa.id)}
 						onDelete={() => void onDeleteMeeting(etapa.id)}
 					/>
@@ -1687,14 +1691,16 @@
 		/>
 
 		<!-- Reunião Google: criar/editar (reusa CalendarEventModal). -->
-		<CalendarEventModal
-			open={meetingModalOpen}
-			event={meetingModalEvent}
-			busy={meetingModalBusy}
-			error={meetingModalError}
-			onSave={onSaveMeeting}
-			onClose={closeMeetingModal}
-		/>
+		{#if CALENDAR_ENABLED}
+			<CalendarEventModal
+				open={meetingModalOpen}
+				event={meetingModalEvent}
+				busy={meetingModalBusy}
+				error={meetingModalError}
+				onSave={onSaveMeeting}
+				onClose={closeMeetingModal}
+			/>
+		{/if}
 
 		<!-- Quick-add de tarefas da etapa (drawer lateral; abre o TaskDrawer por cima) -->
 		{#if quickAddEtapa}

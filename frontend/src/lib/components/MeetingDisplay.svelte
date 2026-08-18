@@ -23,13 +23,15 @@
 		meeting: EtapaMeeting;
 		/** Operação de exclusão em andamento (spinner no botão Apagar). */
 		busy?: boolean;
+		/** Oculta Editar/Apagar (ambos dependem da integração Google). */
+		actionsHidden?: boolean;
 		/** Abre o modal de edição da reunião. */
 		onEdit: () => void;
 		/** Exclui a reunião (a página confirma e chama a API). */
 		onDelete: () => void;
 	}
 
-	let { meeting, busy = false, onEdit, onDelete }: Props = $props();
+	let { meeting, busy = false, actionsHidden = false, onEdit, onDelete }: Props = $props();
 
 	let copied = $state(false);
 	let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -110,7 +112,7 @@
 			</button>
 		{/if}
 
-		{#if meeting.can_manage}
+		{#if meeting.can_manage && !actionsHidden}
 			{#if meeting.can_edit}
 				<button
 					type="button"
@@ -134,7 +136,7 @@
 					/>{/if}
 				{busy ? 'Apagando…' : 'Apagar'}
 			</button>
-		{:else}
+		{:else if !actionsHidden}
 			<span class="inline-flex items-center gap-1 text-sm text-text-muted">
 				<i class="fas fa-lock" aria-hidden="true"></i>
 				Somente a mesma conta Google conectada pode editar ou apagar.

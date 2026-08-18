@@ -8,6 +8,7 @@
 	 * dado antigo instantaneo.
 	 */
 	import Skeleton from '$lib/components/Skeleton.svelte';
+	import { CALENDAR_ENABLED } from '$lib/config/features';
 
 	const stageDescWidths = ['w-4/5', 'w-3/5', 'w-2/3', 'w-1/2', 'w-3/4'];
 </script>
@@ -102,7 +103,9 @@
 	<!-- Acoes (Importar Modelo / Adicionar reuniao). -->
 	<div class="flex flex-wrap items-center justify-end gap-2">
 		<Skeleton class="h-9 w-36 rounded-md" />
-		<Skeleton class="h-9 w-40 rounded-md" />
+		{#if CALENDAR_ENABLED}
+			<Skeleton class="h-9 w-40 rounded-md" />
+		{/if}
 	</div>
 
 	<!-- Tabela de etapas: mesmo cartao/cabecalho de colunas do StageList pronto.
