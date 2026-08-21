@@ -104,8 +104,9 @@ const NON_GET = (method: string): boolean => method.toUpperCase() !== 'GET';
 
 /** True quando o erro indica token CSRF invalido/ausente. */
 function isCsrfFailure(status: number, code: string): boolean {
-	// CSRFProtect responde 400; o backend marca code "validation"/"csrf".
-	return status === 400 && (code === 'csrf' || code === 'validation');
+	// Handler dedicado no backend (routes/api/errors.py::api_csrf_error) marca
+	// code "csrf"; "validation" e erro de dominio e NAO deve ser repetido.
+	return status === 400 && code === 'csrf';
 }
 
 /** Executa uma requisicao (sem logica de retry de CSRF). */

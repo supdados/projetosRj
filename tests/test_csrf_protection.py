@@ -176,3 +176,26 @@ def test_post_com_csrf_header_valido_passa_csrf(csrf_app, csrf_client, url):
         f"O fetch da SPA injeta esse header — deveria passar do CSRF. "
         f"Corpo: {resp.get_data(as_text=True)[:200]}"
     )
+
+
+# ── 4. Envelope: falha de CSRF sob /api/* responde JSON com code "csrf" ───────
+
+
+def test_falha_csrf_em_api_responde_envelope_com_code_csrf(csrf_client):
+    """Falha de CSRF em /api/* vira envelope JSON ``code="csrf"``, não HTML.
+
+    O client.ts só re-busca o token e repete a requisição quando ``code ==
+    "csrf"`` (routes/api/errors.py::api_csrf_error); ``validation`` é erro de
+    domínio e não pode disparar retry (queimava o rate limit em dobro).
+    """
+    resp = csrf_client.post(
+        "/api/conta/senha",
+        content_type="application/json",
+        data="{}",
+    )
+
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body is not None, "Falha de CSRF sob /api/* deve responder JSON, não HTML"
+    assert body["ok"] is False
+    assert body["error"]["code"] == "csrf"

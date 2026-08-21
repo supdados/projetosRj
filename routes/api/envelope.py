@@ -9,6 +9,9 @@ forma uniforme:
 
 Códigos de erro canônicos (``code``):
     "unauthenticated" | "forbidden" | "not_found" | "validation" | "server"
+    Rotas podem usar códigos de domínio além desses quando o cliente precisa
+    distinguir o caso (ex.: "csrf" em ``routes/api/errors.py``,
+    "sugestoes_indisponiveis" em ``routes/api/collection_suggestions.py``).
 
 NÃO ENVELOPAR (exceções deliberadas):
     - ``/webhook`` (``routes/calendars/webhook.py``): responde text/plain cru

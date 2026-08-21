@@ -26,6 +26,7 @@ Registrado via ``from . import errors`` em ``routes/api/__init__.py``.
 from __future__ import annotations
 
 from flask import Response, request
+from flask_wtf.csrf import CSRFError
 from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound
 
 from ..blueprint import main_bp
@@ -88,6 +89,26 @@ def api_method_not_allowed(
     return fail(
         "Método não permitido para este recurso.", status=405, code="validation"
     )
+
+
+@main_bp.app_errorhandler(CSRFError)
+def api_csrf_error(error: CSRFError) -> Response | tuple[Response, int] | CSRFError:
+    """Converte falha de CSRF sob ``/api/*`` no envelope ``fail`` (``code="csrf"``).
+
+    O código dedicado permite ao ``client.ts`` distinguir CSRF expirado (re-busca
+    o token e repete UMA vez) de erro de validação de domínio (``validation``,
+    que não deve ser repetido — repetir queimava o rate limit em dobro). Fora de
+    ``/api/*`` re-ergue o erro original (400 HTML das telas Jinja de auth).
+
+    Args:
+        error: O ``CSRFError`` (400) levantado pelo Flask-WTF.
+
+    Returns:
+        ``fail(..., 400, "csrf")`` para paths ``/api/*``; senão o ``error`` original.
+    """
+    if not _is_api_request():
+        return error
+    return fail("Token CSRF ausente ou expirado.", status=400, code="csrf")
 
 
 @main_bp.app_errorhandler(Exception)
