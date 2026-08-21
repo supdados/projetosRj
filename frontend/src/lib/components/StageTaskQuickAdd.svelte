@@ -40,6 +40,7 @@
 	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import {
 		triggerTaskFinalizeConfetti,
@@ -305,7 +306,7 @@
 				tipo_pedido: addDraft.tipo || null
 			});
 			// Form permanece aberto e focado (Enter salva e abre nova linha); a
-			// lista re-busca e a tarefa entra JÁ ordenada (status, prioridade) —
+			// lista re-busca e a tarefa entra JÁ ordenada (prioridade) —
 			// regra do hub aplicada pelo endpoint, por isso sem scroll automático.
 			addDraft = emptyAddDraft();
 			await loadTasks();
@@ -397,8 +398,9 @@
 	onclick={attemptClose}
 ></div>
 
-<!-- Painel lateral: 880px fixo (fullscreen abaixo disso via min()); a grade
-     interna usa larguras próprias (.stq-compact, min 800px + scroll-x). -->
+<!-- Painel lateral: 1040px fixo (fullscreen abaixo disso via min()) — largura
+     escolhida para a grade interna (.stq-compact, 680px de colunas fixas) caber
+     inteira com a descrição folgada, sem scroll-x. -->
 <div
 	bind:this={panelEl}
 	role="dialog"
@@ -406,8 +408,8 @@
 	aria-labelledby="stage-quick-add-title"
 	tabindex="-1"
 	use:focusTrap
-	transition:fly={{ x: 880, duration: 240, easing: cubicOut, opacity: 1 }}
-	class="stq-panel fixed right-0 top-0 z-modal flex h-full w-[min(880px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
+	transition:fly={{ x: 1040, duration: 240, easing: cubicOut, opacity: 1 }}
+	class="stq-panel fixed right-0 top-0 z-modal flex h-full w-[min(1040px,100vw)] flex-col border-l border-border-subtle bg-surface shadow-[-18px_0_44px_rgba(12,44,74,0.18)]"
 >
 	<header
 		class="flex shrink-0 flex-col gap-3 border-b border-border-subtle bg-surface-elevated px-5 pb-3.5 pt-4"
@@ -570,6 +572,7 @@
 										disabled={addDraft.saving}
 										ariaLabel="Tipo de pedido"
 										size="sm"
+										optionIcon={tipoOptionIcon}
 									/>
 									<SelectMenu
 										options={STATUS_MENU_OPTIONS}
@@ -645,23 +648,34 @@
 	{/if}
 </div>
 
+<!-- Tipo não tem `icon` na régua de ícones (o desenho é o bloco chanfrado do
+	 TaskTipoIcon), então vai por snippet; o gatilho padrão do SelectMenu já
+	 renderiza o `optionIcon` da opção selecionada. -->
+{#snippet tipoOptionIcon(opt: SelectMenuOption)}
+	<span class="flex shrink-0"><TaskTipoIcon tipo={opt.value} size={14} /></span>
+{/snippet}
+
 <style>
 	/* VARIANTE da grade do hub, só neste drawer — a página /tarefas segue com os
 	 * defaults de `.task-hub-grid` (fallbacks `var(--th-col-*, ...)` do app.css).
 	 * Larguras dimensionadas pelo PIOR rótulo de cada SelectMenu (dot + label +
-	 * chevron sem truncar): "Urgente"/"Prioridade" 120px, "Melhoria" 108px,
-	 * "Para validação" 160px. */
+	 * chevron sem truncar): "Urgente"/"Prioridade" 120px, "Melhoria" + ícone de
+	 * tipo 124px, "Para validação" 160px. Responsável no pior caso são 5 círculos
+	 * de 28px sobrepostos em 6px (3 avatares + "+N" + "+") = 120px; Ações medem
+	 * pela LINHA (comentário + anexo com contador + excluir), não pelo form de
+	 * criação, que só tem dois botões. */
 	.stq-compact {
-		--th-col-prio: 128px;
-		--th-col-tipo: 116px;
-		--th-col-status: 168px;
-		--th-col-owner: 128px;
-		--th-col-actions: 84px;
+		--th-col-prio: 120px;
+		--th-col-tipo: 124px;
+		--th-col-status: 160px;
+		--th-col-owner: 120px;
+		--th-col-actions: 96px;
 	}
 	.stq-compact :global(.task-hub-grid) {
-		/* 600px de colunas fixas + gaps + mínimo legível da descrição; abaixo
-		   disso o overflow-x-auto do card assume o scroll. */
-		min-width: 824px;
+		/* 620px de colunas fixas + 36px de gaps + 24px de padding = 680px; +200px
+		   de descrição legível. No painel de 1040px sobra bem mais que isso — o
+		   scroll-x do card só entra em viewport estreita. */
+		min-width: 880px;
 		column-gap: 0.45rem;
 	}
 

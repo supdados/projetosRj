@@ -47,7 +47,7 @@
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
-	import { priorityIconId } from '$lib/utils/taskLabels';
+	import { priorityIconId, prioridadeLabel } from '$lib/utils/taskLabels';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import ProjetosSkeleton from '$lib/components/skeletons/ProjetosSkeleton.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
@@ -319,7 +319,7 @@
 	const priorityMenuOptions = $derived<SelectMenuOption[]>(
 		priorityOptions.map((o) => ({
 			value: o,
-			label: capitalize(o),
+			label: prioridadeLabel(o.toLowerCase()) ?? capitalize(o),
 			dot: `var(--ds-color-priority-${o.toLowerCase()})`,
 			icon: priorityIconId(o.toLowerCase())
 		}))
@@ -1277,7 +1277,7 @@
 												]}"
 											>
 												<StateIcon id={priorityIconId(project.prioridade)} size={16} />
-												{capitalize(project.prioridade)}
+												{prioridadeLabel(project.prioridade?.toLowerCase() ?? null) ?? capitalize(project.prioridade)}
 											</span>
 										{:else}
 											<span class="italic text-text-muted">—</span>

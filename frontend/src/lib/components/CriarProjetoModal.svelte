@@ -1799,7 +1799,7 @@
 											optionIcon={deliveryOptionIcon}
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-6">
+									<div class="flex flex-col gap-1.5 md:col-span-7">
 										<label for="cp-sei" class={labelClass}>Processo SEI-RJ</label>
 										<SeiProcessField
 											fieldId="cp-sei"
@@ -1807,7 +1807,7 @@
 											onSave={(list) => (seiList = list)}
 										/>
 									</div>
-									<div class="flex flex-col gap-1.5 md:col-span-6">
+									<div class="flex flex-col gap-1.5 md:col-span-5">
 										<label for="cp-special" class={labelClass}>Projetos especiais</label>
 										<SelectMenu
 											id="cp-special"

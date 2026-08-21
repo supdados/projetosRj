@@ -104,10 +104,10 @@ def test_flattened_tasks_have_first_of_stage_flags():
     assert flat[2].hub_stage_id == 20
 
 
-def test_tasks_within_stage_are_sorted_by_status():
+def test_status_does_not_change_position_within_stage():
     project = _make_project()
     etapa = FakeEtapa(id=10, descricao="Etapa A", ordem=0)
-    # Mesma prioridade: ordena por status (nao_iniciada → … → finalizada).
+    # Mesma prioridade: status NÃO influencia — a ordem de entrada é mantida.
     tasks = [
         FakeTask(
             id=1, project=project, etapa=etapa, prioridade="alta", status="finalizada"
@@ -130,13 +130,13 @@ def test_tasks_within_stage_are_sorted_by_status():
         ),
     ]
     groups = _group_hub_tasks_by_project(tasks)
-    assert [t.id for t in groups[0]["tasks"]] == [2, 4, 5, 3, 1]
+    assert [t.id for t in groups[0]["tasks"]] == [1, 2, 3, 4, 5]
 
 
-def test_same_status_is_ordered_by_priority():
+def test_tasks_within_stage_are_sorted_by_priority():
     project = _make_project()
     etapa = FakeEtapa(id=10, descricao="Etapa A", ordem=0)
-    # Mesmo status: desempata por prioridade (urgente → alta → media → baixa).
+    # Ordena por prioridade (urgente → alta → media → baixa).
     tasks = [
         FakeTask(
             id=1,
@@ -167,35 +167,35 @@ def test_same_status_is_ordered_by_priority():
     assert [t.id for t in groups[0]["tasks"]] == [2, 4, 3, 1]
 
 
-def test_status_outranks_priority():
+def test_priority_outranks_status():
     project = _make_project()
     etapa = FakeEtapa(id=10, descricao="Etapa A", ordem=0)
-    # Status tem precedência sobre prioridade: nao_iniciada/baixa vem antes de
-    # finalizada/urgente.
+    # Só a prioridade define a posição: finalizada/urgente vem antes de
+    # nao_iniciada/baixa.
     tasks = [
         FakeTask(
             id=1,
             project=project,
             etapa=etapa,
-            status="finalizada",
-            prioridade="urgente",
+            status="nao_iniciada",
+            prioridade="baixa",
         ),
         FakeTask(
             id=2,
             project=project,
             etapa=etapa,
-            status="nao_iniciada",
-            prioridade="baixa",
+            status="finalizada",
+            prioridade="urgente",
         ),
     ]
     groups = _group_hub_tasks_by_project(tasks)
     assert [t.id for t in groups[0]["tasks"]] == [2, 1]
 
 
-def test_same_status_and_priority_preserves_manual_order():
+def test_same_priority_preserves_manual_order():
     project = _make_project()
     etapa = FakeEtapa(id=10, descricao="Etapa A", ordem=0)
-    # Mesmo status e prioridade: a ordem de entrada (Task.ordem) é mantida.
+    # Mesma prioridade: a ordem de entrada (Task.ordem) é mantida.
     tasks = [
         FakeTask(id=7, project=project, etapa=etapa, prioridade="alta"),
         FakeTask(id=3, project=project, etapa=etapa, prioridade="alta"),

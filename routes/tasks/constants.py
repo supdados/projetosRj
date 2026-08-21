@@ -51,13 +51,12 @@ TASK_STATUS_ORDER = (
 )
 
 # Pesos de ordenação reusados pelo hub (lista) e pelo board (kanban). Prioridade
-# é invertida (urgente primeiro); status segue TASK_STATUS_ORDER direto. Valor
-# ausente/desconhecido recebe o maior peso (vai por último). Fonte única para
-# evitar duplicar o mapeamento entre routes/tasks/hub.py e routes/api/board.py.
+# é invertida (urgente primeiro); valor ausente/desconhecido recebe o maior peso
+# (vai por último). Fonte única para evitar duplicar o mapeamento entre
+# routes/tasks/hub.py, routes/api/board.py e routes/api/projects_write.py.
 _PRIORITY_SORT_RANK = {
     prioridade: rank for rank, prioridade in enumerate(reversed(TASK_PRIORIDADE_ORDER))
 }
-_STATUS_SORT_RANK = {status: rank for rank, status in enumerate(TASK_STATUS_ORDER)}
 
 
 def task_priority_sort_rank(prioridade) -> int:
@@ -67,15 +66,6 @@ def task_priority_sort_rank(prioridade) -> int:
     Exemplo: ``task_priority_sort_rank("urgente")`` → 0; ``task_priority_sort_rank(None)`` → 4.
     """
     return _PRIORITY_SORT_RANK.get(prioridade, len(TASK_PRIORIDADE_ORDER))
-
-
-def task_status_sort_rank(status) -> int:
-    """Peso de ordenação por status seguindo TASK_STATUS_ORDER (0=nao_iniciada).
-
-    Status ausente/desconhecido recebe o maior peso. Exemplo:
-    ``task_status_sort_rank("finalizada")`` → 4; ``task_status_sort_rank(None)`` → 5.
-    """
-    return _STATUS_SORT_RANK.get(status, len(TASK_STATUS_ORDER))
 
 
 def _get_upload_folder():

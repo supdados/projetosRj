@@ -13,7 +13,7 @@ from services.authorization import project_visibility_criterion
 from routes.tasks.permissions import (
     task_permission_flags as _public_task_permission_flags,
 )
-from routes.tasks.constants import task_priority_sort_rank, task_status_sort_rank
+from routes.tasks.constants import task_priority_sort_rank
 from routes.tasks.queries import (
     _build_visible_tasks_query,
 )
@@ -21,18 +21,15 @@ from routes.tasks.queries import (
 ARCHIVED_TASKS_PER_PAGE = 20
 
 
-def _task_status_priority_rank(task) -> tuple[int, int]:
-    """Chave de ordenação da task DENTRO da etapa: ``(status, prioridade)``.
+def _task_priority_rank(task) -> int:
+    """Chave de ordenação da task DENTRO da etapa: prioridade apenas.
 
-    Ordena primeiro por status (0 = nao_iniciada … 4 = finalizada) e, em empate,
-    por prioridade (0 = urgente … 3 = baixa). A ordem manual (``Task.ordem``)
-    segue como desempate final via sort estável. Exemplo: uma task
-    nao_iniciada/baixa → ``(0, 3)``; uma task finalizada/urgente → ``(4, 0)``.
+    Ordena por prioridade (0 = urgente … 3 = baixa; ausente por último). O
+    status NÃO influencia a posição. A ordem manual (``Task.ordem``) segue como
+    desempate via sort estável. Exemplo: uma task urgente → 0; uma task sem
+    prioridade → 4.
     """
-    return (
-        task_status_sort_rank(task.status),
-        task_priority_sort_rank(task.prioridade),
-    )
+    return task_priority_sort_rank(task.prioridade)
 
 
 _NO_STAGE_BUCKET = {
@@ -169,16 +166,15 @@ def _flatten_stage_tasks_into_group(group, stages):
     """Reordena group['tasks'] para refletir a hierarquia de etapas.
 
     Sem etapa primeiro, depois etapas por ordem natural; tasks dentro de cada
-    etapa são ordenadas por status (nao_iniciada → em_andamento → para_validacao
-    → para_ajustes → finalizada) e, em empate, por prioridade (urgente → alta →
-    media → baixa), com a ordem manual (``Task.ordem``, já refletida na ordem do
-    banco) como desempate final via sort estável. Marca a primeira task de cada
+    etapa são ordenadas apenas por prioridade (urgente → alta → media → baixa,
+    ausente por último), com a ordem manual (``Task.ordem``, já refletida na
+    ordem do banco) como desempate via sort estável. Marca a primeira task de cada
     etapa com ``hub_is_first_of_stage`` — o template usa esse flag para
     renderizar o sub-cabeçalho sem duplicar markup.
     """
     flat = []
     for stage in stages:
-        ordered_tasks = sorted(stage["tasks"], key=_task_status_priority_rank)
+        ordered_tasks = sorted(stage["tasks"], key=_task_priority_rank)
         for index, task in enumerate(ordered_tasks):
             task.hub_stage_id = stage["etapa_id"]
             task.hub_stage_value = stage["etapa_value"]

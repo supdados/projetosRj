@@ -40,7 +40,7 @@ from models import Etapa, Project, Task, db
 from ..blueprint import main_bp
 from ..projects.crud import OrgaoErrorCode, _resolve_orgao_from_form
 from ..shared import log_project_action
-from ..tasks.constants import task_priority_sort_rank, task_status_sort_rank
+from ..tasks.constants import task_priority_sort_rank
 from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_project_card, serialize_task_card
@@ -357,10 +357,10 @@ def api_etapa_tarefas(
     e que a etapa pertence ao projeto.
 
     A ordenação segue a MESMA regra do hub de tarefas
-    (``routes/tasks/hub._task_status_priority_rank``): status primeiro
-    (0=nao_iniciada … 4=finalizada), prioridade no empate (0=urgente …
-    3=baixa) e a ordem manual (``Task.ordem``) como desempate final via sort
-    estável sobre a query já ordenada.
+    (``routes/tasks/hub._task_priority_rank``): apenas prioridade (0=urgente …
+    3=baixa, ausente por último) e a ordem manual (``Task.ordem``) como
+    desempate via sort estável sobre a query já ordenada. O status não
+    influencia a posição.
 
     Returns:
         ``ok({tarefas: [...], total, done})`` (200); 404 projeto inexistente ou
@@ -384,12 +384,7 @@ def api_etapa_tarefas(
         .order_by(Task.ordem.asc(), Task.created_at.asc(), Task.id.asc())
         .all()
     )
-    tarefas.sort(
-        key=lambda task: (
-            task_status_sort_rank(task.status),
-            task_priority_sort_rank(task.prioridade),
-        )
-    )
+    tarefas.sort(key=lambda task: task_priority_sort_rank(task.prioridade))
     done = sum(1 for t in tarefas if t.status == "finalizada")
     return ok(
         {

@@ -20,6 +20,7 @@
 	 */
 	import { base } from '$app/paths';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import { prioridadeLabel } from '$lib/utils/taskLabels';
 	import type { Project, TaskPrioridade } from '$lib/types/entities';
 
 	interface Props {
@@ -46,7 +47,7 @@
 	function prioLabel(prioridade: TaskPrioridade | string | null): string {
 		const k = prioKey(prioridade);
 		if (!k) return '—';
-		return k.charAt(0).toUpperCase() + k.slice(1);
+		return prioridadeLabel(k) ?? k.charAt(0).toUpperCase() + k.slice(1);
 	}
 </script>
 
