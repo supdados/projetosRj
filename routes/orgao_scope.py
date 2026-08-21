@@ -14,9 +14,10 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from flask import g, redirect, request, url_for
-from sqlalchemy import or_
+from sqlalchemy import func, or_
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
-from models import OrgaoUnidade
+from models import OrgaoClosure, OrgaoUnidade, db
 from routes.orgao_tree import get_orgao_ancestors, get_orgao_descendants
 from services.authorization import assignable_orgao_ids
 from services.authorization import (
@@ -26,6 +27,9 @@ from services.authorization import (
     user_can_access_project as _resolve_user_can_access_project,
 )
 
+# Órgão fora da closure ordena por último, nunca vira primary por acidente.
+_SEM_CLOSURE = 10**6
+
 
 def get_user_orgao_subtree_ids(user) -> set[int]:
     """Wrapper de compatibilidade — implementacao em ``services.authorization``."""
@@ -33,21 +37,17 @@ def get_user_orgao_subtree_ids(user) -> set[int]:
 
 
 def sanitize_orgao_filter_for_user(user, selected_orgao_id):
-    """Valida o filtro ?orgao=<id> contra a ARVORE VISIVEL do usuario.
+    """Valida o filtro ?orgao=<id> contra o escopo do usuario.
 
     Retorna ``(orgao_id|None, invalid: bool)``. Invalido quando o id nao esta
-    entre os orgaos VISIVEIS de um nao-admin - nesse caso o caller redireciona
-    (Jinja) ou devolve 422 (API).
+    no escopo de um nao-admin - nesse caso o caller redireciona (Jinja) ou
+    devolve 422 (API).
 
-    O conjunto aceito e a arvore visivel (``get_visible_orgao_tree``: ancestrais
-    + orgao do vinculo + descendentes) — a MESMA fonte que popula os seletores
-    (``get_user_orgao_options``) e a arvore do topnav, onde TODO no e clicavel.
-    Validar so contra a subtree (vinculo + descendentes) rejeitava com 422 a
-    selecao de um ANCESTRAL, que e oferecido como opcao — inconsistencia
-    corrigida aqui. Aceitar um ancestral e seguro: cada consumidor ja clampa a
-    query base a subtree do usuario ANTES de aplicar ``expand_orgao_filter_ids``,
-    entao o filtro por ancestral intersecta de volta para a subtree (sem
-    vazamento de ramos irmaos).
+    ANCESTRAL de vinculo (que a arvore visivel nao oferece mais) e tratado como
+    filtro VAZIO — ``(None, False)`` — em vez de invalido: URL antiga com
+    ``?orgao=<ancestral>`` (bookmark, link compartilhado) carrega sem 422/redirect
+    e mostra o escopo inteiro, coerente com o gatilho "Todas as areas" que o
+    seletor exibe quando o id nao esta entre as opcoes.
     """
     if selected_orgao_id in (None, "", "None"):
         return None, False
@@ -62,9 +62,11 @@ def sanitize_orgao_filter_for_user(user, selected_orgao_id):
         return orgao_id, False
 
     visible_ids = {node["id"] for node in get_visible_orgao_tree(user)}
-    if orgao_id not in visible_ids:
-        return None, True
-    return orgao_id, False
+    if orgao_id in visible_ids:
+        return orgao_id, False
+    if orgao_id in ancestrais_dos_vinculos(_vinculo_orgao_ids(user)):
+        return None, False
+    return None, True
 
 
 def sanitize_orgao_filter_for_current_user(selected_orgao_id):
@@ -113,14 +115,120 @@ def get_user_orgao_siglas(user) -> list[str]:
     return [uo.orgao.sigla for uo in vinculos if uo.orgao and uo.orgao.sigla]
 
 
-def get_user_primary_orgao(user):
-    """Retorna o primeiro vinculo OrgaoUnidade do usuario (ou None)."""
+def _orgaos_vinculados(user) -> dict[int, OrgaoUnidade]:
+    """``{orgao_id: OrgaoUnidade}`` dos vinculos diretos do usuario, sem repeticao."""
     if user is None:
-        return None
+        return {}
     vinculos = getattr(user, "orgaos", None) or []
-    if not vinculos:
-        return None
-    return vinculos[0].orgao
+    return {uo.orgao.id: uo.orgao for uo in vinculos if uo.orgao is not None}
+
+
+def _vinculo_orgao_ids(user) -> set[int]:
+    """IDs dos vinculos diretos — a MESMA fonte de ``_build_role_map``.
+
+    Le ``vinculo.orgao_id`` em vez de ``vinculo.orgao.id``: nao dispara um SELECT
+    por vinculo (N+1) e nao depende do relacionamento estar carregado.
+    """
+    if user is None:
+        return set()
+    return {v.orgao_id for v in (getattr(user, "orgaos", None) or [])}
+
+
+def _profundidade_na_arvore(orgao_ids: set[int]) -> dict[int, int]:
+    """``{orgao_id: distancia ate a raiz}`` pela ``orgao_closure``; ausente = stale."""
+    try:
+        linhas = (
+            db.session.query(OrgaoClosure.descendant_id, func.max(OrgaoClosure.depth))
+            .filter(OrgaoClosure.descendant_id.in_(orgao_ids))
+            .group_by(OrgaoClosure.descendant_id)
+            .all()
+        )
+    except (OperationalError, ProgrammingError):
+        db.session.rollback()
+        return {}
+    return {descendant_id: depth for descendant_id, depth in linhas}
+
+
+def _relacionados_por_closure(
+    orgao_ids: set[int], *, chave, alvo, fallback
+) -> set[int]:
+    """Resolve ancestrais/descendentes de VARIOS orgaos em UMA consulta a closure.
+
+    ``chave``/``alvo`` sao as colunas de ``orgao_closure`` (ancestor/descendant ou
+    o inverso). Orgao sem nenhuma linha na closure cai no ``fallback`` unitario —
+    a closure so e reconstruida pelo sync SIORG, entao orgao criado pela tela de
+    admin (ou por fixture) nao tem linha nenhuma. O proprio orgao volta no
+    conjunto (linha de ``depth=0``) e sai na subtracao feita pelos chamadores.
+    """
+    if not orgao_ids:
+        return set()
+    linhas = _linhas_de_closure(orgao_ids, chave, alvo)
+    relacionados = {alvo_id for _, alvo_id in linhas}
+    for orgao_id in orgao_ids - {chave_id for chave_id, _ in linhas}:
+        relacionados.update(fallback(orgao_id))
+    return relacionados
+
+
+def _linhas_de_closure(orgao_ids: set[int], chave, alvo) -> list[tuple[int, int]]:
+    """Pares da closure, INCLUSIVE ``depth=0``.
+
+    A linha de si mesmo e o que distingue "folha" de "fora da closure": filtrando
+    ``depth > 0`` toda folha caia no fallback e cada vinculo virava duas queries.
+    Trade-off: orgao criado APOS o ultimo rebuild da closure nao cai no fallback
+    (a linha depth=0 do pai existe) e some da arvore — depende do sync SIORG
+    rebuildar a closure a cada criacao (services/siorg_sync.py).
+    """
+    try:
+        return db.session.query(chave, alvo).filter(chave.in_(orgao_ids)).all()
+    except (OperationalError, ProgrammingError):
+        db.session.rollback()
+        return []
+
+
+def ancestrais_dos_vinculos(orgao_ids: set[int]) -> set[int]:
+    """Uniao dos ancestrais de todos os orgaos informados (sem os proprios)."""
+    return (
+        _relacionados_por_closure(
+            orgao_ids,
+            chave=OrgaoClosure.descendant_id,
+            alvo=OrgaoClosure.ancestor_id,
+            fallback=get_orgao_ancestors,
+        )
+        - orgao_ids
+    )
+
+
+def descendentes_dos_vinculos(orgao_ids: set[int]) -> set[int]:
+    """Uniao dos descendentes de todos os orgaos informados (sem os proprios)."""
+    return (
+        _relacionados_por_closure(
+            orgao_ids,
+            chave=OrgaoClosure.ancestor_id,
+            alvo=OrgaoClosure.descendant_id,
+            fallback=get_orgao_descendants,
+        )
+        - orgao_ids
+    )
+
+
+def get_user_primary_orgao(user):
+    """Orgao-ancora do usuario: o vinculo mais alto na arvore (ou None sem vinculo).
+
+    ``User.orgaos`` nao tem ``order_by`` — pegar ``vinculos[0]`` devolvia ordens
+    diferentes em SQLite (rowid) e MySQL (plano por ``ix_user_orgao_user_id``), e
+    um primary errado some com um ramo inteiro do topnav e faz
+    ``sanitize_orgao_filter_for_user`` rejeitar um ``?orgao=`` valido com 422.
+    Criterio: menor profundidade na ``orgao_closure``, desempate por menor id;
+    closure sem resposta cai no menor id. Ex.: vinculos {SETD, SUPDADOS} -> SETD.
+    """
+    candidatos = _orgaos_vinculados(user)
+    if len(candidatos) <= 1:
+        return next(iter(candidatos.values()), None)
+    profundidades = _profundidade_na_arvore(set(candidatos))
+    return min(
+        candidatos.values(),
+        key=lambda orgao: (profundidades.get(orgao.id, _SEM_CLOSURE), orgao.id),
+    )
 
 
 def get_user_orgao_breadcrumb(user) -> list[dict]:
@@ -174,10 +282,15 @@ def get_visible_orgao_tree(user) -> list[dict]:
     """Retorna nos visiveis ao usuario para montar a arvore do seletor.
 
     - admin: todos os orgaos ativos.
-    - nao-admin com vinculo: ancestrais do orgao primario + o orgao + descendentes.
+    - nao-admin: uniao, sobre TODOS os vinculos, de (orgao + descendentes).
+      ANCESTRAIS ficam de fora: aparecer clicavel um orgao acima do escopo
+      (ex.: SETD para quem so acessa SUPDADOS) induzia ao erro — o usuario
+      clicava esperando ver mais e via so o proprio escopo. Sem os ancestrais,
+      ``build_nested_orgao_tree`` promove cada vinculo a raiz (o ``pai_id``
+      nao esta na lista); vinculos em ramos distintos viram multiplas raizes.
     - sem vinculo: lista vazia.
 
-    Cada no: ``{id, sigla, nome, tipo, pai_id, is_user_orgao, is_user_ancestor}``.
+    Cada no: ``{id, sigla, nome, tipo, pai_id, is_user_orgao, is_inactive}``.
     """
     if user is None:
         return []
@@ -200,29 +313,24 @@ def get_visible_orgao_tree(user) -> list[dict]:
                 "tipo": r.tipo,
                 "pai_id": r.pai_id,
                 "is_user_orgao": False,
-                "is_user_ancestor": False,
                 "is_inactive": False,
             }
             for r in rows
         ]
 
-    primary = get_user_primary_orgao(user)
-    if primary is None:
+    vinculo_ids = _vinculo_orgao_ids(user)
+    if not vinculo_ids:
         return []
-    ancestor_ids = set(get_orgao_ancestors(primary.id))
-    descendant_ids = set(get_orgao_descendants(primary.id))
-    visible_ids = ancestor_ids | {primary.id} | descendant_ids
-    # Ancestrais entram sempre (contexto para montar a árvore); descendentes
-    # só se ativos. Antes o filtro `ativo=True` derrubava pais inativos e
-    # gerava nós órfãos no build_nested_orgao_tree. O primary (órgão do user)
-    # também sempre entra — mesmo que tenha sido desativado após o vínculo.
-    always_visible = ancestor_ids | {primary.id}
+    visible_ids = vinculo_ids | descendentes_dos_vinculos(vinculo_ids)
+    # Descendentes só se ativos; os órgãos dos vínculos entram sempre — mesmo
+    # que desativados após o vínculo (é o escopo real do usuário e a raiz do
+    # ramo dele na árvore).
     rows = (
         OrgaoUnidade.query.filter(OrgaoUnidade.id.in_(visible_ids))
         .filter(
             or_(
                 OrgaoUnidade.ativo.is_(True),
-                OrgaoUnidade.id.in_(always_visible),
+                OrgaoUnidade.id.in_(vinculo_ids),
             )
         )
         .order_by(
@@ -237,8 +345,7 @@ def get_visible_orgao_tree(user) -> list[dict]:
             "nome": r.nome,
             "tipo": r.tipo,
             "pai_id": r.pai_id,
-            "is_user_orgao": r.id == primary.id,
-            "is_user_ancestor": r.id in ancestor_ids,
+            "is_user_orgao": r.id in vinculo_ids,
             "is_inactive": not bool(r.ativo),
         }
         for r in rows
@@ -249,17 +356,17 @@ def get_user_orgao_options(user) -> list[dict]:
     """Retorna a subárvore de órgãos visível ao usuário para popular um seletor.
 
     Reusa ``get_visible_orgao_tree`` (escopo server-side: admin vê tudo ativo;
-    não-admin vê ancestrais + órgão + descendentes do vínculo). NÃO reimplementa
-    a lógica de escopo — apenas repassa a árvore visível para que os endpoints
-    JSON (``/api/projetos``, ``/api/tarefas``, ``/api/projetos-pendentes``) a
-    serializem em opções de ``<select>``.
+    não-admin vê órgão + descendentes de todos os vínculos, SEM ancestrais). NÃO
+    reimplementa a lógica de escopo — apenas repassa a árvore visível para que
+    os endpoints JSON (``/api/projetos``, ``/api/tarefas``,
+    ``/api/projetos-pendentes``) a serializem em opções de ``<select>``.
 
     Args:
         user: Instância de ``User`` (ou ``None``).
 
     Returns:
         Lista de nós ``{id, sigla, nome, tipo, pai_id, is_user_orgao,
-        is_user_ancestor, is_inactive}``, vazia quando não há vínculos.
+        is_inactive}``, vazia quando não há vínculos.
     """
     return get_visible_orgao_tree(user)
 

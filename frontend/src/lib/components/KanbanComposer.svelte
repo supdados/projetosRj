@@ -29,6 +29,7 @@
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import type { TaskStatus } from '$lib/utils/taskStatus';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import TaskTipoIcon from '$lib/components/TaskTipoIcon.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import { priorityDotColor, priorityIconId } from '$lib/utils/taskLabels';
@@ -354,6 +355,7 @@
 					size="sm"
 					placeholder="Tipo"
 					ariaLabel="Tipo de pedido"
+					optionIcon={tipoOptionIcon}
 				/>
 			</div>
 		</div>
@@ -391,3 +393,7 @@
 		</div>
 	</form>
 {/if}
+
+{#snippet tipoOptionIcon(opt: SelectMenuOption)}
+	<span class="flex shrink-0"><TaskTipoIcon tipo={opt.value} size={14} /></span>
+{/snippet}

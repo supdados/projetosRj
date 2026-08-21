@@ -180,7 +180,7 @@ def test_orgaos_escopo_returns_nested_tree(client_user):
     for node in data["tree"]:
         assert "children" in node
         assert "is_user_orgao" in node
-        assert "is_user_ancestor" in node
+        assert "is_user_ancestor" not in node
         assert "tipo" in node
 
 

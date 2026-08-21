@@ -4,7 +4,7 @@
 	// Lista global de áreas: uma fetch por sessão de página; erro zera p/ retry.
 	let areasPromise: Promise<AreaOption[]> | null = null;
 
-	/** Candidato: `AreaOption` real ou o nó sintético "Outras" (value -1). */
+	/** Candidato: `AreaOption` real ou o nó sintético "Outras áreas" (value -1). */
 	interface AreaCandidate {
 		value: number;
 		pai_id: number | null;
@@ -16,7 +16,7 @@
 	const OUTRAS: AreaCandidate = {
 		value: -1,
 		pai_id: null,
-		sigla: 'Outras',
+		sigla: 'Outras áreas',
 		nome: 'Área não cadastrada',
 		area_id: null
 	};
@@ -28,7 +28,7 @@
 	 * autofocus filtra a lista achatada (o caminho hierárquico aparece como texto
 	 * secundário, sem árvore navegável) e a seção "Selecionadas" fica fixa no topo
 	 * do painel, imune ao filtro, com remoção em 1 clique. Lista TODAS as áreas
-	 * (sem filtro de escopo do usuário) + "Outras" (area_id null) por último.
+	 * (sem filtro de escopo do usuário) + "Outras áreas" (area_id null) por último.
 	 *
 	 * Painel no top layer (Popover API) — imune a overflow/transform de ancestrais
 	 * (célula de tabela, drawers). Saves serializados single-flight latest-wins; o

@@ -23,7 +23,6 @@ export interface OrgaoOption {
 	tipo: string | null;
 	pai_id: number | null;
 	is_user_orgao: boolean;
-	is_user_ancestor: boolean;
 	is_inactive: boolean;
 }
 

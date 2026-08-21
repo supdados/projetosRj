@@ -24,10 +24,10 @@ def api_orgaos_escopo() -> Response | tuple[Response, int]:
     """Árvore aninhada de órgãos visível ao usuário corrente (envelope).
 
     Reusa ``get_visible_orgao_tree`` (escopo: admin vê tudo ativo; não-admin vê
-    ancestrais + órgão + descendentes do vínculo) e ``build_nested_orgao_tree``
-    para aninhar cada nó em ``children``. Cada nó traz ``tipo`` e as flags
-    ``is_user_orgao``/``is_user_ancestor`` que a topnav usa para destacar o órgão
-    do usuário no seletor.
+    órgão + descendentes de cada vínculo, sem ancestrais — cada vínculo vira
+    raiz) e ``build_nested_orgao_tree`` para aninhar cada nó em ``children``.
+    Cada nó traz ``tipo`` e a flag ``is_user_orgao`` que a topnav usa para
+    destacar o órgão do usuário no seletor.
 
     Returns:
         ``ok({tree: [...]})`` (200) com a árvore aninhada (vazia se sem vínculo);

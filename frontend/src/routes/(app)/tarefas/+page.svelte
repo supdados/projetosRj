@@ -1122,6 +1122,7 @@
 															disabled={addDraft.saving}
 															placeholder="Tipo"
 															ariaLabel="Tipo de pedido"
+															optionIcon={tipoOptionIcon}
 														/>
 														<SelectMenu
 															size="sm"

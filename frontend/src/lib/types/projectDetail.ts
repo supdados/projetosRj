@@ -57,7 +57,7 @@ export interface EtapaTaskCount {
 
 /**
  * Uma área responsável de etapa (serialize_etapa_detail.responsaveis). N:N com
- * OrgaoUnidade; `area_id === null` representa a opção especial "Outras" (o rótulo
+ * OrgaoUnidade; `area_id === null` representa a opção especial "Outras áreas" (o rótulo
  * fica em `label`). Espelha `EtapaResponsavel` (models/etapa.py).
  */
 export interface EtapaResponsavelArea {

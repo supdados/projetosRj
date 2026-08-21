@@ -19,7 +19,7 @@ from flask import g, has_request_context
 
 from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
-from services.etapa_responsaveis import responsavel_display
+from services.etapa_responsaveis import responsavel_display, responsavel_label
 from services.etapas_mutation import etapa_tem_responsavel
 from services.project_collections import PAPEL_COLECAO_DONO
 from services.project_membership import project_access_via, project_permission_flags
@@ -72,16 +72,16 @@ def serialize_orgao_option(node: dict[str, Any]) -> dict[str, Any]:
 
     Args:
         node: ``dict`` com ``id``/``sigla``/``nome``/``tipo``/``pai_id`` e as
-            flags ``is_user_orgao``/``is_user_ancestor``/``is_inactive``.
+            flags ``is_user_orgao``/``is_inactive``.
 
     Returns:
         ``dict`` JSON-safe ``{value, label, sigla, nome, tipo, pai_id,
-        is_user_orgao, is_user_ancestor, is_inactive}``.
+        is_user_orgao, is_inactive}``.
 
     Exemplo:
         >>> serialize_orgao_option({"id": 3, "sigla": "SETD", "nome": "...",
         ...     "tipo": "Secretaria", "pai_id": 1, "is_user_orgao": True,
-        ...     "is_user_ancestor": False, "is_inactive": False})["value"]
+        ...     "is_inactive": False})["value"]
         '3'
     """
     return {
@@ -92,7 +92,6 @@ def serialize_orgao_option(node: dict[str, Any]) -> dict[str, Any]:
         "tipo": node.get("tipo"),
         "pai_id": node.get("pai_id"),
         "is_user_orgao": bool(node.get("is_user_orgao")),
-        "is_user_ancestor": bool(node.get("is_user_ancestor")),
         "is_inactive": bool(node.get("is_inactive")),
     }
 
@@ -474,10 +473,7 @@ def serialize_etapa_detail(
         "data_fim": _iso_or_none(etapa.data_fim),
         "responsavel": responsavel_display(etapa),
         "responsaveis": [
-            {
-                "area_id": r.area_id,
-                "label": r.area.sigla if r.area is not None else r.label,
-            }
+            {"area_id": r.area_id, "label": responsavel_label(r)}
             for r in etapa.responsaveis
         ],
         "ordem": etapa.ordem,

@@ -2,6 +2,9 @@
 
 #5 — get_visible_orgao_tree filtrava ancestrais por ativo=True, derrubando o
     pai quando desativado e deixando o filho órfão no build_nested_orgao_tree.
+    Hoje ancestrais ficam FORA da árvore de não-admin (o vínculo vira raiz),
+    então ancestral inativo não é mais um problema — o teste vira guarda da
+    regra nova.
 #6 — selected_orgao_sigla no task hub usava g.get("ORGAOS_DISPONIVEIS") mas o
     valor é injetado no contexto do template (context processor), não em g.
 
@@ -11,15 +14,17 @@
 """
 
 from models import OrgaoUnidade, User, db
-from routes.orgao_scope import get_visible_orgao_tree
+from routes.orgao_scope import build_nested_orgao_tree, get_visible_orgao_tree
 
 # --- #5 --------------------------------------------------------------------
 
 
-def test_get_visible_orgao_tree_keeps_inactive_ancestor(app, seed_data):
-    # O seed cria Auditoria como filho de SETD. Desativamos SETD (ancestral)
-    # e garantimos que ele continua aparecendo na árvore do usuário de
-    # Auditoria — caso contrário, Auditoria ficaria órfã.
+def test_get_visible_orgao_tree_omite_ancestral_e_promove_vinculo_a_raiz(
+    app, seed_data
+):
+    # O seed cria Auditoria como filho de SETD. SETD (ancestral, mesmo
+    # inativo) fica fora da árvore do usuário de Auditoria; Auditoria vira
+    # raiz no build_nested_orgao_tree — sem nó órfão.
     with app.app_context():
         setd = OrgaoUnidade.query.filter_by(sigla="SETD").first()
         assert setd is not None
@@ -29,12 +34,12 @@ def test_get_visible_orgao_tree_keeps_inactive_ancestor(app, seed_data):
         user = db.session.get(User, seed_data["user_id"])
         tree = get_visible_orgao_tree(user)
         by_id = {node["id"]: node for node in tree}
-        assert setd.id in by_id, "ancestral inativo foi derrubado — árvore quebra"
-        assert by_id[setd.id]["is_inactive"] is True
-        # Órgão do usuário segue presente.
+        assert setd.id not in by_id
         auditoria = OrgaoUnidade.query.filter_by(sigla="Auditoria").first()
         assert auditoria.id in by_id
         assert by_id[auditoria.id]["is_inactive"] is False
+        roots = build_nested_orgao_tree(tree)
+        assert auditoria.id in {root["id"] for root in roots}
 
 
 # --- #6 --------------------------------------------------------------------
