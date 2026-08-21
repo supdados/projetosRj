@@ -35,13 +35,17 @@ def carregar_lista_exclusao(caminho: Path) -> list[tuple[int, str]]:
     return [(int(linha["id"]), linha["titulo"].strip()) for linha in linhas]
 
 
+def _normalizar_titulo(titulo: str) -> str:
+    """Colapsa espaços duplos e quebras de linha — o Excel normaliza whitespace."""
+    return " ".join((titulo or "").split()).casefold()
+
+
 def conferir_projeto(project, titulo_planilha: str) -> str | None:
     """Devolve o motivo para pular, ou None quando o projeto confere."""
     if project is None:
         return "id inexistente no banco"
-    titulo_banco = (project.titulo or "").strip()
-    if titulo_banco.casefold() != titulo_planilha.casefold():
-        return f'título divergente: banco="{titulo_banco}" planilha="{titulo_planilha}"'
+    if _normalizar_titulo(project.titulo) != _normalizar_titulo(titulo_planilha):
+        return f'título divergente: banco="{project.titulo}" planilha="{titulo_planilha}"'
     return None
 
 
