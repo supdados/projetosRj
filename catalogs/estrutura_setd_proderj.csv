@@ -28,7 +28,7 @@ codigo,codigo_pai,nome,sigla,tipo,area_atuacao,categoria,natureza_juridica,nivel
 27,26,Assessoria Técnica,ASSTEC,UA,,,,,,,,,,0
 28,26,Superintendência de Inovação e Modernização,SUPIM,UA,,,,,,,,,,1
 29,28,Coordenadoria de Qualidade em Serviços Digitais,COOQUALI,UA,,,,,,,,,,0
-30,28,Escritório de Processos e Inovação do Estado do Rio de Janeiro,EPERJ,UA,,,,,,,,,,1
+30,26,Escritório de Processos e Inovação do Estado do Rio de Janeiro,EPERJ,UA,,,,,,,,,,3
 31,26,Superintendência de Processos Administrativos Eletrônicos,SUPPAE,UA,,,,,,,,,,2
 32,31,Coordenadoria de Gestão do SEI-RJ,COOGSEI,UA,,,,,,,,,,0
 33,1,Comitê de Governança em Privacidade e Proteção de Dados Pessoais,COMPPDP,UC,,,,,,,,,,1
