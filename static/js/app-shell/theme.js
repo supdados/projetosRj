@@ -9,6 +9,9 @@
         var themeStorageKey = 'projetosrj.theme';
         var themeColorByMode = { light: '#005A92', dark: '#273447' };
         var darkMediaQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+        // Modo escuro incompleto: forca claro e ignora toggle/preferencia do
+        // sistema ate o tema ser finalizado. Reativar virando este flag.
+        var darkModeEnabled = false;
 
         function normalizeTheme(themeName) {
             return themeName === 'dark' ? 'dark' : 'light';
@@ -61,6 +64,11 @@
             if (attrTheme === 'light' || attrTheme === 'dark') return attrTheme;
             if (storedThemeOverride) return storedThemeOverride;
             return darkMediaQuery && darkMediaQuery.matches ? 'dark' : 'light';
+        }
+
+        if (!darkModeEnabled) {
+            applyTheme('light', false);
+            return;
         }
 
         applyTheme(resolveInitialTheme(), false);

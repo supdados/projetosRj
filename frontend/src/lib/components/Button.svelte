@@ -49,14 +49,13 @@
 		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-ui duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 
 	const variantClass: Record<Variant, string> = {
-		primary:
-			'bg-brand text-on-brand shadow-sm hover:-translate-y-0.5 hover:bg-brand-hover hover:shadow-md active:translate-y-0',
+		primary: 'bg-brand text-on-brand shadow-sm hover:bg-brand-hover hover:shadow-md',
 		// Espelha .btn-glass-secondary: superficie clara, borda/texto primary.
 		secondary:
-			'border border-brand bg-surface text-brand shadow-sm hover:-translate-y-0.5 hover:bg-surface-muted hover:shadow-md active:translate-y-0',
+			'border border-brand bg-surface text-brand shadow-sm hover:bg-surface-muted hover:shadow-md',
 		// Espelha .btn-glass-remove: superficie + danger.
 		danger:
-			'border border-danger bg-surface text-danger hover:-translate-y-0.5 hover:bg-surface-muted hover:shadow-md active:translate-y-0',
+			'border border-danger bg-surface text-danger hover:bg-surface-muted hover:shadow-md',
 		ghost: 'bg-transparent text-text-primary hover:bg-surface-muted'
 	};
 

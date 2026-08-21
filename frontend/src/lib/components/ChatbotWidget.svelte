@@ -255,7 +255,6 @@
 	}
 	.dashboard-chatbot-launcher:hover,
 	.dashboard-chatbot-launcher:focus-visible {
-		transform: translateY(-2px);
 		background: #cbd5e1;
 	}
 	.dashboard-chatbot-launcher[aria-expanded='true'] {

@@ -1,21 +1,23 @@
 from pathlib import Path
 
+from tests.routes.render_shell import render_authenticated_shell
+
 
 def _read(path):
     return path.read_text(encoding="utf-8")
 
 
-def test_theme_toggle_is_present_on_authenticated_pages(client_user):
-    # Páginas Jinja autenticadas restantes são as de auth; usamos
-    # /profile/change-password (extends base.html) para o app-shell com o toggle.
-    response = client_user.get("/profile/change-password")
+def test_theme_toggle_is_hidden_while_dark_mode_is_incomplete(app, seed_data):
+    # Modo escuro incompleto: o toggle está escondido ({% if False %} em
+    # app_topnav.html) mas o código do tema segue no lugar para reativação.
+    # Render direto do shell autenticado: /profile/change-password (última
+    # página Jinja logada) virou redirect 302 para a SPA.
+    html = render_authenticated_shell(app, seed_data)
 
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-
-    assert 'id="appThemeToggle"' in html
+    assert 'id="appThemeToggle"' not in html
     assert "theme-dark.css" in html
     assert "projetosrj.theme" in html
+    assert "darkModeEnabled = false" in html
 
 
 def test_theme_toggle_is_not_rendered_on_login_page(client):
@@ -77,15 +79,24 @@ def test_login_skeleton_template_tracks_new_layout_contract():
     assert "skeleton-login-brand-logo" not in skeleton_content
 
 
-def test_theme_toggle_is_after_notifications_and_account(client_user):
-    response = client_user.get("/profile/change-password")
+def test_theme_toggle_is_after_notifications_and_account():
+    """Ordem notificações < conta < toggle no FONTE do parcial.
 
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
+    O toggle nunca renderiza hoje ({% if False %} até o modo escuro ser
+    finalizado), então a ordem só é observável no template — a asserção migrou
+    do HTML servido para o fonte, preservando o contrato para a reativação.
+    """
+    topnav_path = (
+        Path(__file__).resolve().parents[2]
+        / "templates"
+        / "partials"
+        / "app_topnav.html"
+    )
+    topnav_source = _read(topnav_path)
 
-    notifications_index = html.index('id="appNotificationsDesktop"')
-    theme_toggle_index = html.index('id="appThemeToggle"')
-    account_index = html.index('id="appAccountMenuDesktop"')
+    notifications_index = topnav_source.index('id="appNotificationsDesktop"')
+    theme_toggle_index = topnav_source.index('id="appThemeToggle"')
+    account_index = topnav_source.index('id="appAccountMenuDesktop"')
 
     assert notifications_index < account_index < theme_toggle_index
 

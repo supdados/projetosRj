@@ -963,7 +963,7 @@
 						<button
 							type="button"
 							onclick={openCreate}
-							class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-ui duration-base hover:-translate-y-px hover:bg-brand-hover hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+							class="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-ui duration-base hover:bg-brand-hover hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
 						>
 							<i class="fas fa-plus" aria-hidden="true"></i>
 							<span>{search.trim() ? 'Novo modelo' : 'Criar primeiro modelo'}</span>

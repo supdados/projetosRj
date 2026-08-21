@@ -16,16 +16,20 @@
             var storageKey = 'projetosrj.theme';
             var root = document.documentElement;
             var theme = 'light';
-            try {
-                var storedTheme = window.localStorage.getItem(storageKey);
-                if (storedTheme === 'light' || storedTheme === 'dark') {
-                    theme = storedTheme;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            } catch (error) {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
+            // Modo escuro incompleto: deteccao desligada ate o tema ser finalizado.
+            var darkModeEnabled = false;
+            if (darkModeEnabled) {
+                try {
+                    var storedTheme = window.localStorage.getItem(storageKey);
+                    if (storedTheme === 'light' || storedTheme === 'dark') {
+                        theme = storedTheme;
+                    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        theme = 'dark';
+                    }
+                } catch (error) {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        theme = 'dark';
+                    }
                 }
             }
             root.setAttribute('data-theme', theme);
