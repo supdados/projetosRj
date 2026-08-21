@@ -17,6 +17,9 @@
 	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 	import { theme, toggleTheme } from '$lib/stores/theme';
+
+	// Modo escuro incompleto: toggle escondido até o tema ser finalizado.
+	const THEME_TOGGLE_ENABLED = false;
 	import {
 		fetchNotificacoes,
 		marcarNotificacoesLidas
@@ -126,6 +129,11 @@
 	}
 
 	const pathname = $derived($page.url.pathname);
+	const ajustesActive = $derived(isActive('/conta/ajustes', pathname));
+
+	// Tela de Ajustes escondida do menu até o vínculo gov.br ser refinado (ver
+	// docs/pendencias-seguranca-vinculo-govbr.txt). Rota, backend e página ficam.
+	const AJUSTES_ENABLED = false;
 
 	// Links do menu Admin (so renderizados quando user.is_admin === true).
 	const adminLinks: { label: string; path: string; kind: AdminIconKind }[] = [
@@ -540,6 +548,21 @@
 								{/each}
 								<hr class="my-1 border-border-subtle" />
 							{/if}
+							{#if AJUSTES_ENABLED}
+							<a
+								role="menuitem"
+								href={`${base}/conta/ajustes`}
+								aria-current={ajustesActive ? 'page' : undefined}
+								onclick={closeAdmin}
+								class="group flex items-center gap-3 px-4 py-2 text-sm no-underline transition-colors duration-fast focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {ajustesActive
+									? 'bg-surface-muted text-text-primary'
+									: 'text-text-secondary hover:bg-surface-muted hover:text-text-primary'}"
+							>
+								<AdminMenuIcon kind="usuarios" />
+								<span>Ajustes</span>
+							</a>
+							<hr class="my-1 border-border-subtle" />
+							{/if}
 							<!-- Exportar CSV de projetos: link direto para a rota Flask
 								 nativa /projects/download (attachment, FORA do envelope JSON).
 								 Migrado da tela de Projetos para o menu de usuário. -->
@@ -570,7 +593,9 @@
 				</div>
 			{/if}
 
-			<!-- Theme switch rolling (portado 1:1 de app_topnav.html + 00-foundation.css) -->
+			<!-- Theme switch rolling (portado 1:1 de app_topnav.html + 00-foundation.css).
+			     Escondido enquanto o modo escuro estiver incompleto (THEME_TOGGLE_ENABLED). -->
+			{#if THEME_TOGGLE_ENABLED}
 			<label class="app-theme-switch" title="Alternar tema">
 				<input
 					type="checkbox"
@@ -629,6 +654,7 @@
 				</span>
 				<span class="app-theme-switch__sr">Alternar tema</span>
 			</label>
+			{/if}
 		</div>
 	</div>
 </header>

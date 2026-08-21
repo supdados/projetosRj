@@ -55,6 +55,7 @@ from .serializers import (  # noqa: F401
 # Importa submódulos com rotas para registrá-las no main_bp.
 from . import legacy  # noqa: F401,E402
 from . import session  # noqa: F401,E402
+from . import account  # noqa: F401,E402
 from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
 from . import projects_write  # noqa: F401,E402

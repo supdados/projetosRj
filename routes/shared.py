@@ -4,8 +4,7 @@ from zoneinfo import ZoneInfo
 from flask import abort, current_app, g, request, url_for
 from sqlalchemy import ColumnElement, and_, inspect, or_
 
-from catalogs.abep import ABEP_INDICADORES_OPTIONS, normalize_abep_indicator
-from catalogs.inventario import INVENTARIO_ORGAO_SIGLAS
+from catalogs.abep import normalize_abep_indicator
 from models import OrgaoUnidade, Project, ProjectHistory, db
 from catalogs.objectives import (
     OBJETIVO_IDS,
@@ -234,8 +233,6 @@ def inject_current_year():
 
     return {
         "current_year": datetime.datetime.now(datetime.timezone.utc).year,
-        "ABEP_INDICADORES_OPTIONS": ABEP_INDICADORES_OPTIONS,
-        "INVENTARIO_ORGAO_SIGLAS": list(INVENTARIO_ORGAO_SIGLAS),
         "ORGAOS_DISPONIVEIS": orgaos_disponiveis,
         "USER_ORGAO_BREADCRUMB": user_orgao_breadcrumb,
         "ORGAO_VISIBLE_TREE": orgao_visible_tree,

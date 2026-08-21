@@ -1,14 +1,16 @@
 from pathlib import Path
 
+from tests.routes.render_shell import render_authenticated_shell
+
 
 def _read(path):
     return path.read_text(encoding="utf-8")
 
 
-def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
-    response = client_user.get("/profile/change-password")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
+def test_notifications_dropdown_contains_semantic_render_hooks(app, seed_data):
+    # Render direto do shell autenticado: /profile/change-password (última
+    # página Jinja logada) virou redirect 302 para a SPA.
+    html = render_authenticated_shell(app, seed_data)
     notifications_path = (
         Path(__file__).resolve().parents[2]
         / "static"
@@ -49,10 +51,8 @@ def test_notifications_dropdown_contains_semantic_render_hooks(client_user):
     assert "app-notification-tone-" not in notifications_content
 
 
-def test_notifications_dropdown_navigation_contract_is_preserved(client_user):
-    response = client_user.get("/profile/change-password")
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
+def test_notifications_dropdown_navigation_contract_is_preserved(app, seed_data):
+    html = render_authenticated_shell(app, seed_data)
     notifications_path = (
         Path(__file__).resolve().parents[2]
         / "static"

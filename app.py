@@ -2,7 +2,6 @@ import os
 import secrets
 import time
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -28,8 +27,6 @@ from routes import inject_current_year, main_bp
 from services.govbr_oidc import is_govbr_oidc_enabled
 from startup import verify_schema_version
 from time_utils import register_sqlite_adapters
-
-TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 
 
 def _extract_origin(url):
@@ -130,26 +127,6 @@ def _register_request_hooks(app):
                 nonce, chatbot_origin
             )
         return response
-
-
-def _register_template_filters(app):
-    @app.template_filter("local_time")
-    def local_time_filter(dt, fmt="%d/%m %H:%M"):
-        """Converte datetime UTC para horário do Brasil e formata."""
-        if dt is None:
-            return ""
-        utc = dt.replace(tzinfo=ZoneInfo("UTC")) if dt.tzinfo is None else dt
-        local = utc.astimezone(TIMEZONE_BR)
-        return local.strftime(fmt)
-
-    @app.template_filter("local_datetime")
-    def local_datetime_filter(dt, fmt="%d/%m/%Y às %H:%M"):
-        """Converte datetime UTC para horário do Brasil em formato longo."""
-        if dt is None:
-            return ""
-        utc = dt.replace(tzinfo=ZoneInfo("UTC")) if dt.tzinfo is None else dt
-        local = utc.astimezone(TIMEZONE_BR)
-        return local.strftime(fmt)
 
 
 def _register_context_processors(app):
@@ -274,7 +251,6 @@ def create_app(test_config=None):
 
     app.register_blueprint(main_bp)
     _register_request_hooks(app)
-    _register_template_filters(app)
     _register_context_processors(app)
 
     # TESTING usa create_all sem alembic_version; SKIP_STARTUP_DB_INIT cobre

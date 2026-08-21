@@ -23,8 +23,10 @@ _APP_ROUTES_DIR = os.path.join(_REPO_ROOT, "frontend", "src", "routes", "(app)")
 
 # Ex-_MIGRATED_EXACT_PATHS (routes/spa.py antes do manifesto), MENOS "admin":
 # nunca teve +page.svelte — servia a shell com o 404 do SvelteKit em HTTP 200.
+# "conta/ajustes" entrou no corte do change-password Jinja (Passo 1b do mapa).
 _LEGACY_EXACT_PATHS = frozenset(
     {
+        "conta/ajustes",
         "projetos",
         "projetos/pendentes",
         "admin/usuarios",
@@ -122,7 +124,10 @@ def test_manifest_recarrega_apos_rebuild_por_mtime(monkeypatch, tmp_path):
     assert spa_module._is_migrated_spa_path("relatorios") is False
 
     manifest_path.write_text('{"exact": ["projetos", "relatorios"], "dynamic": []}')
-    os.utime(manifest_path, (manifest_path.stat().st_atime, manifest_path.stat().st_mtime + 2))
+    os.utime(
+        manifest_path,
+        (manifest_path.stat().st_atime, manifest_path.stat().st_mtime + 2),
+    )
     assert spa_module._is_migrated_spa_path("relatorios") is True
 
 

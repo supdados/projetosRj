@@ -17,7 +17,6 @@ from flask import (
 from models import OrgaoUnidade, Project, Task, User, db
 from routes.safe_redirect import safe_internal_path
 from time_utils import utc_now
-from services.password_policy import validate_password_strength
 from services.govbr_oidc import (
     GovBrOIDCError,
     build_authorization_url,
@@ -512,94 +511,14 @@ def logout():
     return response
 
 
-@main_bp.route("/profile/change-password", methods=["GET", "POST"])
+@main_bp.route("/profile/change-password")
 @login_required
-@limiter.limit("5 per minute", methods=["POST"])
 def change_password():
-    is_govbr_linked = bool(g.user and g.user.cpf_govbr and g.user.govbr_sub)
+    """KEEP-ENDPOINT: redireciona (302) para /conta/ajustes (SPA).
 
-    if request.method == "POST":
-        submitted_name = request.form.get("name")
-        name = (
-            submitted_name if submitted_name is not None else g.user.name or ""
-        ).strip()
-        if not name:
-            flash("O nome é obrigatório.", "danger")
-            return render_template(
-                "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-            )
-
-        if not is_govbr_linked and "cpf_govbr" in request.form:
-            raw_cpf = request.form.get("cpf_govbr")
-            if raw_cpf and str(raw_cpf).strip():
-                try:
-                    requested_cpf = normalize_cpf(raw_cpf)
-                except ValueError as exc:
-                    flash(f"CPF gov.br inválido: {exc}", "danger")
-                    return render_template(
-                        "auth/change_password.html",
-                        hide_govbr_link_fields=is_govbr_linked,
-                    )
-                if requested_cpf != (g.user.cpf_govbr or ""):
-                    flash(
-                        "Alteração de CPF gov.br por autoatendimento está desativada. Solicite ao administrador.",
-                        "danger",
-                    )
-                    return render_template(
-                        "auth/change_password.html",
-                        hide_govbr_link_fields=is_govbr_linked,
-                    )
-
-        current_password = request.form.get("current_password")
-        new_password = request.form.get("new_password")
-        confirm_new_password = request.form.get("confirm_new_password")
-
-        should_update_password = bool(
-            current_password or new_password or confirm_new_password
-        )
-        if should_update_password and (
-            not current_password or not new_password or not confirm_new_password
-        ):
-            flash(
-                "Para alterar a senha, preencha senha atual, nova senha e confirmação.",
-                "danger",
-            )
-            return render_template(
-                "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-            )
-
-        if should_update_password and not g.user.check_password(current_password):
-            flash("Senha atual incorreta.", "danger")
-            return render_template(
-                "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-            )
-
-        if should_update_password and new_password != confirm_new_password:
-            flash("A nova senha e a confirmação não correspondem.", "danger")
-            return render_template(
-                "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-            )
-
-        password_error = (
-            validate_password_strength(new_password) if should_update_password else None
-        )
-        if password_error:
-            flash(password_error, "danger")
-            return render_template(
-                "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-            )
-
-        g.user.name = name
-        if should_update_password:
-            g.user.set_password(new_password)
-        db.session.commit()
-        if should_update_password:
-            _log_auth_event("password_changed", user=g.user, provider="local")
-            flash("Conta atualizada e senha alterada com sucesso!", "success")
-        else:
-            flash("Conta atualizada com sucesso!", "success")
-        return redirect(url_for("main.dashboard"))
-
-    return render_template(
-        "auth/change_password.html", hide_govbr_link_fields=is_govbr_linked
-    )
+    O path é preservado para bookmarks antigos e para o item de menu das telas
+    de auth. O fluxo Jinja de troca de senha foi cortado: a UI vive na SPA
+    (``/conta/ajustes``) e a escrita em ``POST /api/conta/*``
+    (``routes/api/account.py``).
+    """
+    return redirect("/conta/ajustes")
