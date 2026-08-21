@@ -7,7 +7,7 @@ from sqlalchemy import func
 from models import EtapaResponsavel, OrgaoUnidade, db
 from services.etapas_mutation import assert_etapa_editavel
 
-OUTRAS_LABEL = "Outras"
+OUTRAS_LABEL = "Outras áreas"
 MOTIVO_RESPONSAVEIS_ETAPA_CONCLUIDA = (
     "Não é possível editar responsáveis de uma etapa concluída."
 )
@@ -44,12 +44,12 @@ def areas_from_responsavel_legado(raw: object) -> list[dict]:
 
     Ponte para quem só tem o texto legado (payloads antigos da API de edição):
     cada rótulo vira a unidade viva de mesma sigla e o que não casa cai em
-    "Outras" (``area_id`` nulo), como no caminho canônico. A saída alimenta
+    "Outras áreas" (``area_id`` nulo), como no caminho canônico. A saída alimenta
     ``replace_etapa_responsaveis``, que valida de novo e reescreve o espelho.
 
     Exemplo:
         >>> areas_from_responsavel_legado("SUBEXE, Time externo")
-        [{'area_id': 7, 'label': 'SUBEXE'}, {'area_id': None, 'label': 'Outras'}]
+        [{'area_id': 7, 'label': 'SUBEXE'}, {'area_id': None, 'label': 'Outras áreas'}]
     """
     nomes = split_responsavel_legado(raw)
     if not nomes:
@@ -69,6 +69,24 @@ def areas_from_responsavel_legado(raw: object) -> list[dict]:
     ]
 
 
+def responsavel_label(item: EtapaResponsavel) -> str:
+    """Rótulo de exibição de UMA linha N:N de responsável.
+
+    Sigla viva do órgão; ``OUTRAS_LABEL`` quando ``area_id`` é nulo (assim linhas
+    gravadas antes da renomeação do rótulo exibem o texto atual, sem migração); e
+    o ``label`` congelado no save quando o órgão foi apagado do catálogo.
+
+    Exemplo:
+        >>> responsavel_label(etapa.responsaveis[0])
+        'SUBEXE'
+    """
+    if item.area is not None:
+        return item.area.sigla
+    if item.area_id is None:
+        return OUTRAS_LABEL
+    return item.label
+
+
 def responsavel_display(etapa) -> str:
     """String de exibição dos responsáveis da etapa, derivada da N:N.
 
@@ -81,10 +99,7 @@ def responsavel_display(etapa) -> str:
         >>> responsavel_display(etapa)
         'SUBEXE, COODADOS'
     """
-    labels = [
-        (item.area.sigla if item.area is not None else item.label) or ""
-        for item in etapa.responsaveis
-    ]
+    labels = [responsavel_label(item) or "" for item in etapa.responsaveis]
     labels = [label.strip() for label in labels if label.strip()]
     if labels:
         return ", ".join(labels)
@@ -123,7 +138,7 @@ def _parse_responsavel_item(item: object) -> dict:
     if area is None:
         raise ValueError(
             f"Área responsável inexistente (recebido area_id={area_id!r}; "
-            "esperado: id de OrgaoUnidade cadastrado ou null para 'Outras')."
+            "esperado: id de OrgaoUnidade cadastrado ou null para 'Outras áreas')."
         )
     return {"area_id": area.id, "label": area.sigla}
 

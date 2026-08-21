@@ -108,7 +108,7 @@ def test_replace_substitui_linhas_e_reescreve_mirror(app):
             (area_b.id, "SEB", 0),
             (None, OUTRAS_LABEL, 1),
         ]
-        assert etapa.responsavel == "SEB, Outras"
+        assert etapa.responsavel == f"SEB, {OUTRAS_LABEL}"
         assert EtapaResponsavel.query.filter_by(etapa_id=etapa.id).count() == 2
 
 
@@ -208,9 +208,15 @@ class FakeAreaViva:
 
 
 class FakeResponsavelRow:
-    def __init__(self, label: str, area: FakeAreaViva | None = None):
+    def __init__(
+        self,
+        label: str,
+        area: FakeAreaViva | None = None,
+        area_id: int | None = 1,
+    ):
         self.label = label
         self.area = area
+        self.area_id = area_id
 
 
 class FakeEtapaDisplay:

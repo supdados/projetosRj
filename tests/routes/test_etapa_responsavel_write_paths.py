@@ -6,6 +6,7 @@ aceita mais o campo.
 """
 
 from models import Etapa, EtapaResponsavel, OrgaoUnidade, db
+from services.etapa_responsaveis import OUTRAS_LABEL
 
 EDIT_BASE = {
     "descricao": "Etapa editada",
@@ -82,7 +83,10 @@ def test_edit_com_responsavel_desconhecido_vira_outras(app, client_user, seed_da
     )
 
     assert response.status_code == 200
-    assert _estado_responsaveis(app, etapa_id) == ("Outras", [(None, "Outras")])
+    assert _estado_responsaveis(app, etapa_id) == (
+        OUTRAS_LABEL,
+        [(None, OUTRAS_LABEL)],
+    )
 
 
 def test_edit_com_responsavel_vazio_e_422_e_preserva_estado(

@@ -4,7 +4,7 @@
 Sprint 3.1: a N:N é a face canônica e o espelho vira derivado com um único
 escritor (services/etapa_responsaveis.py). Etapas antigas só têm o texto — este
 passo converte cada uma preservando TODOS os rótulos: diferente do caminho
-canônico da API (que colapsa rótulos sem área em "Outras"), aqui cada rótulo
+canônico da API (que colapsa rótulos sem área em "Outras áreas"), aqui cada rótulo
 não casado vira linha ``area_id=None`` com o texto original. A barra ("/") só é
 tratada como separador quando TODAS as partes casam com sigla viva — senão faz
 parte do nome (ex.: "contrato Nº 004/2024"). Idempotente: etapas já com linhas

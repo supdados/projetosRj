@@ -12,11 +12,16 @@ Saída: 0 = coluna presente; 1 = banco não migrado (rode `alembic upgrade head`
 """
 
 from pathlib import Path
+import os
 import sys
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# Roda DURANTE a migração, contra banco fora do head: importar o app não pode
+# disparar verify_schema_version() e matar o script antes do primeiro trabalho.
+os.environ.setdefault("SKIP_STARTUP_DB_INIT", "true")
 
 from sqlalchemy import inspect
 

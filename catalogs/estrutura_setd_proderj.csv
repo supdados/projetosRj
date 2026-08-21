@@ -1,0 +1,99 @@
+codigo,codigo_pai,nome,sigla,tipo,area_atuacao,categoria,natureza_juridica,nivel_normatizacao,ato_normativo,competencia,finalidade,missao,objetivo_estrategico,ordenacao
+1,,Governo do Estado do Rio de Janeiro,GOVRJ,ENTE,,,,,,,,,,0
+2,1,Secretaria de Estado de Transformação Digital,SETD,ORGAO,,,,,,,,,,0
+3,2,Gabinete do Secretário,GABSEC,UA,,,,,,,,,,0
+4,3,Chefia de Gabinete,CHEGAB,UA,,,,,,,,,,0
+5,4,Assessoria Especial,ASSESP,UA,,,,,,,,,,0
+6,3,Assessoria Jurídica,ASSJUR,UA,,,,,,,,,,1
+7,3,Assessoria de Comunicação e Relações Institucionais,ASSCOM,UA,,,,,,,,,,2
+8,3,Auditoria Interna,AUD,UA,,,,,,,,,,3
+9,3,Corregedoria Interna,CORREG,UA,,,,,,,,,,4
+10,3,Ouvidoria Interna e Transparência,OUVI,UA,,,,,,,,,,5
+11,3,Subsecretaria Executiva,SUBEXE,UA,,,,,,,,,,6
+12,11,Assessoria Setorial de Planejamento e Orçamento,ASPLO,UA,,,,,,,,,,0
+13,11,Assessoria Especial,ASSEXE,UA,,,,,,,,,,1
+14,11,Diretoria Geral de Administração e Finanças,DGAF,UA,,,,,,,,,,2
+15,14,"Coordenadoria de Contabilidade, Orçamento e Finanças",COOCOF,UA,,,,,,,,,,0
+16,15,Assessoria Setorial de Contabilidade,ASSCONT,UA,,,,,,,,,,0
+17,14,Coordenadoria de Contratações,COOCONT,UA,,,,,,,,,,1
+18,17,Assessoria Setorial de Cotação de Preços,ASSCP,UA,,,,,,,,,,0
+19,14,Coordenadoria Administrativa e Recursos Humanos,COOADM,UA,,,,,,,,,,2
+20,3,Subsecretaria de Estratégia Digital e Dados,SUBEDD,UA,,,,,,,,,,7
+21,20,Assessoria Técnica em Dados,ASSTED,UA,,,,,,,,,,0
+22,20,Superintendência de Estratégia Digital e Governança de Dados,SUPEST,UA,,,,,,,,,,1
+23,22,Coordenadoria de Acompanhamento Estratégico,COOACES,UA,,,,,,,,,,0
+24,20,Superintendência de Dados e Inteligência Artificial,SUPDADOS,UA,,,,,,,,,,2
+25,24,Coordenadoria de Dados,COODADOS,UA,,,,,,,,,,0
+26,3,Subsecretaria de Desburocratização e Governo Digital,SUBDGD,UA,,,,,,,,,,8
+27,26,Assessoria Técnica,ASSTEC,UA,,,,,,,,,,0
+28,26,Superintendência de Inovação e Modernização,SUPIM,UA,,,,,,,,,,1
+29,28,Coordenadoria de Qualidade em Serviços Digitais,COOQUALI,UA,,,,,,,,,,0
+30,28,Escritório de Processos e Inovação do Estado do Rio de Janeiro,EPERJ,UA,,,,,,,,,,1
+31,26,Superintendência de Processos Administrativos Eletrônicos,SUPPAE,UA,,,,,,,,,,2
+32,31,Coordenadoria de Gestão do SEI-RJ,COOGSEI,UA,,,,,,,,,,0
+33,1,Comitê de Governança em Privacidade e Proteção de Dados Pessoais,COMPPDP,UC,,,,,,,,,,1
+34,1,Centro de Tecnologia de Informação e Comunicação do Estado do Rio de Janeiro,PRODERJ,ENTIDADE,,,,,,,,,,2
+35,34,Presidência,PRESI,UA,,,,,,,,,,0
+36,35,Chefia de Gabinete,CHEGAB,UA,,,,,,,,,,0
+37,35,Assessoria Especial,ASSE,UA,,,,,,,,,,1
+38,35,Assessoria Jurídica,ASSJUR,UA,,,,,,,,,,2
+39,35,Unidade de Controle Interno,UCI,UA,,,,,,,,,,3
+40,35,Assessoria Especial de Modernização e Gestão,ASSM,UA,,,,,,,,,,4
+41,35,Assessoria de Comunicação Institucional,ASSCOM,UA,,,,,,,,,,5
+42,35,Corregedoria,CORREG,UA,,,,,,,,,,6
+43,35,Ouvidoria,OUVI,UA,,,,,,,,,,7
+44,35,Unidade de Gestão de Integridade,UGI,UA,,,,,,,,,,8
+45,35,Vice-Presidência de Administração,VICEPRESA,UA,,,,,,,,,,9
+46,45,Assessoria da Vice-Presidência de Administração,ASSVPA,UA,,,,,,,,,,0
+47,45,Diretoria de Patrimônio e Logística,DIRPL,UA,,,,,,,,,,1
+48,47,Gerência de Recursos Humanos,GERRH,UA,,,,,,,,,,0
+49,47,Gerência de Administração e Logística,GERLO,UA,,,,,,,,,,1
+50,47,Gerência de Aquisições,GEREA,UA,,,,,,,,,,2
+51,47,Unidade de Cotação de Preços,UCP,UA,,,,,,,,,,3
+52,45,Diretoria de Orçamento e Finanças,DIROF,UA,,,,,,,,,,2
+53,52,Assessoria de Planejamento e Orçamento,ASSPLO,UA,,,,,,,,,,0
+54,52,Assessoria de Conformidade e Faturamento,ASSCOF,UA,,,,,,,,,,1
+55,52,Gerência de Orçamento e Finanças,GEROF,UA,,,,,,,,,,2
+56,52,Gerência de Gestão de Contratos,GERGC,UA,,,,,,,,,,3
+57,52,Gerência de Contabilidade,GERCT,UA,,,,,,,,,,4
+58,35,Vice-Presidência de Tecnologia,VICEPREST,UA,,,,,,,,,,10
+59,58,Assessoria da Vice-Presidência de Tecnologia,ASSVPT,UA,,,,,,,,,,0
+60,58,Assessoria Técnica,ASST,UA,,,,,,,,,,1
+61,58,Assessoria de Planejamento de Contratações,ASSPC,UA,,,,,,,,,,2
+62,58,Diretoria de Segurança da Informação,DIRSI,UA,,,,,,,,,,3
+63,62,Gerência de Riscos e Ameaças,GERRA,UA,,,,,,,,,,0
+64,62,Gerência de Proteção de Dados e Sistemas,GERPT,UA,,,,,,,,,,1
+65,58,Diretoria de Sistemas e Soluções,DIRSS,UA,,,,,,,,,,4
+66,65,Gerência de Sustentação de Sistemas,GERSS,UA,,,,,,,,,,0
+67,65,Gerência de Análise de Requisitos,GERAR,UA,,,,,,,,,,1
+68,65,Gerência de Engenharia de Soluções,GERES,UA,,,,,,,,,,2
+69,65,Gerência de Fábrica de Software,GERFS,UA,,,,,,,,,,3
+70,65,Gerência de Inteligência de Informações,GERII,UA,,,,,,,,,,4
+71,58,Diretoria de Infraestrutura Tecnológica,DIRIT,UA,,,,,,,,,,5
+72,71,Gerência de Rede e Telecomunicações,GERRT,UA,,,,,,,,,,0
+73,71,Gerência de Engenharia,GEREN,UA,,,,,,,,,,1
+74,71,Gerência de Infraestrutura e Serviços,GERIS,UA,,,,,,,,,,2
+75,71,Gerência de Suporte Técnico,GERST,UA,,,,,,,,,,3
+76,71,Gerência de Banco de Dados,GERBD,UA,,,,,,,,,,4
+77,35,Vice-Presidência de Governo Digital,VICEPRESD,UA,,,,,,,,,,11
+78,77,Assessoria da Vice-Presidência de Governo Digital,ASSVPD,UA,,,,,,,,,,0
+79,77,Diretoria de Transformação Digital e Design de Serviços Digitais,DIRTD,UA,,,,,,,,,,1
+80,79,Gerência de Sistemas Digitais,GERSD,UA,,,,,,,,,,0
+81,79,Gerência de Experiência do Usuário de Serviços Públicos,GEREU,UA,,,,,,,,,,1
+82,79,Gerência de Análise de Inovações Digitais,GERAN,UA,,,,,,,,,,2
+83,79,Gerência de Eficiência Pública Digital,GERED,UA,,,,,,,,,,3
+84,77,Diretoria de Governança e Dados e Informações,DIRGD,UA,,,,,,,,,,2
+85,84,Gerência de Normas e Governança de Dados e Informações,GERND,UA,,,,,,,,,,0
+86,84,Gerência de Arquitetura e Plataforma de Dados,GERAP,UA,,,,,,,,,,1
+87,35,"Vice-Presidência de Estratégia, Governança e Inovação",VICEPRESE,UA,,,,,,,,,,12
+88,87,"Assessoria da Vice-Presidência de Estratégia, Governança e Inovação",ASSVPE,UA,,,,,,,,,,0
+89,87,Diretoria de Planejamento Estratégico,DIRPE,UA,,,,,,,,,,1
+90,89,Gerência de Assuntos Estratégicos,GERAE,UA,,,,,,,,,,0
+91,89,Gerência de Capacitação e Desenvolvimento,GERCD,UA,,,,,,,,,,1
+92,87,Diretoria de Governança e Inovação,DIRGI,UA,,,,,,,,,,2
+93,92,Gerência de Inovação e Novas Tendências,GERIT,UA,,,,,,,,,,0
+94,92,Escritório de Gerenciamento de Projetos Estratégicos,EGPE,UA,,,,,,,,,,1
+95,92,Gerência de Mapeamento de Processos e Inovação,GERMA,UA,,,,,,,,,,2
+96,87,Diretoria de Gestão de Negócios,DIRGN,UA,,,,,,,,,,3
+97,96,Gerência de Relacionamento com o Cliente,GERRC,UA,,,,,,,,,,0
+98,96,Gerência de Governança de Demandas,GERGD,UA,,,,,,,,,,1

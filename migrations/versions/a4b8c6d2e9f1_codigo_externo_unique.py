@@ -6,6 +6,7 @@ Create Date: 2026-07-14 12:00:00.000000
 
 """
 
+import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -14,38 +15,43 @@ down_revision = "f3b9d0c7e2a5"
 branch_labels = None
 depends_on = None
 
-
-def _has_table(name):
-    """Guarda de instalação limpa (Sprint 5.3): em banco vazio a revisão histórica
-    é no-op — o schema completo nasce na revisão baseline de catch-up."""
-    import sqlalchemy as _sa
-    from alembic import op as _op
-    return name in _sa.inspect(_op.get_bind()).get_table_names()
+TABELA = "orgao_unidade"
+INDICE = "ix_orgao_unidade_codigo_externo"
+COLUNA = "codigo_externo"
 
 
-def _has_column(table, column):
-    import sqlalchemy as _sa
-    from alembic import op as _op
-    insp = _sa.inspect(_op.get_bind())
-    if table not in insp.get_table_names():
-        return False
-    return column in {c["name"] for c in insp.get_columns(table)}
+def _colunas(inspector: sa.Inspector, tabela: str) -> set[str]:
+    if tabela not in inspector.get_table_names():
+        return set()
+    return {col["name"] for col in inspector.get_columns(tabela)}
 
 
-def upgrade():
-    if not _has_table("orgao_unidade"):
+def _indices(inspector: sa.Inspector, tabela: str) -> set[str]:
+    if tabela not in inspector.get_table_names():
+        return set()
+    return {ix["name"] for ix in inspector.get_indexes(tabela)}
+
+
+def upgrade() -> None:
+    inspector = sa.inspect(op.get_bind())
+    # O banco legado de produção nunca teve `codigo_externo` nem o índice: nenhuma
+    # migration os criava (só a baseline). Sem esta guarda o DROP INDEX estoura
+    # ("no such index" no SQLite, ERROR 1091 no MySQL) e a cadeia inteira morre aqui.
+    if COLUNA not in _colunas(inspector, TABELA):
         return
-    # batch p/ SQLite; NULLs múltiplos são permitidos em unique index (SQLite/MySQL).
-    with op.batch_alter_table("orgao_unidade") as batch_op:
-        batch_op.drop_index("ix_orgao_unidade_codigo_externo")
-        batch_op.create_index(
-            "ix_orgao_unidade_codigo_externo", ["codigo_externo"], unique=True
-        )
+
+    with op.batch_alter_table(TABELA) as batch_op:
+        if INDICE in _indices(inspector, TABELA):
+            batch_op.drop_index(INDICE)
+        batch_op.create_index(INDICE, [COLUNA], unique=True)
 
 
-def downgrade():
-    with op.batch_alter_table("orgao_unidade") as batch_op:
-        batch_op.drop_index("ix_orgao_unidade_codigo_externo")
-        batch_op.create_index(
-            "ix_orgao_unidade_codigo_externo", ["codigo_externo"], unique=False
-        )
+def downgrade() -> None:
+    inspector = sa.inspect(op.get_bind())
+    if COLUNA not in _colunas(inspector, TABELA):
+        return
+
+    with op.batch_alter_table(TABELA) as batch_op:
+        if INDICE in _indices(inspector, TABELA):
+            batch_op.drop_index(INDICE)
+        batch_op.create_index(INDICE, [COLUNA], unique=False)

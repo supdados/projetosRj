@@ -115,7 +115,7 @@ def sync_etapa_from_meeting(etapa, meeting, *, title=None):
     etapa.data_inicio = start_local.date() if start_local else None
     etapa.data_fim = end_local.date() if end_local else None
     if meeting.google_owner_email:
-        # apply (não replace/parse): parse colapsaria o e-mail em "Outras".
+        # apply (não replace/parse): parse colapsaria o e-mail em "Outras áreas".
         apply_responsaveis_entries(
             etapa, [{"area_id": None, "label": meeting.google_owner_email}]
         )

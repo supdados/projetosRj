@@ -27,7 +27,10 @@ from flask import Response, g, request
 from models import OrgaoUnidade, Task, db
 
 from ..blueprint import main_bp
-from ..orgao_scope import sanitize_orgao_filter_for_current_user
+from ..orgao_scope import (
+    get_user_orgao_subtree_ids,
+    sanitize_orgao_filter_for_current_user,
+)
 from ..tasks.creation import (
     _get_assignable_users_for_orgao,
     _get_assignable_users_for_project,
@@ -271,6 +274,32 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
     )
 
 
+def _resolve_orgao_id_por_sigla(sigla: str) -> int | None:
+    """Resolve ``?orgao=<sigla>`` para um id, sem depender da ordem do banco.
+
+    A sigla deixou de ser única quando o organograma do SIORG entrou: ASSCOM,
+    ASSJUR, CHEGAB, CORREG e OUVI existem na SETD e no PRODERJ. Prefere a unidade
+    dentro do escopo do usuário e, sem nenhuma lá, devolve o menor id — o
+    ``sanitize_orgao_filter_for_current_user`` seguinte é quem nega com 403.
+
+    Exemplo:
+        >>> _resolve_orgao_id_por_sigla("chegab")
+        4
+    """
+    ids = [
+        row_id
+        for (row_id,) in db.session.query(OrgaoUnidade.id)
+        .filter(db.func.lower(OrgaoUnidade.sigla) == sigla.lower())
+        .order_by(OrgaoUnidade.id.asc())
+        .all()
+    ]
+    if not ids:
+        return None
+    escopo = get_user_orgao_subtree_ids(getattr(g, "user", None))
+    no_escopo = [orgao_id for orgao_id in ids if orgao_id in escopo]
+    return no_escopo[0] if no_escopo else ids[0]
+
+
 @main_bp.route("/api/tarefas/sugestoes-responsavel", methods=["GET"])
 @api_login_required
 def api_hub_sugestoes_responsavel() -> Response | tuple[Response, int]:
@@ -301,12 +330,10 @@ def api_hub_sugestoes_responsavel() -> Response | tuple[Response, int]:
     elif orgao_raw:
         resolved_orgao_raw = orgao_raw
         if not orgao_raw.isdigit():
-            orgao = OrgaoUnidade.query.filter(
-                db.func.lower(OrgaoUnidade.sigla) == orgao_raw.lower()
-            ).first()
-            if not orgao:
+            orgao_id_por_sigla = _resolve_orgao_id_por_sigla(orgao_raw)
+            if orgao_id_por_sigla is None:
                 return fail("Órgão inválido.", status=400, code="validation")
-            resolved_orgao_raw = str(orgao.id)
+            resolved_orgao_raw = str(orgao_id_por_sigla)
         orgao_id, invalid = sanitize_orgao_filter_for_current_user(resolved_orgao_raw)
         if invalid:
             return fail("Sem permissão para este órgão.", status=403, code="forbidden")

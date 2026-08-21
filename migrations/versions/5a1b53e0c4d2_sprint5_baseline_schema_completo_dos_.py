@@ -91,7 +91,7 @@ def upgrade():
     sa.Column('name', sa.String(length=120), nullable=False),
     sa.Column('orgao', sa.String(length=100), nullable=True),
     sa.Column('is_admin', sa.Boolean(), nullable=False),
-    sa.Column('is_super_admin', sa.Boolean(), nullable=False),
+    sa.Column('is_super_admin', sa.Boolean(), server_default=sa.text('0'), nullable=False),
     sa.Column('cpf_govbr', sa.String(length=11), nullable=True),
     sa.Column('govbr_sub', sa.String(length=255), nullable=True),
     sa.Column('failed_login_attempts', sa.Integer(), nullable=False),

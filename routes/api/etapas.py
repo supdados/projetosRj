@@ -475,7 +475,7 @@ def api_etapa_responsaveis(etapa_id: int) -> Response | tuple[Response, int]:
     """Substitui as áreas responsáveis da etapa (envelope), mudança #3.
 
     Corpo: ``{"areas": [{"area_id": 12, "label": "SES"}, {"area_id": null,
-    "label": "Outras"}]}``. Reusa ``replace_etapa_responsaveis`` (substituição
+    "label": "Outras áreas"}]}``. Reusa ``replace_etapa_responsaveis`` (substituição
     N:N + mirror legado ``etapa.responsavel``). Reuniões Google e etapas
     concluídas são recusadas.
 

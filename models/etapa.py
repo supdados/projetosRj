@@ -40,7 +40,8 @@ class Etapa(db.Model):
 class EtapaResponsavel(db.Model):
     """Área responsável por uma etapa (N:N Etapa↔OrgaoUnidade).
 
-    area_id=None + label='Outras' representa a opção especial "Outras".
+    area_id=None representa a opção especial "Outras áreas" (rótulo em
+    services.etapa_responsaveis.OUTRAS_LABEL).
     label guarda a sigla no momento do save (fallback se o órgão sumir).
     """
 

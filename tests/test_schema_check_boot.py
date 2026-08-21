@@ -7,6 +7,7 @@ from sqlalchemy.pool import NullPool
 from app import create_app
 from models import db
 from startup import (
+    _REVISAO_LEGADO_PRE_BASELINE,
     SchemaVersionMismatch,
     alembic_head_revision,
     database_schema_revision,
@@ -37,8 +38,22 @@ def test_banco_populado_sem_alembic_version_manda_stampar(app):
     # pré-baseline (tabelas materializadas, histórico Alembic ausente).
     with app.app_context():
         assert database_schema_revision() is None
-        with pytest.raises(SchemaVersionMismatch, match="flask db stamp --purge head"):
+        with pytest.raises(SchemaVersionMismatch) as excinfo:
             verify_schema_version()
+    mensagem = str(excinfo.value)
+    assert f"flask db stamp --purge {_REVISAO_LEGADO_PRE_BASELINE}" in mensagem
+    # Carimbar o head deixaria o `upgrade` seguinte no-op: o banco legado ficaria
+    # sem a DDL da baseline e do catch-up, com o carimbo mentindo para sempre.
+    assert "stamp --purge head" not in mensagem
+    assert "docs/runbook-migracao-producao-v5.md" in mensagem
+
+
+def test_revisao_pre_baseline_existe_na_cadeia(app):
+    from startup import _revisao_existe_na_cadeia
+
+    with app.app_context():
+        assert _revisao_existe_na_cadeia(_REVISAO_LEGADO_PRE_BASELINE)
+        assert _REVISAO_LEGADO_PRE_BASELINE != alembic_head_revision()
 
 
 def test_banco_stampado_no_head_passa(app):
@@ -58,7 +73,8 @@ def test_stamp_orfao_manda_adotar_baseline(app):
     mensagem = str(excinfo.value)
     assert "deadbeef0000" in mensagem
     assert alembic_head_revision() in mensagem
-    assert "flask db stamp --purge head" in mensagem
+    assert f"flask db stamp --purge {_REVISAO_LEGADO_PRE_BASELINE}" in mensagem
+    assert "stamp --purge head" not in mensagem
 
 
 def test_banco_atras_do_head_manda_rodar_upgrade(app):
@@ -129,7 +145,16 @@ def test_python_m_flask_db_tambem_e_detectado(tmp_path, monkeypatch):
     # por `db <subcomando>`, não pelo nome do binário.
     monkeypatch.setattr(
         "sys.argv",
-        ["/fake/.venv/bin/python", "-m", "flask", "--app", "app", "db", "stamp", "head"],
+        [
+            "/fake/.venv/bin/python",
+            "-m",
+            "flask",
+            "--app",
+            "app",
+            "db",
+            "stamp",
+            "head",
+        ],
         raising=False,
     )
     create_app(
@@ -140,3 +165,47 @@ def test_python_m_flask_db_tambem_e_detectado(tmp_path, monkeypatch):
             "SKIP_STARTUP_DB_INIT": False,
         }
     )
+
+
+def _drop(sql: str) -> None:
+    db.session.execute(text(sql))
+    db.session.commit()
+
+
+def test_head_carimbado_com_tabela_faltando_falha(app):
+    # Caso real de produção: banco legado stampado no head, sem a DDL da baseline.
+    with app.app_context():
+        _stamp(alembic_head_revision())
+        _drop("DROP TABLE etapa_responsavel")
+        with pytest.raises(SchemaVersionMismatch) as excinfo:
+            verify_schema_version()
+    mensagem = str(excinfo.value)
+    assert "etapa_responsavel" in mensagem
+    assert "INCOMPLETO" in mensagem
+    assert "1 tabela(s)" in mensagem
+
+
+def test_head_carimbado_com_coluna_critica_faltando_falha(app):
+    with app.app_context():
+        _stamp(alembic_head_revision())
+        _drop("ALTER TABLE orgao_unidade DROP COLUMN data_fim_vigencia")
+        with pytest.raises(SchemaVersionMismatch) as excinfo:
+            verify_schema_version()
+    mensagem = str(excinfo.value)
+    assert "orgao_unidade.data_fim_vigencia" in mensagem
+    assert "stamp --purge head" not in mensagem
+
+
+def test_skip_schema_check_pula_tambem_a_estrutural(app, monkeypatch):
+    monkeypatch.setenv("SKIP_SCHEMA_CHECK", "1")
+    with app.app_context():
+        _stamp(alembic_head_revision())
+        _drop("DROP TABLE etapa_responsavel")
+        assert verify_schema_version() is None
+
+
+def test_verify_schema_structure_passa_em_banco_integro(app):
+    from startup import verify_schema_structure
+
+    with app.app_context():
+        assert verify_schema_structure() is None

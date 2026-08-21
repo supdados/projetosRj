@@ -133,11 +133,16 @@ def test_persistir_lote_nao_commita(app, dono_id):
 
 
 def test_persistir_lote_substitui_pendentes_anteriores(app, dono_id):
+    # A substituição é asserida pelo CONTEÚDO (nome/lote), não pelo id: o
+    # SQLite sem AUTOINCREMENT reutiliza o id apagado na mesma transação,
+    # então a linha nova pode herdar o id da antiga.
     with app.app_context():
-        antiga_id = _semear_linha(dono_id, status=STATUS_SUGESTAO_PENDENTE)
+        _semear_linha(dono_id, status=STATUS_SUGESTAO_PENDENTE)
         persistir_lote(dono_id, _resultado(_sugerida("Nova", [3, 7])))
         db.session.commit()
-        assert db.session.get(ColecaoSugestaoIA, antiga_id) is None
+        restantes = ColecaoSugestaoIA.query.filter_by(user_id=dono_id).all()
+        assert [linha.nome for linha in restantes] == ["Nova"]
+        assert restantes[0].lote_id != "a" * 32
         assert [linha.nome for linha in lote_pendente(dono_id)] == ["Nova"]
 
 

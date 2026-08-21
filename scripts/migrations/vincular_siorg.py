@@ -13,6 +13,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,13 +23,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Roda DURANTE a migração, contra banco fora do head: importar o app não pode
+# disparar verify_schema_version() e matar o script antes do primeiro trabalho.
+os.environ.setdefault("SKIP_STARTUP_DB_INIT", "true")
+
 from app import app, db
 from models import EtapaResponsavel, OrgaoUnidade, Project, UserOrgao
 
 # Validado contra siorg-rj/data/estrutura_setd_proderj.csv em 2026-07-14.
 SIGLA_LOCAL_PARA_CODIGO_SIORG: dict[str, int] = {
     "SETD": 2,
-    "CHEGAB": 36,  # Chefia de Gabinete da Presidência do PRODERJ, não a da SETD (4)
+    # Há duas CHEGAB no SIORG: 4 (SETD) e 36 (Presidência do PRODERJ). A legada é
+    # a da SETD — seus 4 usuários têm user.orgao='SETD' e os 78 projetos são da SETD.
+    "CHEGAB": 4,
     "SUPDADOS": 24,
     "SUBDGD": 26,
     "SUPEST": 22,
