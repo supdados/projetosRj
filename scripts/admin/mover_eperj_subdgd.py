@@ -34,7 +34,7 @@ def _buscar_por_sigla(sigla: str):
 
 def mover_eperj(apply: bool) -> None:
     from models import db
-    from services.orgao_tree import rebuild_orgao_closure, validate_orgao_move
+    from services.orgao_tree import rebuild_orgao_closure, would_create_cycle
 
     eperj = _buscar_por_sigla(SIGLA_UNIDADE)
     pai_atual = _buscar_por_sigla(SIGLA_PAI_ATUAL)
@@ -49,9 +49,11 @@ def mover_eperj(apply: bool) -> None:
             f"({SIGLA_PAI_ATUAL}) — estrutura diferente da prevista, abortando."
         )
 
-    erro = validate_orgao_move(eperj, pai_novo.id)
-    if erro:
-        raise SystemExit(f"Movimentação inválida: {erro}")
+    # validate_orgao_move exige rank de tipo estritamente crescente (UA nao
+    # poderia ser pai de UA), mas a arvore importada do SIORG e toda UA sob UA
+    # — aqui so a checagem de ciclo faz sentido.
+    if would_create_cycle(eperj.id, pai_novo.id):
+        raise SystemExit("Movimentação inválida: criaria ciclo na árvore.")
 
     print(f"{SIGLA_UNIDADE} (id {eperj.id}): {SIGLA_PAI_ATUAL} (id {pai_atual.id}) "
           f"-> {SIGLA_PAI_NOVO} (id {pai_novo.id})")
