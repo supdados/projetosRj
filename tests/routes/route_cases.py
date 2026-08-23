@@ -1356,6 +1356,16 @@ ROUTE_CASES += [
         "requires_admin": True,
     },
     {
+        "id": "api_projetos_exportar_get",
+        "method": "GET",
+        "rule": "/api/projetos/exportar",
+        "path": "/api/projetos/exportar",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
         "id": "api_projeto_concluir_post",
         "method": "POST",
         "rule": "/api/projetos/<int:project_id>/concluir",

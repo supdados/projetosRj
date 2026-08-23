@@ -60,6 +60,7 @@ from . import dashboard  # noqa: F401,E402
 from . import projects  # noqa: F401,E402
 from . import projects_write  # noqa: F401,E402
 from . import projects_import  # noqa: F401,E402
+from . import projects_export  # noqa: F401,E402
 from . import project_detail  # noqa: F401,E402
 from . import project_members  # noqa: F401,E402
 from . import collections  # noqa: F401,E402

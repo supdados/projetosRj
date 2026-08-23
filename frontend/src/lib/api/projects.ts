@@ -16,10 +16,11 @@
  *   const data = await fetchProjects({ status: 'Vigente', q: 'painel' });
  */
 
-import { get, post, del, postForm } from './client';
+import { get, post, del, postForm, redirectToLogin, ApiClientError } from './client';
 import { createSwrCache } from './swrCache';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
 import type { AnaliseImportacao, ImportProjectsResultV2 } from '$lib/types/importExport';
+import type { ApiResult } from '$lib/types/api';
 
 // Ultimo payload bom por chave de filtros (querystring de `buildQuery`). SWR:
 // a tela reabre com o dado antigo e revalida em silencio (ver dashboard.ts).
@@ -60,6 +61,62 @@ export async function importProjectsCsv(formData: FormData): Promise<ImportProje
 	return result;
 }
 
+/** Arquivo devolvido por `GET /api/projetos/exportar`. */
+export interface ExportProjectsFile {
+	blob: Blob;
+	filename: string;
+}
+
+/** Nome usado quando o `Content-Disposition` não traz um `filename`. */
+const EXPORT_FALLBACK_FILENAME = 'projetos.csv';
+
+/** Lê o `filename="..."` do `Content-Disposition`. */
+function parseExportFilename(contentDisposition: string | null): string {
+	const match = contentDisposition?.match(/filename="(.+)"/);
+	return match ? match[1] : EXPORT_FALLBACK_FILENAME;
+}
+
+/** Traduz a resposta de falha do export no `ApiClientError` do envelope. */
+async function readExportError(res: Response): Promise<ApiClientError> {
+	const fallback = `Não foi possível gerar o arquivo (HTTP ${res.status}).`;
+	let erro = new ApiClientError('server', fallback, res.status);
+	try {
+		const body = JSON.parse(await res.text()) as ApiResult<unknown>;
+		if (!body.ok) erro = new ApiClientError(body.error.code, body.error.message, res.status);
+	} catch {
+		// corpo não-JSON (proxy/500 em HTML) — usa a mensagem de fallback
+	}
+	if (res.status === 401 || erro.code === 'unauthenticated') {
+		redirectToLogin();
+		return new ApiClientError('unauthenticated', erro.message, res.status);
+	}
+	return erro;
+}
+
+/**
+ * Baixa o CSV de projetos (`GET /api/projetos/exportar`) como blob, com o nome
+ * de arquivo vindo do `Content-Disposition`. Fora do pipeline de envelope de
+ * `client.ts` porque a resposta de sucesso é `text/csv`, não JSON; em falha o
+ * envelope `{ok:false}` vira `ApiClientError`, como no resto da API.
+ *
+ * Exemplo:
+ *   const { blob, filename } = await exportarProjetosCsv(
+ *     new URLSearchParams({ status: 'Vigente', colunas: 'id,titulo' })
+ *   );
+ */
+export async function exportarProjetosCsv(params: URLSearchParams): Promise<ExportProjectsFile> {
+	const qs = params.toString();
+	const res = await fetch(`/api/projetos/exportar${qs ? `?${qs}` : ''}`, {
+		method: 'GET',
+		credentials: 'include',
+		headers: { Accept: 'text/csv, application/json' }
+	});
+	if (!res.ok) throw await readExportError(res);
+	return {
+		blob: await res.blob(),
+		filename: parseExportFilename(res.headers.get('Content-Disposition'))
+	};
+}
 import type { Project } from '$lib/types/entities';
 
 /** Descarta TODAS as chaves do cache de listagem (escritas fora deste módulo). */

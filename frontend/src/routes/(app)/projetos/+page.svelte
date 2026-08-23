@@ -46,6 +46,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
+	import ExportarProjetosModal from '$lib/components/ExportarProjetosModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { priorityIconId, prioridadeLabel } from '$lib/utils/taskLabels';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
@@ -107,6 +108,8 @@
 	let createModalOpen = $state<boolean>(false);
 	// Modal de importação de projetos via CSV (Admin).
 	let importModalOpen = $state<boolean>(false);
+	// Modal de exportação de projetos em CSV (todos os logados).
+	let exportModalOpen = $state<boolean>(false);
 
 	/** Só admin importa projetos via CSV (espelha @admin_required do backend). */
 	const isAdmin = $derived($auth.user?.is_admin ?? false);
@@ -278,6 +281,12 @@
 			})
 		)
 	);
+	/** Sigla do órgão filtrado — o query carrega só o id, e o chip do export mostra a sigla. */
+	const orgaoFiltradoSigla = $derived.by<string | null>(() => {
+		const id = orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId();
+		if (id === undefined) return null;
+		return orgaoOptions.find((o) => Number(o.value) === id)?.sigla ?? null;
+	});
 	const specialOptions = $derived(data?.options.special_projects_options ?? []);
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
@@ -875,6 +884,15 @@
 				 seleção em qualquer campo já re-busca server-side (a busca textual tem
 				 debounce e o Enter ainda submete o form). -->
 			<div class="ml-auto flex items-center gap-2">
+				<button
+					type="button"
+					onclick={() => (exportModalOpen = true)}
+					title="Exportar projetos"
+					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-text-secondary transition-ui duration-fast ease-out hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				>
+					<i class="fas fa-file-export" aria-hidden="true"></i>
+					Exportar
+				</button>
 				<!-- Toggle "Mais filtros" (btn-projects-v4-toggle). -->
 				<button
 					type="button"
@@ -1424,4 +1442,13 @@
 	onImported={onProjectsImported}
 />
 
+<!-- Exportação de projetos em CSV (GET /api/projetos/exportar) — todos os logados. -->
+<ExportarProjetosModal
+	open={exportModalOpen}
+	filtros={buildProjectsQuery()}
+	totalFiltrado={totalProjects}
+	hasFiltrosAtivos={hasActiveFilters}
+	orgaoSigla={orgaoFiltradoSigla}
+	onClose={() => (exportModalOpen = false)}
+/>
 

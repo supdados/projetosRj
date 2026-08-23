@@ -18,6 +18,8 @@ NÃO ENVELOPAR (exceções deliberadas):
       (``("", 204)`` / ``("token mismatch", 403)``); o Google espera corpo cru.
     - Downloads binários: CSV de projetos (``routes/projects/views.py``) e
       ``send_file`` de anexos — são octet-stream/CSV, não JSON.
+    - ``GET /api/projetos/exportar`` (``routes/api/projects_export.py``): o
+      sucesso é o próprio text/csv; só as falhas usam o envelope.
     - Endpoints legados (``routes/api/legacy.py``) mantidos por compatibilidade.
 
 Exemplo de uso:
