@@ -27,6 +27,7 @@ from models import (
     db,
 )
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
+from catalogs.delivery_types import DELIVERY_TYPES_OPTIONS
 from catalogs.inventario import any_orgao_allows_inventario
 
 from routes.blueprint import main_bp
@@ -39,45 +40,20 @@ from routes.orgao_scope import (
     scoped_orgao_options,
     user_can_access_project,
 )
-from services.atraso import etapa_esta_vencida, hoje_utc, projeto_atrasado_criterion
+from services.atraso import etapa_esta_vencida, hoje_utc
 from services.authorization import project_visibility_criterion
+from services.csv_safety import safe_csv_text as _safe_csv_text
 from services.etapa_positions import build_etapa_position_map
+from routes.projects.list_filters import (
+    ProjectsListFilters,
+    apply_projects_list_filters,
+)
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
     parse_db_integer_id,
-    parse_abep_indicator_filter,
-    parse_objetivo_filter,
     project_orgao_search_filter,
 )
-
-CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
-
-
-def _safe_csv_text(value):
-    text = "" if value is None else str(value)
-    if text.lstrip().startswith(CSV_FORMULA_PREFIXES):
-        return f"'{text}"
-    return text
-
-
-def _colecao_project_ids_subquery(collection_id):
-    """Ids dos projetos da coleção, SÓ se ela pertence ao usuário corrente.
-
-    Coleção de outro dono devolve subquery vazia (filtro sem resultado) em vez de
-    erro — a existência da coleção alheia não vaza pela lista.
-    """
-    return (
-        db.session.query(ProjectCollectionItem.project_id)
-        .join(
-            ProjectCollection,
-            ProjectCollection.id == ProjectCollectionItem.collection_id,
-        )
-        .filter(
-            ProjectCollection.id == collection_id,
-            ProjectCollection.owner_user_id == g.user.id,
-        )
-    )
 
 
 def _favorito_project_ids(project_ids):
@@ -155,65 +131,22 @@ def build_projects_list_context(
         opções de filtro (incluindo ``orgaos_options`` e
         ``ABEP_INDICADORES_OPTIONS``) e os metadados de paginação.
     """
-    query = Project.query
-
-    if not g.user.is_admin:
-        query = query.filter(project_visibility_criterion(g.user))
-
-    if selected_orgao_id is not None:
-        subtree_ids = expand_orgao_filter_ids(selected_orgao_id)
-        if subtree_ids:
-            query = query.filter(Project.orgao_id.in_(subtree_ids))
-
-    if selected_colecao_id is not None:
-        query = query.filter(
-            Project.id.in_(_colecao_project_ids_subquery(selected_colecao_id))
-        )
-
-    if excluded_colecao_id is not None:
-        query = query.filter(
-            ~Project.id.in_(_colecao_project_ids_subquery(excluded_colecao_id))
-        )
-
-    if selected_priority and selected_priority != "":
-        query = query.filter(Project.prioridade == selected_priority)
-    if selected_status and selected_status != "":
-        query = query.filter(Project.status == selected_status)
-    if selected_special_project and selected_special_project != "":
-        query = query.filter(Project.special_project == selected_special_project)
-    if selected_delivery_type and selected_delivery_type != "":
-        query = query.filter(Project.delivery_type == selected_delivery_type)
-    selected_abep_indicator = parse_abep_indicator_filter(selected_abep_indicator)
-    if selected_abep_indicator:
-        query = query.filter(Project.abep_indicator == selected_abep_indicator)
-    objetivo_filter_id = parse_objetivo_filter(selected_objetivo)
-    if selected_objetivo and objetivo_filter_id is None:
-        selected_objetivo = ""
-    if selected_objetivo and objetivo_filter_id is not None:
-        query = query.filter(Project.objetivo_id == objetivo_filter_id)
-
-    if search_query:
-        search_pattern = f"%{search_query}%"
-        search_id = parse_db_integer_id(search_query)
-        text_filters = db.or_(
-            Project.titulo.ilike(search_pattern),
-            project_orgao_search_filter(search_pattern),
-            Project.abep_indicator.ilike(search_pattern),
-        )
-        query = query.filter(
-            db.or_(Project.id == search_id, text_filters)
-            if search_id is not None
-            else text_filters
-        )
-
-    if selected_atraso in ("atrasado", "no_prazo"):
-        # Atraso só é definido para projetos vigentes (semântica preservada).
-        atrasado = projeto_atrasado_criterion()
-        query = query.filter(Project.status == "Vigente")
-        query = query.filter(atrasado if selected_atraso == "atrasado" else ~atrasado)
-    elif selected_atraso:
-        # Valor desconhecido preservava lista vazia na versão em Python.
-        query = query.filter(db.false())
+    filters = ProjectsListFilters(
+        selected_orgao_id=selected_orgao_id,
+        selected_status=selected_status,
+        selected_priority=selected_priority,
+        selected_atraso=selected_atraso,
+        selected_special_project=selected_special_project,
+        selected_delivery_type=selected_delivery_type,
+        selected_abep_indicator=selected_abep_indicator,
+        selected_objetivo=selected_objetivo,
+        selected_colecao_id=selected_colecao_id,
+        excluded_colecao_id=excluded_colecao_id,
+        search_query=search_query,
+    )
+    query = apply_projects_list_filters(Project.query, filters, g.user)
+    selected_abep_indicator = filters.selected_abep_indicator
+    selected_objetivo = filters.selected_objetivo
 
     total_projects = query.count()
     total_pages = (total_projects + per_page - 1) // per_page  # Ceiling division
@@ -250,15 +183,7 @@ def build_projects_list_context(
     special_projects_options = ["ABEP", "TCE", "Fórum de simplificação"]
     if g.user.is_admin or any_orgao_allows_inventario(get_user_orgao_siglas(g.user)):
         special_projects_options.append("Inventário")
-    delivery_types_options = [
-        "Sistema",
-        "Painel",
-        "Norma",
-        "Instrumento de parceria",
-        "Fluxo Processual",
-        "Eventos",
-        "Outro",
-    ]
+    delivery_types_options = list(DELIVERY_TYPES_OPTIONS)
     has_advanced_filters_active = any(
         [
             selected_atraso,
