@@ -6,7 +6,7 @@
 	 *   - secondary: superficie clara + borda/texto primary.
 	 *   - danger: superficie + texto/borda danger.
 	 *   - ghost: sem borda/fundo, so texto, hover suave.
-	 * Transicao do original: all 0.3s cubic-bezier(0.4,0,0.2,1) (duration-slow).
+	 * Transicao: 150ms (duration-fast), casada com os demais controles do app.
 	 *
 	 * Renderiza <a> quando `href` e passado (preserva navegacao), senao <button>.
 	 * Nao adiciona logica: handlers/atributos extras passam via `...rest`.
@@ -46,7 +46,7 @@
 	}: Props & HTMLButtonAttributes & HTMLAnchorAttributes = $props();
 
 	const base =
-		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-ui duration-slow ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
+		'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-ui duration-fast ease-[cubic-bezier(0.4,0,0.2,1)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60';
 
 	const variantClass: Record<Variant, string> = {
 		primary: 'bg-brand text-on-brand shadow-sm hover:bg-brand-hover hover:shadow-md',

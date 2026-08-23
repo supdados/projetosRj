@@ -86,7 +86,7 @@ async function refreshCsrfToken(): Promise<string | null> {
 }
 
 /** Redireciona para /login via navegacao top-level (nunca fetch). */
-function redirectToLogin(): void {
+export function redirectToLogin(): void {
 	if (typeof window !== 'undefined') {
 		window.location.assign(LOGIN_PATH);
 	}

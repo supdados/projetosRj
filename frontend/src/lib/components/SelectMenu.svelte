@@ -176,10 +176,16 @@
 		term = '';
 		highlightedIndex = selectedNavIndex();
 		await tick();
-		if (searchable) inputEl?.focus();
+		// Sem busca, o foco vai ao painel (dono do onkeydown) — no gatilho as setas nunca chegariam nele.
+		(searchable ? inputEl : panelEl)?.focus({ preventScroll: true });
 	}
 
 	function closePanel(): void {
+		// O painel sai do DOM ainda focado — sem devolver o foco ao gatilho, o
+		// activeElement cai no body e o focus trap de um modal pai perde o Tab.
+		if (panelEl && panelEl.contains(document.activeElement)) {
+			triggerEl?.focus({ preventScroll: true });
+		}
 		open = false;
 		highlightedIndex = -1;
 	}
@@ -224,7 +230,6 @@
 				event.stopPropagation();
 			}
 			closePanel();
-			triggerEl?.focus();
 			return;
 		}
 		if (event.key === 'ArrowDown') {
@@ -336,7 +341,7 @@
 				{:else if selected?.dot}
 					<span class="h-2 w-2 shrink-0 rounded-full" style:background={selected.dot}></span>
 				{/if}
-				<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
+				<span class="truncate transition-colors duration-fast {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
 					{triggerLabel}
 				</span>
 			</span>

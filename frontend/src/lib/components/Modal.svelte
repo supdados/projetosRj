@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Chrome ÚNICO de modais do app: backdrop escurecido + painel centralizado
-	 * (rounded-xl, bg-surface, shadow-lg, animate-modal-slide-in). O conteúdo
+	 * (rounded-xl, bg-surface, shadow-lg), com entrada/saída animadas. O conteúdo
 	 * interno fica por conta do chamador via `children`.
 	 *
 	 * Agora também: fecha no Esc (via `onEscape`, com fallback para `onBackdrop`;
@@ -14,19 +14,27 @@
 	 *   </Modal>
 	 */
 	import type { Snippet } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicIn, cubicOut } from 'svelte/easing';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { focusTrap } from '$lib/actions/focusTrap';
 
 	interface Props {
 		labelId: string;
+		/** Quando informado, o próprio Modal monta/desmonta — necessário para a saída animada. */
+		open?: boolean;
 		maxWidth?: string;
 		onBackdrop?: () => void;
 		onEscape?: () => void;
 		children: Snippet;
 	}
 
-	let { labelId, maxWidth = 'max-w-md', onBackdrop, onEscape, children }: Props = $props();
+	let { labelId, open = true, maxWidth = 'max-w-md', onBackdrop, onEscape, children }: Props =
+		$props();
 
 	let panelEl: HTMLDivElement | undefined = $state();
+
+	const duracao = (ms: number): number => (prefersReducedMotion.current ? 0 : ms);
 
 	function handleBackdropClick(event: MouseEvent) {
 		if (event.target === event.currentTarget) onBackdrop?.();
@@ -52,20 +60,26 @@
 	});
 </script>
 
-<div
-	class="fixed inset-0 z-modal flex items-center justify-center bg-overlay p-4"
-	role="presentation"
-	onclick={handleBackdropClick}
->
+{#if open}
 	<div
-		bind:this={panelEl}
-		class="w-full {maxWidth} animate-modal-slide-in rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby={labelId}
-		tabindex="-1"
-		use:focusTrap
+		class="fixed inset-0 z-modal flex items-center justify-center bg-overlay p-4"
+		role="presentation"
+		onclick={handleBackdropClick}
+		in:fade|global={{ duration: duracao(150) }}
+		out:fade={{ duration: duracao(150) }}
 	>
-		{@render children()}
+		<div
+			bind:this={panelEl}
+			class="w-full {maxWidth} rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby={labelId}
+			tabindex="-1"
+			use:focusTrap
+			in:scale|global={{ start: 0.96, duration: duracao(220), easing: cubicOut }}
+			out:scale={{ start: 0.98, duration: duracao(140), easing: cubicIn }}
+		>
+			{@render children()}
+		</div>
 	</div>
-</div>
+{/if}
