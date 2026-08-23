@@ -5,76 +5,256 @@ reusa a MESMA lógica pura de parsing (``parse_import_rows``) e persistência
 (``_persist_imported_projects``), apenas trocando o ``flash`` + redirect do fluxo
 Jinja pelo envelope canônico (``ok``/``fail``). Restrito a admin via
 ``api_admin_required``.
+
+Inclui também ``POST /api/projetos/importar-csv/analise``, que apenas inspeciona
+o arquivo enviado (nada é persistido) e devolve as colunas detectadas para a
+tela de revisão do mapeamento.
 """
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from flask import Response, request
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.datastructures import FileStorage
 
 from catalogs.inventario import sanitize_special_project_for_orgao
 from models import OrgaoUnidade, db
+from services.import_columns import (
+    IMPORT_FIELDS_PAYLOAD,
+    ImportFieldPayload,
+    parse_mapping_form_value,
+    suggest_column_mapping,
+)
 
 from ..blueprint import main_bp
 from ..projects.import_csv import (
     ALLOWED_IMPORT_STATUSES,
+    ImportOutcome,
+    ParsedImportRow,
+    _cell,
+    _decode_csv_bytes,
+    _detect_delimiter,
     _persist_imported_projects,
     parse_import_rows,
+    read_tabular_bytes,
 )
 from .envelope import fail, ok
 from .negotiation import api_admin_required
+
+MAX_IMPORT_UPLOAD_BYTES = 2 * 1024 * 1024
+MAX_IMPORT_ROWS = 10_000
+MAX_IMPORT_COLUMNS = 200
+
+
+class ColumnPreview(TypedDict):
+    indice: int
+    cabecalho: str
+    campo: str | None
+    confianca: str | None
+    amostra: str
+
+
+class ImportAnalysisPayload(TypedDict):
+    delimitador: str
+    total_linhas: int
+    colunas: list[ColumnPreview]
+    campos: list[ImportFieldPayload]
+
+
+def _resolve_import_orgao(orgao_id_raw: str | None) -> OrgaoUnidade:
+    """Resolve o órgão de destino do lote a partir do form."""
+    if not orgao_id_raw:
+        raise ValueError("Selecione o órgão de destino dos projetos.")
+    try:
+        orgao_id = int(orgao_id_raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"Órgão inválido: {orgao_id_raw!r} (esperado id numérico).")
+    orgao = db.session.get(OrgaoUnidade, orgao_id)
+    if orgao is None or not orgao.ativo:
+        raise ValueError("O órgão selecionado é inválido ou não está mais disponível.")
+    return orgao
+
+
+def _resolve_import_status(status_raw: str | None) -> str:
+    """Status padrão do lote, aplicado às linhas sem status próprio."""
+    status = status_raw or "Vigente"
+    if status not in ALLOWED_IMPORT_STATUSES:
+        raise ValueError(
+            f"Status inválido: {status!r}. Use um de {ALLOWED_IMPORT_STATUSES}."
+        )
+    return status
+
+
+def _resolve_import_mapping(mapeamento_raw: str | None) -> dict[int, str] | None:
+    """Mapeamento índice→campo do form; ausente devolve None (cabeçalho legado)."""
+    if not mapeamento_raw or not mapeamento_raw.strip():
+        return None
+    return parse_mapping_form_value(mapeamento_raw)
+
+
+def _oversized_upload_message() -> str:
+    return (
+        f"Arquivo acima de 2 MB (limite {MAX_IMPORT_UPLOAD_BYTES} bytes por arquivo)."
+    )
+
+
+def _read_capped_upload(upload: FileStorage) -> bytes:
+    """Lê o upload recusando arquivo acima de ``MAX_IMPORT_UPLOAD_BYTES``.
+
+    Mede só o arquivo: ``request.content_length`` é o corpo multipart inteiro e
+    recusaria arquivos abaixo do teto por causa do overhead das bordas.
+    """
+    raw = upload.read(MAX_IMPORT_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_IMPORT_UPLOAD_BYTES:
+        raise ValueError(_oversized_upload_message())
+    return raw
+
+
+def _ensure_rows_cap(rows: list[ParsedImportRow]) -> None:
+    """Recusa lotes acima de ``MAX_IMPORT_ROWS`` linhas com título, antes de persistir."""
+    importaveis = sum(1 for row in rows if row.titulo)
+    if importaveis > MAX_IMPORT_ROWS:
+        raise ValueError("Importação acima de 10.000 projetos — divida o arquivo.")
+
+
+def _parse_upload_rows(
+    raw: bytes, mapeamento: dict[int, str] | None
+) -> list[ParsedImportRow]:
+    try:
+        rows = parse_import_rows(raw, mapeamento)
+    except ValueError as parse_error:
+        raise ValueError(f"Falha ao ler o CSV: {parse_error}")
+    if not rows:
+        raise ValueError(
+            'Nenhum projeto válido encontrado no CSV (verifique a coluna "titulo").'
+        )
+    return rows
+
+
+def _read_import_rows(
+    upload: FileStorage | None, mapeamento: dict[int, str] | None
+) -> list[ParsedImportRow]:
+    """Lê o arquivo enviado em linhas de importação."""
+    if upload is None or not upload.filename:
+        raise ValueError("Selecione um arquivo CSV para importar.")
+    rows = _parse_upload_rows(_read_capped_upload(upload), mapeamento)
+    _ensure_rows_cap(rows)
+    return rows
+
+
+def _batch_defaults(orgao: OrgaoUnidade) -> tuple[str | None, str | None]:
+    """Projeto especial e tipo de entrega padrão do lote, vindos do form."""
+    special_project = sanitize_special_project_for_orgao(
+        request.form.get("special_project") or None, orgao.sigla
+    )
+    return special_project, request.form.get("delivery_type") or None
+
+
+def _import_counts(outcome: ImportOutcome) -> dict[str, int]:
+    return {
+        "imported_count": outcome.imported,
+        "ignored_count": outcome.ignored,
+        "adjusted_count": outcome.adjusted,
+    }
 
 
 @main_bp.route("/api/projetos/importar-csv", methods=["POST"])
 @api_admin_required
 def api_projetos_importar_csv() -> Response | tuple[Response, int]:
-    """Importa projetos em lote de um CSV (colunas ``titulo``/``descricao``).
+    """Importa projetos em lote de um CSV.
 
-    Aceita ``multipart/form-data`` com o arquivo em ``arquivo`` e os atributos
-    comuns aplicados a todas as linhas: ``orgao_id`` (obrigatório), ``status``,
-    ``special_project`` e ``delivery_type``. Validações espelham a rota Jinja.
+    Aceita ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB e
+    10.000 projetos), os atributos
+    padrão do lote (``orgao_id`` obrigatório, ``status``, ``special_project``,
+    ``delivery_type``) e o ``mapeamento`` opcional (JSON de índice de coluna
+    para campo). Sem ``mapeamento``, o CSV precisa das colunas
+    ``titulo``/``descricao``.
 
     Returns:
-        ``ok({"imported_count": N})`` em sucesso; ``fail(..., 422, "validation")``
-        para entradas inválidas; ``fail(..., 500)`` em erro de persistência.
-        ``api_admin_required`` devolve 401/403 conforme a sessão.
+        ``ok({"imported_count", "ignored_count", "adjusted_count"})`` em
+        sucesso; ``fail(..., 422, "validation")`` para entradas inválidas;
+        ``fail(..., 500, "server")`` em erro de persistência.
     """
-    orgao_id_raw = request.form.get("orgao_id")
-    if not orgao_id_raw:
-        return fail(
-            "Selecione o órgão de destino dos projetos.",
-            status=422,
-            code="validation",
-        )
     try:
-        orgao_id = int(orgao_id_raw)
-    except (TypeError, ValueError):
-        return fail(
-            f"Órgão inválido: {orgao_id_raw!r} (esperado id numérico).",
-            status=422,
-            code="validation",
-        )
-    orgao = db.session.get(OrgaoUnidade, orgao_id)
-    if orgao is None or not orgao.ativo:
-        return fail(
-            "O órgão selecionado é inválido ou não está mais disponível.",
-            status=422,
-            code="validation",
-        )
+        orgao = _resolve_import_orgao(request.form.get("orgao_id"))
+        status = _resolve_import_status(request.form.get("status"))
+        mapeamento = _resolve_import_mapping(request.form.get("mapeamento"))
+        rows = _read_import_rows(request.files.get("arquivo"), mapeamento)
+    except ValueError as invalid_input:
+        return fail(str(invalid_input), status=422, code="validation")
 
-    status = request.form.get("status") or "Vigente"
-    if status not in ALLOWED_IMPORT_STATUSES:
-        return fail(
-            f"Status inválido: {status!r}. Use um de {ALLOWED_IMPORT_STATUSES}.",
-            status=422,
-            code="validation",
+    special_project, delivery_type = _batch_defaults(orgao)
+    try:
+        outcome = _persist_imported_projects(
+            rows, orgao, status, special_project, delivery_type
         )
+    except SQLAlchemyError:
+        db.session.rollback()
+        return fail("Erro ao salvar os projetos importados.", status=500, code="server")
 
-    special_project = sanitize_special_project_for_orgao(
-        request.form.get("special_project") or None, orgao.sigla
-    )
-    delivery_type = request.form.get("delivery_type") or None
+    return ok(_import_counts(outcome))
 
+
+def _first_sample(linhas: list[list[str]], indice: int) -> str:
+    """Primeiro valor não-vazio da coluna ``indice`` entre as linhas de dados."""
+    for linha in linhas:
+        valor = _cell(linha, indice)
+        if valor:
+            return valor
+    return ""
+
+
+def _detected_delimiter(raw: bytes) -> str:
+    return _detect_delimiter(_decode_csv_bytes(raw))
+
+
+def _build_columns_preview(
+    cabecalhos: list[str], linhas: list[list[str]]
+) -> list[ColumnPreview]:
+    return [
+        {
+            "indice": sugestao.indice,
+            "cabecalho": sugestao.cabecalho,
+            "campo": sugestao.campo,
+            "confianca": sugestao.confianca,
+            "amostra": _first_sample(linhas, sugestao.indice),
+        }
+        for sugestao in suggest_column_mapping(cabecalhos)
+    ]
+
+
+def _analysable_table(raw: bytes) -> tuple[list[str], list[list[str]]]:
+    """Lê a tabela para análise recusando cabeçalhos acima de ``MAX_IMPORT_COLUMNS``."""
+    try:
+        cabecalhos, linhas = read_tabular_bytes(raw)
+    except ValueError as parse_error:
+        raise ValueError(f"Falha ao ler o CSV: {parse_error}")
+    if len(cabecalhos) > MAX_IMPORT_COLUMNS:
+        raise ValueError(f"Arquivo acima de 200 colunas (recebidas {len(cabecalhos)}).")
+    return cabecalhos, linhas
+
+
+def _build_analysis_payload(
+    raw: bytes, cabecalhos: list[str], linhas: list[list[str]]
+) -> ImportAnalysisPayload:
+    return {
+        "delimitador": _detected_delimiter(raw),
+        "total_linhas": len(linhas),
+        "colunas": _build_columns_preview(cabecalhos, linhas),
+        "campos": IMPORT_FIELDS_PAYLOAD,
+    }
+
+
+@main_bp.route("/api/projetos/importar-csv/analise", methods=["POST"])
+@api_admin_required
+def api_projetos_importar_csv_analise() -> Response | tuple[Response, int]:
+    """Analisa o CSV enviado e sugere o mapeamento de colunas, sem persistir nada.
+
+    Recebe ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB) e
+    devolve ``ok({delimitador, total_linhas, colunas, campos})``.
+    """
     upload = request.files.get("arquivo")
     if not upload or not upload.filename:
         return fail(
@@ -82,23 +262,9 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
         )
 
     try:
-        rows = parse_import_rows(upload.read())
-    except ValueError as parse_error:
-        return fail(f"Falha ao ler o CSV: {parse_error}", status=422, code="validation")
+        raw = _read_capped_upload(upload)
+        cabecalhos, linhas = _analysable_table(raw)
+    except ValueError as invalid_input:
+        return fail(str(invalid_input), status=422, code="validation")
 
-    if not rows:
-        return fail(
-            'Nenhum projeto válido encontrado no CSV (verifique a coluna "titulo").',
-            status=422,
-            code="validation",
-        )
-
-    try:
-        _persist_imported_projects(rows, orgao, status, special_project, delivery_type)
-    except SQLAlchemyError:
-        db.session.rollback()
-        return fail(
-            "Erro ao salvar os projetos importados.", status=500, code="server_error"
-        )
-
-    return ok({"imported_count": len(rows)})
+    return ok(_build_analysis_payload(raw, cabecalhos, linhas))

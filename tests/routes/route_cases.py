@@ -1345,6 +1345,17 @@ ROUTE_CASES += [
         "requires_admin": True,
     },
     {
+        # Análise do CSV (Admin), stateless: sem corpo devolve 422 (arquivo obrigatório).
+        "id": "api_projetos_importar_csv_analise_post",
+        "method": "POST",
+        "rule": "/api/projetos/importar-csv/analise",
+        "path": "/api/projetos/importar-csv/analise",
+        "role": "admin",
+        "expected_status": 422,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
         "id": "api_projeto_concluir_post",
         "method": "POST",
         "rule": "/api/projetos/<int:project_id>/concluir",

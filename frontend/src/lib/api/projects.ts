@@ -19,6 +19,7 @@
 import { get, post, del, postForm } from './client';
 import { createSwrCache } from './swrCache';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
+import type { AnaliseImportacao, ImportProjectsResultV2 } from '$lib/types/importExport';
 
 // Ultimo payload bom por chave de filtros (querystring de `buildQuery`). SWR:
 // a tela reabre com o dado antigo e revalida em silencio (ver dashboard.ts).
@@ -29,21 +30,36 @@ export function peekProjects(query: ProjectsListQuery = {}): ProjectsListData | 
 	return projectsCache.peek(buildQuery(query));
 }
 
-/** Resultado da importação de projetos via CSV (`POST /api/projetos/importar-csv`). */
-export interface ImportProjectsResult {
-	imported_count: number;
+/**
+ * Analisa um CSV (Admin) sem persistir nada: devolve delimitador, total de
+ * linhas, as colunas com o campo sugerido pelo matching do backend e o catálogo
+ * de campos importáveis. Envia `multipart/form-data` com o arquivo em `arquivo`.
+ *
+ * Exemplo:
+ *   const fd = new FormData();
+ *   fd.append('arquivo', file);
+ *   const analise = await analisarImportacaoCsv(fd);
+ */
+export function analisarImportacaoCsv(
+	formData: FormData,
+	signal?: AbortSignal
+): Promise<AnaliseImportacao> {
+	return postForm<AnaliseImportacao>('/api/projetos/importar-csv/analise', formData, signal);
 }
 
 /**
  * Importa projetos em lote de um CSV (Admin). Envia `multipart/form-data` com o
- * arquivo em `arquivo` e os atributos comuns (`orgao_id`, `status`,
- * `special_project`, `delivery_type`). Sucessor da rota Jinja `/projects/import`.
+ * arquivo em `arquivo`, os atributos comuns (`orgao_id`, `status`,
+ * `special_project`, `delivery_type`) e, opcionalmente, `mapeamento` — JSON
+ * `{"<índice da coluna>": "<campo>"}` das colunas não ignoradas. Sem
+ * `mapeamento` o backend segue o caminho legado (cabeçalhos `titulo`/`descricao`).
  */
-export async function importProjectsCsv(formData: FormData): Promise<ImportProjectsResult> {
-	const result = await postForm<ImportProjectsResult>('/api/projetos/importar-csv', formData);
+export async function importProjectsCsv(formData: FormData): Promise<ImportProjectsResultV2> {
+	const result = await postForm<ImportProjectsResultV2>('/api/projetos/importar-csv', formData);
 	projectsCache.invalidate();
 	return result;
 }
+
 import type { Project } from '$lib/types/entities';
 
 /** Descarta TODAS as chaves do cache de listagem (escritas fora deste módulo). */

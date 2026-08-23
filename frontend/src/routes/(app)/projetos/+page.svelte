@@ -114,10 +114,9 @@
 	/** F3-9: usuário só-convite não vê o seletor de órgão (e nunca toma o 422). */
 	const temVinculoDeArea = $derived($auth.user?.tem_vinculo_de_area ?? true);
 
-	/** Sucesso da importação CSV: flash + recarrega a lista. */
-	function onProjectsImported(count: number): void {
+	/** Sucesso da importação CSV: o próprio modal já mostrou o total; só recarrega. */
+	function onProjectsImported(): void {
 		importModalOpen = false;
-		flash.success(`${count} projeto(s) importado(s) com sucesso.`);
 		void load();
 	}
 
@@ -1424,4 +1423,5 @@
 	onClose={() => (importModalOpen = false)}
 	onImported={onProjectsImported}
 />
+
 
