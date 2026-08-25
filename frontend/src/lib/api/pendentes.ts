@@ -31,6 +31,7 @@ function buildQuery(filters: PendingFilters): string {
 	if (filters.search && filters.search.trim()) params.set('q', filters.search.trim());
 	if (filters.orgao !== undefined && filters.orgao !== null) {
 		params.set('orgao', String(filters.orgao));
+		if (filters.apenas_orgao) params.set('apenas_orgao', '1');
 	}
 	if (filters.page && filters.page > 1) params.set('page', String(filters.page));
 	const query = params.toString();

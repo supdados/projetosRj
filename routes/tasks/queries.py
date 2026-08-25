@@ -75,8 +75,11 @@ def set_task_assignees(task: Task, desired_user_ids) -> tuple[list, list]:
 
 
 def _read_task_filter_values(source):
+    from routes.orgao_scope import parse_apenas_orgao_flag
+
     return {
         "orgao_filter": (source.get("orgao") or source.get("area") or "").strip(),
+        "apenas_orgao_filter": parse_apenas_orgao_flag(source.get("apenas_orgao")),
         "project_filter": (source.get("project") or "").strip(),
         "prioridade_filter": (source.get("prioridade") or "").strip(),
         "tipo_filter": (source.get("tipo") or "").strip(),
@@ -89,6 +92,7 @@ def _read_task_filter_values(source):
 def _merge_task_filter_values(*values_list):
     merged = {
         "orgao_filter": "",
+        "apenas_orgao_filter": False,
         "project_filter": "",
         "prioridade_filter": "",
         "tipo_filter": "",
@@ -251,6 +255,7 @@ def _build_visible_tasks_query(
     search_filter="",
     include_relations=True,
     orgao_filter_id=None,
+    apenas_orgao=False,
 ):
     from routes.orgao_scope import expand_orgao_filter_ids
     from services.authorization import project_visibility_criterion
@@ -275,7 +280,9 @@ def _build_visible_tasks_query(
         )
 
     if orgao_filter_id is not None:
-        subtree_ids = expand_orgao_filter_ids(orgao_filter_id)
+        subtree_ids = expand_orgao_filter_ids(
+            orgao_filter_id, incluir_descendentes=not apenas_orgao
+        )
         if subtree_ids:
             query = query.filter(
                 Task.project_id.isnot(None), Project.orgao_id.in_(subtree_ids)

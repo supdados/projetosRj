@@ -4,6 +4,7 @@ from routes.orgao_scope import (
     expand_orgao_filter_ids,
     get_user_orgao_subtree_ids,
     get_visible_orgao_tree,
+    parse_apenas_orgao_flag,
     sanitize_orgao_filter_for_user,
 )
 from services.authorization import get_user_orgao_role_map
@@ -110,6 +111,25 @@ def test_expand_orgao_filter_includes_descendants(app):
         assert ids == {root.id, a.id, b.id, c.id}
 
         assert expand_orgao_filter_ids(None) == set()
+
+
+def test_expand_orgao_filter_sem_descendentes(app):
+    with app.app_context():
+        root = _add_orgao("R", tipo="Secretaria")
+        _add_orgao("A", pai_id=root.id)
+
+        assert expand_orgao_filter_ids(root.id, incluir_descendentes=False) == {root.id}
+        assert expand_orgao_filter_ids(None, incluir_descendentes=False) == set()
+
+
+def test_parse_apenas_orgao_flag():
+    assert parse_apenas_orgao_flag("1") is True
+    assert parse_apenas_orgao_flag("true") is True
+    assert parse_apenas_orgao_flag(True) is True
+    assert parse_apenas_orgao_flag("0") is False
+    assert parse_apenas_orgao_flag("") is False
+    assert parse_apenas_orgao_flag(None) is False
+    assert parse_apenas_orgao_flag(False) is False
 
 
 # --- A3: arvore visivel a partir de TODOS os vinculos ------------------------

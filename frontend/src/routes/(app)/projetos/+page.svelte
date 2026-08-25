@@ -16,7 +16,7 @@
 	 * (replaceState) para deep-link / voltar / reload preservarem o estado,
 	 * espelhando o `?status=...` do form GET Jinja.
 	 */
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, untrack } from 'svelte';
 	import { base } from '$app/paths';
 	import { goto, replaceState } from '$app/navigation';
 	import { page as pageState } from '$app/state';
@@ -45,12 +45,12 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import CriarProjetoModal from '$lib/components/CriarProjetoModal.svelte';
-	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import ExportarProjetosModal from '$lib/components/ExportarProjetosModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import { priorityIconId, prioridadeLabel } from '$lib/utils/taskLabels';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
 	import ProjetosSkeleton from '$lib/components/skeletons/ProjetosSkeleton.svelte';
+	import ApenasEstaAreaChip from '$lib/components/ApenasEstaAreaChip.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -58,6 +58,7 @@
 	import { flash } from '$lib/stores/flash';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { auth } from '$lib/stores/auth';
+	import { projectsRevision } from '$lib/stores/projectsRevision';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 
@@ -76,6 +77,9 @@
 	// Filtros controlados pela UI; a busca acontece server-side.
 	let search = $state<string>('');
 	let orgao = $state<string>(''); // value do <select> (id como string)
+	// Modo "Apenas esta área": órgão selecionado SEM os descendentes. Reseta em
+	// toda troca de órgão (estado herdado silenciosamente seria imprevisível).
+	let apenasOrgao = $state<boolean>(false);
 	let status = $state<string>(DEFAULT_STATUS);
 	let prioridade = $state<string>('');
 	let deliveryType = $state<string>('');
@@ -106,22 +110,11 @@
 
 	// Modal de criação de projeto (Quick Create).
 	let createModalOpen = $state<boolean>(false);
-	// Modal de importação de projetos via CSV (Admin).
-	let importModalOpen = $state<boolean>(false);
 	// Modal de exportação de projetos em CSV (todos os logados).
 	let exportModalOpen = $state<boolean>(false);
 
-	/** Só admin importa projetos via CSV (espelha @admin_required do backend). */
-	const isAdmin = $derived($auth.user?.is_admin ?? false);
-
 	/** F3-9: usuário só-convite não vê o seletor de órgão (e nunca toma o 422). */
 	const temVinculoDeArea = $derived($auth.user?.tem_vinculo_de_area ?? true);
-
-	/** Sucesso da importação CSV: o próprio modal já mostrou o total; só recarrega. */
-	function onProjectsImported(): void {
-		importModalOpen = false;
-		void load();
-	}
 
 	/**
 	 * Sucesso da criação: replica o flash success + redirect do Jinja.
@@ -208,6 +201,7 @@
 		status = statusParam === null ? DEFAULT_STATUS : statusParam;
 		search = params.get('search') ?? params.get('q') ?? '';
 		orgao = params.get('orgao') ?? '';
+		apenasOrgao = orgao !== '' && params.get('apenas_orgao') === '1';
 		prioridade = params.get('prioridade') ?? '';
 		deliveryType = params.get('delivery_type') ?? '';
 		atraso = params.get('atraso') ?? '';
@@ -245,6 +239,7 @@
 			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
 			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todos os órgãos").
 			orgao: orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId(),
+			apenas_orgao: orgao && apenasOrgao ? true : undefined,
 			q: search.trim() || undefined,
 			page
 		};
@@ -281,12 +276,11 @@
 			})
 		)
 	);
-	/** Sigla do órgão filtrado — o query carrega só o id, e o chip do export mostra a sigla. */
-	const orgaoFiltradoSigla = $derived.by<string | null>(() => {
-		const id = orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId();
-		if (id === undefined) return null;
-		return orgaoOptions.find((o) => Number(o.value) === id)?.sigla ?? null;
-	});
+	// O chip "Apenas esta área" só existe quando o órgão filtrado tem filhos.
+	const orgaoTemFilhos = $derived(
+		orgao !== '' &&
+			orgaoOptions.some((o) => o.pai_id != null && Number(o.pai_id) === Number(orgao))
+	);
 	const specialOptions = $derived(data?.options.special_projects_options ?? []);
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
@@ -353,6 +347,7 @@
 		const params = new URLSearchParams();
 		if (search.trim()) params.set('search', search.trim());
 		if (orgao) params.set('orgao', orgao);
+		if (orgao && apenasOrgao) params.set('apenas_orgao', '1');
 		// Mantém ?status na URL sempre que difere do default OU foi limpo ("Todos").
 		if (status !== DEFAULT_STATUS) params.set('status', status);
 		if (prioridade) params.set('prioridade', prioridade);
@@ -488,6 +483,12 @@
 	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
 	function onOrgaoSelect(selecionado: number | null): void {
 		orgao = selecionado == null ? '' : String(selecionado);
+		apenasOrgao = false;
+		applyFilterChange();
+	}
+
+	function toggleApenasOrgao(): void {
+		apenasOrgao = !apenasOrgao;
 		applyFilterChange();
 	}
 
@@ -503,6 +504,7 @@
 		if (debounceTimer) clearTimeout(debounceTimer);
 		search = '';
 		orgao = '';
+		apenasOrgao = false;
 		status = DEFAULT_STATUS;
 		prioridade = '';
 		deliveryType = '';
@@ -701,6 +703,17 @@
 		unsubscribeScope();
 	});
 
+	// A importação de CSV agora acontece no menu do usuário, fora desta tela.
+	// untrack: `load()` lê os filtros; sem ele o efeito passaria a depender deles
+	// e re-rodaria a cada digitação/troca de filtro.
+	let revisaoAplicada = $projectsRevision;
+	$effect(() => {
+		const revisao = $projectsRevision;
+		if (revisao === revisaoAplicada) return;
+		revisaoAplicada = revisao;
+		untrack(() => void load());
+	});
+
 	/** Detalhe do projeto: rota SPA base-aware (Fase 5a migrada). */
 	function projectDetailHref(project: Project): string {
 		return `${base}/projetos/${project.id}`;
@@ -787,16 +800,14 @@
 			<!--
 				Botão primário (btn-projects-v4-primary): gradiente da marca + sombra
 				elevada. Reproduzido com o token primary e leve elevação no hover.
-				(Exportar CSV migrou para o menu de usuário no topnav — AppTopnav.)
+				(Importar CSV migrou para o menu de usuário no topnav — AppTopnav.)
 			-->
-			{#if isAdmin}
-				<Button size="sm" variant="secondary" onclick={() => (importModalOpen = true)}>
-					{#snippet icon()}
-						<i class="fas fa-file-import" aria-hidden="true"></i>
-					{/snippet}
-					Importar CSV
-				</Button>
-			{/if}
+			<Button size="sm" variant="secondary" onclick={() => (exportModalOpen = true)}>
+				{#snippet icon()}
+					<i class="fas fa-file-export" aria-hidden="true"></i>
+				{/snippet}
+				Exportar CSV
+			</Button>
 			<Button size="sm" onclick={() => (createModalOpen = true)}>
 				{#snippet icon()}
 					<i class="fas fa-plus" aria-hidden="true"></i>
@@ -818,7 +829,11 @@
 		<!-- Linha essencial: busca/órgão/status/prioridade + ações à direita. -->
 		<div class="flex flex-wrap items-center gap-2">
 			<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas). -->
-			<div class="relative w-full min-w-[14rem] max-w-[26rem]">
+			<div
+				class="relative {orgaoTemFilhos
+					? 'min-w-[12rem] max-w-[26rem] flex-[1_1_16rem]'
+					: 'w-full min-w-[14rem] max-w-[26rem]'}"
+			>
 				<i
 					class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 					aria-hidden="true"
@@ -837,16 +852,26 @@
 			</div>
 
 			{#if temVinculoDeArea && orgaoTreeOptions.length > 0}
-				<div class="min-w-[11rem] flex-1">
-					<OrgaoTreeSelect
-						id="projetosOrgao"
-						options={orgaoTreeOptions}
-						value={orgao ? Number(orgao) : null}
-						onSelect={onOrgaoSelect}
-						allowTodos
-						ariaLabel="Filtrar por área responsável"
-						placeholder="Todas as áreas"
-					/>
+				<div
+					class="flex {orgaoTemFilhos
+						? 'min-w-[15.5rem] max-w-[26rem] flex-[1_1_7rem]'
+						: 'min-w-[11rem] flex-1'}"
+				>
+					<div class="min-w-0 flex-1">
+						<OrgaoTreeSelect
+							id="projetosOrgao"
+							options={orgaoTreeOptions}
+							value={orgao ? Number(orgao) : null}
+							onSelect={onOrgaoSelect}
+							allowTodos
+							ariaLabel="Filtrar por área responsável"
+							placeholder="Todas as áreas"
+							attachedRight={orgaoTemFilhos}
+						/>
+					</div>
+					{#if orgaoTemFilhos}
+						<ApenasEstaAreaChip ativo={apenasOrgao} onToggle={toggleApenasOrgao} />
+					{/if}
 				</div>
 			{/if}
 
@@ -865,7 +890,7 @@
 				/>
 			</div>
 
-			<div class="min-w-[11rem] flex-1">
+			<div class="min-w-[11.75rem] flex-1">
 				<SelectMenu
 					id="projetosPrioridade"
 					options={priorityMenuOptions}
@@ -884,15 +909,6 @@
 				 seleção em qualquer campo já re-busca server-side (a busca textual tem
 				 debounce e o Enter ainda submete o form). -->
 			<div class="ml-auto flex items-center gap-2">
-				<button
-					type="button"
-					onclick={() => (exportModalOpen = true)}
-					title="Exportar projetos"
-					class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-text-secondary transition-ui duration-fast ease-out hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<i class="fas fa-file-export" aria-hidden="true"></i>
-					Exportar
-				</button>
 				<!-- Toggle "Mais filtros" (btn-projects-v4-toggle). -->
 				<button
 					type="button"
@@ -1434,21 +1450,12 @@
 	onCreatedDismissed={onProjectCreatedDismissed}
 />
 
-<!-- Importação de projetos via CSV (Admin) — sucessor do import_modal.html Jinja. -->
-<ImportarCsvModal
-	open={importModalOpen}
-	options={createOptions}
-	onClose={() => (importModalOpen = false)}
-	onImported={onProjectsImported}
-/>
-
 <!-- Exportação de projetos em CSV (GET /api/projetos/exportar) — todos os logados. -->
 <ExportarProjetosModal
 	open={exportModalOpen}
 	filtros={buildProjectsQuery()}
 	totalFiltrado={totalProjects}
 	hasFiltrosAtivos={hasActiveFilters}
-	orgaoSigla={orgaoFiltradoSigla}
 	onClose={() => (exportModalOpen = false)}
 />
 

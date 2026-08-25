@@ -81,6 +81,7 @@ def _load_active_board_tasks(filter_values: dict[str, str], orgao_id: int | None
         status_filter=filter_values["status_filter"],
         responsavel_filter=filter_values["responsavel_filter"],
         orgao_filter_id=orgao_id,
+        apenas_orgao=filter_values["apenas_orgao_filter"],
     ).all()
 
 

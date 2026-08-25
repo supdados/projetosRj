@@ -85,6 +85,7 @@ def build_projects_list_context(
     selected_priority=None,
     selected_status=None,
     selected_orgao_id=None,
+    apenas_orgao=False,
     selected_atraso=None,
     selected_special_project=None,
     selected_delivery_type=None,
@@ -109,6 +110,7 @@ def build_projects_list_context(
         selected_status: Filtro de status; o chamador define o default "Vigente"
             (mantido aqui apenas como filtro, sem reescrever o default).
         selected_orgao_id: ID de órgão já validado para o usuário (ou ``None``).
+        apenas_orgao: ``True`` restringe ao órgão selecionado SEM os descendentes.
         selected_atraso: "atrasado" | "no_prazo" | "" (critério único de
             ``services/atraso.py``, aplicado em SQL sobre projetos vigentes).
         selected_special_project: "ABEP" | "TCE" | "Fórum de simplificação" | "" .
@@ -133,6 +135,7 @@ def build_projects_list_context(
     """
     filters = ProjectsListFilters(
         selected_orgao_id=selected_orgao_id,
+        apenas_orgao=apenas_orgao,
         selected_status=selected_status,
         selected_priority=selected_priority,
         selected_atraso=selected_atraso,
@@ -313,6 +316,7 @@ def _responsavel_criterion(nome):
 def build_projetos_pendentes_context(
     selected_orgao_id,
     *,
+    apenas_orgao=False,
     filtro_periodo="atrasados",
     selected_responsavel="",
     selected_priority="",
@@ -390,7 +394,9 @@ def build_projetos_pendentes_context(
         )
 
     if selected_orgao_id is not None:
-        orgao_subtree = expand_orgao_filter_ids(selected_orgao_id)
+        orgao_subtree = expand_orgao_filter_ids(
+            selected_orgao_id, incluir_descendentes=not apenas_orgao
+        )
         if orgao_subtree:
             query_projetos_base = query_projetos_base.filter(
                 Project.orgao_id.in_(orgao_subtree)

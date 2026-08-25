@@ -153,7 +153,10 @@
 			if (filtros.abep_indicator) params.set('abep_indicator', filtros.abep_indicator);
 			if (filtros.objetivo) params.set('objetivo', filtros.objetivo);
 			if (filtros.q) params.set('q', filtros.q);
-			if (filtros.orgao != null) params.set('orgao', String(filtros.orgao));
+			if (filtros.orgao != null) {
+				params.set('orgao', String(filtros.orgao));
+				if (filtros.apenas_orgao) params.set('apenas_orgao', '1');
+			}
 			if (filtros.colecao != null) params.set('colecao', String(filtros.colecao));
 			if (filtros.excluir_colecao != null) {
 				params.set('excluir_colecao', String(filtros.excluir_colecao));

@@ -151,6 +151,8 @@ export interface PendingFilters {
 	prioridade?: string;
 	search?: string;
 	orgao?: number | null;
+	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
+	apenas_orgao?: boolean;
 	page?: number;
 }
 

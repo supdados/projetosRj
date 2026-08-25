@@ -37,6 +37,7 @@ function buildQuery(query: TaskHubQuery): string {
 	if (query.search) params.set('search', query.search);
 	if (query.orgao !== undefined && query.orgao !== null && query.orgao !== '') {
 		params.set('orgao', String(query.orgao));
+		if (query.apenas_orgao) params.set('apenas_orgao', '1');
 	}
 	if (query.modo) params.set('modo', query.modo);
 	if (query.page && query.page > 1) params.set('page', String(query.page));

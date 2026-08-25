@@ -180,6 +180,7 @@ def api_tarefas() -> Response | tuple[Response, int]:
         responsavel_filter=filter_values["responsavel_filter"],
         search_filter=filter_values["search_filter"],
         selected_orgao_id=selected_orgao_id,
+        apenas_orgao=filter_values["apenas_orgao_filter"],
         include_archived=include_archived,
         page=request.args.get("page", 1, type=int),
         per_page=HUB_GROUPS_PER_PAGE,

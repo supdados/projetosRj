@@ -119,6 +119,8 @@ export interface TaskHubQuery {
 	/** Busca livre por descrição da tarefa ou título do projeto. */
 	search?: string;
 	orgao?: string | number | null;
+	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
+	apenas_orgao?: boolean;
 	modo?: TaskHubModo;
 	/** Página (1-based) da lista paginada por grupo de projeto. */
 	page?: number;
@@ -131,6 +133,8 @@ export interface TaskHubQuery {
 export interface TaskHubFilterValues {
 	project?: string;
 	orgao?: string | number | null;
+	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
+	apenas_orgao?: boolean;
 	prioridade?: string;
 	tipo?: string;
 	status?: string;

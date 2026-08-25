@@ -140,6 +140,7 @@ function buildQuery(query: ProjectsListQuery): string {
 	if (query.q) params.set('q', query.q);
 	if (query.orgao !== undefined && query.orgao !== null) {
 		params.set('orgao', String(query.orgao));
+		if (query.apenas_orgao) params.set('apenas_orgao', '1');
 	}
 	if (query.colecao !== undefined && query.colecao !== null) {
 		params.set('colecao', String(query.colecao));

@@ -189,14 +189,18 @@ def _flatten_stage_tasks_into_group(group, stages):
         group["items"] = list(flat)
 
 
-def _build_task_hub_project_options(include_archived=False, orgao_filter_id=None):
+def _build_task_hub_project_options(
+    include_archived=False, orgao_filter_id=None, apenas_orgao=False
+):
     query = Project.query
 
     if not g.user.is_admin:
         query = query.filter(project_visibility_criterion(g.user))
 
     if orgao_filter_id is not None:
-        filter_subtree_ids = expand_orgao_filter_ids(orgao_filter_id)
+        filter_subtree_ids = expand_orgao_filter_ids(
+            orgao_filter_id, incluir_descendentes=not apenas_orgao
+        )
         if filter_subtree_ids:
             query = query.filter(Project.orgao_id.in_(filter_subtree_ids))
         else:
@@ -338,6 +342,7 @@ def build_task_hub_context(
     responsavel_filter="",
     search_filter="",
     selected_orgao_id=None,
+    apenas_orgao=False,
     include_archived=False,
     page=1,
     per_page=None,
@@ -385,6 +390,7 @@ def build_task_hub_context(
         "responsavel_filter": responsavel_filter,
         "search_filter": search_filter,
         "orgao_filter_id": selected_orgao_id,
+        "apenas_orgao": apenas_orgao,
     }
     if per_page is None:
         groups, total_groups, total_items = _load_all_groups(**filters)
@@ -397,6 +403,7 @@ def build_task_hub_context(
     project_options = _build_task_hub_project_options(
         include_archived=include_archived,
         orgao_filter_id=selected_orgao_id,
+        apenas_orgao=apenas_orgao,
     )
 
     return {

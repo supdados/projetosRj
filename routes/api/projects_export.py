@@ -21,7 +21,10 @@ from services.project_export import (
 from time_utils import utc_now
 
 from ..blueprint import main_bp
-from ..orgao_scope import sanitize_orgao_filter_for_current_user
+from ..orgao_scope import (
+    parse_apenas_orgao_flag,
+    sanitize_orgao_filter_for_current_user,
+)
 from ..projects.list_filters import ProjectsListFilters
 from .envelope import fail
 from .negotiation import api_login_required
@@ -46,6 +49,7 @@ def _parse_export_slugs(raw: str | None) -> list[str]:
 def _export_filters_from_request(selected_orgao_id: int | None) -> ProjectsListFilters:
     return ProjectsListFilters(
         selected_orgao_id=selected_orgao_id,
+        apenas_orgao=parse_apenas_orgao_flag(request.args.get("apenas_orgao")),
         selected_status=request.args.get("status"),
         selected_priority=request.args.get("prioridade"),
         selected_atraso=request.args.get("atraso"),

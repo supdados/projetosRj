@@ -231,6 +231,7 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
         _build_visible_tasks_query(
             include_archived=False,
             orgao_filter_id=orgao_filter_id,
+            apenas_orgao=filter_values["apenas_orgao_filter"],
             project_filter=filter_values["project_filter"],
             prioridade_filter=filter_values["prioridade_filter"],
             tipo_filter=filter_values["tipo_filter"],

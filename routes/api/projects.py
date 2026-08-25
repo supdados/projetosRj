@@ -24,7 +24,10 @@ from werkzeug.exceptions import NotFound
 from services.authorization import PAPEL_LEITOR, require_project_rank
 
 from ..blueprint import main_bp
-from ..orgao_scope import sanitize_orgao_filter_for_current_user
+from ..orgao_scope import (
+    parse_apenas_orgao_flag,
+    sanitize_orgao_filter_for_current_user,
+)
 from ..projects.views import (
     build_project_history_context,
     build_projects_list_context,
@@ -132,6 +135,7 @@ def api_projetos_pendentes() -> Response | tuple[Response, int]:
 
     context = build_projetos_pendentes_context(
         selected_orgao_id,
+        apenas_orgao=parse_apenas_orgao_flag(request.args.get("apenas_orgao")),
         filtro_periodo=(request.args.get("periodo") or "atrasados").strip(),
         selected_responsavel=(request.args.get("responsavel") or "").strip(),
         selected_priority=(request.args.get("prioridade") or "").strip(),
@@ -249,6 +253,7 @@ def api_projetos() -> Response | tuple[Response, int]:
         selected_priority=request.args.get("prioridade"),
         selected_status=selected_status,
         selected_orgao_id=selected_orgao_id,
+        apenas_orgao=parse_apenas_orgao_flag(request.args.get("apenas_orgao")),
         selected_atraso=request.args.get("atraso"),
         selected_special_project=request.args.get("special_project"),
         selected_delivery_type=request.args.get("delivery_type"),

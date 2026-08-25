@@ -86,6 +86,8 @@ export interface BoardQuery {
 	status?: string;
 	responsavel?: string;
 	orgao?: string | number | null;
+	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
+	apenas_orgao?: boolean;
 }
 
 /** Resposta de `POST /api/tarefas/<id>/status`: o card atualizado. */

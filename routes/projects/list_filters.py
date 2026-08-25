@@ -25,6 +25,7 @@ class ProjectsListFilters:
     """Filtros da listagem de projetos; defaults (ex.: status Vigente) são da rota."""
 
     selected_orgao_id: int | None = None
+    apenas_orgao: bool = False
     selected_status: str | None = None
     selected_priority: str | None = None
     selected_atraso: str | None = None
@@ -62,7 +63,9 @@ def _apply_scope_filters(
     if not user.is_admin:
         query = query.filter(project_visibility_criterion(user))
     if filters.selected_orgao_id is not None:
-        subtree_ids = expand_orgao_filter_ids(filters.selected_orgao_id)
+        subtree_ids = expand_orgao_filter_ids(
+            filters.selected_orgao_id, incluir_descendentes=not filters.apenas_orgao
+        )
         if subtree_ids:
             query = query.filter(Project.orgao_id.in_(subtree_ids))
     if filters.selected_colecao_id is not None:

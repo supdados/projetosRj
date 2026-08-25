@@ -33,6 +33,8 @@
 		fallbackLabel?: string | null;
 		/** Sem moldura própria: para uso dentro de um bloco que já tem a sua. */
 		bare?: boolean;
+		/** Corta o raio direito para acoplar um segmento colado (ex.: "Apenas a área"). */
+		attachedRight?: boolean;
 	}
 
 	let {
@@ -46,7 +48,8 @@
 		id,
 		ariaLabel,
 		fallbackLabel = null,
-		bare = false
+		bare = false,
+		attachedRight = false
 	}: Props = $props();
 
 	let open = $state(false);
@@ -162,7 +165,7 @@
 		onkeydown={onTriggerKeydown}
 		class="flex w-full items-center justify-between gap-2 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-50 {bare
 			? 'rounded-md border border-transparent text-md hover:bg-surface-muted'
-			: 'h-[var(--control-h-md)] rounded-lg border border-border-subtle bg-surface px-3 text-md hover:border-brand'}"
+			: `h-[var(--control-h-md)] ${attachedRight ? 'rounded-l-lg' : 'rounded-lg'} border border-border-subtle bg-surface px-3 text-md hover:border-brand`}"
 	>
 		<span class="truncate {isPlaceholder ? 'text-text-muted' : 'text-text-primary'}">
 			{triggerLabel}

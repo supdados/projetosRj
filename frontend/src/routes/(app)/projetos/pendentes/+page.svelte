@@ -28,6 +28,7 @@
 	import CountBadge from '$lib/components/CountBadge.svelte';
 	import PendingProjectCard from '$lib/components/PendingProjectCard.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import ApenasEstaAreaChip from '$lib/components/ApenasEstaAreaChip.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
@@ -101,6 +102,9 @@
 	let responsavel = $state<string>('');
 	let prioridade = $state<string>('');
 	let orgao = $state<number | null>(null);
+	// Modo "Apenas esta área": órgão selecionado SEM os descendentes. Reseta em
+	// toda troca de órgão.
+	let apenasOrgao = $state<boolean>(false);
 	let page = $state<number>(1);
 
 	// Criar projeto pelo header (mesmo botão/fluxo de Home e Projetos): as opções
@@ -147,7 +151,15 @@
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	async function load(): Promise<void> {
-		const filters: PendingFilters = { periodo, search, responsavel, prioridade, orgao, page };
+		const filters: PendingFilters = {
+			periodo,
+			search,
+			responsavel,
+			prioridade,
+			orgao,
+			apenas_orgao: orgao !== null && apenasOrgao ? true : undefined,
+			page
+		};
 		// SWR: com cache dos filtros correntes mostra o dado antigo já (sem
 		// skeleton) e a revalidação abaixo troca em silêncio; sem cache, skeleton.
 		const cached = peekPendentes(filters);
@@ -231,6 +243,13 @@
 	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
 	function onOrgaoSelect(selecionado: number | null): void {
 		orgao = selecionado;
+		apenasOrgao = false;
+		page = 1;
+		void load();
+	}
+
+	function toggleApenasOrgao(): void {
+		apenasOrgao = !apenasOrgao;
 		page = 1;
 		void load();
 	}
@@ -242,6 +261,7 @@
 		responsavel = '';
 		prioridade = '';
 		orgao = null;
+		apenasOrgao = false;
 		page = 1;
 		void load();
 	}
@@ -372,6 +392,13 @@
 			})
 		)
 	);
+	// O chip "Apenas esta área" só existe quando o órgão filtrado tem filhos.
+	const orgaoTemFilhos = $derived(
+		orgao !== null &&
+			(data?.orgaos_options ?? []).some(
+				(o) => o.pai_id != null && Number(o.pai_id) === orgao
+			)
+	);
 	const selectedOrgaoLabel = $derived(
 		orgao === null
 			? ''
@@ -434,7 +461,11 @@
 	>
 		<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas):
 			 flex-1 fazia a busca variar conforme os filtros vizinhos de cada tela. -->
-		<div class="relative w-full min-w-[14rem] max-w-[26rem]">
+		<div
+			class="relative {orgaoTemFilhos
+				? 'min-w-[12rem] max-w-[26rem] flex-[1_1_12rem]'
+				: 'w-full min-w-[14rem] max-w-[26rem]'}"
+		>
 			<i
 				class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 				aria-hidden="true"
@@ -464,16 +495,26 @@
 		</div>
 
 		{#if data && data.orgaos_options.length > 1}
-			<div class="min-w-[11rem] flex-1">
-				<OrgaoTreeSelect
-					id="orgaoFilter"
-					options={orgaoTreeOptions}
-					value={orgao}
-					onSelect={onOrgaoSelect}
-					allowTodos
-					ariaLabel="Filtrar por área responsável"
-					placeholder="Todas as áreas"
-				/>
+			<div
+				class="flex {orgaoTemFilhos
+					? 'min-w-[15.5rem] max-w-[26rem] flex-[1_1_7rem]'
+					: 'min-w-[11rem] flex-1'}"
+			>
+				<div class="min-w-0 flex-1">
+					<OrgaoTreeSelect
+						id="orgaoFilter"
+						options={orgaoTreeOptions}
+						value={orgao}
+						onSelect={onOrgaoSelect}
+						allowTodos
+						ariaLabel="Filtrar por área responsável"
+						placeholder="Todas as áreas"
+						attachedRight={orgaoTemFilhos}
+					/>
+				</div>
+				{#if orgaoTemFilhos}
+					<ApenasEstaAreaChip ativo={apenasOrgao} onToggle={toggleApenasOrgao} />
+				{/if}
 			</div>
 		{/if}
 
@@ -490,7 +531,7 @@
 			/>
 		</div>
 
-		<div class="min-w-[11rem] flex-1">
+		<div class="min-w-[11.75rem] flex-1">
 			<SelectMenu
 				id="prioridadeFilter"
 				options={PRIORIDADE_OPTIONS}
@@ -508,7 +549,7 @@
 				onclick={clearFilters}
 				title="Limpar filtros"
 				aria-label="Limpar filtros"
-				class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				class="ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				<i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
 			</button>

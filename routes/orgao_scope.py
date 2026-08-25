@@ -92,14 +92,23 @@ def redirect_to_current_route_without_orgao():
     return redirect(target_url)
 
 
-def expand_orgao_filter_ids(orgao_id) -> set[int]:
+def expand_orgao_filter_ids(orgao_id, *, incluir_descendentes: bool = True) -> set[int]:
     """Expande um orgao_id para o conjunto {proprio + descendentes}.
 
-    Usado quando filtro ?orgao=X deve incluir toda a subtree de X.
+    Usado quando filtro ?orgao=X deve incluir toda a subtree de X. Com
+    ``incluir_descendentes=False`` (modo ``?apenas_orgao=1`` da SPA) devolve
+    apenas ``{orgao_id}``.
     """
     if orgao_id is None:
         return set()
+    if not incluir_descendentes:
+        return {int(orgao_id)}
     return {int(orgao_id), *get_orgao_descendants(int(orgao_id))}
+
+
+def parse_apenas_orgao_flag(valor) -> bool:
+    """Interpreta o param ``apenas_orgao`` (query string ou corpo JSON)."""
+    return str(valor).strip().lower() in ("1", "true", "on")
 
 
 def get_user_orgao_siglas(user) -> list[str]:

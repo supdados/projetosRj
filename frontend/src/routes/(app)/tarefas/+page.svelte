@@ -50,6 +50,7 @@
 	import KanbanComposer from '$lib/components/KanbanComposer.svelte';
 	import TaskViewToggle from '$lib/components/TaskViewToggle.svelte';
 	import PaginationBar from '$lib/components/PaginationBar.svelte';
+	import ApenasEstaAreaChip from '$lib/components/ApenasEstaAreaChip.svelte';
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -87,6 +88,9 @@
 	let modo = $state<TaskHubModo>('ativas');
 	let project = $state<string>('');
 	let orgao = $state<string>('');
+	// Modo "Apenas esta área": órgão selecionado SEM os descendentes. Reseta em
+	// toda troca de órgão.
+	let apenasOrgao = $state<boolean>(false);
 
 	// Busca livre (descrição da tarefa ou título do projeto), com debounce —
 	// mesmo padrão/estilo das telas de Projetos e Pendentes (350ms).
@@ -116,6 +120,7 @@
 			modo,
 			project,
 			orgao,
+			apenas_orgao: orgao && apenasOrgao ? true : undefined,
 			search: search.trim() || undefined,
 			tipo: tipo || undefined,
 			prioridade: prioridade || undefined,
@@ -292,6 +297,8 @@
 		const query: BoardQuery = {
 			project: project || undefined,
 			orgao: orgao || (scopeId !== null ? String(scopeId) : undefined),
+			// O modo "apenas" é do filtro LOCAL; não se aplica ao escopo do topnav.
+			apenas_orgao: orgao && apenasOrgao ? true : undefined,
 			// Mesmos filtros da barra compartilhada aplicados ao board (o endpoint
 			// do Kanban os suporta) — sem isso a lista filtra e o board nao.
 			tipo: tipo || undefined,
@@ -397,7 +404,8 @@
 		try {
 			const result = await archiveFinalizadas({
 				project: project || undefined,
-				orgao: orgao || undefined
+				orgao: orgao || undefined,
+				apenas_orgao: orgao && apenasOrgao ? true : undefined
 			});
 			if (result.archived_count === 0) {
 				archiveNotice = { tone: 'info', title: result.message };
@@ -666,6 +674,7 @@
 		search = '';
 		project = '';
 		orgao = '';
+		apenasOrgao = false;
 		tipo = '';
 		prioridade = '';
 		statusFilter = '';
@@ -739,8 +748,20 @@
 
 	function selectOrgao(next: number | null): void {
 		orgao = next === null ? '' : String(next);
+		apenasOrgao = false;
 		reloadActiveView();
 	}
+
+	function toggleApenasOrgao(): void {
+		apenasOrgao = !apenasOrgao;
+		reloadActiveView();
+	}
+
+	// O chip "Apenas esta área" só existe quando o órgão filtrado tem filhos.
+	const orgaoTemFilhos = $derived(
+		orgao !== '' &&
+			orgaoOptions.some((o) => o.pai_id !== null && Number(o.pai_id) === Number(orgao))
+	);
 
 	const hasActiveFilters = $derived(
 		project !== '' ||
@@ -826,15 +847,21 @@
 				<!-- No Kanban a barra de filtros some, mas quem tem acesso a mais de
 					 um órgão ainda precisa restringir o quadro: filtro de órgão
 					 compacto no header, replicando o select da Lista. -->
-				<div class="w-48">
-					<OrgaoTreeSelect
-						id="kanban_filter_orgao"
-						options={orgaoTreeOptions}
-						value={orgao === '' ? null : Number(orgao)}
-						onSelect={selectOrgao}
-						allowTodos={true}
-						ariaLabel="Filtrar por área responsável"
-					/>
+				<div class="flex">
+					<div class="{orgaoTemFilhos ? 'w-36' : 'w-48'} min-w-0">
+						<OrgaoTreeSelect
+							id="kanban_filter_orgao"
+							options={orgaoTreeOptions}
+							value={orgao === '' ? null : Number(orgao)}
+							onSelect={selectOrgao}
+							allowTodos={true}
+							ariaLabel="Filtrar por área responsável"
+							attachedRight={orgaoTemFilhos}
+						/>
+					</div>
+					{#if orgaoTemFilhos}
+						<ApenasEstaAreaChip ativo={apenasOrgao} onToggle={toggleApenasOrgao} />
+					{/if}
 				</div>
 			{/if}
 
@@ -876,12 +903,16 @@
 	{#if !boardExpanded}
 	<form
 		transition:slide={{ duration: filtersSlideMs }}
-		class="flex items-center gap-2 border-t border-border-subtle px-4 py-2.5"
+		class="flex {orgaoTemFilhos ? 'flex-wrap' : ''} items-center gap-2 border-t border-border-subtle px-4 py-2.5"
 		aria-label="Filtros de tarefas"
 		onsubmit={(e) => e.preventDefault()}
 	>
 		<!-- Largura FIXA e idêntica nas 3 telas (Projetos/Pendentes/Tarefas). -->
-		<div class="relative w-full min-w-[14rem] max-w-[26rem]">
+		<div
+			class="relative {orgaoTemFilhos
+				? 'min-w-[12rem] max-w-[26rem] flex-[1_1_12rem]'
+				: 'w-full min-w-[14rem] max-w-[26rem]'}"
+		>
 			<i
 				class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
 				aria-hidden="true"
@@ -899,19 +930,29 @@
 			/>
 		</div>
 
-		<div class="min-w-[10rem] flex-1">
-			<OrgaoTreeSelect
-				id="filter_orgao"
-				options={orgaoTreeOptions}
-				value={orgao === '' ? null : Number(orgao)}
-				onSelect={selectOrgao}
-				allowTodos={true}
-				ariaLabel="Filtrar por área responsável"
-				disabled={orgaoOptions.length === 0}
-			/>
+		<div
+			class="flex {orgaoTemFilhos
+				? 'min-w-[15.5rem] max-w-[26rem] flex-[1_1_7rem]'
+				: 'min-w-[10rem] flex-1'}"
+		>
+			<div class="min-w-0 flex-1">
+				<OrgaoTreeSelect
+					id="filter_orgao"
+					options={orgaoTreeOptions}
+					value={orgao === '' ? null : Number(orgao)}
+					onSelect={selectOrgao}
+					allowTodos={true}
+					ariaLabel="Filtrar por área responsável"
+					disabled={orgaoOptions.length === 0}
+					attachedRight={orgaoTemFilhos}
+				/>
+			</div>
+			{#if orgaoTemFilhos}
+				<ApenasEstaAreaChip ativo={apenasOrgao} onToggle={toggleApenasOrgao} />
+			{/if}
 		</div>
 
-		<div class="min-w-[10rem] flex-1">
+		<div class="min-w-[11.75rem] flex-1">
 			<SelectMenu
 				id="filter_prioridade"
 				options={prioridadeSelectOptions}
@@ -961,7 +1002,7 @@
 			<button
 				type="button"
 				onclick={clearFilters}
-				class="h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				class="ml-auto h-9 shrink-0 rounded-lg border border-border-subtle bg-surface px-3.5 text-sm font-medium text-text-secondary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 			>
 				Limpar
 			</button>

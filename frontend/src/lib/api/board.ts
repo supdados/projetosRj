@@ -33,6 +33,7 @@ function buildQuery(query: BoardQuery): string {
 	if (query.responsavel) params.set('responsavel', query.responsavel);
 	if (query.orgao !== undefined && query.orgao !== null && query.orgao !== '') {
 		params.set('orgao', String(query.orgao));
+		if (query.apenas_orgao) params.set('apenas_orgao', '1');
 	}
 	const qs = params.toString();
 	return qs ? `?${qs}` : '';

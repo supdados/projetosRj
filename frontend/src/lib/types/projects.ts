@@ -115,6 +115,8 @@ export interface ProjectsListQuery {
 	objetivo?: string;
 	q?: string;
 	orgao?: number | null;
+	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
+	apenas_orgao?: boolean;
 	/** Restringe aos projetos desta coleção do próprio usuário. */
 	colecao?: number;
 	/** Omite os projetos já pertencentes a esta coleção do próprio usuário. */
