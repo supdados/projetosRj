@@ -14,7 +14,6 @@
 	import {
 		EXPORT_COLUMNS,
 		DEFAULT_SLUGS,
-		isDefaultSelection,
 		loadStoredSlugs,
 		saveStoredSlugs
 	} from '$lib/utils/exportColumns';
@@ -28,16 +27,22 @@
 
 	interface Props {
 		open: boolean;
-		filtros: ProjectsListQuery;
-		totalFiltrado: number;
-		hasFiltrosAtivos: boolean;
-		/** Sigla do órgão filtrado, para o chip `Órgão: {sigla}` (o query só tem o id). */
-		orgaoSigla?: string | null;
+		filtros?: ProjectsListQuery;
+		totalFiltrado?: number;
+		hasFiltrosAtivos?: boolean;
+		/** `false` esconde o escopo e exporta sempre todos os projetos. */
+		permitirEscopoLista?: boolean;
 		onClose: () => void;
 	}
 
-	let { open, filtros, totalFiltrado, hasFiltrosAtivos, orgaoSigla = null, onClose }: Props =
-		$props();
+	let {
+		open,
+		filtros = {},
+		totalFiltrado = 0,
+		hasFiltrosAtivos = false,
+		permitirEscopoLista = true,
+		onClose
+	}: Props = $props();
 
 	let escopo = $state<EscopoExport>('todos');
 	let slugs = $state<string[]>([...DEFAULT_SLUGS]);
@@ -56,7 +61,6 @@
 	const pendente = delayedPending({ showAfterMs: 150, minVisibleMs: 350 });
 
 	const selecionadas = $derived(new Set(slugs));
-	const padraoAtivo = $derived(isDefaultSelection(slugs));
 	const rotuloRepouso = $derived(
 		escopo === 'lista'
 			? `Exportar ${totalFiltrado} ${totalFiltrado === 1 ? 'projeto' : 'projetos'}`
@@ -69,35 +73,19 @@
 		spanVisivel === 'gerando' ? 'Gerando…' : spanVisivel === 'pronto' ? 'Pronto' : rotuloRepouso
 	);
 
-	/** Chips read-only dos filtros correntes (default `Status: Vigente` incluído). */
-	const chipsFiltros = $derived.by<string[]>(() => {
-		const chips: string[] = [];
-		if (filtros.status) chips.push(`Status: ${filtros.status}`);
-		if (filtros.orgao != null) chips.push(`Órgão: ${orgaoSigla ?? `#${filtros.orgao}`}`);
-		if (filtros.q) chips.push(`Busca: "${filtros.q}"`);
-		if (filtros.prioridade) chips.push(`Prioridade: ${filtros.prioridade}`);
-		if (filtros.atraso) chips.push(`Atraso: ${filtros.atraso}`);
-		if (filtros.delivery_type) chips.push(`Tipo de entrega: ${filtros.delivery_type}`);
-		if (filtros.special_project) chips.push(`Projeto especial: ${filtros.special_project}`);
-		if (filtros.abep_indicator) chips.push(`Indicador ABEP: ${filtros.abep_indicator}`);
-		if (filtros.objetivo) chips.push('Objetivo EEGD');
-		if (filtros.colecao != null) chips.push('Coleção');
-		return chips;
-	});
-
 	// untrack: uma revalidação de `hasFiltrosAtivos` com o modal aberto não pode
 	// resetar a seleção de colunas nem derrubar um export em voo.
 	$effect(() => {
 		if (!open) return;
 		return untrack(() => {
-			escopo = hasFiltrosAtivos ? 'lista' : 'todos';
+			escopo = permitirEscopoLista && hasFiltrosAtivos ? 'lista' : 'todos';
 			slugs = ordenarPeloRegistro(loadStoredSlugs());
 			fase = 'repouso';
 			falha = false;
 			falhaDetalhe = '';
 			montado = false;
 			const quadro = requestAnimationFrame(() => (montado = true));
-			void focarRadioSelecionado();
+			if (permitirEscopoLista) void focarRadioSelecionado();
 			return () => {
 				sessaoExport += 1;
 				cancelAnimationFrame(quadro);
@@ -152,10 +140,6 @@
 
 	function limparColunas(): void {
 		aplicarEmLote([]);
-	}
-
-	function restaurarPadrao(): void {
-		aplicarEmLote([...DEFAULT_SLUGS]);
 	}
 
 	function montarParams(): URLSearchParams {
@@ -233,89 +217,89 @@
 	}
 </script>
 
-<Modal {open} labelId="exportar-projetos-title" maxWidth="max-w-md" onBackdrop={fechar} onEscape={fechar}>
+<Modal {open} labelId="exportar-projetos-title" maxWidth="max-w-2xl" onBackdrop={fechar} onEscape={fechar}>
 		<div class="flex flex-col gap-4">
 			<h2 id="exportar-projetos-title" class="font-heading text-xl font-bold text-text-primary">
 				Exportar projetos
 			</h2>
 
-			<fieldset class="flex flex-col gap-2">
-				<legend class="mb-1.5 text-2xs font-bold uppercase tracking-caps text-text-label">
-					Escopo
-				</legend>
-				<label
-					class="flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2.5 transition-colors duration-fast focus-within:ring-2 focus-within:ring-brand {escopo === 'lista'
-						? 'border-brand-soft bg-wash-brand'
-						: 'border-border-subtle hover:bg-surface-muted'}"
-				>
-					<span class="flex items-center gap-2">
-						<input
-							bind:this={radioListaEl}
-							type="radio"
-							name="exportar-projetos-escopo"
-							value="lista"
-							checked={escopo === 'lista'}
-							onchange={() => (escopo = 'lista')}
-							class="sr-only"
-						/>
-						<span
-							class="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border {escopo === 'lista'
-								? 'border-brand'
-								: 'border-border-strong'}"
-							aria-hidden="true"
+			{#if permitirEscopoLista}
+				<fieldset class="flex flex-col gap-1.5">
+					<legend class="mb-1.5 text-2xs font-bold uppercase tracking-caps text-text-label">
+						Escopo
+					</legend>
+					<div class="flex items-center gap-5">
+						<label
+							class="inline-flex cursor-pointer items-center gap-2 rounded-sm focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2"
 						>
+							<input
+								bind:this={radioListaEl}
+								type="radio"
+								name="exportar-projetos-escopo"
+								value="lista"
+								checked={escopo === 'lista'}
+								onchange={() => (escopo = 'lista')}
+								class="sr-only"
+							/>
 							<span
-								class="export-dot h-2 w-2 rounded-full bg-brand"
-								style:transform={escopo === 'lista' ? 'scale(1)' : 'scale(0)'}
-							></span>
-						</span>
-						<span class="text-sm font-semibold text-text-primary">Lista filtrada atual</span>
-					</span>
-					{#if chipsFiltros.length > 0}
-						<span class="flex flex-wrap gap-1 pl-[1.375rem]">
-							{#each chipsFiltros as chip (chip)}
-								<span class="chip chip--neutral">{chip}</span>
-							{/each}
-						</span>
-					{:else}
-						<span class="pl-[1.375rem] text-xs text-text-muted">
-							Nenhum filtro ativo — equivale a todos os projetos visíveis para você.
-						</span>
-					{/if}
-				</label>
-				<label
-					class="flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2.5 transition-colors duration-fast focus-within:ring-2 focus-within:ring-brand {escopo === 'todos'
-						? 'border-brand-soft bg-wash-brand'
-						: 'border-border-subtle hover:bg-surface-muted'}"
-				>
-					<span class="flex items-center gap-2">
-						<input
-							bind:this={radioTodosEl}
-							type="radio"
-							name="exportar-projetos-escopo"
-							value="todos"
-							checked={escopo === 'todos'}
-							onchange={() => (escopo = 'todos')}
-							class="sr-only"
-						/>
-						<span
-							class="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border {escopo === 'todos'
-								? 'border-brand'
-								: 'border-border-strong'}"
-							aria-hidden="true"
+								class="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border {escopo === 'lista'
+									? 'border-brand'
+									: 'border-border-strong'}"
+								aria-hidden="true"
+							>
+								<span
+									class="export-dot h-2 w-2 rounded-full bg-brand"
+									style:transform={escopo === 'lista' ? 'scale(1)' : 'scale(0)'}
+								></span>
+							</span>
+							<span
+								class="text-sm {escopo === 'lista'
+									? 'font-medium text-text-primary'
+									: 'text-text-secondary'}"
+							>
+								Lista filtrada atual
+							</span>
+						</label>
+						<label
+							class="inline-flex cursor-pointer items-center gap-2 rounded-sm focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2"
 						>
+							<input
+								bind:this={radioTodosEl}
+								type="radio"
+								name="exportar-projetos-escopo"
+								value="todos"
+								checked={escopo === 'todos'}
+								onchange={() => (escopo = 'todos')}
+								class="sr-only"
+							/>
 							<span
-								class="export-dot h-2 w-2 rounded-full bg-brand"
-								style:transform={escopo === 'todos' ? 'scale(1)' : 'scale(0)'}
-							></span>
-						</span>
-						<span class="text-sm font-semibold text-text-primary">Todos os projetos</span>
-					</span>
-					<span class="pl-[1.375rem] text-xs text-text-muted">Ignora os filtros da tela.</span>
-				</label>
-			</fieldset>
+								class="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-full border {escopo === 'todos'
+									? 'border-brand'
+									: 'border-border-strong'}"
+								aria-hidden="true"
+							>
+								<span
+									class="export-dot h-2 w-2 rounded-full bg-brand"
+									style:transform={escopo === 'todos' ? 'scale(1)' : 'scale(0)'}
+								></span>
+							</span>
+							<span
+								class="text-sm {escopo === 'todos'
+									? 'font-medium text-text-primary'
+									: 'text-text-secondary'}"
+							>
+								Todos os projetos
+							</span>
+						</label>
+					</div>
+				</fieldset>
+			{/if}
 
-			<section class="flex flex-col gap-2 border-t border-border-hairline pt-4">
+			<section
+				class="flex flex-col gap-2 {permitirEscopoLista
+					? 'border-t border-border-hairline pt-4'
+					: ''}"
+			>
 				<div class="flex items-baseline justify-between">
 					<span class="text-2xs font-bold uppercase tracking-caps text-text-label">Colunas</span>
 					<span class="font-mono text-xs tabular-nums text-text-muted" aria-live="polite">
@@ -325,7 +309,24 @@
 						</span>
 					</span>
 				</div>
-				<div class="grid grid-cols-2 gap-1.5">
+				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						onclick={selecionarTodas}
+						class="rounded-sm text-xs text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						Selecionar todas
+					</button>
+					<span class="text-xs text-text-faint" aria-hidden="true">·</span>
+					<button
+						type="button"
+						onclick={limparColunas}
+						class="rounded-sm text-xs text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						Limpar
+					</button>
+				</div>
+				<div class="grid grid-cols-3 gap-1.5">
 					{#each EXPORT_COLUMNS as coluna (coluna.slug)}
 						{@const ativa = selecionadas.has(coluna.slug)}
 						<button
@@ -360,39 +361,9 @@
 						</button>
 					{/each}
 				</div>
-				<div class="flex items-center gap-2">
-					<button
-						type="button"
-						onclick={selecionarTodas}
-						class="rounded-sm text-xs text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						Selecionar todas
-					</button>
-					<span class="text-xs text-text-faint" aria-hidden="true">·</span>
-					<button
-						type="button"
-						onclick={limparColunas}
-						class="rounded-sm text-xs text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-					>
-						Limpar
-					</button>
-					<button
-						type="button"
-						onclick={restaurarPadrao}
-						disabled={padraoAtivo}
-						class="ml-auto rounded-sm text-xs text-brand transition-opacity duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-0"
-					>
-						Padrão
-					</button>
-				</div>
-				<div class="grid text-xs text-text-muted">
-					<span class="[grid-area:1/1]" aria-live="polite">
-						{slugs.length === 0 ? 'Escolha ao menos uma coluna.' : ''}
-					</span>
-					{#if slugs.length > 0}
-						<span class="[grid-area:1/1]">CSV com ponto e vírgula, pronto para o Excel.</span>
-					{/if}
-				</div>
+				<p class="min-h-4 text-xs text-text-muted" aria-live="polite">
+					{slugs.length === 0 ? 'Escolha ao menos uma coluna.' : ''}
+				</p>
 			</section>
 
 			{#if falha}

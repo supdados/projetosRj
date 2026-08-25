@@ -401,7 +401,6 @@
 							</span>
 						</button>
 						<span class="sr-only" aria-live="polite">{$analisePendente ? 'Lendo o arquivo…' : ''}</span>
-						<p class="text-xs text-text-muted">As colunas são reconhecidas pelo nome — não é preciso seguir um modelo.</p>
 						<input bind:this={fileInputEl} type="file" accept=".csv,text/csv" class="hidden" onchange={aoEscolherArquivo} />
 					</div>
 				{:else if estado === 'revisao'}
