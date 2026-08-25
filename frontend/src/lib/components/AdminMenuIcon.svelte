@@ -118,21 +118,18 @@
 			viewBox="0 0 24 24"
 			fill="currentColor"
 			class="absolute inset-0 group-hover:opacity-0 group-focus-visible:opacity-0"
-			><path
-				fill-rule="evenodd"
-				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4ZM15.2 20.2H16.8V18H18.4L16 15.4L13.6 18H15.2Z"
-			/><path d="M15 2.6L19.4 7H15Z" opacity=".48" /></svg
+			><path d="M11.2 2.6H12.8V7.4H15.6L12 11.4L8.4 7.4H11.2Z" /><path
+				d="M2.6 12.6H8.6L10 15H14L15.4 12.6H21.4V21.4H2.6Z"
+				opacity=".48"
+			/></svg
 		>
 		<svg
 			viewBox="0 0 24 24"
 			class="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
-			><path
-				fill-rule="evenodd"
-				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4Z"
-				fill="#1B6E96"
-			/><path d="M15 2.6L19.4 7H15Z" fill="#8FB6CC" /><g
-				><path d="M15.2 20.2H16.8V18H18.4L16 15.4L13.6 18H15.2Z" fill="#FFFFFF" /></g
-			></svg
+			><path d="M11.2 2.6H12.8V7.4H15.6L12 11.4L8.4 7.4H11.2Z" fill="#1B6E96" /><path
+				d="M2.6 12.6H8.6L10 15H14L15.4 12.6H21.4V21.4H2.6Z"
+				fill="#8FB6CC"
+			/></svg
 		>
 	{:else}
 		<svg
