@@ -32,6 +32,11 @@
 	import { CALENDAR_ENABLED } from '$lib/config/features';
 	import type { User } from '$lib/types/entities';
 	import type { Notificacao } from '$lib/types/notifications';
+	import ExportarProjetosModal from '$lib/components/ExportarProjetosModal.svelte';
+	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
+	import { fetchProjects, peekProjects, invalidateProjects } from '$lib/api/projects';
+	import { bumpProjectsRevision } from '$lib/stores/projectsRevision';
+	import type { ProjectsListOptions } from '$lib/types/projects';
 
 	interface Props {
 		user: User | null;
@@ -137,8 +142,8 @@
 
 	// Links do menu Admin (so renderizados quando user.is_admin === true).
 	const adminLinks: { label: string; path: string; kind: AdminIconKind }[] = [
-		{ label: 'Usuarios', path: '/admin/usuarios', kind: 'usuarios' },
-		{ label: 'Orgaos', path: '/admin/orgaos', kind: 'orgaos' },
+		{ label: 'Usuários', path: '/admin/usuarios', kind: 'usuarios' },
+		{ label: 'Órgãos', path: '/admin/orgaos', kind: 'orgaos' },
 		{ label: 'Templates', path: '/admin/templates', kind: 'templates' }
 	];
 
@@ -160,6 +165,56 @@
 	}
 
 	let adminToggleEl = $state<HTMLButtonElement | null>(null);
+
+	// Modais de export/import de CSV abertos pelo menu de conta.
+	let exportCsvOpen = $state(false);
+	let importCsvOpen = $state(false);
+	let importOptions = $state<ProjectsListOptions | null>(null);
+	let importOptionsEmVoo = false;
+
+	function abrirExportarCsv(): void {
+		closeAdmin();
+		exportCsvOpen = true;
+	}
+
+	function fecharExportarCsv(): void {
+		exportCsvOpen = false;
+		adminToggleEl?.focus();
+	}
+
+	function abrirImportarCsv(): void {
+		closeAdmin();
+		importCsvOpen = true;
+		carregarImportOptions();
+	}
+
+	function fecharImportarCsv(): void {
+		importCsvOpen = false;
+		adminToggleEl?.focus();
+	}
+
+	/** Options sob demanda: cache SWR primeiro; falha deixa null (o modal tolera). */
+	function carregarImportOptions(): void {
+		if (importOptions || importOptionsEmVoo) return;
+		const cached = peekProjects();
+		if (cached) {
+			importOptions = cached.options;
+			return;
+		}
+		// Guarda de voo: reabrir o modal antes da resposta nao dispara um 2o GET.
+		importOptionsEmVoo = true;
+		fetchProjects()
+			.then((data) => (importOptions = data.options))
+			.catch(() => {})
+			.finally(() => (importOptionsEmVoo = false));
+	}
+
+	function handleCsvImported(): void {
+		importCsvOpen = false;
+		invalidateProjects();
+		bumpProjectsRevision();
+		adminToggleEl?.focus();
+	}
 
 	/** Esc fecha o menu e devolve foco ao botao acionador. */
 	function handleWindowKeydown(event: KeyboardEvent): void {
@@ -563,19 +618,26 @@
 							</a>
 							<hr class="my-1 border-border-subtle" />
 							{/if}
-							<!-- Exportar CSV de projetos: link direto para a rota Flask
-								 nativa /projects/download (attachment, FORA do envelope JSON).
-								 Migrado da tela de Projetos para o menu de usuário. -->
-							<a
+							<button
+								type="button"
 								role="menuitem"
-								href="/projects/download"
-								download
-								onclick={closeAdmin}
-								class="group flex items-center gap-3 px-4 py-2 text-sm text-text-secondary no-underline transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+								onclick={abrirExportarCsv}
+								class="group flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 							>
 								<AdminMenuIcon kind="csv" />
 								<span>Exportar CSV de projetos</span>
-							</a>
+							</button>
+							{#if user.is_admin}
+								<button
+									type="button"
+									role="menuitem"
+									onclick={abrirImportarCsv}
+									class="group flex w-full items-center gap-3 px-4 py-2 text-left text-sm text-text-secondary transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:bg-surface-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+								>
+									<AdminMenuIcon kind="csv-upload" />
+									<span>Importar CSV de projetos</span>
+								</button>
+							{/if}
 							<hr class="my-1 border-border-subtle" />
 							<!-- Logout: rota Flask nativa /logout (fluxo fora da SPA), como no
 								 dropdown do topnav Jinja v4.5. -->
@@ -658,6 +720,14 @@
 		</div>
 	</div>
 </header>
+
+<ExportarProjetosModal open={exportCsvOpen} permitirEscopoLista={false} onClose={fecharExportarCsv} />
+<ImportarCsvModal
+	open={importCsvOpen}
+	options={importOptions}
+	onClose={fecharImportarCsv}
+	onImported={handleCsvImported}
+/>
 
 <style>
 	/* Indicador deslizante da nav: anima transform (compositor) + width (UM elemento

@@ -1,5 +1,5 @@
 <script module lang="ts">
-	export type AdminIconKind = 'usuarios' | 'orgaos' | 'templates' | 'csv' | 'sair';
+	export type AdminIconKind = 'usuarios' | 'orgaos' | 'templates' | 'csv' | 'csv-upload' | 'sair';
 </script>
 
 <script lang="ts">
@@ -99,7 +99,7 @@
 			class="absolute inset-0 group-hover:opacity-0 group-focus-visible:opacity-0"
 			><path
 				fill-rule="evenodd"
-				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4Z"
+				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4ZM15.2 15.4H16.8V17.6H18.4L16 20.2L13.6 17.6H15.2Z"
 			/><path d="M15 2.6L19.4 7H15Z" opacity=".48" /></svg
 		>
 		<svg
@@ -110,7 +110,28 @@
 				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4Z"
 				fill="#1B6E96"
 			/><path d="M15 2.6L19.4 7H15Z" fill="#8FB6CC" /><g
-				><path d="M15.1 15.4H17.3V18H19.4L16.2 21.4L13 18H15.1Z" fill="#FFFFFF" /></g
+				><path d="M15.2 15.4H16.8V17.6H18.4L16 20.2L13.6 17.6H15.2Z" fill="#FFFFFF" /></g
+			></svg
+		>
+	{:else if kind === 'csv-upload'}
+		<svg
+			viewBox="0 0 24 24"
+			fill="currentColor"
+			class="absolute inset-0 group-hover:opacity-0 group-focus-visible:opacity-0"
+			><path
+				fill-rule="evenodd"
+				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4ZM15.2 20.2H16.8V18H18.4L16 15.4L13.6 18H15.2Z"
+			/><path d="M15 2.6L19.4 7H15Z" opacity=".48" /></svg
+		>
+		<svg
+			viewBox="0 0 24 24"
+			class="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+			><path
+				fill-rule="evenodd"
+				d="M4.6 2.6H15L19.4 7V21.4H4.6ZM7.4 10.4H16.6V11.8H7.4ZM7.4 13.4H16.6V14.8H7.4Z"
+				fill="#1B6E96"
+			/><path d="M15 2.6L19.4 7H15Z" fill="#8FB6CC" /><g
+				><path d="M15.2 20.2H16.8V18H18.4L16 15.4L13.6 18H15.2Z" fill="#FFFFFF" /></g
 			></svg
 		>
 	{:else}

@@ -113,8 +113,12 @@ export function focusTrap(node: HTMLElement): FocusTrapReturn {
 			if (!hasDom) return;
 			node.removeEventListener('keydown', onKeydown, true);
 			// Restaura o foco ao elemento anterior, se ainda estiver no documento.
+			// `<body>` nao conta: quando o gatilho ja tinha saido do DOM na abertura
+			// (item de menu que fecha o proprio menu), focar o body ROUBARIA o foco
+			// que o chamador ja devolveu ao acionador.
 			if (
 				previouslyFocused &&
+				previouslyFocused !== document.body &&
 				typeof previouslyFocused.focus === 'function' &&
 				document.contains(previouslyFocused)
 			) {
