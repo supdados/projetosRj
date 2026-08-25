@@ -18,7 +18,7 @@
  *     403, só as mutações (que exigem editor/gestor).
  */
 
-import { get, post } from './client';
+import { del, get, post } from './client';
 import { createSwrCache } from './swrCache';
 import type {
 	ProjectDetailData,
@@ -40,7 +40,8 @@ import type {
 	StageTemplateOption,
 	ConcludeProjectResult,
 	MeetingPayload,
-	MeetingMutationResult
+	MeetingMutationResult,
+	ProjetoRelacionadoCandidato
 } from '$lib/types/projectDetail';
 
 // Ultimo payload bom por id de projeto. SWR: a tela reabre com o dado antigo e
@@ -300,6 +301,44 @@ export function deleteStageMeeting(
 		undefined,
 		signal
 	);
+}
+
+/** Vincula um projeto relacionado (POST .../relacionados). A tela re-busca o detalhe. */
+export async function linkRelatedProject(
+	projectId: number,
+	relatedProjectId: number,
+	signal?: AbortSignal
+): Promise<void> {
+	await post(
+		`/api/projetos/${projectId}/relacionados`,
+		{ related_project_id: relatedProjectId },
+		signal
+	);
+}
+
+/** Desvincula um projeto relacionado (DELETE .../relacionados/<relatedId>). */
+export async function unlinkRelatedProject(
+	projectId: number,
+	relatedProjectId: number,
+	signal?: AbortSignal
+): Promise<void> {
+	await del(`/api/projetos/${projectId}/relacionados/${relatedProjectId}`, undefined, signal);
+}
+
+/**
+ * Autocomplete de candidatos a vínculo (visibilidade aplicada no backend; piso
+ * de 2 caracteres server-side — o drawer só chama com `q.length >= 2`).
+ */
+export async function searchRelatedCandidates(
+	projectId: number,
+	q: string,
+	signal?: AbortSignal
+): Promise<ProjetoRelacionadoCandidato[]> {
+	const data = await get<ProjetoRelacionadoCandidato[]>(
+		`/api/projetos/${projectId}/relacionados/candidatos?q=${encodeURIComponent(q)}`,
+		signal
+	);
+	return Array.isArray(data) ? data : [];
 }
 
 /**

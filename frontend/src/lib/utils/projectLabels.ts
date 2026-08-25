@@ -47,6 +47,22 @@ export function projectStatusIconId(value: string | null | undefined): ProjectIc
 	return iconIdFor(PROJECT_STATUS_ICON_ID, value);
 }
 
+export type ProjectStatusChipTone = 'neutral' | 'warning' | 'success';
+
+// Mesma semântica dos .ph-chip--status-* do ProjectHeader (CSS escopado,
+// inalcançável de fora): vigente=success, suspenso=warning, finalizado=neutro.
+const PROJECT_STATUS_CHIP_TONE: Record<string, ProjectStatusChipTone> = {
+	vigente: 'success',
+	suspenso: 'warning',
+	finalizado: 'neutral'
+};
+
+/** @example projectStatusChipTone('Vigente') // 'success' */
+export function projectStatusChipTone(value: string | null | undefined): ProjectStatusChipTone {
+	if (!value) return 'neutral';
+	return PROJECT_STATUS_CHIP_TONE[value.trim().toLowerCase()] ?? 'neutral';
+}
+
 /** @example deliveryIconId('Fluxo Processual') // 'entrega-fluxo' */
 export function deliveryIconId(value: string | null | undefined): ProjectIconId | null {
 	return iconIdFor(DELIVERY_ICON_ID, value);

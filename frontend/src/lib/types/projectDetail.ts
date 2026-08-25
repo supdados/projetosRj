@@ -165,6 +165,26 @@ export interface ProjectDetailPermissions {
 	can_manage_members?: boolean;
 }
 
+/**
+ * Projeto relacionado (vínculo simétrico) no payload do detalhe. O backend só
+ * emite linhas cujo outro lado o viewer enxerga (anti-enumeração).
+ */
+export interface ProjetoRelacionado {
+	id: number;
+	titulo: string;
+	status: string;
+	prioridade: string | null;
+	orgao_sigla: string | null;
+}
+
+/** Candidato a vínculo (GET /api/projetos/<id>/relacionados/candidatos?q=). */
+export interface ProjetoRelacionadoCandidato {
+	id: number;
+	titulo: string;
+	status: string;
+	orgao_sigla: string | null;
+}
+
 /** Carga completa de GET /api/projetos/<id>/detalhe (já desempacotada). */
 export interface ProjectDetailData {
 	project: ProjectDetail;
@@ -172,6 +192,8 @@ export interface ProjectDetailData {
 	derived: ProjectDetailDerived;
 	options: ProjectDetailOptions;
 	permissions: ProjectDetailPermissions;
+	/** Opcional: backend do release anterior não emite a chave (rolling deploy). */
+	relacionados?: ProjetoRelacionado[];
 }
 
 /**

@@ -63,6 +63,7 @@
 	} from '$lib/types/projectDetail';
 	import StageTaskQuickAdd from '$lib/components/StageTaskQuickAdd.svelte';
 	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
+	import ProjetosRelacionadosDrawer from '$lib/components/ProjetosRelacionadosDrawer.svelte';
 	import CompartilharProjetoModal from '$lib/components/CompartilharProjetoModal.svelte';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
@@ -460,6 +461,19 @@
 		}
 	}
 
+	// Navegar entre detalhes reusa este componente (ex.: link no drawer de
+	// relacionados): recarrega quando o id da rota muda, sem repetir no mount.
+	let loadedProjectId = -1;
+	$effect(() => {
+		if (projectId === loadedProjectId) return;
+		const isFirst = loadedProjectId === -1;
+		loadedProjectId = projectId;
+		if (isFirst) return;
+		relacionadosOpen = false;
+		historyOpen = false;
+		void load();
+	});
+
 	// --- Drawer de tarefa (Fase 5b-2, modo drawer-only) ----------------------
 	// Sem board aqui: ao fechar o drawer após mutações, recarrega o detalhe para
 	// refletir contagem/estado das tarefas de etapa (sem re-fetch por keystroke).
@@ -472,6 +486,10 @@
 		if (drawerWasOpen && !open) void refresh();
 		drawerWasOpen = open;
 	});
+
+	// --- Drawer de projetos relacionados ------------------------------------
+	let relacionadosOpen = $state(false);
+	const relacionados = $derived(data?.relacionados ?? []);
 
 	// --- Drawer de histórico (substitui a página /projetos/<id>/historico) ---
 	// A URL antiga segue viva: ela redireciona para cá com ?historico=1.
@@ -1253,6 +1271,14 @@
 			<div class="order-2 flex flex-wrap items-center gap-2">
 				<button
 					type="button"
+					onclick={() => (relacionadosOpen = true)}
+					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				>
+					<ProjectIcon id="link" size={14} />
+					Projetos Relacionados{relacionados.length > 0 ? ` (${relacionados.length})` : ''}
+				</button>
+				<button
+					type="button"
 					onclick={() => (historyOpen = true)}
 					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
@@ -1760,6 +1786,17 @@
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
 		onClose={closeHistory}
+	/>
+{/if}
+
+{#if relacionadosOpen && data}
+	<ProjetosRelacionadosDrawer
+		projectId={data.project.id}
+		projectTitulo={data.project.titulo}
+		{relacionados}
+		{canEdit}
+		onChanged={refresh}
+		onClose={() => (relacionadosOpen = false)}
 	/>
 {/if}
 
