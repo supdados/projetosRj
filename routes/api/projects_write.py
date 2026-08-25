@@ -57,6 +57,7 @@ from services.project_creation import (
     StageDraft,
     create_project_record,
 )
+from services.project_relations import remover_relacoes_do_projeto
 from services.link_validation import LinkValidationError, normalize_link_url
 from services.project_custom_links import (
     parse_custom_links_payload,
@@ -307,6 +308,7 @@ def api_projeto_excluir(project_id: int) -> Response | tuple[Response, int]:
             action_type="delete",
             description=f'Excluiu o projeto "{titulo}"',
         )
+        remover_relacoes_do_projeto(project.id)
         db.session.delete(project)
         db.session.commit()
     except Exception:

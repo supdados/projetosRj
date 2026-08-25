@@ -18,6 +18,7 @@ from .task import (
 )
 from .siorg_sync import SiorgSyncLog, SIORG_SYNC_STATUSES
 from .project_member import ORIGEM_CONVITE, ProjectMember, papeis_de_convite
+from .project_relation import ProjectRelation
 from .project_collection import (
     PAPEIS_SHARE,
     PAPEL_SHARE_EDITOR,
@@ -93,6 +94,7 @@ __all__ = [
     "SiorgSyncLog",
     "SIORG_SYNC_STATUSES",
     "ProjectMember",
+    "ProjectRelation",
     "ORIGEM_CONVITE",
     "papeis_de_convite",
     "ProjectCollection",

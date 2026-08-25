@@ -1313,9 +1313,6 @@ ROUTE_CASES = [
     },
 ]
 
-LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
-ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]
-
 ROUTE_CASES += [
     {
         "id": "api_projeto_criar_post",
@@ -1843,4 +1840,42 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # Projetos relacionados: o alvo inexistente devolve o 404 anti-enumeracao,
+    # indistinguivel de projeto invisivel (espelho de api_colecao_share_criar_post).
+    {
+        "id": "api_projeto_relacionar_post",
+        "method": "POST",
+        "rule": "/api/projetos/<int:project_id>/relacionados",
+        "path": "/api/projetos/{project_complete_id}/relacionados",
+        "role": "user",
+        "json": {"related_project_id": 999999},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        # Sem vinculo semeado entre os dois projetos, o par inexistente e 404.
+        "id": "api_projeto_desrelacionar_delete",
+        "method": "DELETE",
+        "rule": "/api/projetos/<int:project_id>/relacionados/<int:related_project_id>",
+        "path": "/api/projetos/{project_complete_id}/relacionados/{foreign_project_id}",
+        "role": "user",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        # Sem ?q= o termo fica sob o piso de 2 caracteres e a rota devolve lista vazia.
+        "id": "api_projeto_relacionados_candidatos_get",
+        "method": "GET",
+        "rule": "/api/projetos/<int:project_id>/relacionados/candidatos",
+        "path": "/api/projetos/{project_complete_id}/relacionados/candidatos",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
 ]
+
+LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
+ADMIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_admin"]]

@@ -34,6 +34,7 @@ from models import Project, Task, db
 
 from services.authorization import PAPEL_LEITOR, require_project_rank
 from services.project_membership import project_permission_flags
+from services.project_relations import listar_relacionados_payload
 
 from ..blueprint import main_bp
 from ..calendars.helpers import _connection_for_current_user
@@ -91,6 +92,7 @@ def _serialize_detail(project: Project) -> dict[str, Any]:
     return {
         "project": serialize_project_detail(project),
         "etapas": project_etapas_payload(project, _connection_for_current_user()),
+        "relacionados": listar_relacionados_payload(project, g.user),
         # Derivados read-only computados no backend (NÃO recalcular no cliente).
         "derived": {
             "data_inicio_projeto": (

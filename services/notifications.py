@@ -15,7 +15,12 @@ from models import (
     db,
 )
 
-IGNORED_PROJECT_ACTION_TYPES = {"reorder_etapas", "cascade_update"}
+IGNORED_PROJECT_ACTION_TYPES = {
+    "reorder_etapas",
+    "cascade_update",
+    "relacionar_projeto",
+    "desrelacionar_projeto",
+}
 
 # Mesmos rótulos da SPA (routes/(app)/colecoes/[id]/+page.svelte::PAPEL_LABEL).
 ROTULO_PAPEL_SHARE = {"viewer": "leitor", "editor": "editor"}
