@@ -33,7 +33,12 @@ export function countMapped(mapping: ImportFieldMapping): number {
 	return Object.values(mapping).filter((campo) => campo !== null).length;
 }
 
+/** `true` quando alguma coluna está mapeada como `campo`. */
+export function hasField(mapping: ImportFieldMapping, campo: string): boolean {
+	return Object.values(mapping).includes(campo);
+}
+
 /** `true` quando alguma coluna está mapeada como título (obrigatório no envio). */
 export function hasTitulo(mapping: ImportFieldMapping): boolean {
-	return Object.values(mapping).includes('titulo');
+	return hasField(mapping, 'titulo');
 }

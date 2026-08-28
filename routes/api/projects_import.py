@@ -22,8 +22,10 @@ from werkzeug.datastructures import FileStorage
 from catalogs.inventario import sanitize_special_project_for_orgao
 from models import OrgaoUnidade, db
 from services.import_columns import (
-    IMPORT_FIELDS_PAYLOAD,
+    IMPORT_MODES,
     ImportFieldPayload,
+    build_fields_payload,
+    import_mode_fields,
     parse_mapping_form_value,
     suggest_column_mapping,
 )
@@ -40,6 +42,7 @@ from ..projects.import_csv import (
     parse_import_rows,
     read_tabular_bytes,
 )
+from ..projects.import_stages import _persist_imported_projects_with_stages
 from .envelope import fail, ok
 from .negotiation import api_admin_required
 
@@ -59,8 +62,17 @@ class ColumnPreview(TypedDict):
 class ImportAnalysisPayload(TypedDict):
     delimitador: str
     total_linhas: int
+    modo: str
     colunas: list[ColumnPreview]
     campos: list[ImportFieldPayload]
+
+
+def _resolve_import_modo(modo_raw: str | None) -> str:
+    """Modo do lote vindo do form; ausente ou vazio cai no modo simples."""
+    modo = (modo_raw or "").strip() or "simples"
+    if modo not in IMPORT_MODES:
+        raise ValueError(f"Modo inválido: {modo!r}. Use um de {IMPORT_MODES}.")
+    return modo
 
 
 def _resolve_import_orgao(orgao_id_raw: str | None) -> OrgaoUnidade:
@@ -87,11 +99,22 @@ def _resolve_import_status(status_raw: str | None) -> str:
     return status
 
 
-def _resolve_import_mapping(mapeamento_raw: str | None) -> dict[int, str] | None:
-    """Mapeamento índice→campo do form; ausente devolve None (cabeçalho legado)."""
+def _resolve_import_mapping(
+    mapeamento_raw: str | None, modo: str
+) -> dict[int, str] | None:
+    """Mapeamento índice→campo do form; obrigatório no modo com etapas.
+
+    No modo simples, ausente devolve ``None`` (cabeçalho legado
+    ``titulo``/``descricao``).
+    """
     if not mapeamento_raw or not mapeamento_raw.strip():
+        if modo == "com_etapas":
+            raise ValueError(
+                "O modo com etapas exige o mapeamento de colunas "
+                "(form 'mapeamento' ausente)."
+            )
         return None
-    return parse_mapping_form_value(mapeamento_raw)
+    return parse_mapping_form_value(mapeamento_raw, modo)
 
 
 def _oversized_upload_message() -> str:
@@ -157,7 +180,26 @@ def _import_counts(outcome: ImportOutcome) -> dict[str, int]:
         "imported_count": outcome.imported,
         "ignored_count": outcome.ignored,
         "adjusted_count": outcome.adjusted,
+        "etapas_criadas": outcome.etapas_criadas,
     }
+
+
+def _persist_import_batch(
+    modo: str,
+    rows: list[ParsedImportRow],
+    orgao: OrgaoUnidade,
+    status: str,
+    special_project: str | None,
+    delivery_type: str | None,
+) -> ImportOutcome:
+    """Despacha a persistência do lote para o fluxo do modo pedido."""
+    if modo == "com_etapas":
+        return _persist_imported_projects_with_stages(
+            rows, orgao, status, special_project, delivery_type
+        )
+    return _persist_imported_projects(
+        rows, orgao, status, special_project, delivery_type
+    )
 
 
 @main_bp.route("/api/projetos/importar-csv", methods=["POST"])
@@ -166,30 +208,36 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
     """Importa projetos em lote de um CSV.
 
     Aceita ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB e
-    10.000 projetos), os atributos
-    padrão do lote (``orgao_id`` obrigatório, ``status``, ``special_project``,
-    ``delivery_type``) e o ``mapeamento`` opcional (JSON de índice de coluna
-    para campo). Sem ``mapeamento``, o CSV precisa das colunas
-    ``titulo``/``descricao``.
+    10.000 projetos), o ``modo`` opcional (``simples``/``com_etapas``), os
+    atributos padrão do lote (``orgao_id`` obrigatório, ``status``,
+    ``special_project``, ``delivery_type``) e o ``mapeamento`` (JSON de índice
+    de coluna para campo) — opcional no modo simples (sem ele o CSV precisa das
+    colunas ``titulo``/``descricao``) e obrigatório no modo com etapas, que lê
+    1 linha por etapa agrupada por ``ref_projeto``. No modo simples todo
+    projeto nasce com a etapa "Etapas a definir".
 
     Returns:
-        ``ok({"imported_count", "ignored_count", "adjusted_count"})`` em
-        sucesso; ``fail(..., 422, "validation")`` para entradas inválidas;
-        ``fail(..., 500, "server")`` em erro de persistência.
+        ``ok({"imported_count", "ignored_count", "adjusted_count",
+        "etapas_criadas"})`` em sucesso; ``fail(..., 422, "validation")`` para
+        entradas inválidas; ``fail(..., 500, "server")`` em erro de persistência.
     """
     try:
+        modo = _resolve_import_modo(request.form.get("modo"))
         orgao = _resolve_import_orgao(request.form.get("orgao_id"))
         status = _resolve_import_status(request.form.get("status"))
-        mapeamento = _resolve_import_mapping(request.form.get("mapeamento"))
+        mapeamento = _resolve_import_mapping(request.form.get("mapeamento"), modo)
         rows = _read_import_rows(request.files.get("arquivo"), mapeamento)
     except ValueError as invalid_input:
         return fail(str(invalid_input), status=422, code="validation")
 
     special_project, delivery_type = _batch_defaults(orgao)
     try:
-        outcome = _persist_imported_projects(
-            rows, orgao, status, special_project, delivery_type
+        outcome = _persist_import_batch(
+            modo, rows, orgao, status, special_project, delivery_type
         )
+    except ValueError as invalid_rows:
+        db.session.rollback()
+        return fail(str(invalid_rows), status=422, code="validation")
     except SQLAlchemyError:
         db.session.rollback()
         return fail("Erro ao salvar os projetos importados.", status=500, code="server")
@@ -211,7 +259,7 @@ def _detected_delimiter(raw: bytes) -> str:
 
 
 def _build_columns_preview(
-    cabecalhos: list[str], linhas: list[list[str]]
+    cabecalhos: list[str], linhas: list[list[str]], campos: tuple[str, ...]
 ) -> list[ColumnPreview]:
     return [
         {
@@ -221,7 +269,7 @@ def _build_columns_preview(
             "confianca": sugestao.confianca,
             "amostra": _first_sample(linhas, sugestao.indice),
         }
-        for sugestao in suggest_column_mapping(cabecalhos)
+        for sugestao in suggest_column_mapping(cabecalhos, campos)
     ]
 
 
@@ -237,13 +285,15 @@ def _analysable_table(raw: bytes) -> tuple[list[str], list[list[str]]]:
 
 
 def _build_analysis_payload(
-    raw: bytes, cabecalhos: list[str], linhas: list[list[str]]
+    raw: bytes, cabecalhos: list[str], linhas: list[list[str]], modo: str
 ) -> ImportAnalysisPayload:
+    campos, obrigatorios = import_mode_fields(modo)
     return {
         "delimitador": _detected_delimiter(raw),
         "total_linhas": len(linhas),
-        "colunas": _build_columns_preview(cabecalhos, linhas),
-        "campos": IMPORT_FIELDS_PAYLOAD,
+        "modo": modo,
+        "colunas": _build_columns_preview(cabecalhos, linhas, campos),
+        "campos": build_fields_payload(campos, obrigatorios),
     }
 
 
@@ -252,8 +302,10 @@ def _build_analysis_payload(
 def api_projetos_importar_csv_analise() -> Response | tuple[Response, int]:
     """Analisa o CSV enviado e sugere o mapeamento de colunas, sem persistir nada.
 
-    Recebe ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB) e
-    devolve ``ok({delimitador, total_linhas, colunas, campos})``.
+    Recebe ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB) e o
+    ``modo`` opcional, devolvendo
+    ``ok({delimitador, total_linhas, modo, colunas, campos})`` — campos e
+    sugestões restritos aos campos do modo pedido.
     """
     upload = request.files.get("arquivo")
     if not upload or not upload.filename:
@@ -262,9 +314,10 @@ def api_projetos_importar_csv_analise() -> Response | tuple[Response, int]:
         )
 
     try:
+        modo = _resolve_import_modo(request.form.get("modo"))
         raw = _read_capped_upload(upload)
         cabecalhos, linhas = _analysable_table(raw)
     except ValueError as invalid_input:
         return fail(str(invalid_input), status=422, code="validation")
 
-    return ok(_build_analysis_payload(raw, cabecalhos, linhas))
+    return ok(_build_analysis_payload(raw, cabecalhos, linhas, modo))

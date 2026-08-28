@@ -13,24 +13,74 @@ import re
 import unicodedata
 from typing import NamedTuple, TypedDict
 
-IMPORT_FIELDS: tuple[str, ...] = (
+IMPORT_FIELDS_SIMPLE: tuple[str, ...] = (
     "titulo",
     "descricao",
     "status",
+    "prioridade",
     "delivery_type",
     "special_project",
+    "area",
+    "orgao",
     "observacao",
     "sei",
+    "data_inicio",
+    "data_fim",
 )
+
+IMPORT_FIELDS_ETAPA: tuple[str, ...] = (
+    "ref_projeto",
+    "etapa",
+    "etapa_data_inicio",
+    "etapa_data_fim",
+    "etapa_responsavel",
+    "etapa_situacao",
+    "etapa_comentarios",
+)
+
+# Superset validado em ``parse_mapping_form_value``.
+IMPORT_FIELDS: tuple[str, ...] = IMPORT_FIELDS_SIMPLE + IMPORT_FIELDS_ETAPA
+
+# Datas de projeto alimentam só a etapa default do modo simples; no modo com
+# etapas as datas vêm por etapa (etapa_data_inicio/etapa_data_fim).
+_CAMPOS_SO_DO_MODO_SIMPLES: frozenset[str] = frozenset({"data_inicio", "data_fim"})
+
+IMPORT_FIELDS_COM_ETAPAS: tuple[str, ...] = (
+    tuple(
+        campo
+        for campo in IMPORT_FIELDS_SIMPLE
+        if campo not in _CAMPOS_SO_DO_MODO_SIMPLES
+    )
+    + IMPORT_FIELDS_ETAPA
+)
+
+REQUIRED_IMPORT_FIELDS: frozenset[str] = frozenset({"titulo"})
+REQUIRED_IMPORT_FIELDS_COM_ETAPAS: frozenset[str] = frozenset(
+    {"titulo", "ref_projeto", "etapa"}
+)
+
+IMPORT_MODES: tuple[str, ...] = ("simples", "com_etapas")
 
 IMPORT_FIELD_LABELS: dict[str, str] = {
     "titulo": "Título",
     "descricao": "Descrição",
     "status": "Status",
+    "prioridade": "Prioridade",
     "delivery_type": "Tipo de entrega",
     "special_project": "Projeto especial",
+    "area": "Área responsável",
+    "orgao": "Órgão",
     "observacao": "Observação",
     "sei": "Processos SEI",
+    "data_inicio": "Data de início",
+    "data_fim": "Data de fim",
+    "ref_projeto": "Ref do projeto",
+    "etapa": "Etapa",
+    "etapa_data_inicio": "Etapa: data de início",
+    "etapa_data_fim": "Etapa: data de fim",
+    "etapa_responsavel": "Etapa: responsável",
+    "etapa_situacao": "Etapa: situação",
+    "etapa_comentarios": "Etapa: comentários",
 }
 
 IMPORT_FIELD_SYNONYMS: dict[str, tuple[str, ...]] = {
@@ -44,8 +94,18 @@ IMPORT_FIELD_SYNONYMS: dict[str, tuple[str, ...]] = {
         "description",
     ),
     "status": ("status", "situacao"),
+    "prioridade": ("prioridade", "priority", "urgencia"),
     "delivery_type": ("tipo entrega", "entrega", "delivery type"),
     "special_project": ("projeto especial", "especial", "marcador"),
+    "area": (
+        "area",
+        "area responsavel",
+        "area demandante",
+        "sigla",
+        "sigla area",
+        "unidade",
+    ),
+    "orgao": ("orgao", "orgao responsavel", "orgao demandante", "secretaria"),
     "observacao": (
         "observacao",
         "observacoes",
@@ -58,10 +118,35 @@ IMPORT_FIELD_SYNONYMS: dict[str, tuple[str, ...]] = {
     "sei": (
         "sei",
         "processo sei",
+        "processos sei",
         "processo sei rj",
         "numero sei",
         "n sei",
         "processo",
+    ),
+    "data_inicio": ("data inicio", "inicio", "data inicial", "inicio previsto"),
+    "data_fim": ("data fim", "fim", "data final", "termino", "data termino", "prazo"),
+    "ref_projeto": ("ref projeto", "ref", "referencia projeto", "referencia"),
+    "etapa": ("etapa", "nome etapa", "descricao etapa", "fase"),
+    "etapa_data_inicio": ("etapa data inicio", "etapa inicio", "inicio etapa"),
+    "etapa_data_fim": ("etapa data fim", "etapa fim", "fim etapa", "etapa prazo"),
+    "etapa_responsavel": (
+        "etapa responsavel",
+        "responsavel etapa",
+        "area etapa",
+        "etapa area",
+    ),
+    "etapa_situacao": (
+        "etapa situacao",
+        "situacao etapa",
+        "etapa status",
+        "status etapa",
+    ),
+    "etapa_comentarios": (
+        "etapa comentarios",
+        "comentarios etapa",
+        "etapa observacao",
+        "etapa comentario",
     ),
 }
 
@@ -72,14 +157,39 @@ class ImportFieldPayload(TypedDict):
     obrigatorio: bool
 
 
-IMPORT_FIELDS_PAYLOAD: list[ImportFieldPayload] = [
-    {
-        "campo": campo,
-        "rotulo": IMPORT_FIELD_LABELS[campo],
-        "obrigatorio": campo == "titulo",
-    }
-    for campo in IMPORT_FIELDS
-]
+def build_fields_payload(
+    campos: tuple[str, ...], obrigatorios: frozenset[str]
+) -> list[ImportFieldPayload]:
+    """Monta a lista de campos oferecidos ao select de mapeamento da tela.
+
+    Exemplo: ``build_fields_payload(("titulo",), frozenset({"titulo"}))``.
+    """
+    return [
+        {
+            "campo": campo,
+            "rotulo": IMPORT_FIELD_LABELS[campo],
+            "obrigatorio": campo in obrigatorios,
+        }
+        for campo in campos
+    ]
+
+
+IMPORT_FIELDS_PAYLOAD: list[ImportFieldPayload] = build_fields_payload(
+    IMPORT_FIELDS_SIMPLE, REQUIRED_IMPORT_FIELDS
+)
+
+
+def import_mode_fields(modo: str) -> tuple[tuple[str, ...], frozenset[str]]:
+    """Campos oferecidos e obrigatórios do modo de importação.
+
+    Exemplo: ``import_mode_fields("simples") == (IMPORT_FIELDS_SIMPLE,
+    frozenset({"titulo"}))``.
+    """
+    if modo == "simples":
+        return IMPORT_FIELDS_SIMPLE, REQUIRED_IMPORT_FIELDS
+    if modo == "com_etapas":
+        return IMPORT_FIELDS_COM_ETAPAS, REQUIRED_IMPORT_FIELDS_COM_ETAPAS
+    raise ValueError(f"Modo inválido: {modo!r}. Use um de {IMPORT_MODES}.")
 
 
 class ColumnSuggestion(NamedTuple):
@@ -134,26 +244,32 @@ def score_field(header_norm: str, campo: str) -> tuple[float, str] | None:
     return (ratio, "aproximado") if ratio >= _FUZZY_THRESHOLD else None
 
 
-def _rank_candidates(headers: list[str]) -> list[tuple[float, int, str, str]]:
+def _rank_candidates(
+    headers: list[str], fields: tuple[str, ...]
+) -> list[tuple[float, int, str, str]]:
     """Candidatos ``(score, índice, campo, confiança)`` do melhor para o pior."""
     candidatos: list[tuple[float, int, str, str]] = []
     for indice, cabecalho in enumerate(headers):
         header_norm = normalize_header(cabecalho)
-        for campo in IMPORT_FIELDS:
+        for campo in fields:
             scored = score_field(header_norm, campo)
             if scored is not None:
                 candidatos.append((scored[0], indice, campo, scored[1]))
     return sorted(candidatos, key=lambda candidato: (-candidato[0], candidato[1]))
 
 
-def suggest_column_mapping(headers: list[str]) -> list[ColumnSuggestion]:
+def suggest_column_mapping(
+    headers: list[str], fields: tuple[str, ...] = IMPORT_FIELDS
+) -> list[ColumnSuggestion]:
     """Sugere um campo por coluna, com unicidade dupla (um campo ↔ uma coluna).
+
+    ``fields`` restringe as sugestões aos campos do modo pedido.
 
     Exemplo: ``suggest_column_mapping(["Título"])[0].campo == "titulo"``.
     """
     escolhas: dict[int, tuple[str, str]] = {}
     campos_usados: set[str] = set()
-    for _score, indice, campo, confianca in _rank_candidates(headers):
+    for _score, indice, campo, confianca in _rank_candidates(headers, fields):
         if indice in escolhas or campo in campos_usados:
             continue
         escolhas[indice] = (campo, confianca)
@@ -198,17 +314,50 @@ def _ensure_known_field(valor: object) -> str:
     )
 
 
-def parse_mapping_form_value(raw: str) -> dict[int, str]:
+def _ensure_field_in_mode(
+    campo: str, campos_do_modo: tuple[str, ...], modo: str
+) -> None:
+    """Recusa campo válido no superset mas fora do modo pedido (ex.: etapa no simples)."""
+    if campo in campos_do_modo:
+        return
+    raise ValueError(
+        f"Campo {campo!r} não está disponível no modo {modo!r}. "
+        f"Use um de {', '.join(campos_do_modo)}."
+    )
+
+
+_REQUIRED_FIELD_ERRORS: dict[str, str] = {
+    "titulo": "Mapeie a coluna do título antes de importar.",
+    "ref_projeto": (
+        "Mapeie a coluna da referência do projeto (Ref do projeto) no modo com etapas."
+    ),
+    "etapa": "Mapeie a coluna da etapa no modo com etapas.",
+}
+
+
+def _ensure_required_mapped(
+    campos_mapeados: set[str], obrigatorios: frozenset[str]
+) -> None:
+    for campo in ("titulo", "ref_projeto", "etapa"):
+        if campo in obrigatorios and campo not in campos_mapeados:
+            raise ValueError(_REQUIRED_FIELD_ERRORS[campo])
+
+
+def parse_mapping_form_value(raw: str, modo: str = "simples") -> dict[int, str]:
     """Valida o form ``mapeamento`` e devolve ``{índice da coluna: campo}``.
+
+    ``modo`` restringe os campos aceitos e define os obrigatórios (o modo com
+    etapas exige também ``ref_projeto`` e ``etapa``).
 
     Exemplo: ``parse_mapping_form_value('{"0":"titulo"}') == {0: "titulo"}``.
     """
+    campos_do_modo, obrigatorios = import_mode_fields(modo)
     mapeamento: dict[int, str] = {}
     for chave, valor in _load_mapping_json(raw).items():
         campo = _ensure_known_field(valor)
+        _ensure_field_in_mode(campo, campos_do_modo, modo)
         if campo in mapeamento.values():
             raise ValueError(f"Campo {campo!r} mapeado em mais de uma coluna.")
         mapeamento[_coerce_index(raw, chave)] = campo
-    if "titulo" not in mapeamento.values():
-        raise ValueError("Mapeie a coluna do título antes de importar.")
+    _ensure_required_mapped(set(mapeamento.values()), obrigatorios)
     return mapeamento

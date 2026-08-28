@@ -3,7 +3,8 @@
 Cobre ``GET /api/projetos/exportar`` (``routes/api/projects_export.py``): guard
 de login, preset de colunas com BOM/";", ordem custom de colunas, validações
 422, escopo de visibilidade de não-admin, filtro de status sem default
-implícito, teto de linhas e neutralização de fórmulas (CSV injection).
+implícito, teto de linhas, neutralização de fórmulas (CSV injection) e o
+formato longo ``?com_etapas=1``.
 """
 
 from __future__ import annotations
@@ -12,13 +13,23 @@ import csv
 import io
 import re
 
-from models import Project, db
+from models import Etapa, Project, db
+
+STAGE_HEADERS = [
+    "Etapa",
+    "Etapa Data de início",
+    "Etapa Data de fim",
+    "Etapa Responsável",
+    "Etapa Situação",
+    "Etapa Comentários",
+]
 
 DEFAULT_HEADERS = [
     "ID",
     "Título",
     "Descrição",
     "Processos SEI",
+    "Área responsável",
     "Órgão",
     "Status",
     "Data de início",
@@ -151,3 +162,93 @@ def test_export_neutraliza_formulas(app, client_admin, seed_data):
     rows = _rows(client_admin.get("/api/projetos/exportar?colunas=titulo"))
     injetado = next(row for row in rows[1:] if "HYPERLINK" in row[0])
     assert injetado[0].startswith("'=")
+
+
+def test_export_com_etapas_headers_e_ref_projeto(client_user, seed_data):
+    response = client_user.get("/api/projetos/exportar?com_etapas=1&colunas=titulo")
+    assert response.status_code == 200
+    rows = _rows(response)
+    assert rows[0] == ["Ref Projeto", "Título", *STAGE_HEADERS]
+    linhas = [row for row in rows[1:] if row[1] == "Projeto Auditoria"]
+    assert [row[0] for row in linhas] == [str(seed_data["project_id"])] * 2
+    assert [row[2] for row in linhas] == ["Etapa Planejada", "Etapa Iniciada"]
+    assert linhas[0][3] == "10/01/2026"
+    assert linhas[0][5] == "Usuario Auditoria"
+    assert [row[6] for row in linhas] == ["Não iniciada", "Em andamento"]
+
+
+def test_export_com_etapas_projeto_sem_etapa_vira_linha_vazia(
+    app, client_admin, seed_data
+):
+    with app.app_context():
+        db.session.add(
+            Project(
+                titulo="Projeto Sem Etapa",
+                orgao_id=seed_data["auditoria_orgao_id"],
+                status="Vigente",
+            )
+        )
+        db.session.commit()
+
+    rows = _rows(client_admin.get("/api/projetos/exportar?com_etapas=1&colunas=titulo"))
+    linhas = [row for row in rows[1:] if row[1] == "Projeto Sem Etapa"]
+    assert len(linhas) == 1
+    assert linhas[0][2:] == [""] * len(STAGE_HEADERS)
+
+
+def test_export_com_etapas_colunas_etapa_custom_ordem(client_user, seed_data):
+    response = client_user.get(
+        "/api/projetos/exportar?com_etapas=1&colunas=titulo"
+        "&colunas_etapa=etapa_situacao,etapa"
+    )
+    assert response.status_code == 200
+    rows = _rows(response)
+    assert rows[0] == ["Ref Projeto", "Título", "Etapa Situação", "Etapa"]
+
+
+def test_export_colunas_etapa_invalida_422(client_user, seed_data):
+    response = client_user.get(
+        "/api/projetos/exportar?com_etapas=1&colunas_etapa=etapa,foo"
+    )
+    assert response.status_code == 422
+    error = response.get_json()["error"]
+    assert error["code"] == "validation"
+    assert "Coluna inválida: 'foo'" in error["message"]
+
+
+def test_export_colunas_etapa_vazio_422(client_user, seed_data):
+    response = client_user.get("/api/projetos/exportar?com_etapas=1&colunas_etapa=")
+    assert response.status_code == 422
+    assert response.get_json()["error"]["message"] == "Escolha ao menos uma coluna."
+
+
+def test_export_com_etapas_teto_conta_linhas(client_user, seed_data, monkeypatch):
+    projetos = _rows(client_user.get("/api/projetos/exportar?colunas=titulo"))[1:]
+    monkeypatch.setattr("routes.api.projects_export.MAX_EXPORT_ROWS", len(projetos))
+    assert client_user.get("/api/projetos/exportar?colunas=titulo").status_code == 200
+
+    response = client_user.get("/api/projetos/exportar?com_etapas=1&colunas=titulo")
+    assert response.status_code == 422
+    assert (
+        response.get_json()["error"]["message"]
+        == "Exportação acima de 10.000 linhas — refine os filtros."
+    )
+
+
+def test_export_com_etapas_neutraliza_formulas_em_comentarios(
+    app, client_admin, seed_data
+):
+    with app.app_context():
+        db.session.add(
+            Etapa(
+                descricao="Etapa Injetada",
+                comentarios='=HYPERLINK("https://attacker.example","click")',
+                project_id=seed_data["project_id"],
+                ordem=9,
+            )
+        )
+        db.session.commit()
+
+    rows = _rows(client_admin.get("/api/projetos/exportar?com_etapas=1&colunas=titulo"))
+    injetada = next(row for row in rows[1:] if row[2] == "Etapa Injetada")
+    assert injetada[7].startswith("'=")

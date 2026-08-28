@@ -6,17 +6,32 @@ cabeçalho ausente e filtragem de linhas sem título.
 """
 
 import csv
+from dataclasses import dataclass
+from datetime import date
 
 import pytest
 
 from routes.projects.import_csv import (
     ParsedImportRow,
     _filter_sei_numbers,
+    _resolve_row_area,
     _resolve_row_attributes,
     parse_import_rows,
     read_tabular_bytes,
 )
 from services.sei_process import SEI_MAX_PER_PROJECT
+
+
+@dataclass(frozen=True)
+class FakeArea:
+    """Dublê de OrgaoUnidade — ``_resolve_row_area`` só lê sigla/id."""
+
+    id: int
+    sigla: str
+
+
+_AREAS = {"vpd": FakeArea(1, "VPD"), "coodados": FakeArea(2, "COODADOS")}
+_AREA_PADRAO = FakeArea(9, "SECT")
 
 
 def test_parses_semicolon_utf8():
@@ -248,3 +263,80 @@ def test_special_project_com_espaco_duplo_casa_no_catalogo():
     attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
     assert attrs.special_project == "Fórum de simplificação"
     assert attrs.adjusted is False
+
+
+def test_parse_com_mapeamento_dos_campos_novos():
+    raw = (
+        "Título;Prioridade;Órgão;Área responsável;Data de início;Data de fim\n"
+        "Projeto Y;MÉDIA;Secretaria de Fazenda;COODADOS;01/02/2026;2026-03-31"
+    ).encode("utf-8")
+    mapeamento = {
+        0: "titulo",
+        1: "prioridade",
+        2: "orgao",
+        3: "area",
+        4: "data_inicio",
+        5: "data_fim",
+    }
+    (row,) = parse_import_rows(raw, mapeamento=mapeamento)
+    assert row.prioridade == "MÉDIA"
+    assert row.orgao == "Secretaria de Fazenda"
+    assert row.area == "COODADOS"
+    assert (row.data_inicio, row.data_fim) == ("01/02/2026", "2026-03-31")
+
+
+def test_campos_novos_ausentes_ficam_none():
+    (row,) = parse_import_rows(b"t\nProjeto Z", mapeamento={0: "titulo"})
+    assert (row.prioridade, row.orgao, row.area) == (None, None, None)
+    assert (row.data_inicio, row.data_fim) == (None, None)
+
+
+def test_prioridade_acentuada_normaliza_sem_ajuste():
+    row = ParsedImportRow(titulo="P", prioridade="MÉDIA")
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    assert attrs.prioridade == "media"
+    assert attrs.adjusted is False
+
+
+def test_prioridade_invalida_vira_none_e_conta_adjusted():
+    row = ParsedImportRow(titulo="P", prioridade="altíssima")
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    assert attrs.prioridade is None
+    assert attrs.adjusted is True
+
+
+def test_prioridade_ausente_nao_conta_adjusted():
+    attrs = _resolve_row_attributes(
+        ParsedImportRow(titulo="P"), "VPD", "Vigente", None, None
+    )
+    assert attrs.prioridade is None
+    assert attrs.adjusted is False
+
+
+def test_datas_da_linha_aceitam_br_e_iso():
+    row = ParsedImportRow(titulo="P", data_inicio="01/02/2026", data_fim="2026-03-31")
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    assert attrs.data_inicio == date(2026, 2, 1)
+    assert attrs.data_fim == date(2026, 3, 31)
+    assert attrs.adjusted is False
+
+
+def test_data_ilegivel_vira_none_e_conta_adjusted():
+    row = ParsedImportRow(titulo="P", data_inicio="quando der")
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    assert attrs.data_inicio is None
+    assert attrs.adjusted is True
+
+
+def test_resolve_row_area_sigla_conhecida():
+    area, ok = _resolve_row_area("coodados", _AREAS, _AREA_PADRAO)
+    assert (area.sigla, ok) == ("COODADOS", True)
+
+
+def test_resolve_row_area_vazia_cai_no_lote_sem_ajuste():
+    for raw in (None, "", "   "):
+        assert _resolve_row_area(raw, _AREAS, _AREA_PADRAO) == (_AREA_PADRAO, True)
+
+
+def test_resolve_row_area_desconhecida_cai_no_lote_com_ajuste():
+    assert _resolve_row_area("XPTO", _AREAS, _AREA_PADRAO) == (_AREA_PADRAO, False)

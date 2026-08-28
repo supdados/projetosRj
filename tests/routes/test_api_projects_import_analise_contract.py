@@ -114,12 +114,18 @@ def test_analise_sugere_colunas(client_admin):
         "titulo",
         "descricao",
         "status",
+        "prioridade",
         "delivery_type",
         "special_project",
+        "area",
+        "orgao",
         "observacao",
         "sei",
+        "data_inicio",
+        "data_fim",
     ]
     assert all(not campo["obrigatorio"] for campo in data["campos"][1:])
+    assert data["modo"] == "simples"
 
 
 def test_analise_colunas_acentuadas_fora_de_ordem(client_admin):
@@ -269,3 +275,136 @@ def test_analise_arquivo_no_teto_de_2_mb_passa(client_admin, tamanho):
     assert [
         coluna["cabecalho"] for coluna in response.get_json()["data"]["colunas"]
     ] == ["titulo", "descricao"]
+
+
+def test_analise_sugere_os_campos_novos(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data=_csv(
+            "Título;Prioridade;Órgão;Área responsável;Data de início;Data de fim\n"
+            "Portal;Alta;Secretaria de Fazenda;COODADOS;01/02/2026;2026-03-31\n"
+        ),
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    colunas = response.get_json()["data"]["colunas"]
+    assert [coluna["campo"] for coluna in colunas] == [
+        "titulo",
+        "prioridade",
+        "orgao",
+        "area",
+        "data_inicio",
+        "data_fim",
+    ]
+    assert {coluna["confianca"] for coluna in colunas} == {"exato"}
+
+
+def test_analise_rotulos_pt_br_dos_campos_novos(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data=_csv("Título;Descrição\nPortal;Unifica\n"),
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    rotulos = {
+        campo["campo"]: campo["rotulo"]
+        for campo in response.get_json()["data"]["campos"]
+    }
+    assert rotulos["prioridade"] == "Prioridade"
+    assert rotulos["orgao"] == "Órgão"
+    assert rotulos["area"] == "Área responsável"
+    assert rotulos["data_inicio"] == "Data de início"
+    assert rotulos["data_fim"] == "Data de fim"
+
+
+def test_analise_modo_com_etapas_devolve_campos_do_modo(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data={"modo": "com_etapas", **_csv("Título;Descrição\nA;desc")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    assert data["modo"] == "com_etapas"
+    assert [campo["campo"] for campo in data["campos"]] == [
+        "titulo",
+        "descricao",
+        "status",
+        "prioridade",
+        "delivery_type",
+        "special_project",
+        "area",
+        "orgao",
+        "observacao",
+        "sei",
+        "ref_projeto",
+        "etapa",
+        "etapa_data_inicio",
+        "etapa_data_fim",
+        "etapa_responsavel",
+        "etapa_situacao",
+        "etapa_comentarios",
+    ]
+    obrigatorios = {c["campo"] for c in data["campos"] if c["obrigatorio"]}
+    assert obrigatorios == {"titulo", "ref_projeto", "etapa"}
+
+
+def test_analise_modo_com_etapas_sugere_colunas_de_etapa(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data={
+            "modo": "com_etapas",
+            **_csv(
+                "Ref Projeto;Título;Etapa;Etapa Data de início;Etapa Data de fim;"
+                "Etapa Responsável;Etapa Situação;Etapa Comentários\n"
+                "p1;Portal;Levantamento;01/02/2026;2026-02-28;VPD;concluída;ok\n"
+            ),
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    colunas = response.get_json()["data"]["colunas"]
+    assert [coluna["campo"] for coluna in colunas] == [
+        "ref_projeto",
+        "titulo",
+        "etapa",
+        "etapa_data_inicio",
+        "etapa_data_fim",
+        "etapa_responsavel",
+        "etapa_situacao",
+        "etapa_comentarios",
+    ]
+    assert {coluna["confianca"] for coluna in colunas} == {"exato"}
+
+
+def test_analise_modo_simples_nao_oferece_campos_de_etapa(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data={"modo": "simples", **_csv("Ref Projeto;Etapa\np1;Levantamento\n")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    data = response.get_json()["data"]
+    campos = {campo["campo"] for campo in data["campos"]}
+    assert campos.isdisjoint({"ref_projeto", "etapa", "etapa_data_inicio"})
+    assert [coluna["campo"] for coluna in data["colunas"]] == [None, None]
+
+
+def test_analise_modo_desconhecido_422(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data={"modo": "turbo", **_csv("Título;Descrição\nA;desc")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert response.get_json()["error"]["message"].startswith("Modo inválido: 'turbo'")
+
+
+def test_analise_modo_simples_explicito(client_admin):
+    response = client_admin.post(
+        "/api/projetos/importar-csv/analise",
+        data={"modo": "simples", **_csv("Título;Descrição\nA;desc")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    assert response.get_json()["data"]["modo"] == "simples"

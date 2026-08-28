@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 from flask_sqlalchemy.query import Query
 from sqlalchemy.orm import joinedload, selectinload
 
-from models import IndicadorProjeto, Project, User
+from models import Etapa, IndicadorProjeto, Project, User
 from services.csv_safety import safe_csv_text
 
 if TYPE_CHECKING:
@@ -28,13 +28,24 @@ class ExportColumn(NamedTuple):
     render: Callable[[Project], str]
 
 
+class StageExportColumn(NamedTuple):
+    slug: str
+    header: str
+    render: Callable[[Etapa], str]
+
+
 def _format_date(value: datetime.date | None) -> str:
     return value.strftime("%d/%m/%Y") if value else ""
 
 
+def _render_area(project: Project) -> str:
+    """Área responsável = sigla da unidade vinculada; vazio quando não há vínculo."""
+    if project.orgao_ref is None:
+        return ""
+    return safe_csv_text(project.orgao_ref.sigla)
+
+
 def _render_orgao(project: Project) -> str:
-    if project.orgao_ref is not None:
-        return safe_csv_text(project.orgao_ref.sigla)
     return safe_csv_text(project.orgao or "")
 
 
@@ -65,6 +76,7 @@ EXPORT_COLUMNS: dict[str, ExportColumn] = {
             "descricao", "Descrição", lambda p: safe_csv_text(p.short_description)
         ),
         ExportColumn("sei", "Processos SEI", _render_sei),
+        ExportColumn("area", "Área responsável", _render_area),
         ExportColumn("orgao", "Órgão", _render_orgao),
         ExportColumn("status", "Status", lambda p: safe_csv_text(p.status)),
         ExportColumn("prioridade", "Prioridade", lambda p: safe_csv_text(p.prioridade)),
@@ -110,6 +122,7 @@ DEFAULT_EXPORT_SLUGS: tuple[str, ...] = (
     "titulo",
     "descricao",
     "sei",
+    "area",
     "orgao",
     "status",
     "data_inicio",
@@ -122,13 +135,57 @@ DEFAULT_EXPORT_SLUGS: tuple[str, ...] = (
 )
 
 
+def _render_etapa_responsavel(etapa: Etapa) -> str:
+    # Import tardio: services.etapa_responsaveis puxa routes.* e fecharia o ciclo.
+    from services.etapa_responsaveis import responsavel_display
+
+    return safe_csv_text(responsavel_display(etapa))
+
+
+def _render_etapa_situacao(etapa: Etapa) -> str:
+    if etapa.done:
+        return "Concluída"
+    if etapa.iniciada:
+        return "Em andamento"
+    return "Não iniciada"
+
+
+EXPORT_STAGE_COLUMNS: dict[str, StageExportColumn] = {
+    column.slug: column
+    for column in (
+        StageExportColumn("etapa", "Etapa", lambda e: safe_csv_text(e.descricao)),
+        StageExportColumn(
+            "etapa_data_inicio",
+            "Etapa Data de início",
+            lambda e: _format_date(e.data_inicio),
+        ),
+        StageExportColumn(
+            "etapa_data_fim", "Etapa Data de fim", lambda e: _format_date(e.data_fim)
+        ),
+        StageExportColumn(
+            "etapa_responsavel", "Etapa Responsável", _render_etapa_responsavel
+        ),
+        StageExportColumn("etapa_situacao", "Etapa Situação", _render_etapa_situacao),
+        StageExportColumn(
+            "etapa_comentarios",
+            "Etapa Comentários",
+            lambda e: safe_csv_text(e.comentarios or ""),
+        ),
+    )
+}
+
+DEFAULT_EXPORT_STAGE_SLUGS: tuple[str, ...] = tuple(EXPORT_STAGE_COLUMNS)
+
+REF_PROJETO_HEADER = "Ref Projeto"
+
+
 def build_export_query(filters: "ProjectsListFilters", user: User) -> Query:
     """Query do export: filtros da listagem + eager loading das relações lidas."""
     # Import tardio: quebra o ciclo services.project_export <-> routes.
     from routes.projects.list_filters import apply_projects_list_filters
 
     query = Project.query.options(
-        selectinload(Project.etapas),
+        selectinload(Project.etapas).selectinload(Etapa.responsaveis),
         selectinload(Project.sei_processes),
         selectinload(Project.indicadores).joinedload(IndicadorProjeto.indicador),
         joinedload(Project.orgao_ref),
@@ -146,6 +203,40 @@ def build_export_rows(
     columns = [EXPORT_COLUMNS[slug] for slug in slugs]
     for project in projects:
         yield [column.render(project) for column in columns]
+
+
+def build_export_headers_with_stages(
+    slugs: Sequence[str], stage_slugs: Sequence[str]
+) -> list[str]:
+    """Cabeçalhos do modo com etapas: Ref Projeto + colunas de projeto + de etapa."""
+    return [
+        REF_PROJETO_HEADER,
+        *(EXPORT_COLUMNS[slug].header for slug in slugs),
+        *(EXPORT_STAGE_COLUMNS[slug].header for slug in stage_slugs),
+    ]
+
+
+def build_export_rows_with_stages(
+    projects: Iterable[Project],
+    slugs: Sequence[str],
+    stage_slugs: Sequence[str],
+) -> Iterator[list[str]]:
+    """Gera uma linha por etapa de workflow; projeto sem etapa vira uma linha vazia.
+
+    Exemplo:
+        >>> list(build_export_rows_with_stages([projeto], ["titulo"], ["etapa"]))
+        [['12', 'Portal Único', 'Planejamento']]
+    """
+    columns = [EXPORT_COLUMNS[slug] for slug in slugs]
+    stage_columns = [EXPORT_STAGE_COLUMNS[slug] for slug in stage_slugs]
+    for project in projects:
+        base = [str(project.id), *(column.render(project) for column in columns)]
+        etapas = project.workflow_etapas
+        if not etapas:
+            yield [*base, *([""] * len(stage_columns))]
+            continue
+        for etapa in etapas:
+            yield [*base, *(column.render(etapa) for column in stage_columns)]
 
 
 def write_tabular_bytes(

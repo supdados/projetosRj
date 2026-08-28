@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
-	 * Modal de importação de projetos via CSV (Admin) em três estados — arquivo,
-	 * revisão e conclusão. A análise (`POST /api/projetos/importar-csv/analise`)
-	 * roda ao receber o arquivo; o envio reusa o MESMO `File` com `mapeamento`.
+	 * Modal de importação de projetos via CSV (Admin) em quatro estados — modo,
+	 * arquivo, revisão e conclusão. A análise (`POST /api/projetos/importar-csv/analise`)
+	 * roda ao receber o arquivo; o envio reusa o MESMO `File` com `mapeamento` e `modo`.
 	 */
 	import { tick, untrack } from 'svelte';
 	import { fade, fly, slide, type FlyParams } from 'svelte/transition';
@@ -13,8 +13,8 @@
 	import { confirmAction } from '$lib/stores/confirm';
 	import { animateHeight } from '$lib/utils/animateHeight';
 	import { delayedPending, type DelayedPending } from '$lib/utils/delayedPending';
-	import { countMapped, hasTitulo, type ImportFieldMapping } from '$lib/utils/importMappingState';
-	import type { AnaliseImportacao, ImportProjectsResultV2 } from '$lib/types/importExport';
+	import { countMapped, hasField, hasTitulo, type ImportFieldMapping } from '$lib/utils/importMappingState';
+	import type { AnaliseImportacao, ImportModo, ImportProjectsResultV2 } from '$lib/types/importExport';
 	import type { ProjectsListOptions } from '$lib/types/projects';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -24,8 +24,10 @@
 	import OrgaoTreeSelect from '$lib/components/OrgaoTreeSelect.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import ImportCsvMapping from '$lib/components/ImportCsvMapping.svelte';
+	import ImportCsvModoStep from '$lib/components/ImportCsvModoStep.svelte';
+	import ImportCsvSucesso from '$lib/components/ImportCsvSucesso.svelte';
 
-	type EstadoImportacao = 'arquivo' | 'revisao' | 'sucesso';
+	type EstadoImportacao = 'modo' | 'arquivo' | 'revisao' | 'sucesso';
 
 	interface Props {
 		open: boolean;
@@ -49,7 +51,8 @@
 	const CLASSE_PRIMARIO =
 		'inline-flex h-9 items-center justify-center rounded-md bg-brand text-sm font-semibold text-on-brand shadow-sm transition-ui hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] active:[transition-duration:90ms] disabled:cursor-not-allowed';
 
-	let estado = $state<EstadoImportacao>('arquivo');
+	let estado = $state<EstadoImportacao>('modo');
+	let modo = $state<ImportModo>('simples');
 	let file = $state<File | null>(null);
 	let analise = $state<AnaliseImportacao | null>(null);
 	let mapping = $state<ImportFieldMapping>({});
@@ -70,15 +73,16 @@
 	let jaAbriu = $state<boolean>(false);
 	// Invalida continuações de análise/import antigas (arquivo trocado, modal fechado).
 	let sessaoFluxo = 0;
-	const ORDEM_ESTADOS: Record<EstadoImportacao, number> = { arquivo: 0, revisao: 1, sucesso: 2 };
+	const ORDEM_ESTADOS: Record<EstadoImportacao, number> = { modo: 0, arquivo: 1, revisao: 2, sucesso: 3 };
 	// Voltar (trocar arquivo) entra de cima; avançar entra de baixo.
 	let sentido: 1 | -1 = 1;
 
 	let corpoEl = $state<HTMLDivElement | null>(null);
+	let modoEl = $state<HTMLDivElement | null>(null);
 	let arquivoEl = $state<HTMLDivElement | null>(null);
 	let revisaoEl = $state<HTMLFormElement | null>(null);
 	let sucessoEl = $state<HTMLDivElement | null>(null);
-	let concluirEl = $state<HTMLButtonElement | null>(null);
+	let sucessoComp = $state<{ focusConcluir: () => void } | null>(null);
 	let fileInputEl = $state<HTMLInputElement | null>(null);
 	const analisePendente = delayedPending({ showAfterMs: 150, minVisibleMs: 350 });
 	const importPendente = delayedPending({ showAfterMs: 150, minVisibleMs: 350 });
@@ -98,16 +102,36 @@
 	);
 
 	const dragAtivo = $derived(profundidadeDrag > 0);
+	const modoComEtapas = $derived(modo === 'com_etapas');
+	const rotuloModo = $derived(modoComEtapas ? 'Projetos com etapas' : 'Somente projetos');
 	const tituloMapeado = $derived(hasTitulo(mapping));
 	const colunasMapeadas = $derived(countMapped(mapping));
-	const tabelaVisivel = $derived(mappingExpandido || !tituloMapeado);
-	const podeImportar = $derived(tituloMapeado && orgaoId.trim().length > 0);
-	const motivoBloqueio = $derived<string>(
-		!tituloMapeado
-			? 'Mapeie a coluna do título.'
-			: orgaoId.trim().length === 0
-				? 'Escolha o órgão de destino.'
-				: ''
+	const obrigatoriosMapeados = $derived(
+		tituloMapeado &&
+			(!modoComEtapas || (hasField(mapping, 'ref_projeto') && hasField(mapping, 'etapa')))
+	);
+	const tabelaVisivel = $derived(mappingExpandido || !obrigatoriosMapeados);
+	const motivoBloqueio = $derived.by<string>(() => {
+		if (!tituloMapeado) return 'Mapeie a coluna do título.';
+		if (modoComEtapas && !hasField(mapping, 'ref_projeto')) return 'Mapeie a coluna Ref do projeto.';
+		if (modoComEtapas && !hasField(mapping, 'etapa')) return 'Mapeie a coluna Etapa.';
+		if (orgaoId.trim().length === 0) return 'Escolha a área de destino.';
+		return '';
+	});
+	const podeImportar = $derived(motivoBloqueio === '');
+	const rotuloImportar = $derived(
+		modoComEtapas ? 'Importar' : `Importar ${analise?.total_linhas ?? 0} projetos`
+	);
+	const rotuloSucesso = $derived(
+		resultado === null
+			? ''
+			: modoComEtapas
+				? `${resultado.imported_count} projetos e ${resultado.etapas_criadas} etapas importados`
+				: `${resultado.imported_count} projetos importados`
+	);
+	// No com etapas, linha sem título é erro 422 — só sobram linhas em branco.
+	const descricaoIgnoradas = $derived(
+		modoComEtapas ? 'linha(s) em branco ignorada(s).' : 'linha(s) ignorada(s) por não ter título.'
 	);
 	const dropzoneEstadoClasse = $derived(
 		dragAtivo
@@ -152,9 +176,9 @@
 			anuncioSucesso = '';
 			return;
 		}
-		const partes = [`${resultado.imported_count} projetos importados.`];
+		const partes = [`${rotuloSucesso}.`];
 		if (resultado.ignored_count > 0) {
-			partes.push(`${resultado.ignored_count} linha(s) ignorada(s) por não ter título.`);
+			partes.push(`${resultado.ignored_count} ${descricaoIgnoradas}`);
 		}
 		if (resultado.adjusted_count > 0) {
 			partes.push(`Valores não reconhecidos em ${resultado.adjusted_count} linha(s) receberam os padrões escolhidos.`);
@@ -192,7 +216,8 @@
 
 	function resetarFormulario(): void {
 		sessaoFluxo += 1;
-		estado = 'arquivo';
+		estado = 'modo';
+		modo = 'simples';
 		file = null;
 		analise = null;
 		resultado = null;
@@ -224,8 +249,10 @@
 		sentido = ORDEM_ESTADOS[novo] >= ORDEM_ESTADOS[estado] ? 1 : -1;
 		estado = novo;
 		await tick();
-		const entrada = novo === 'arquivo' ? arquivoEl : novo === 'revisao' ? revisaoEl : sucessoEl;
-		(novo === 'sucesso' ? concluirEl : entrada)?.focus({ preventScroll: true });
+		const entrada =
+			novo === 'modo' ? modoEl : novo === 'arquivo' ? arquivoEl : novo === 'revisao' ? revisaoEl : sucessoEl;
+		if (novo === 'sucesso') sucessoComp?.focusConcluir();
+		else entrada?.focus({ preventScroll: true });
 		if (entrada) animarCorpo(alturaAntes, entrada.offsetHeight);
 	}
 
@@ -257,7 +284,7 @@
 		const dados = new FormData();
 		dados.append('arquivo', novo);
 		try {
-			const recebida = await analisarImportacaoCsv(dados);
+			const recebida = await analisarImportacaoCsv(dados, modo);
 			await concluirAnalise(sessao, () => {
 				prepararRevisao(recebida);
 				void trocarEstado('revisao');
@@ -284,7 +311,9 @@
 		const inicial: ImportFieldMapping = {};
 		for (const coluna of recebida.colunas) inicial[coluna.indice] = coluna.campo;
 		mapping = inicial;
-		mappingExpandido = !hasTitulo(inicial);
+		mappingExpandido =
+			!hasTitulo(inicial) ||
+			(modo === 'com_etapas' && !(hasField(inicial, 'ref_projeto') && hasField(inicial, 'etapa')));
 		maisOpcoesAberto = false;
 		importErro = '';
 	}
@@ -296,6 +325,16 @@
 		mapping = {};
 		analiseErro = importErro = '';
 		void trocarEstado('arquivo');
+	}
+
+	// Trocar o modo invalida a análise — o catálogo de campos é por modo.
+	function voltarAoModo(): void {
+		sessaoFluxo += 1;
+		file = null;
+		analise = null;
+		mapping = {};
+		analiseErro = importErro = '';
+		void trocarEstado('modo');
 	}
 
 	function montarFormularioDeImportacao(arquivo: File): FormData {
@@ -318,7 +357,7 @@
 		importErro = '';
 		importPendente.start();
 		try {
-			const recebido = await importProjectsCsv(montarFormularioDeImportacao(file));
+			const recebido = await importProjectsCsv(montarFormularioDeImportacao(file), modo);
 			await concluirImport(sessao, () => {
 				resultado = recebido;
 				void trocarEstado('sucesso');
@@ -379,8 +418,20 @@
 		<div class="flex flex-col gap-4">
 			<h2 id="importar-projetos-title" class="font-heading text-xl font-bold text-text-primary">Importar projetos</h2>
 			<div bind:this={corpoEl} class="grid items-start">
-				{#if estado === 'arquivo'}
+				{#if estado === 'modo'}
+					<div bind:this={modoEl} tabindex="-1" class={CLASSE_ESTADO} in:fly={entrar()} out:fade={sumir()}>
+						<ImportCsvModoStep {modo} classeLink={CLASSE_LINK} onSelect={(novo) => (modo = novo)} />
+						<div class="flex justify-end gap-2">
+							<Button variant="secondary" onclick={fechar}>Cancelar</Button>
+							<button type="button" onclick={() => void trocarEstado('arquivo')} class="px-6 {CLASSE_PRIMARIO}">Continuar</button>
+						</div>
+					</div>
+				{:else if estado === 'arquivo'}
 					<div bind:this={arquivoEl} tabindex="-1" class={CLASSE_ESTADO} in:fly={entrar()} out:fade={sumir()}>
+						<div class="flex items-center justify-between gap-3">
+							<span class="min-w-0 truncate text-sm text-text-secondary">Formato: <span class="font-medium text-text-primary">{rotuloModo}</span></span>
+							<button type="button" onclick={voltarAoModo} disabled={analisando} class="{CLASSE_LINK} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:no-underline">alterar</button>
+						</div>
 						{#if analiseErro}
 							<div transition:slide={deslizar()}>
 								<StateBanner tone="danger" title="Não foi possível ler o arquivo." description={analiseErro} />
@@ -427,8 +478,8 @@
 								</div>
 							{/if}
 							<div class="flex flex-col gap-1 text-sm">
-								<label for="importar-projetos-orgao" class={CLASSE_LABEL}>Órgão de destino</label>
-								<OrgaoTreeSelect id="importar-projetos-orgao" options={orgaoTreeOptions} value={orgaoId ? Number(orgaoId) : null} onSelect={(v) => (orgaoId = v == null ? '' : String(v))} placeholder="Selecione o órgão…" ariaLabel="Órgão de destino (obrigatório)" />
+								<label for="importar-projetos-orgao" class={CLASSE_LABEL}>Área de destino</label>
+								<OrgaoTreeSelect id="importar-projetos-orgao" options={orgaoTreeOptions} value={orgaoId ? Number(orgaoId) : null} onSelect={(v) => (orgaoId = v == null ? '' : String(v))} placeholder="Selecione a área…" ariaLabel="Área de destino (obrigatório)" />
 							</div>
 							<div class="flex flex-col gap-2">
 								<button type="button" onclick={() => (maisOpcoesAberto = !maisOpcoesAberto)} aria-expanded={maisOpcoesAberto} class="flex items-center gap-1.5 self-start rounded-sm text-sm font-semibold text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
@@ -468,9 +519,9 @@
 							<div class="flex justify-end gap-2">
 								<Button variant="secondary" onclick={fechar} disabled={importando}>Cancelar</Button>
 								<button type="submit" disabled={!podeImportar} aria-disabled={importando} aria-busy={importando} class="min-w-[13rem] px-4 {CLASSE_PRIMARIO}">
-									<span class="sr-only" aria-live="polite">{$importPendente ? 'Importando…' : `Importar ${analise.total_linhas} projetos`}</span>
+									<span class="sr-only" aria-live="polite">{$importPendente ? 'Importando…' : rotuloImportar}</span>
 									<span class="grid" aria-hidden="true">
-										<span class={spanBotao(!$importPendente)}>Importar {analise.total_linhas} projetos</span>
+										<span class={spanBotao(!$importPendente)}>{rotuloImportar}</span>
 										<span class={spanBotao($importPendente)}>
 											<i class="fas fa-spinner {$importPendente ? 'fa-spin' : ''}" style="--fa-animation-duration: 0.8s"></i>
 											Importando…
@@ -483,21 +534,7 @@
 				{:else}
 					<div bind:this={sucessoEl} tabindex="-1" class="flex flex-col items-center gap-3 py-6 text-center focus:outline-none [grid-area:1/1]" in:fly={entrar()} out:fade={sumir()}>
 						{#if resultado !== null}
-							<span class="import-sucesso-circulo grid h-14 w-14 place-items-center rounded-full bg-wash-success">
-								<svg width="24" height="24" viewBox="0 0 24 24" class="text-success" aria-hidden="true">
-									<path class="import-sucesso-check" d="M4 13 L9.5 18.5 L20 6.5" fill="none" />
-								</svg>
-							</span>
-							<p class="text-xl font-bold text-text-primary" aria-hidden="true">
-								{resultado.imported_count} projetos importados
-							</p>
-							{#if resultado.ignored_count > 0}
-								<p class="text-sm text-text-muted">{resultado.ignored_count} linha(s) ignorada(s) por não ter título.</p>
-							{/if}
-							{#if resultado.adjusted_count > 0}
-								<p class="text-sm text-text-muted">Valores não reconhecidos em {resultado.adjusted_count} linha(s) receberam os padrões escolhidos.</p>
-							{/if}
-							<button bind:this={concluirEl} type="button" onclick={concluir} class="mt-2 px-6 {CLASSE_PRIMARIO}">Concluir</button>
+							<ImportCsvSucesso bind:this={sucessoComp} {resultado} rotulo={rotuloSucesso} {descricaoIgnoradas} classePrimario={CLASSE_PRIMARIO} onConcluir={concluir} />
 						{/if}
 					</div>
 				{/if}
@@ -505,40 +542,3 @@
 			<p class="sr-only" role="status">{anuncioSucesso}</p>
 		</div>
 </Modal>
-
-<style>
-	.import-sucesso-circulo {
-		animation: import-circulo-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-	}
-	@keyframes import-circulo-pop {
-		from {
-			transform: scale(0.8);
-		}
-		to {
-			transform: scale(1);
-		}
-	}
-	.import-sucesso-check {
-		stroke: currentColor;
-		stroke-width: 2.5;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-		stroke-dasharray: 24;
-		animation: import-check-draw 400ms cubic-bezier(0.33, 1, 0.68, 1) 120ms both;
-	}
-	@keyframes import-check-draw {
-		from {
-			stroke-dashoffset: 24;
-		}
-		to {
-			stroke-dashoffset: 0;
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.import-sucesso-circulo,
-		.import-sucesso-check {
-			animation-duration: 0ms;
-			animation-delay: 0ms;
-		}
-	}
-</style>

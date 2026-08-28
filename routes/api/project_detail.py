@@ -30,6 +30,7 @@ from flask import Response, g, request
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from catalogs.inventario import orgao_allows_inventario
+from catalogs.priorities import PRIORITY_LABELS, PRIORITY_OPTIONS
 from models import Project, Task, db
 
 from services.authorization import PAPEL_LEITOR, require_project_rank
@@ -53,10 +54,7 @@ _STATUS_OPTIONS = [
     {"value": "Suspenso", "label": "Suspenso"},
 ]
 _PRIORIDADE_OPTIONS = [
-    {"value": "baixa", "label": "Baixa"},
-    {"value": "media", "label": "Média"},
-    {"value": "alta", "label": "Alta"},
-    {"value": "urgente", "label": "Urgente"},
+    {"value": value, "label": PRIORITY_LABELS[value]} for value in PRIORITY_OPTIONS
 ]
 _SPECIAL_PROJECT_OPTIONS = ["ABEP", "TCE", "Fórum de simplificação"]
 _DELIVERY_TYPE_OPTIONS = [

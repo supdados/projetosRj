@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	applyFieldSelection,
 	countMapped,
+	hasField,
 	hasTitulo,
 	type ImportFieldMapping
 } from './importMappingState';
@@ -46,6 +47,14 @@ describe('countMapped', () => {
 	it('conta só as colunas com campo escolhido', () => {
 		expect(countMapped({ 0: 'titulo', 1: null, 2: 'sei' })).toBe(2);
 		expect(countMapped({})).toBe(0);
+	});
+});
+
+describe('hasField', () => {
+	it('acha o campo em qualquer coluna mapeada', () => {
+		expect(hasField({ 0: 'titulo', 1: 'ref_projeto' }, 'ref_projeto')).toBe(true);
+		expect(hasField({ 0: 'titulo', 1: null }, 'etapa')).toBe(false);
+		expect(hasField({}, 'etapa')).toBe(false);
 	});
 });
 

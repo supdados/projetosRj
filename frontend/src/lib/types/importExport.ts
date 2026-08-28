@@ -5,6 +5,9 @@
  * (português), já desempacotados do envelope por `client.ts`.
  */
 
+/** Modo do lote: 1 linha = 1 projeto (`simples`) ou 1 linha = 1 etapa (`com_etapas`). */
+export type ImportModo = 'simples' | 'com_etapas';
+
 /** Coluna do CSV com o campo sugerido pelo matching do backend. */
 export interface ColunaDetectada {
 	indice: number;
@@ -28,6 +31,8 @@ export interface AnaliseImportacao {
 	delimitador: string;
 	/** Linhas de dados, já sem o cabeçalho. */
 	total_linhas: number;
+	/** Modo pedido no form — campos e sugestões vêm restritos a ele. */
+	modo: ImportModo;
 	colunas: ColunaDetectada[];
 	campos: CampoImportacao[];
 }
@@ -39,4 +44,6 @@ export interface ImportProjectsResultV2 {
 	ignored_count: number;
 	/** Linhas em que algum valor não reconhecido caiu no padrão do formulário. */
 	adjusted_count: number;
+	/** Etapas persistidas (no modo simples, nº de etapas default criadas). */
+	etapas_criadas: number;
 }

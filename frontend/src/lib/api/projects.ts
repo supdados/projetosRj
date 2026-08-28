@@ -19,7 +19,7 @@
 import { get, post, del, postForm, redirectToLogin, ApiClientError } from './client';
 import { createSwrCache } from './swrCache';
 import type { ProjectsListData, ProjectsListQuery } from '$lib/types/projects';
-import type { AnaliseImportacao, ImportProjectsResultV2 } from '$lib/types/importExport';
+import type { AnaliseImportacao, ImportModo, ImportProjectsResultV2 } from '$lib/types/importExport';
 import type { ApiResult } from '$lib/types/api';
 
 // Ultimo payload bom por chave de filtros (querystring de `buildQuery`). SWR:
@@ -34,17 +34,20 @@ export function peekProjects(query: ProjectsListQuery = {}): ProjectsListData | 
 /**
  * Analisa um CSV (Admin) sem persistir nada: devolve delimitador, total de
  * linhas, as colunas com o campo sugerido pelo matching do backend e o catálogo
- * de campos importáveis. Envia `multipart/form-data` com o arquivo em `arquivo`.
+ * de campos importáveis — ambos restritos ao `modo` (`simples`/`com_etapas`).
+ * Envia `multipart/form-data` com o arquivo em `arquivo` e o `modo`.
  *
  * Exemplo:
  *   const fd = new FormData();
  *   fd.append('arquivo', file);
- *   const analise = await analisarImportacaoCsv(fd);
+ *   const analise = await analisarImportacaoCsv(fd, 'simples');
  */
 export function analisarImportacaoCsv(
 	formData: FormData,
+	modo: ImportModo = 'simples',
 	signal?: AbortSignal
 ): Promise<AnaliseImportacao> {
+	formData.append('modo', modo);
 	return postForm<AnaliseImportacao>('/api/projetos/importar-csv/analise', formData, signal);
 }
 
@@ -52,10 +55,16 @@ export function analisarImportacaoCsv(
  * Importa projetos em lote de um CSV (Admin). Envia `multipart/form-data` com o
  * arquivo em `arquivo`, os atributos comuns (`orgao_id`, `status`,
  * `special_project`, `delivery_type`) e, opcionalmente, `mapeamento` — JSON
- * `{"<índice da coluna>": "<campo>"}` das colunas não ignoradas. Sem
- * `mapeamento` o backend segue o caminho legado (cabeçalhos `titulo`/`descricao`).
+ * `{"<índice da coluna>": "<campo>"}` das colunas não ignoradas — obrigatório
+ * no `modo` com etapas (1 linha = 1 etapa agrupada por `ref_projeto`). Sem
+ * `mapeamento` no modo simples o backend segue o caminho legado (cabeçalhos
+ * `titulo`/`descricao`).
  */
-export async function importProjectsCsv(formData: FormData): Promise<ImportProjectsResultV2> {
+export async function importProjectsCsv(
+	formData: FormData,
+	modo: ImportModo = 'simples'
+): Promise<ImportProjectsResultV2> {
+	formData.append('modo', modo);
 	const result = await postForm<ImportProjectsResultV2>('/api/projetos/importar-csv', formData);
 	projectsCache.invalidate();
 	return result;
