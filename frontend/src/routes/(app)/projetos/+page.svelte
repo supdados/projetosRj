@@ -236,8 +236,8 @@
 			colecao: colecao ? Number.parseInt(colecao, 10) : undefined,
 			special_project: specialProject || undefined,
 			abep_indicator: abepIndicator || undefined,
-			// Filtro de órgão da tela tem precedência; senão, herda o escopo global
-			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todos os órgãos").
+			// Filtro de área da tela tem precedência; senão, herda o escopo global
+			// do topnav (orgaoScopeQuery). Vazio => sem filtro ("Todas as áreas").
 			orgao: orgao ? Number.parseInt(orgao, 10) : scopeOrgaoId(),
 			apenas_orgao: orgao && apenasOrgao ? true : undefined,
 			q: search.trim() || undefined,
@@ -480,7 +480,7 @@
 		void load();
 	}
 
-	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
+	/** Seleção no OrgaoTreeSelect (null = "Todas as áreas"): mesmo fluxo do onchange. */
 	function onOrgaoSelect(selecionado: number | null): void {
 		orgao = selecionado == null ? '' : String(selecionado);
 		apenasOrgao = false;

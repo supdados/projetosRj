@@ -151,5 +151,5 @@
 	onChange={handleSelecaoChange}
 	{disabled}
 	{id}
-	ariaLabel="Órgãos responsáveis"
+	ariaLabel="Áreas responsáveis"
 />

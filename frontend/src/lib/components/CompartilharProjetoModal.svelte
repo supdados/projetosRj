@@ -629,7 +629,7 @@
 									aria-activedescendant={destaqueOrgao >= 0 && listaOrgaoAberta
 										? `compartilhar-orgao-${destaqueOrgao}`
 										: undefined}
-									placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome do órgão…'}
+									placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome da área…'}
 									bind:value={termoOrgao}
 									oninput={() => {
 										orgaoSelecionado = null;
@@ -667,7 +667,7 @@
 						<ul
 							id="compartilhar-orgaos"
 							role="listbox"
-							aria-label="Órgãos encontrados"
+							aria-label="Áreas encontradas"
 							class="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-subtle bg-surface py-1 shadow-lg"
 						>
 							{#each linhasOrgao as linha, index (linha.value)}

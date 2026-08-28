@@ -358,7 +358,7 @@
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Nome Completo</th>
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Login</th>
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Órgão</th>
-								<th scope="col" class="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Órgãos Vinculados</th>
+								<th scope="col" class="w-[160px] whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">Áreas Vinculadas</th>
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-caps text-text-muted">CPF gov.br</th>
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-caps text-text-muted">Perfil</th>
 								<th scope="col" class="whitespace-nowrap px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-caps text-text-muted">Ações</th>
@@ -404,7 +404,7 @@
 												{user.orgaos.map((o) => `${o.sigla} (${papelLabel(o.papel)})`).join(', ')}
 											</span>
 										{:else}
-											<span class="text-sm italic text-text-muted">Sem órgão definido</span>
+											<span class="text-sm italic text-text-muted">Sem área definida</span>
 										{/if}
 									</td>
 									<td class="px-3 py-2.5 align-middle">

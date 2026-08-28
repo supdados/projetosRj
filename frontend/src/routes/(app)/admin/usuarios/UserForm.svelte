@@ -304,7 +304,7 @@
 			</div>
 
 			{#if orgaosOptions.length === 0}
-				<p class="text-sm text-text-muted">Nenhum órgão ativo disponível.</p>
+				<p class="text-sm text-text-muted">Nenhuma área ativa disponível.</p>
 			{:else}
 				<OrgaoPapelRepeater
 					options={orgaosOptions}

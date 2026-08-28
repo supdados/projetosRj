@@ -85,8 +85,8 @@
 			type="search"
 			bind:value={term}
 			{disabled}
-			placeholder="Buscar órgão por sigla ou nome…"
-			aria-label="Buscar órgão por sigla ou nome"
+			placeholder="Buscar área por sigla ou nome…"
+			aria-label="Buscar área por sigla ou nome"
 			autocomplete="off"
 			class="h-10 w-full border-none bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
 		/>
@@ -96,12 +96,12 @@
 	<ul
 		role="tree"
 		aria-multiselectable="true"
-		aria-label={ariaLabel ?? 'Órgãos responsáveis'}
+		aria-label={ariaLabel ?? 'Áreas responsáveis'}
 		class="thin-scroll max-h-80 overflow-y-auto p-1.5"
 	>
 		{#if rows.length === 0}
 			<li class="px-3 py-4 text-center text-sm text-text-muted">
-				Nenhum órgão encontrado{term.trim() ? ` para "${term.trim()}"` : ''}.
+				Nenhuma área encontrada{term.trim() ? ` para "${term.trim()}"` : ''}.
 			</li>
 		{:else}
 			{#each rows as row (row.value)}

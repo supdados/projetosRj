@@ -556,7 +556,7 @@
 												aria-controls="nc-area-lista"
 												aria-autocomplete="list"
 												aria-label="Buscar área"
-												placeholder="Sigla ou nome do órgão…"
+												placeholder="Sigla ou nome da área…"
 												bind:value={termoOrgao}
 												oninput={() => {
 													orgao = null;

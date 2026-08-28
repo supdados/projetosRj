@@ -240,7 +240,7 @@
 		void load();
 	}
 
-	/** Seleção no OrgaoTreeSelect (null = "Todos os órgãos"): mesmo fluxo do onchange. */
+	/** Seleção no OrgaoTreeSelect (null = "Todas as áreas"): mesmo fluxo do onchange. */
 	function onOrgaoSelect(selecionado: number | null): void {
 		orgao = selecionado;
 		apenasOrgao = false;

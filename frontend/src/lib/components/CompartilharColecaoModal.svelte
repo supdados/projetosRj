@@ -488,7 +488,7 @@
 										aria-activedescendant={destaqueOrgao >= 0 && listaOrgaoAberta
 											? `cc-area-op-${destaqueOrgao}`
 											: undefined}
-										placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome do órgão…'}
+										placeholder={orgaosCarregando ? 'Carregando áreas…' : 'Sigla ou nome da área…'}
 										bind:value={termoOrgao}
 										oninput={() => {
 											orgao = null;

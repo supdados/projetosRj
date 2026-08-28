@@ -1557,7 +1557,7 @@
 									<div
 										class="flex h-11 items-center justify-between gap-2 rounded-control border border-border-strong bg-surface-muted px-3.5 text-base text-text-faint opacity-60"
 									>
-										<span class="truncate">Nenhum órgão atribuído</span>
+										<span class="truncate">Nenhuma área atribuída</span>
 									</div>
 								{:else if orgaoOptions.length === 1}
 									<div
@@ -1582,7 +1582,7 @@
 								{#if assistOrgaoError}
 									<p class="text-xs text-danger" transition:slide={{ duration: 160, easing: cubicOut }}>
 										{orgaoOptions.length === 0
-											? 'Nenhum órgão atribuído ao seu perfil.'
+											? 'Nenhuma área atribuída ao seu perfil.'
 											: 'Selecione a área responsável.'}
 									</p>
 								{/if}
