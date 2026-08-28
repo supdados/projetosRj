@@ -194,33 +194,33 @@
 	use:activatePopover
 	role="dialog"
 	aria-label={ariaLabel}
-	class="dfp-panel"
+	class="datepick-panel"
 	style:top={pos.top != null ? `${pos.top}px` : undefined}
 	style:bottom={pos.bottom != null ? `${pos.bottom}px` : undefined}
 	style:left="{pos.left}px"
 >
-	<div class="dfp-header">
-		<button type="button" class="dfp-nav-btn" aria-label="Mês anterior" onclick={prevMonth}>
+	<div class="datepick-header">
+		<button type="button" class="datepick-nav-btn" aria-label="Mês anterior" onclick={prevMonth}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
 		</button>
-		<span class="dfp-month-label">{monthLabel}</span>
-		<button type="button" class="dfp-nav-btn" aria-label="Próximo mês" onclick={nextMonth}>
+		<span class="datepick-month-label">{monthLabel}</span>
+		<button type="button" class="datepick-nav-btn" aria-label="Próximo mês" onclick={nextMonth}>
 			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
 		</button>
 	</div>
-	<div class="dfp-weekdays">
+	<div class="datepick-weekdays">
 		{#each WEEKDAYS_PT as wd (wd)}<span>{wd}</span>{/each}
 	</div>
-	<div class="dfp-days">
+	<div class="datepick-days">
 		{#each cells as c (c.dateStr)}
 			{@const disabled = (!!min && c.dateStr < min) || (!!max && c.dateStr > max)}
 			<button
 				type="button"
-				class="dfp-day"
-				class:dfp-day--outside={c.outside}
-				class:dfp-day--today={c.dateStr === tdy}
-				class:dfp-day--selected={c.dateStr === value}
-				class:dfp-day--disabled={disabled}
+				class="datepick-day"
+				class:datepick-day--outside={c.outside}
+				class:datepick-day--today={c.dateStr === tdy}
+				class:datepick-day--selected={c.dateStr === value}
+				class:datepick-day--disabled={disabled}
 				{disabled}
 				onclick={() => onPick(c.dateStr)}
 			>
@@ -228,17 +228,17 @@
 			</button>
 		{/each}
 	</div>
-	<div class="dfp-footer">
+	<div class="datepick-footer">
 		<button
 			type="button"
-			class="dfp-footer-btn"
+			class="datepick-footer-btn"
 			disabled={todayOutOfRange}
 			onclick={() => onPick(todayStr())}
 		>
 			Hoje
 		</button>
 		{#if allowClear && value}
-			<button type="button" class="dfp-footer-btn dfp-footer-btn--clear" onclick={() => onClear?.()}>
+			<button type="button" class="datepick-footer-btn datepick-footer-btn--clear" onclick={() => onClear?.()}>
 				Limpar
 			</button>
 		{/if}
@@ -248,7 +248,7 @@
 <style>
 	/* Visual 1:1 do .cdp-calendar do CalendarEventModal, tokens idênticos.
 	   margin/inset neutralizam a UA stylesheet de [popover]. */
-	.dfp-panel {
+	.datepick-panel {
 		position: fixed;
 		margin: 0;
 		inset: auto;
@@ -259,12 +259,12 @@
 		border-radius: 12px;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 		overflow: hidden;
-		animation: dfp-in 0.14s ease both;
+		animation: datepick-in 0.14s ease both;
 	}
-	:global([data-theme='dark']) .dfp-panel {
+	:global([data-theme='dark']) .datepick-panel {
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
 	}
-	@keyframes dfp-in {
+	@keyframes datepick-in {
 		from {
 			opacity: 0;
 			transform: translateY(-4px);
@@ -275,23 +275,23 @@
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.dfp-panel {
+		.datepick-panel {
 			animation-duration: 1ms;
 		}
 	}
-	.dfp-header {
+	.datepick-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.55rem 0.55rem 0.35rem;
 	}
-	.dfp-month-label {
+	.datepick-month-label {
 		font-size: 0.8125rem;
 		font-weight: 600;
 		color: var(--ds-color-text-primary);
 		user-select: none;
 	}
-	.dfp-nav-btn {
+	.datepick-nav-btn {
 		width: 1.6rem;
 		height: 1.6rem;
 		border-radius: 50%;
@@ -304,16 +304,16 @@
 		justify-content: center;
 		transition: background 0.12s, color 0.12s;
 	}
-	.dfp-nav-btn:hover {
+	.datepick-nav-btn:hover {
 		background: var(--ds-color-surface-muted);
 		color: var(--ds-color-text-primary);
 	}
-	.dfp-weekdays {
+	.datepick-weekdays {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
 		padding: 0 0.4rem;
 	}
-	.dfp-weekdays span {
+	.datepick-weekdays span {
 		text-align: center;
 		font-size: 0.6875rem;
 		color: var(--ds-color-text-muted);
@@ -322,13 +322,13 @@
 		text-transform: uppercase;
 		letter-spacing: 0.02em;
 	}
-	.dfp-days {
+	.datepick-days {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
 		padding: 0.1rem 0.4rem 0.4rem;
 		gap: 0.08rem;
 	}
-	.dfp-day {
+	.datepick-day {
 		width: 2rem;
 		height: 2rem;
 		margin: auto;
@@ -346,39 +346,39 @@
 		padding: 0;
 		line-height: 1;
 	}
-	.dfp-day:hover:not(.dfp-day--selected):not(.dfp-day--disabled):not(.dfp-day--outside) {
+	.datepick-day:hover:not(.datepick-day--selected):not(.datepick-day--disabled):not(.datepick-day--outside) {
 		background: var(--ds-color-surface-muted);
 	}
-	.dfp-day--today:not(.dfp-day--selected) {
+	.datepick-day--today:not(.datepick-day--selected) {
 		font-weight: 600;
 		color: var(--ds-color-text-brand);
 		box-shadow: inset 0 0 0 1.5px var(--ds-color-fill-brand);
 	}
-	.dfp-day--selected {
+	.datepick-day--selected {
 		background: var(--ds-color-fill-brand);
 		color: var(--ds-color-fill-brand-fg);
 		font-weight: 600;
 	}
-	.dfp-day--selected:hover {
+	.datepick-day--selected:hover {
 		background: var(--ds-color-fill-brand-hover);
 	}
-	.dfp-day--outside {
+	.datepick-day--outside {
 		color: var(--ds-color-text-muted);
 		opacity: 0.35;
 	}
-	.dfp-day--disabled {
+	.datepick-day--disabled {
 		opacity: 0.25;
 		cursor: default;
 		pointer-events: none;
 	}
-	.dfp-footer {
+	.datepick-footer {
 		padding: 0.25rem 0.55rem 0.45rem;
 		border-top: 1px solid var(--ds-color-border-base);
 		display: flex;
 		justify-content: center;
 		gap: 0.5rem;
 	}
-	.dfp-footer-btn {
+	.datepick-footer-btn {
 		font-size: 0.75rem;
 		font-weight: 500;
 		color: var(--ds-color-text-brand);
@@ -390,17 +390,17 @@
 		transition: background 0.12s;
 		font-family: inherit;
 	}
-	.dfp-footer-btn:hover:not(:disabled) {
+	.datepick-footer-btn:hover:not(:disabled) {
 		background: var(--ds-color-wash-neutral);
 	}
-	.dfp-footer-btn:disabled {
+	.datepick-footer-btn:disabled {
 		opacity: 0.4;
 		cursor: default;
 	}
-	.dfp-footer-btn--clear {
+	.datepick-footer-btn--clear {
 		color: var(--ds-color-text-danger);
 	}
-	.dfp-footer-btn--clear:hover {
+	.datepick-footer-btn--clear:hover {
 		background: var(--ds-color-wash-danger);
 	}
 </style>

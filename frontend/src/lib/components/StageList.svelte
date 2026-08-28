@@ -766,7 +766,7 @@
 						</tr>
 						{#if addStageError}
 							<tr>
-								<td colspan="9" class="stage-inline-banner-cell">
+								<td colspan="9" class="stage-inline-notice-cell">
 									<StateBanner tone="danger" title={addStageError} />
 								</td>
 							</tr>
@@ -1232,7 +1232,7 @@
 		text-align: center;
 		color: var(--ds-color-text-secondary);
 	}
-	.stage-inline-banner-cell {
+	.stage-inline-notice-cell {
 		padding: 0.5rem 0.7rem;
 	}
 	.no-etapas-cell i {
