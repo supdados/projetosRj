@@ -1272,10 +1272,17 @@
 				<button
 					type="button"
 					onclick={() => (relacionadosOpen = true)}
+					aria-haspopup="dialog"
+					aria-expanded={relacionadosOpen}
 					class="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 				>
 					<ProjectIcon id="link" size={14} />
-					Projetos Relacionados{relacionados.length > 0 ? ` (${relacionados.length})` : ''}
+					Projetos Relacionados
+					{#if relacionados.length > 0}
+						<span
+							class="ml-0.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-wash-neutral px-1.5 py-0.5 text-xs font-bold tabular-nums text-brand"
+						>{relacionados.length}</span>
+					{/if}
 				</button>
 				<button
 					type="button"
