@@ -62,6 +62,7 @@
 		type AccessErrorKind
 	} from '$lib/utils/accessErrorMessages';
 	import { formatIsoDateBR } from '$lib/utils/dateFormat';
+	import { projectStatusChipClass } from '$lib/utils/projectLabels';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type FiltroLinhas = 'todos' | 'atrasados';
@@ -221,16 +222,6 @@
 	});
 
 	// ── Apresentação ─────────────────────────────────────────────────────────
-	/** Família da pílula `.chip` conforme o status REAL (atraso é indicador à parte). */
-	function statusChipClass(status: string): string {
-		const key = statusKey(status);
-		if (key === 'vigente' || key === 'em andamento') return 'chip--brand';
-		if (CONCLUIDO_KEYS.has(key)) return 'chip--success';
-		if (key === 'suspenso' || key === 'pausado') return 'chip--warning';
-		if (key === 'cancelado' || key === 'cancelada') return 'chip--danger';
-		return 'chip--neutral';
-	}
-
 	const pluralizar = (n: number, singular: string, plural: string): string =>
 		`${n} ${n === 1 ? singular : plural}`;
 
@@ -895,7 +886,7 @@
 										{#if row.atrasado}
 											<span class="chip chip--danger">Atrasado</span>
 										{:else}
-											<span class="chip {statusChipClass(row.status)}">{row.status}</span>
+											<span class="chip {projectStatusChipClass(row.status)}">{row.status}</span>
 										{/if}
 									</td>
 									{#if podeMexerNosItens}

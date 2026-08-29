@@ -47,20 +47,46 @@ export function projectStatusIconId(value: string | null | undefined): ProjectIc
 	return iconIdFor(PROJECT_STATUS_ICON_ID, value);
 }
 
-export type ProjectStatusChipTone = 'neutral' | 'warning' | 'success';
+export type ProjectStatusChipClass =
+	| 'chip--brand'
+	| 'chip--success'
+	| 'chip--warning'
+	| 'chip--danger'
+	| 'chip--neutral';
 
-// Mesma semântica dos .ph-chip--status-* do ProjectHeader (CSS escopado,
-// inalcançável de fora): vigente=success, suspenso=warning, finalizado=neutro.
-const PROJECT_STATUS_CHIP_TONE: Record<string, ProjectStatusChipTone> = {
-	vigente: 'success',
-	suspenso: 'warning',
-	finalizado: 'neutral'
-};
+/** Família da pílula `.chip` de status nas TABELAS (molde da tela de Coleções).
+ *  @example projectStatusChipClass('Vigente') // 'chip--brand' */
+export function projectStatusChipClass(
+	status: string | null | undefined
+): ProjectStatusChipClass {
+	const key = (status ?? '').trim().toLowerCase();
+	if (key === 'vigente' || key === 'em andamento') return 'chip--brand';
+	if (key === 'finalizado' || key === 'finalizada' || key === 'concluido' || key === 'concluído')
+		return 'chip--success';
+	if (key === 'suspenso' || key === 'pausado') return 'chip--warning';
+	if (key === 'cancelado' || key === 'cancelada') return 'chip--danger';
+	return 'chip--neutral';
+}
 
-/** @example projectStatusChipTone('Vigente') // 'success' */
-export function projectStatusChipTone(value: string | null | undefined): ProjectStatusChipTone {
-	if (!value) return 'neutral';
-	return PROJECT_STATUS_CHIP_TONE[value.trim().toLowerCase()] ?? 'neutral';
+export type ProjectStatusToneTextClass =
+	| 'text-success'
+	| 'text-brand'
+	| 'text-warning'
+	| 'text-danger'
+	| 'text-text-secondary';
+
+/** Cor de TEXTO do status — padrão da lista de projetos e do ProjectHeader
+ *  (par do ícone de `projectStatusIconId`; sem pílula).
+ *  @example projectStatusToneTextClass('Vigente') // 'text-success' */
+export function projectStatusToneTextClass(
+	status: string | null | undefined
+): ProjectStatusToneTextClass {
+	const key = (status ?? '').trim().toLowerCase();
+	if (key === 'vigente') return 'text-success';
+	if (key === 'em andamento') return 'text-brand';
+	if (key === 'suspenso' || key === 'pausado') return 'text-warning';
+	if (key === 'cancelado' || key === 'cancelada') return 'text-danger';
+	return 'text-text-secondary';
 }
 
 /** @example deliveryIconId('Fluxo Processual') // 'entrega-fluxo' */
