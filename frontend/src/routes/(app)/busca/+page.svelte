@@ -56,23 +56,16 @@
 	/** Ordem canonica dos tipos (espelha SEARCH_TYPE_KEYS do backend). */
 	const ALL_TYPES: readonly SearchTypeKey[] = ['projects', 'stages', 'tasks', 'events'];
 
-	/**
-	 * Secoes na ordem de exibicao, com rotulo, chave em `results`, icone do
-	 * redesign (AppIcon) e classes de cor da pilula de
-	 * tipo — os mesmos tons do Badge compartilhado (Badge.svelte): projeto usa
-	 * `bg-wash-brand`, demais tons `bg-surface-muted` + texto colorido
-	 * (dark-safe via tokens).
-	 */
+	/** Secoes na ordem de exibicao: rotulo, chave em `results` e AppIcon do tipo. */
 	const SECTIONS: ReadonlyArray<{
 		key: keyof SearchResultsByType;
 		label: string;
 		icon: AppIconId;
-		titleClass: string;
 	}> = [
-		{ key: 'projects', label: 'Projetos', icon: 'projetos', titleClass: 'text-brand' },
-		{ key: 'stages', label: 'Etapas', icon: 'etapa', titleClass: 'text-warning' },
-		{ key: 'tasks', label: 'Tarefas', icon: 'tarefas', titleClass: 'text-success' },
-		{ key: 'events', label: 'Eventos', icon: 'calendario', titleClass: 'text-text-secondary' }
+		{ key: 'projects', label: 'Projetos', icon: 'projetos' },
+		{ key: 'stages', label: 'Etapas', icon: 'etapa' },
+		{ key: 'tasks', label: 'Tarefas', icon: 'tarefas' },
+		{ key: 'events', label: 'Eventos', icon: 'calendario' }
 	];
 
 	// SWR: hidrata o estado inicial a partir da URL (deep-link) + peek do cache
@@ -103,6 +96,44 @@
 
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let inFlight: AbortController | null = null;
+
+	let typeMenuOpen = $state(false);
+	let typeMenuEl = $state<HTMLDivElement | null>(null);
+	let typeTriggerEl = $state<HTMLButtonElement | null>(null);
+
+	const typeTriggerLabel = $derived.by<string>(() => {
+		if (selectedTypes.length === ALL_TYPES.length) return 'Todos os tipos';
+		if (selectedTypes.length === 1) {
+			return SECTIONS.find((s) => s.key === selectedTypes[0])?.label ?? 'Tipos';
+		}
+		return `${selectedTypes.length} tipos`;
+	});
+
+	function closeTypeMenu(): void {
+		if (!typeMenuOpen) return;
+		typeMenuOpen = false;
+		typeTriggerEl?.focus({ preventScroll: true });
+	}
+
+	// Fecha o menu de tipos ao clicar fora ou com Esc (captura, como no SelectMenu).
+	$effect(() => {
+		if (!typeMenuOpen) return;
+		const onPointerDown = (event: PointerEvent): void => {
+			if (typeMenuEl && !typeMenuEl.contains(event.target as Node)) typeMenuOpen = false;
+		};
+		const onKeydown = (event: KeyboardEvent): void => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			event.stopPropagation();
+			closeTypeMenu();
+		};
+		window.addEventListener('pointerdown', onPointerDown, true);
+		window.addEventListener('keydown', onKeydown, true);
+		return () => {
+			window.removeEventListener('pointerdown', onPointerDown, true);
+			window.removeEventListener('keydown', onKeydown, true);
+		};
+	});
 
 	/** Texto exibido para o termo atual (o do payload, ja normalizado). */
 	const shownTerm = $derived(data?.query ?? term.trim());
@@ -338,10 +369,27 @@
 	</span>
 {/snippet}
 
+<!-- Quadro de vazio padrão (Projetos/Pendentes/Coleções): tracejado + ícone emoldurado. -->
+{#snippet emptyPanel(titulo: string, texto: string)}
+	<div
+		role="status"
+		aria-live="polite"
+		class="rounded-lg border border-dashed border-border-strong bg-surface-muted px-4 py-8 text-center"
+	>
+		<div
+			class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-brand"
+		>
+			<AppIcon id="busca" size={28} />
+		</div>
+		<h2 class="m-0 font-heading text-xl font-bold text-text-primary">{titulo}</h2>
+		<p class="mb-0 mt-1.5 text-sm text-text-muted">{texto}</p>
+	</div>
+{/snippet}
+
 <section aria-labelledby="busca-title" class="flex flex-col gap-4">
 	<!-- Card único (padrão das telas com filtro): header compacto + linha de busca
 		 embutida abaixo de um divisor fino. -->
-	<div class="rounded-xl border border-border-subtle bg-surface shadow-token">
+	<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
 		<PageHeader compact embedded class="min-h-[3.5rem]" labelId="busca-title">
 			{#snippet titleContent()}
 				<span class="align-middle">Busca Global</span>
@@ -382,56 +430,98 @@
 					aria-label="Buscar projetos, etapas, tarefas e eventos"
 					aria-describedby="busca-hint"
 					placeholder="Buscar projetos, etapas, tarefas e eventos…"
-					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-sm text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
+					class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
 				/>
 			</div>
-			<div
-				class="flex flex-wrap items-center gap-1.5"
-				role="group"
-				aria-label="Filtrar por tipo de resultado"
-			>
-				{#each SECTIONS as section (section.key)}
-					{@const active = selectedTypes.includes(section.key)}
-					{@const typeCount = data?.meta.type_counts?.[section.key]}
-					<button
-						type="button"
-						aria-pressed={active}
-						onclick={() => toggleType(section.key)}
-						class="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {active
-							? 'border-brand bg-wash-brand text-brand'
-							: 'border-border-subtle bg-surface text-text-secondary hover:border-brand hover:bg-wash-neutral hover:text-brand'}"
+			<div bind:this={typeMenuEl} class="relative">
+				<button
+					bind:this={typeTriggerEl}
+					type="button"
+					aria-haspopup="true"
+					aria-expanded={typeMenuOpen}
+					aria-controls="busca-types-menu"
+					onclick={() => (typeMenuOpen = !typeMenuOpen)}
+					class="flex h-[var(--control-h-md)] min-w-[11rem] items-center justify-between gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-left text-md transition-colors duration-fast hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+				>
+					<span class="truncate text-text-primary">{typeTriggerLabel}</span>
+					<svg
+						width="10"
+						height="6"
+						viewBox="0 0 10 6"
+						class="shrink-0 text-text-muted transition-transform duration-fast"
+						style:transform={typeMenuOpen ? 'rotate(180deg)' : 'none'}
+						aria-hidden="true"
 					>
-						<AppIcon id={section.icon} size={12} />
-						{section.label}{#if typeCount !== undefined}
-							<span class="tabular-nums font-normal">({typeCount})</span>
-						{/if}
-					</button>
-				{/each}
+						<path
+							d="M1 1 L5 5 L9 1"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.6"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
+				{#if typeMenuOpen}
+					<!-- Linhas no padrão do seletor de indicadores (EeggInlineEditor). -->
+					<div
+						id="busca-types-menu"
+						role="group"
+						aria-label="Filtrar por tipo de resultado"
+						class="absolute left-0 top-[calc(100%+6px)] z-dropdown flex w-60 flex-col gap-1.5 rounded-xl border border-border-subtle bg-surface p-2 shadow-lg"
+					>
+						{#each SECTIONS as section (section.key)}
+							{@const active = selectedTypes.includes(section.key)}
+							{@const typeCount = data?.meta.type_counts?.[section.key]}
+							{@const locked = active && selectedTypes.length === 1}
+							<button
+								type="button"
+								role="checkbox"
+								aria-checked={active}
+								disabled={locked}
+								onclick={() => toggleType(section.key)}
+								class="flex items-center gap-2.5 rounded-sm border px-2.5 py-2 text-left text-md transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed {active
+									? 'border-border-strong bg-wash-neutral text-text-primary'
+									: 'border-border-subtle text-text-muted hover:bg-surface-muted hover:text-text-primary'}"
+							>
+								<span
+									aria-hidden="true"
+									class="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-fast {active
+										? 'border-brand bg-brand'
+										: 'border-border-strong bg-surface'}"
+								>
+									{#if active}
+										<svg
+											viewBox="0 0 24 24"
+											class="h-3 w-3 text-on-brand"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="3.5"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										>
+											<path d="M5 13l4 4L19 7" />
+										</svg>
+									{/if}
+								</span>
+								<span class="min-w-0 flex-1 truncate">{section.label}</span>
+								{#if typeCount !== undefined}
+									<span class="tabular-nums text-sm text-text-muted">{typeCount}</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		</form>
 		<p id="busca-hint" class="sr-only">Digite ao menos dois caracteres para iniciar a busca.</p>
 	</div>
 
 	{#if searchState === 'idle'}
-		<!-- Estado inicial no mesmo padrão do vazio das outras telas (Pendentes):
-			 quadro suave com ícone emoldurado, título font-heading e texto muted. -->
-		<div
-			role="status"
-			aria-live="polite"
-			class="rounded-lg border border-dashed border-border-strong bg-surface-muted px-4 py-8 text-center"
-		>
-			<div
-				class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
-			>
-				<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-			</div>
-			<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
-				Digite um termo para buscar
-			</h2>
-			<p class="mb-0 mt-1.5 text-sm text-text-muted">
-				Pesquise por projetos, etapas, tarefas e eventos — ao menos dois caracteres.
-			</p>
-		</div>
+		{@render emptyPanel(
+			'Digite um termo para buscar',
+			'Pesquise por projetos, etapas, tarefas e eventos — ao menos dois caracteres.'
+		)}
 	{:else if searchState === 'loading' && !data}
 		<p role="status" aria-live="polite" class="sr-only">Buscando…</p>
 		<BuscaSkeleton />
@@ -439,23 +529,10 @@
 		<LoadErrorState message={errorMessage} onRetry={retry} />
 	{:else if data}
 		{#if data.counts.total === 0}
-			<div
-				role="status"
-				aria-live="polite"
-				class="rounded-lg border border-dashed border-border-strong bg-surface-muted px-4 py-8 text-center"
-			>
-				<div
-					class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
-				>
-					<i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-				</div>
-				<h2 class="m-0 font-heading text-xl font-bold text-text-primary">
-					Nenhuma referência encontrada
-				</h2>
-				<p class="mb-0 mt-1.5 text-sm text-text-muted">
-					Nada corresponde a “{shownTerm}”. Ajuste o termo e tente novamente.
-				</p>
-			</div>
+			{@render emptyPanel(
+				'Nenhuma referência encontrada',
+				`Nada corresponde a “${shownTerm}”. Ajuste o termo e tente novamente.`
+			)}
 		{:else}
 			<!-- Seções de resultados no padrão de cards das outras telas (gap 16px). -->
 			<div class="flex flex-col gap-4" aria-busy={searchState === 'loading'}>
@@ -464,62 +541,38 @@
 					{#if items.length > 0}
 						<section
 							aria-labelledby={`busca-sec-${section.key}`}
-							class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-token"
+							class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm"
 						>
-							<!-- Cabecalho da secao no padrao do Card compartilhado. -->
-							<div
-								class="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-4"
-							>
+							<div class="border-b border-border-subtle px-5 py-4">
 								<h2
 									id={`busca-sec-${section.key}`}
-									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold {section.titleClass}"
+									class="m-0 flex items-center gap-2 font-heading text-lg font-semibold text-text-primary"
 								>
-									<AppIcon id={section.icon} size={14} />
+									<AppIcon id={section.icon} size={18} class="text-text-muted" />
 									{section.label}
 								</h2>
-								<CountBadge>{data.meta.type_counts?.[section.key] ?? items.length}</CountBadge>
 							</div>
 
-							<ul class="flex flex-col" aria-labelledby={`busca-sec-${section.key}`}>
+							<ul class="m-0 flex list-none flex-col p-0">
 								{#each items as item, i (`${item.type}-${item.url}-${i}`)}
-									<li>
+									{@const metaRaw = [item.subtitle, item.meta].filter(Boolean).join(' | ')}
+									<li class="border-b border-border-subtle last:border-b-0">
 										<a
 											href={item.url}
-											class="group mx-1.5 my-1 flex items-start justify-between gap-3 rounded-md border border-border-subtle px-3 py-3 text-text-primary no-underline transition-[background-color,border-color] duration-fast hover:border-border-strong hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+											class="flex min-w-0 flex-col gap-1 px-5 py-3 no-underline transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
 										>
-											<span class="flex min-w-0 flex-1 flex-col gap-1">
-												<span class="flex min-w-0 items-center gap-1.5">
-													<span
-														class="truncate text-base font-medium text-brand group-hover:underline"
-													>
-														{item.title}
-													</span>
+											<span class="truncate text-base font-medium text-brand"
+												>{item.display_title || item.title}</span
+											>
+											{#if metaRaw}
+												{@render metaLine(metaRaw)}
+											{/if}
+											{#if item.match_field === 'comentarios' && item.match_excerpt}
+												<span class="flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
+													<AppIcon id="comentario" size={12} />
+													<span class="truncate">{item.match_excerpt}</span>
 												</span>
-												{#if item.subtitle}
-													{@render metaLine(item.subtitle)}
-												{/if}
-												{#if item.meta}
-													{@render metaLine(item.meta)}
-												{/if}
-												{#if item.match_field === 'comentarios' && (item.match_label || item.match_excerpt)}
-													<span class="mt-1 flex min-w-0 flex-col gap-0.5">
-														{#if item.match_label}
-															<span
-																class="inline-flex w-fit items-center rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-text-secondary"
-															>
-																Encontrado em: {item.match_label}
-															</span>
-														{/if}
-														{#if item.match_excerpt}
-															<span class="truncate text-xs text-text-muted">{item.match_excerpt}</span>
-														{/if}
-													</span>
-												{/if}
-											</span>
-											<i
-												class="fas fa-chevron-right mt-0.5 shrink-0 text-sm text-text-muted"
-												aria-hidden="true"
-											></i>
+											{/if}
 										</a>
 									</li>
 								{/each}

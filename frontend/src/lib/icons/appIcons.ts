@@ -27,6 +27,7 @@ export type AppIconId =
 	| 'projetos'
 	| 'tarefas'
 	| 'calendario'
+	| 'busca'
 	| 'kebab';
 
 export const APP_ICONS: Record<AppIconId, AppIconPath[]> = {
@@ -104,6 +105,15 @@ export const APP_ICONS: Record<AppIconId, AppIconPath[]> = {
 			d: 'M2.6 5H19L21.4 7.4V21H2.6ZM4.7 9.4H19.3V10.4H4.7ZM6.2 12.6H8.3V14.7H6.2ZM10.9 12.6H13V14.7H10.9ZM15.6 12.6H17.7V14.7H15.6ZM6.2 16.4H8.3V18.5H6.2ZM10.9 16.4H13V18.5H10.9Z',
 			fillRule: 'evenodd'
 		}
+	],
+	// Lupa: vidro a .48, aro + cabo sólidos.
+	busca: [
+		{ d: 'M10.5 6A4.5 4.5 0 1 1 10.5 15A4.5 4.5 0 1 1 10.5 6Z', opacity: '.48' },
+		{
+			d: 'M10.5 4A6.5 6.5 0 1 1 10.5 17A6.5 6.5 0 1 1 10.5 4ZM10.5 6A4.5 4.5 0 1 0 10.5 15A4.5 4.5 0 1 0 10.5 6Z',
+			fillRule: 'evenodd'
+		},
+		{ d: 'M14.05 15.45L15.45 14.05L21.6 20.2L20.2 21.6Z' }
 	],
 	// Menu contextual (3 pontos verticais); ponta e base a .48, centro sólido.
 	kebab: [
