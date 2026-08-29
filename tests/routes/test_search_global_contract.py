@@ -137,6 +137,9 @@ def test_global_search_api_returns_grouped_payload_limits_and_has_more(
         == f"{payload['results']['projects'][0]['url'].split('/project/')[1]}-{payload['results']['projects'][0]['title']}"
     )
     assert payload["results"]["stages"][0]["type"] == "stage"
+    stage_row = payload["results"]["stages"][0]
+    stage_project_id = stage_row["url"].split("/project/")[1].split("?")[0]
+    assert stage_row["display_title"] == f"{stage_project_id}.1-{stage_row['title']}"
     assert payload["results"]["tasks"][0]["type"] == "task"
     assert payload["results"]["events"][0]["type"] == "event"
     assert payload["results"]["projects"][0]["url"].startswith("/project/")

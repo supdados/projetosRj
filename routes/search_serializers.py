@@ -69,6 +69,18 @@ def _build_project_display_title(project, max_length: int = 120) -> str:
     return _truncate_text(f"{project.id}-{base_title}", max_length)
 
 
+def _build_stage_display_title(stage, project, max_length: int = 120) -> str:
+    """Prefixa a numeração de exibição "projectId.posição" (mesma do StageList)."""
+    base_title = stage.descricao or f"Etapa #{stage.id}"
+    if project is None:
+        return _truncate_text(base_title, max_length)
+    etapa_ids = [etapa.id for etapa in project.etapas]
+    if stage.id not in etapa_ids:
+        return _truncate_text(base_title, max_length)
+    position = etapa_ids.index(stage.id) + 1
+    return _truncate_text(f"{project.id}.{position}-{base_title}", max_length)
+
+
 def _to_local_datetime(utc_naive):
     if utc_naive is None:
         return None
@@ -177,6 +189,7 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
                 "type": "stage",
                 "type_label": "Etapa",
                 "title": _truncate_text(stage.descricao or f"Etapa #{stage.id}", 120),
+                "display_title": _build_stage_display_title(stage, project),
                 "subtitle": (
                     f"Projeto: {_truncate_text(project.titulo, 95)}" if project else ""
                 ),
