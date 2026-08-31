@@ -17,7 +17,7 @@ from routes.shared import (
     project_orgao_search_filter,
 )
 from services.atraso import projeto_atrasado_criterion
-from services.authorization import project_visibility_criterion
+from services.authorization import apply_project_visibility
 
 
 @dataclass
@@ -60,8 +60,7 @@ def _colecao_project_ids_subquery(collection_id: int, user: User) -> Query:
 def _apply_scope_filters(
     query: Query, filters: ProjectsListFilters, user: User
 ) -> Query:
-    if not user.is_admin:
-        query = query.filter(project_visibility_criterion(user))
+    query = apply_project_visibility(query, user)
     if filters.selected_orgao_id is not None:
         subtree_ids = expand_orgao_filter_ids(
             filters.selected_orgao_id, incluir_descendentes=not filters.apenas_orgao

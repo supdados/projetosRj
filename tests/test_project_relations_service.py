@@ -372,13 +372,15 @@ def test_vinculo_e_desvinculo_nao_geram_notificacao(app, cenario):
     db.session.commit()
     assert UserNotification.query.count() == 0
     # Controle: o mesmo dono recebe notificação de uma ação NÃO ignorada — sem
-    # isso a asserção acima passaria mesmo com o notificador quebrado.
-    log_project_action(
-        project_id=cenario["a"],
-        action_type="update",
-        description="Alterou o título",
-        actor_user_id=ator.id,
-    )
+    # isso a asserção acima passaria mesmo com o notificador quebrado. O
+    # request context é necessário para o url_for do target_url da notificação.
+    with app.test_request_context():
+        log_project_action(
+            project_id=cenario["a"],
+            action_type="update",
+            description="Alterou o título",
+            actor_user_id=ator.id,
+        )
     db.session.commit()
     assert (
         UserNotification.query.filter_by(recipient_user_id=cenario["dono_id"]).count()

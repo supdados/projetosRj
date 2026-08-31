@@ -19,7 +19,7 @@ from sqlalchemy.orm import joinedload
 
 from models import Project, ProjectRelation, User, db
 from routes.shared import log_project_action
-from services.authorization import user_can_access_project
+from services.authorization import apply_project_visibility
 
 RELATED_MAX_PER_PROJECT = 12
 
@@ -79,14 +79,13 @@ def listar_relacionados_payload(
 ) -> list[dict[str, Any]]:
     """Payload dos relacionados VISÍVEIS ao viewer (linha invisível é filtrada).
 
-    JOIN único ``ProjectRelation ⨝ Project`` + ``joinedload(orgao_ref)``; o
-    filtro de visibilidade usa os caches por-request de ``authorization``.
+    JOIN único ``ProjectRelation ⨝ Project`` + ``joinedload(orgao_ref)``; a
+    visibilidade entra na própria query (``apply_project_visibility``) — custo
+    de leitura constante, sem checagem por item.
     """
-    relacionados = _projetos_relacionados(projeto.id)
     return [
         serialize_projeto_relacionado(outro)
-        for outro in relacionados
-        if user_can_access_project(viewer, outro)
+        for outro in _projetos_relacionados(projeto.id, viewer)
     ]
 
 
@@ -182,8 +181,8 @@ def _envolve_projeto(project_id: int) -> Any:
     )
 
 
-def _projetos_relacionados(project_id: int) -> list[Project]:
-    return (
+def _projetos_relacionados(project_id: int, viewer: User | None) -> list[Project]:
+    query = (
         db.session.query(Project)
         .join(
             ProjectRelation,
@@ -200,8 +199,8 @@ def _projetos_relacionados(project_id: int) -> list[Project]:
         )
         .options(joinedload(Project.orgao_ref))
         .order_by(ProjectRelation.id.asc())
-        .all()
     )
+    return apply_project_visibility(query, viewer).all()
 
 
 def _log_vinculo(origem: Project, action_type: str, descricao: str, ator: User) -> None:

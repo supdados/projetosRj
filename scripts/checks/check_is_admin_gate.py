@@ -50,7 +50,7 @@ BASELINE: dict[str, int] = {
     "routes/api/calendars.py": 1,
     "routes/dashboard.py": 2,
     "routes/decorators.py": 1,
-    "routes/projects/views.py": 5,
+    "routes/projects/views.py": 4,
     "routes/search.py": 1,
     "routes/tasks/creation.py": 1,
     "routes/tasks/hub.py": 1,
