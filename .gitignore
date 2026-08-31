@@ -30,3 +30,7 @@ CLAUDE.md
 /tmp_*
 
 node_modules/
+
+# Ferramentas de agente locais
+.codex/
+AGENTS.md
