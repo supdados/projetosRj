@@ -398,6 +398,56 @@ def test_import_prioridade_por_linha(app, client_admin, seed_data):
     }
 
 
+def test_import_prioridade_padrao_do_lote(app, client_admin, seed_data):
+    response = client_admin.post(
+        "/api/projetos/importar-csv",
+        data={
+            "orgao_id": str(seed_data["auditoria_orgao_id"]),
+            "prioridade": "media",
+            "mapeamento": json.dumps({"0": "titulo", "1": "prioridade"}),
+            **_csv(
+                "Título;Prioridade\nProjeto Prio Propria;ALTA\n"
+                "Projeto Prio Ruim;altíssima\nProjeto Prio Vazia;\n"
+            ),
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    # A irreconhecível cai no padrão do lote e ainda conta como ajustada.
+    assert response.get_json()["data"]["adjusted_count"] == 1
+
+    with app.app_context():
+        prioridades = {
+            titulo: Project.query.filter_by(titulo=titulo).one().prioridade
+            for titulo in (
+                "Projeto Prio Propria",
+                "Projeto Prio Ruim",
+                "Projeto Prio Vazia",
+            )
+        }
+    assert prioridades == {
+        "Projeto Prio Propria": "alta",
+        "Projeto Prio Ruim": "media",
+        "Projeto Prio Vazia": "media",
+    }
+
+
+def test_import_prioridade_padrao_invalida_retorna_422(client_admin, seed_data):
+    response = client_admin.post(
+        "/api/projetos/importar-csv",
+        data={
+            "orgao_id": str(seed_data["auditoria_orgao_id"]),
+            "prioridade": "altíssima",
+            **_csv("titulo;descricao\nA;desc"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert response.get_json()["error"]["message"].startswith(
+        "Prioridade inválida: 'altíssima'"
+    )
+
+
 def test_import_area_da_linha_vence_a_do_lote(app, client_admin, seed_data):
     response = client_admin.post(
         "/api/projetos/importar-csv",
@@ -413,7 +463,15 @@ def test_import_area_da_linha_vence_a_do_lote(app, client_admin, seed_data):
     )
     assert response.status_code == 200
     # Só a sigla desconhecida conta como ajuste.
-    assert response.get_json()["data"]["adjusted_count"] == 1
+    data = response.get_json()["data"]
+    assert data["adjusted_count"] == 1
+    assert data["adjusted_rows"] == [
+        {
+            "linha": 3,
+            "titulo": "Projeto Area Desconhecida",
+            "motivos": ['área responsável "XPTO" não reconhecida'],
+        }
+    ]
 
     with app.app_context():
         conhecida = Project.query.filter_by(titulo="Projeto Area Conhecida").one()
@@ -512,6 +570,13 @@ def test_import_com_etapas_cria_projetos_e_etapas(app, client_admin, seed_data):
         "ignored_count": 0,
         "adjusted_count": 1,
         "etapas_criadas": 5,
+        "adjusted_rows": [
+            {
+                "linha": 3,
+                "titulo": "Projeto Etapas 1",
+                "motivos": ['responsável da etapa "vpd, XPTO" não reconhecido'],
+            }
+        ],
     }
 
     with app.app_context():

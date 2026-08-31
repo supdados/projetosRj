@@ -40,57 +40,60 @@ def test_parses_semicolon_utf8():
     )
     rows = parse_import_rows(raw)
     assert rows == [
-        ParsedImportRow("Projeto A", "Descrição A"),
-        ParsedImportRow("Projeto B", "Descrição B"),
+        ParsedImportRow("Projeto A", "Descrição A", linha=2),
+        ParsedImportRow("Projeto B", "Descrição B", linha=3),
     ]
 
 
 def test_parses_comma_delimiter():
     raw = b"titulo,descricao\nA,desc A\nB,desc B"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("A", "desc A"), ParsedImportRow("B", "desc B")]
+    assert rows == [
+        ParsedImportRow("A", "desc A", linha=2),
+        ParsedImportRow("B", "desc B", linha=3),
+    ]
 
 
 def test_delimitador_ignora_linha_em_branco_antes_do_cabecalho():
     raw = b"\ntitulo,descricao\nProjeto A,desc"
-    assert parse_import_rows(raw) == [ParsedImportRow("Projeto A", "desc")]
+    assert parse_import_rows(raw) == [ParsedImportRow("Projeto A", "desc", linha=3)]
 
 
 def test_delimitador_ignora_linhas_em_branco_com_mapeamento():
     raw = "\n\nTítulo,Dono\nProjeto A,Maria".encode("utf-8")
     assert parse_import_rows(raw, mapeamento={0: "titulo"}) == [
-        ParsedImportRow(titulo="Projeto A")
+        ParsedImportRow(titulo="Projeto A", linha=4)
     ]
 
 
 def test_parses_utf8_with_bom():
     raw = "﻿titulo;descricao\nProjeto;Olá".encode("utf-8")
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("Projeto", "Olá")]
+    assert rows == [ParsedImportRow("Projeto", "Olá", linha=2)]
 
 
 def test_parses_latin1_fallback():
     raw = "titulo;descricao\nProjeto;Inventário".encode("latin-1")
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("Projeto", "Inventário")]
+    assert rows == [ParsedImportRow("Projeto", "Inventário", linha=2)]
 
 
 def test_header_is_case_and_space_insensitive():
     raw = b" Titulo ; Descricao \nA;d"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("A", "d")]
+    assert rows == [ParsedImportRow("A", "d", linha=2)]
 
 
 def test_skips_rows_without_title():
     raw = b"titulo;descricao\n;sem titulo\n   ;outra\nValido;ok"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("Valido", "ok")]
+    assert rows == [ParsedImportRow("Valido", "ok", linha=4)]
 
 
 def test_blank_description_is_kept_as_empty_string():
     raw = b"titulo;descricao\nSo titulo;"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("So titulo", "")]
+    assert rows == [ParsedImportRow("So titulo", "", linha=2)]
 
 
 def test_missing_required_column_raises_with_context():
@@ -109,7 +112,7 @@ def test_empty_csv_raises():
 def test_extra_columns_are_ignored():
     raw = b"titulo;descricao;status\nA;d;Vigente"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("A", "d")]
+    assert rows == [ParsedImportRow("A", "d", linha=2)]
 
 
 def test_row_with_more_fields_than_header_does_not_raise():
@@ -117,18 +120,18 @@ def test_row_with_more_fields_than_header_does_not_raise():
     # excedente sob a chave None (uma list); não deve estourar AttributeError.
     raw = b"titulo;descricao\nA;foo;bar"
     rows = parse_import_rows(raw)
-    assert rows == [ParsedImportRow("A", "foo")]
+    assert rows == [ParsedImportRow("A", "foo", linha=2)]
 
 
 def test_parse_com_mapeamento_fora_de_ordem():
     raw = "Dono;Descrição;Título do Projeto\nMaria;Desc A;Projeto A".encode("utf-8")
     rows = parse_import_rows(raw, mapeamento={2: "titulo", 1: "descricao"})
-    assert rows == [ParsedImportRow(titulo="Projeto A", descricao="Desc A")]
+    assert rows == [ParsedImportRow(titulo="Projeto A", descricao="Desc A", linha=2)]
 
 
 def test_parse_sem_mapeamento_continua_legado():
     raw = b"titulo;descricao;status\nA;d;Finalizado"
-    assert parse_import_rows(raw) == [ParsedImportRow("A", "d")]
+    assert parse_import_rows(raw) == [ParsedImportRow("A", "d", linha=2)]
     assert parse_import_rows(raw, mapeamento=None) == parse_import_rows(raw)
 
 
@@ -313,6 +316,21 @@ def test_prioridade_ausente_nao_conta_adjusted():
     assert attrs.adjusted is False
 
 
+def test_prioridade_ausente_cai_no_padrao_do_lote_sem_ajuste():
+    attrs = _resolve_row_attributes(
+        ParsedImportRow(titulo="P"), "VPD", "Vigente", None, None, "media"
+    )
+    assert attrs.prioridade == "media"
+    assert attrs.adjusted is False
+
+
+def test_prioridade_invalida_cai_no_padrao_do_lote_com_ajuste():
+    row = ParsedImportRow(titulo="P", prioridade="altíssima")
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None, "media")
+    assert attrs.prioridade == "media"
+    assert attrs.adjusted is True
+
+
 def test_datas_da_linha_aceitam_br_e_iso():
     row = ParsedImportRow(titulo="P", data_inicio="01/02/2026", data_fim="2026-03-31")
     attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
@@ -326,6 +344,29 @@ def test_data_ilegivel_vira_none_e_conta_adjusted():
     attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
     assert attrs.data_inicio is None
     assert attrs.adjusted is True
+
+
+def test_motivos_de_ajuste_nomeiam_campo_e_valor_recebido():
+    row = ParsedImportRow(
+        titulo="P",
+        status="Concluído",
+        prioridade="altíssima",
+        data_inicio="quando der",
+    )
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    assert attrs.motivos == (
+        'status "Concluído" não reconhecido',
+        'prioridade "altíssima" não reconhecida',
+        'data de início "quando der" ilegível',
+    )
+
+
+def test_linha_sem_ajuste_tem_motivos_vazios():
+    attrs = _resolve_row_attributes(
+        ParsedImportRow(titulo="P"), "VPD", "Vigente", None, None
+    )
+    assert attrs.motivos == ()
+    assert attrs.adjusted is False
 
 
 def test_resolve_row_area_sigla_conhecida():

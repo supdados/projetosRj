@@ -18,6 +18,11 @@
 
 	let { resultado, rotulo, descricaoIgnoradas, classePrimario, onConcluir }: Props = $props();
 
+	const LINHAS_VISIVEIS = 5;
+	const linhasAjustadas = $derived(resultado.adjusted_rows ?? []);
+	const linhasExibidas = $derived(linhasAjustadas.slice(0, LINHAS_VISIVEIS));
+	const linhasOcultas = $derived(linhasAjustadas.length - linhasExibidas.length);
+
 	let concluirEl = $state<HTMLButtonElement | null>(null);
 
 	export function focusConcluir(): void {
@@ -37,9 +42,23 @@
 	</p>
 {/if}
 {#if resultado.adjusted_count > 0}
-	<p class="text-sm text-text-muted">
-		Valores não reconhecidos em {resultado.adjusted_count} linha(s) receberam os padrões escolhidos.
-	</p>
+	<div class="flex w-full max-w-md flex-col gap-1.5 text-sm text-text-muted">
+		<p>Valores não reconhecidos em {resultado.adjusted_count} linha(s) receberam os padrões escolhidos:</p>
+		<ul class="flex flex-col gap-1 rounded-md border border-border-subtle bg-surface-muted px-3 py-2 text-left text-xs">
+			{#each linhasExibidas as ajuste (ajuste.linha)}
+				<li>
+					<span class="font-semibold text-text-secondary">Linha {ajuste.linha}</span>
+					{#if ajuste.titulo}
+						<span class="text-text-secondary">— {ajuste.titulo}</span>
+					{/if}
+					<span>: {ajuste.motivos.join('; ')}</span>
+				</li>
+			{/each}
+			{#if linhasOcultas > 0}
+				<li class="text-text-muted">…e mais {linhasOcultas} linha(s).</li>
+			{/if}
+		</ul>
+	</div>
 {/if}
 <button bind:this={concluirEl} type="button" onclick={onConcluir} class="mt-2 px-6 {classePrimario}">
 	Concluir

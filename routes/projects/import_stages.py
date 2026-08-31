@@ -24,12 +24,14 @@ from routes.shared import log_project_action
 
 from .import_csv import (
     DEFAULT_ETAPA_DESCRICAO,
+    AdjustedRowDetail,
     ImportOutcome,
     ParsedImportRow,
     _active_areas_by_sigla,
     _BatchContext,
     _build_imported_project,
     _filter_sei_numbers,
+    _motivos_fora_dos_attrs,
     _resolve_row_area,
     _resolve_row_attributes,
 )
@@ -59,6 +61,8 @@ class ParsedStage:
     comentarios: str | None = None
     primeira: bool = False
     divergente: bool = False
+    # Nº da linha na planilha (1 = cabeçalho); 0 quando desconhecido.
+    linha: int = 0
 
 
 @dataclass
@@ -103,6 +107,7 @@ def _stage_from_row(
         comentarios=row.etapa_comentarios,
         primeira=primeira,
         divergente=divergente,
+        linha=row.linha,
     )
 
 
@@ -199,10 +204,26 @@ def _area_ids_por_sigla(areas_por_sigla: dict[str, OrgaoUnidade]) -> dict[str, i
     return {sigla: unidade.id for sigla, unidade in areas_por_sigla.items()}
 
 
+def _stage_motivos(
+    stage: ParsedStage,
+    inicio_ok: bool,
+    fim_ok: bool,
+    situacao_ok: bool,
+    responsavel_ok: bool,
+) -> list[str]:
+    checagens = (
+        (inicio_ok, f'data de início da etapa "{stage.data_inicio}" ilegível'),
+        (fim_ok, f'data de fim da etapa "{stage.data_fim}" ilegível'),
+        (situacao_ok, f'situação da etapa "{stage.situacao}" não reconhecida'),
+        (responsavel_ok, f'responsável da etapa "{stage.responsavel}" não reconhecido'),
+    )
+    return [texto for ok, texto in checagens if not ok]
+
+
 def _persist_stage(
     project_id: int, ordem: int, stage: ParsedStage, area_ids: dict[str, int]
-) -> bool:
-    """Cria a Etapa da linha e devolve se algum valor dela caiu (ajuste)."""
+) -> list[str]:
+    """Cria a Etapa da linha; devolve os motivos dos valores que caíram (ajustes)."""
     inicio, inicio_ok = resolve_import_date(stage.data_inicio)
     fim, fim_ok = resolve_import_date(stage.data_fim)
     situacao, situacao_ok = parse_situacao(stage.situacao)
@@ -224,13 +245,13 @@ def _persist_stage(
         apply_responsaveis_entries(etapa, entries)
     etapa.iniciada = situacao.iniciada
     etapa.done = situacao.done
-    return not (inicio_ok and fim_ok and situacao_ok and responsavel_ok)
+    return _stage_motivos(stage, inicio_ok, fim_ok, situacao_ok, responsavel_ok)
 
 
 def _persist_group_project(
     grupo: ParsedImportProject, contexto: _BatchContext
-) -> tuple[Project, bool]:
-    """Cria o Project da 1ª linha do grupo; devolve (projeto, houve ajuste)."""
+) -> tuple[Project, list[str]]:
+    """Cria o Project da 1ª linha do grupo; devolve (projeto, motivos de ajuste)."""
     area, area_ok = _resolve_row_area(
         grupo.projeto.area, contexto.areas_por_sigla, contexto.area_padrao
     )
@@ -240,6 +261,7 @@ def _persist_group_project(
         contexto.status,
         contexto.special_project,
         contexto.delivery_type,
+        contexto.prioridade,
     )
     sei_kept, sei_dropped = _filter_sei_numbers(grupo.projeto.sei_numeros)
     project = _build_imported_project(grupo.projeto, area, attrs)
@@ -252,22 +274,44 @@ def _persist_group_project(
         action_type="create",
         description=f'Importou o projeto "{grupo.projeto.titulo}" via CSV',
     )
-    return project, attrs.adjusted or sei_dropped > 0 or not area_ok
+    motivos = list(attrs.motivos) + _motivos_fora_dos_attrs(
+        grupo.projeto, area_ok, sei_dropped
+    )
+    return project, motivos
 
 
 def _persist_stage_group(
     grupo: ParsedImportProject, contexto: _BatchContext, area_ids: dict[str, int]
-) -> tuple[int, int]:
-    """Persiste o grupo; devolve ``(etapas criadas, linhas com ajuste)``."""
-    project, primeira_ajustada = _persist_group_project(grupo, contexto)
-    ajustadas = 0
+) -> tuple[int, list[AdjustedRowDetail]]:
+    """Persiste o grupo; devolve ``(etapas criadas, linhas ajustadas com motivos)``."""
+    project, motivos_projeto = _persist_group_project(grupo, contexto)
+    ajustes: list[AdjustedRowDetail] = []
     for ordem, stage in enumerate(grupo.etapas):
-        caiu = _persist_stage(project.id, ordem, stage, area_ids) or stage.divergente
+        motivos = _persist_stage(project.id, ordem, stage, area_ids)
+        if stage.divergente:
+            motivos.append(
+                "valores de projeto divergentes da 1ª linha (mantidos os da 1ª)"
+            )
         if stage.primeira:
-            primeira_ajustada = primeira_ajustada or caiu
-        elif caiu:
-            ajustadas += 1
-    return len(grupo.etapas), ajustadas + (1 if primeira_ajustada else 0)
+            motivos = motivos_projeto + motivos
+        if motivos:
+            ajustes.append(
+                {
+                    "linha": stage.linha,
+                    "titulo": grupo.projeto.titulo,
+                    "motivos": motivos,
+                }
+            )
+    if motivos_projeto and not any(stage.primeira for stage in grupo.etapas):
+        ajustes.insert(
+            0,
+            {
+                "linha": grupo.projeto.linha,
+                "titulo": grupo.projeto.titulo,
+                "motivos": motivos_projeto,
+            },
+        )
+    return len(grupo.etapas), ajustes
 
 
 def _persist_imported_projects_with_stages(
@@ -276,6 +320,7 @@ def _persist_imported_projects_with_stages(
     default_status: str,
     default_special: str | None,
     default_delivery: str | None,
+    default_prioridade: str | None = None,
 ) -> ImportOutcome:
     """Agrupa e persiste o lote do modo com etapas; conta linhas ajustadas.
 
@@ -289,14 +334,18 @@ def _persist_imported_projects_with_stages(
         default_status,
         default_special,
         default_delivery,
+        default_prioridade,
     )
     area_ids = _area_ids_por_sigla(contexto.areas_por_sigla)
     ignored = sum(1 for row in rows if _is_blank_import_row(row))
-    imported = adjusted = etapas_criadas = 0
+    imported = etapas_criadas = 0
+    ajustes: list[AdjustedRowDetail] = []
     for grupo in grupos:
         etapas, linhas_ajustadas = _persist_stage_group(grupo, contexto, area_ids)
         imported += 1
         etapas_criadas += etapas
-        adjusted += linhas_ajustadas
+        ajustes.extend(linhas_ajustadas)
     db.session.commit()
-    return ImportOutcome(imported, ignored, adjusted, etapas_criadas)
+    return ImportOutcome(
+        imported, ignored, len(ajustes), etapas_criadas, tuple(ajustes)
+    )

@@ -20,6 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import FileStorage
 
 from catalogs.inventario import sanitize_special_project_for_orgao
+from catalogs.priorities import PRIORITY_OPTIONS, normalize_priority
 from models import OrgaoUnidade, db
 from services.import_columns import (
     IMPORT_MODES,
@@ -33,6 +34,7 @@ from services.import_columns import (
 from ..blueprint import main_bp
 from ..projects.import_csv import (
     ALLOWED_IMPORT_STATUSES,
+    AdjustedRowDetail,
     ImportOutcome,
     ParsedImportRow,
     _cell,
@@ -97,6 +99,18 @@ def _resolve_import_status(status_raw: str | None) -> str:
             f"Status inválido: {status!r}. Use um de {ALLOWED_IMPORT_STATUSES}."
         )
     return status
+
+
+def _resolve_import_prioridade(prioridade_raw: str | None) -> str | None:
+    """Prioridade padrão do lote; ausente ou vazia significa sem prioridade."""
+    if not (prioridade_raw or "").strip():
+        return None
+    prioridade = normalize_priority(prioridade_raw)
+    if prioridade is None:
+        raise ValueError(
+            f"Prioridade inválida: {prioridade_raw!r}. Use uma de {PRIORITY_OPTIONS}."
+        )
+    return prioridade
 
 
 def _resolve_import_mapping(
@@ -175,12 +189,15 @@ def _batch_defaults(orgao: OrgaoUnidade) -> tuple[str | None, str | None]:
     return special_project, request.form.get("delivery_type") or None
 
 
-def _import_counts(outcome: ImportOutcome) -> dict[str, int]:
+def _import_counts(
+    outcome: ImportOutcome,
+) -> dict[str, int | list[AdjustedRowDetail]]:
     return {
         "imported_count": outcome.imported,
         "ignored_count": outcome.ignored,
         "adjusted_count": outcome.adjusted,
         "etapas_criadas": outcome.etapas_criadas,
+        "adjusted_rows": list(outcome.ajustes),
     }
 
 
@@ -191,14 +208,15 @@ def _persist_import_batch(
     status: str,
     special_project: str | None,
     delivery_type: str | None,
+    prioridade: str | None,
 ) -> ImportOutcome:
     """Despacha a persistência do lote para o fluxo do modo pedido."""
     if modo == "com_etapas":
         return _persist_imported_projects_with_stages(
-            rows, orgao, status, special_project, delivery_type
+            rows, orgao, status, special_project, delivery_type, prioridade
         )
     return _persist_imported_projects(
-        rows, orgao, status, special_project, delivery_type
+        rows, orgao, status, special_project, delivery_type, prioridade
     )
 
 
@@ -210,7 +228,8 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
     Aceita ``multipart/form-data`` com o arquivo em ``arquivo`` (até 2 MB e
     10.000 projetos), o ``modo`` opcional (``simples``/``com_etapas``), os
     atributos padrão do lote (``orgao_id`` obrigatório, ``status``,
-    ``special_project``, ``delivery_type``) e o ``mapeamento`` (JSON de índice
+    ``special_project``, ``delivery_type``, ``prioridade``) e o ``mapeamento``
+    (JSON de índice
     de coluna para campo) — opcional no modo simples (sem ele o CSV precisa das
     colunas ``titulo``/``descricao``) e obrigatório no modo com etapas, que lê
     1 linha por etapa agrupada por ``ref_projeto``. No modo simples todo
@@ -218,13 +237,16 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
 
     Returns:
         ``ok({"imported_count", "ignored_count", "adjusted_count",
-        "etapas_criadas"})`` em sucesso; ``fail(..., 422, "validation")`` para
+        "etapas_criadas", "adjusted_rows"})`` em sucesso, onde ``adjusted_rows``
+        detalha cada linha ajustada (``{linha, titulo, motivos}``);
+        ``fail(..., 422, "validation")`` para
         entradas inválidas; ``fail(..., 500, "server")`` em erro de persistência.
     """
     try:
         modo = _resolve_import_modo(request.form.get("modo"))
         orgao = _resolve_import_orgao(request.form.get("orgao_id"))
         status = _resolve_import_status(request.form.get("status"))
+        prioridade = _resolve_import_prioridade(request.form.get("prioridade"))
         mapeamento = _resolve_import_mapping(request.form.get("mapeamento"), modo)
         rows = _read_import_rows(request.files.get("arquivo"), mapeamento)
     except ValueError as invalid_input:
@@ -233,7 +255,7 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
     special_project, delivery_type = _batch_defaults(orgao)
     try:
         outcome = _persist_import_batch(
-            modo, rows, orgao, status, special_project, delivery_type
+            modo, rows, orgao, status, special_project, delivery_type, prioridade
         )
     except ValueError as invalid_rows:
         db.session.rollback()

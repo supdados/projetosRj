@@ -37,6 +37,13 @@ export interface AnaliseImportacao {
 	campos: CampoImportacao[];
 }
 
+/** Linha ajustada na importação: nº na planilha (1 = cabeçalho) e o que caiu no padrão. */
+export interface LinhaAjustada {
+	linha: number;
+	titulo: string;
+	motivos: string[];
+}
+
 /** Carga de `POST /api/projetos/importar-csv` (contadores do lote). */
 export interface ImportProjectsResultV2 {
 	imported_count: number;
@@ -46,4 +53,6 @@ export interface ImportProjectsResultV2 {
 	adjusted_count: number;
 	/** Etapas persistidas (no modo simples, nº de etapas default criadas). */
 	etapas_criadas: number;
+	/** Detalhe das linhas ajustadas, na ordem da planilha. */
+	adjusted_rows: LinhaAjustada[];
 }

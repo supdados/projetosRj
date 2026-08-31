@@ -11,7 +11,7 @@ import io
 import re
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Literal, NamedTuple
+from typing import Literal, NamedTuple, TypedDict
 
 from catalogs.delivery_types import normalize_delivery_type
 from catalogs.inventario import sanitize_special_project_for_orgao
@@ -68,11 +68,20 @@ class ParsedImportRow:
     linha: int = 0
 
 
+class AdjustedRowDetail(TypedDict):
+    """Linha ajustada no import: nº na planilha, título e o que caiu no padrão."""
+
+    linha: int
+    titulo: str
+    motivos: list[str]
+
+
 class ImportOutcome(NamedTuple):
     imported: int
     ignored: int
     adjusted: int
     etapas_criadas: int
+    ajustes: tuple[AdjustedRowDetail, ...] = ()
 
 
 class _RowAttributes(NamedTuple):
@@ -83,6 +92,7 @@ class _RowAttributes(NamedTuple):
     data_inicio: date | None
     data_fim: date | None
     adjusted: bool
+    motivos: tuple[str, ...] = ()
 
 
 class _BatchContext(NamedTuple):
@@ -93,6 +103,7 @@ class _BatchContext(NamedTuple):
     status: str
     special_project: str | None
     delivery_type: str | None
+    prioridade: str | None = None
 
 
 def _decode_csv_bytes(raw: bytes) -> str:
@@ -300,29 +311,55 @@ def _resolve_row_special(
     return sanitized, True
 
 
+def _resolve_row_prioridade(
+    value: str | None, default: str | None
+) -> tuple[str | None, bool]:
+    """Prioridade da linha; vazia ou irreconhecível cai no padrão do lote."""
+    if not (value or "").strip():
+        return default, True
+    prioridade, ok = resolve_import_priority(value)
+    return (prioridade if ok else default), ok
+
+
+def _motivos_de_ajuste(checagens: tuple[tuple[bool, str], ...]) -> tuple[str, ...]:
+    return tuple(texto for ok, texto in checagens if not ok)
+
+
 def _resolve_row_attributes(
     row: ParsedImportRow,
     orgao_sigla: str | None,
     default_status: str,
     default_special: str | None,
     default_delivery: str | None,
+    default_prioridade: str | None = None,
 ) -> _RowAttributes:
     """Aplica precedência linha > padrão do form, marcando ajuste quando o valor cai.
 
-    Prioridade e datas não têm padrão de lote: texto ilegível vira ``None`` e
-    conta como ajuste.
+    Datas não têm padrão de lote: texto ilegível vira ``None`` e conta como
+    ajuste.
     """
     status, status_ok = _resolve_row_status(row.status, default_status)
     special, special_ok = _resolve_row_special(
         row.special_project, orgao_sigla, default_special
     )
     delivery, delivery_ok = _resolve_row_delivery(row.delivery_type, default_delivery)
-    prioridade, prioridade_ok = resolve_import_priority(row.prioridade)
+    prioridade, prioridade_ok = _resolve_row_prioridade(
+        row.prioridade, default_prioridade
+    )
     inicio, inicio_ok = resolve_import_date(row.data_inicio)
     fim, fim_ok = resolve_import_date(row.data_fim)
-    ajustes = (status_ok, special_ok, delivery_ok, prioridade_ok, inicio_ok, fim_ok)
+    motivos = _motivos_de_ajuste(
+        (
+            (status_ok, f'status "{row.status}" não reconhecido'),
+            (special_ok, f'projeto especial "{row.special_project}" não reconhecido'),
+            (delivery_ok, f'tipo de entrega "{row.delivery_type}" não reconhecido'),
+            (prioridade_ok, f'prioridade "{row.prioridade}" não reconhecida'),
+            (inicio_ok, f'data de início "{row.data_inicio}" ilegível'),
+            (fim_ok, f'data de fim "{row.data_fim}" ilegível'),
+        )
+    )
     return _RowAttributes(
-        status, special, delivery, prioridade, inicio, fim, not all(ajustes)
+        status, special, delivery, prioridade, inicio, fim, bool(motivos), motivos
     )
 
 
@@ -394,8 +431,20 @@ def _create_default_etapa(project: Project, attrs: _RowAttributes) -> Etapa:
     return etapa
 
 
-def _persist_import_row(row: ParsedImportRow, contexto: _BatchContext) -> bool:
-    """Persiste uma linha (projeto + etapa default) e diz se houve ajuste."""
+def _motivos_fora_dos_attrs(
+    row: ParsedImportRow, area_ok: bool, sei_dropped: int
+) -> list[str]:
+    """Ajustes de área e SEI, que ficam fora de ``_resolve_row_attributes``."""
+    motivos: list[str] = []
+    if not area_ok:
+        motivos.append(f'área responsável "{row.area}" não reconhecida')
+    if sei_dropped > 0:
+        motivos.append(f"{sei_dropped} processo(s) SEI inválido(s) descartado(s)")
+    return motivos
+
+
+def _persist_import_row(row: ParsedImportRow, contexto: _BatchContext) -> list[str]:
+    """Persiste uma linha (projeto + etapa default); devolve os motivos de ajuste."""
     area, area_ok = _resolve_row_area(
         row.area, contexto.areas_por_sigla, contexto.area_padrao
     )
@@ -405,6 +454,7 @@ def _persist_import_row(row: ParsedImportRow, contexto: _BatchContext) -> bool:
         contexto.status,
         contexto.special_project,
         contexto.delivery_type,
+        contexto.prioridade,
     )
     sei_kept, sei_dropped = _filter_sei_numbers(row.sei_numeros)
     project = _build_imported_project(row, area, attrs)
@@ -418,7 +468,7 @@ def _persist_import_row(row: ParsedImportRow, contexto: _BatchContext) -> bool:
         action_type="create",
         description=f'Importou o projeto "{row.titulo}" via CSV',
     )
-    return attrs.adjusted or sei_dropped > 0 or not area_ok
+    return list(attrs.motivos) + _motivos_fora_dos_attrs(row, area_ok, sei_dropped)
 
 
 def _persist_imported_projects(
@@ -427,6 +477,7 @@ def _persist_imported_projects(
     default_status: str,
     default_special: str | None,
     default_delivery: str | None,
+    default_prioridade: str | None = None,
 ) -> ImportOutcome:
     """Cria um Project (com a etapa default) por linha com título e conta o lote."""
     contexto = _BatchContext(
@@ -435,13 +486,19 @@ def _persist_imported_projects(
         default_status,
         default_special,
         default_delivery,
+        default_prioridade,
     )
-    imported = ignored = adjusted = 0
+    imported = ignored = 0
+    ajustes: list[AdjustedRowDetail] = []
     for row in rows:
         if not row.titulo:
             ignored += 1
             continue
         imported += 1
-        adjusted += 1 if _persist_import_row(row, contexto) else 0
+        motivos = _persist_import_row(row, contexto)
+        if motivos:
+            ajustes.append(
+                {"linha": row.linha, "titulo": row.titulo, "motivos": motivos}
+            )
     db.session.commit()
-    return ImportOutcome(imported, ignored, adjusted, imported)
+    return ImportOutcome(imported, ignored, len(ajustes), imported, tuple(ajustes))

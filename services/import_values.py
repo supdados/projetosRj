@@ -60,8 +60,8 @@ def resolve_import_date(value: str | None) -> tuple[date | None, bool]:
 def resolve_import_priority(value: str | None) -> tuple[str | None, bool]:
     """Prioridade da linha como ``(valor, ok)``, casada ignorando acento e caixa.
 
-    Não há prioridade padrão de lote: texto não reconhecido deixa o projeto sem
-    prioridade e marca a linha como ajustada.
+    Texto não reconhecido devolve ``(None, False)`` — quem decide o fallback
+    (padrão do lote) é o chamador.
 
     Exemplo: ``resolve_import_priority("MÉDIA") == ("media", True)``.
     """

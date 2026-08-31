@@ -15,7 +15,7 @@
 	import { delayedPending, type DelayedPending } from '$lib/utils/delayedPending';
 	import { countMapped, hasField, hasTitulo, type ImportFieldMapping } from '$lib/utils/importMappingState';
 	import type { AnaliseImportacao, ImportModo, ImportProjectsResultV2 } from '$lib/types/importExport';
-	import type { ProjectsListOptions } from '$lib/types/projects';
+	import type { OrgaoOption, ProjectsListOptions } from '$lib/types/projects';
 	import type { OrgaoSelectOption } from '$lib/types/orgaoTreeSelect';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import Modal from '$lib/components/Modal.svelte';
@@ -43,6 +43,13 @@
 		Suspenso: 'var(--ds-color-fill-warning)',
 		Finalizado: 'var(--ds-color-status-finalizada)'
 	};
+	const PRIORIDADE_OPTIONS: SelectMenuOption[] = [
+		{ value: 'baixa', label: 'Baixa' },
+		{ value: 'media', label: 'Média' },
+		{ value: 'alta', label: 'Alta' },
+		{ value: 'urgente', label: 'Urgente' }
+	];
+	const PRIORIDADE_PADRAO = 'media';
 	const CLASSE_ESTADO = 'flex flex-col gap-3 focus:outline-none [grid-area:1/1]';
 	const CLASSE_LINK =
 		'shrink-0 rounded-sm text-xs text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand';
@@ -60,6 +67,7 @@
 	let maisOpcoesAberto = $state<boolean>(false);
 	let orgaoId = $state<string>('');
 	let status = $state<string>('Vigente');
+	let prioridade = $state<string>(PRIORIDADE_PADRAO);
 	let deliveryType = $state<string>('');
 	let specialProject = $state<string>('');
 	let analisando = $state<boolean>(false);
@@ -115,7 +123,7 @@
 		if (!tituloMapeado) return 'Mapeie a coluna do título.';
 		if (modoComEtapas && !hasField(mapping, 'ref_projeto')) return 'Mapeie a coluna Ref do projeto.';
 		if (modoComEtapas && !hasField(mapping, 'etapa')) return 'Mapeie a coluna Etapa.';
-		if (orgaoId.trim().length === 0) return 'Escolha a área de destino.';
+		if (orgaoId.trim().length === 0) return 'Escolha a área padrão.';
 		return '';
 	});
 	const podeImportar = $derived(motivoBloqueio === '');
@@ -165,9 +173,17 @@
 		importPendente.reset();
 	});
 
-	// Idempotente: `options` costuma chegar depois da abertura, e o órgão único precisa entrar quando chegar.
+	/** Área padrão inicial: a raiz da árvore visível (a maior área que o usuário acessa). */
+	function orgaoPadrao(opcoes: OrgaoOption[]): string {
+		const ativas = opcoes.filter((o) => !o.is_inactive);
+		const ids = new Set(ativas.map((o) => Number(o.value)));
+		const raiz = ativas.find((o) => o.pai_id == null || !ids.has(o.pai_id));
+		return raiz?.value ?? '';
+	}
+
+	// Idempotente: `options` costuma chegar depois da abertura, e o default precisa entrar quando chegar.
 	$effect(() => {
-		if (open && orgaoId === '' && orgaoOptions.length === 1) orgaoId = orgaoOptions[0].value;
+		if (open && orgaoId === '' && orgaoOptions.length > 0) orgaoId = orgaoPadrao(orgaoOptions);
 	});
 
 	// A região live é persistente e o texto entra num flush POSTERIOR — nó criado já com conteúdo não é anunciado.
@@ -181,7 +197,10 @@
 			partes.push(`${resultado.ignored_count} ${descricaoIgnoradas}`);
 		}
 		if (resultado.adjusted_count > 0) {
-			partes.push(`Valores não reconhecidos em ${resultado.adjusted_count} linha(s) receberam os padrões escolhidos.`);
+			const linhas = (resultado.adjusted_rows ?? []).map((ajuste) => ajuste.linha).join(', ');
+			partes.push(
+				`Valores não reconhecidos em ${resultado.adjusted_count} linha(s) receberam os padrões escolhidos${linhas ? ` (linha(s) ${linhas})` : ''}.`
+			);
 		}
 		const texto = partes.join(' ');
 		void tick().then(() => (anuncioSucesso = texto));
@@ -225,7 +244,8 @@
 		mappingExpandido = maisOpcoesAberto = analisando = importando = false;
 		analiseErro = importErro = deliveryType = specialProject = '';
 		status = 'Vigente';
-		orgaoId = orgaoOptions.length === 1 ? orgaoOptions[0].value : '';
+		prioridade = PRIORIDADE_PADRAO;
+		orgaoId = orgaoPadrao(orgaoOptions);
 		profundidadeDrag = 0;
 		analisePendente.reset();
 		importPendente.reset();
@@ -342,6 +362,7 @@
 		dados.append('arquivo', arquivo);
 		dados.append('orgao_id', orgaoId);
 		dados.append('status', status);
+		if (prioridade) dados.append('prioridade', prioridade);
 		if (deliveryType) dados.append('delivery_type', deliveryType);
 		if (specialProject) dados.append('special_project', specialProject);
 		// Só as colunas não-ignoradas: `{"0":"titulo","3":"descricao"}`.
@@ -477,21 +498,25 @@
 									<ImportCsvMapping colunas={analise.colunas} campos={analise.campos} {mapping} disabled={importando} onChange={(proximo) => (mapping = proximo)} />
 								</div>
 							{/if}
-							<div class="flex flex-col gap-1 text-sm">
-								<label for="importar-projetos-orgao" class={CLASSE_LABEL}>Área de destino</label>
-								<OrgaoTreeSelect id="importar-projetos-orgao" options={orgaoTreeOptions} value={orgaoId ? Number(orgaoId) : null} onSelect={(v) => (orgaoId = v == null ? '' : String(v))} placeholder="Selecione a área…" ariaLabel="Área de destino (obrigatório)" />
-							</div>
 							<div class="flex flex-col gap-2">
 								<button type="button" onclick={() => (maisOpcoesAberto = !maisOpcoesAberto)} aria-expanded={maisOpcoesAberto} class="flex items-center gap-1.5 self-start rounded-sm text-sm font-semibold text-text-secondary transition-colors duration-fast hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
-									Mais opções
+									Valores padrão
 									<i class="fas fa-chevron-down text-2xs text-text-muted transition-transform duration-fast" style:transform={maisOpcoesAberto ? 'rotate(180deg)' : 'none'} aria-hidden="true"></i>
 								</button>
 								{#if maisOpcoesAberto}
 									<div transition:slide={deslizar()} class="flex flex-col gap-2">
-										<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+										<div class="flex flex-col gap-1 text-sm">
+											<label for="importar-projetos-orgao" class={CLASSE_LABEL}>Área padrão</label>
+											<OrgaoTreeSelect id="importar-projetos-orgao" options={orgaoTreeOptions} value={orgaoId ? Number(orgaoId) : null} onSelect={(v) => (orgaoId = v == null ? '' : String(v))} placeholder="Selecione a área…" ariaLabel="Área padrão (obrigatório)" />
+										</div>
+										<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 											<div class="flex flex-col gap-1 text-sm">
 												<label for="importar-projetos-status" class={CLASSE_LABEL}>Status padrão</label>
 												<SelectMenu id="importar-projetos-status" options={statusMenuOptions} value={status} onSelect={(v) => (status = v ?? status)} ariaLabel="Status padrão" />
+											</div>
+											<div class="flex flex-col gap-1 text-sm">
+												<label for="importar-projetos-prioridade" class={CLASSE_LABEL}>Prioridade padrão</label>
+												<SelectMenu id="importar-projetos-prioridade" options={PRIORIDADE_OPTIONS} value={prioridade || null} onSelect={(v) => (prioridade = v ?? '')} allowAll allLabel="—" ariaLabel="Prioridade padrão" />
 											</div>
 											<div class="flex flex-col gap-1 text-sm">
 												<label for="importar-projetos-delivery" class={CLASSE_LABEL}>Tipo de entrega</label>
