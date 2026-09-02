@@ -12,8 +12,11 @@ from datetime import date
 import pytest
 
 from routes.projects.import_csv import (
+    PROJECT_TITULO_MAX_LEN,
     ParsedImportRow,
+    _build_imported_project,
     _filter_sei_numbers,
+    _motivos_fora_dos_attrs,
     _resolve_row_area,
     _resolve_row_attributes,
     parse_import_rows,
@@ -381,3 +384,18 @@ def test_resolve_row_area_vazia_cai_no_lote_sem_ajuste():
 
 def test_resolve_row_area_desconhecida_cai_no_lote_com_ajuste():
     assert _resolve_row_area("XPTO", _AREAS, _AREA_PADRAO) == (_AREA_PADRAO, False)
+
+
+def test_titulo_acima_do_limite_e_cortado_com_motivo():
+    row = ParsedImportRow(titulo="x" * (PROJECT_TITULO_MAX_LEN + 5))
+    attrs = _resolve_row_attributes(row, "VPD", "Vigente", None, None)
+    project = _build_imported_project(row, _AREA_PADRAO, attrs)
+    assert len(project.titulo) == PROJECT_TITULO_MAX_LEN
+    assert _motivos_fora_dos_attrs(row, True, 0) == [
+        f"título cortado em {PROJECT_TITULO_MAX_LEN} caracteres"
+    ]
+
+
+def test_titulo_no_limite_nao_gera_motivo():
+    row = ParsedImportRow(titulo="x" * PROJECT_TITULO_MAX_LEN)
+    assert _motivos_fora_dos_attrs(row, True, 0) == []

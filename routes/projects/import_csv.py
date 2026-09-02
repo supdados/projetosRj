@@ -37,6 +37,7 @@ IMPORTABLE_SPECIAL_PROJECTS: tuple[str, ...] = (
 )
 DEFAULT_ETAPA_DESCRICAO = "Etapas a definir"
 PROJECT_ORGAO_MAX_LEN = 100
+PROJECT_TITULO_MAX_LEN = 200
 
 TabularFileFormat = Literal["csv"]
 
@@ -404,7 +405,7 @@ def _build_imported_project(
 ) -> Project:
     """Monta o Project da linha; ``orgao`` é texto livre, independente da área."""
     return Project(
-        titulo=row.titulo,
+        titulo=row.titulo[:PROJECT_TITULO_MAX_LEN],
         short_description=row.descricao or None,
         orgao_id=area.id,
         orgao=(row.orgao or "").strip()[:PROJECT_ORGAO_MAX_LEN] or None,
@@ -434,8 +435,10 @@ def _create_default_etapa(project: Project, attrs: _RowAttributes) -> Etapa:
 def _motivos_fora_dos_attrs(
     row: ParsedImportRow, area_ok: bool, sei_dropped: int
 ) -> list[str]:
-    """Ajustes de área e SEI, que ficam fora de ``_resolve_row_attributes``."""
+    """Ajustes de título, área e SEI, que ficam fora de ``_resolve_row_attributes``."""
     motivos: list[str] = []
+    if len(row.titulo) > PROJECT_TITULO_MAX_LEN:
+        motivos.append(f"título cortado em {PROJECT_TITULO_MAX_LEN} caracteres")
     if not area_ok:
         motivos.append(f'área responsável "{row.area}" não reconhecida')
     if sei_dropped > 0:

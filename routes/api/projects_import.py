@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from flask import Response, request
+from flask import Response, current_app, request
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import FileStorage
 
@@ -262,6 +262,12 @@ def api_projetos_importar_csv() -> Response | tuple[Response, int]:
         return fail(str(invalid_rows), status=422, code="validation")
     except SQLAlchemyError:
         db.session.rollback()
+        current_app.logger.exception(
+            "Falha ao persistir lote de importação CSV (modo=%s, orgao_id=%s, linhas=%s)",
+            modo,
+            orgao.id,
+            len(rows),
+        )
         return fail("Erro ao salvar os projetos importados.", status=500, code="server")
 
     return ok(_import_counts(outcome))
