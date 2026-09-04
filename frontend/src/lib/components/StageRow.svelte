@@ -138,14 +138,15 @@
 	}
 	function commitComment(): void {
 		const text = commentDraft.trim();
+		const current = (shownComment ?? '').trim();
 		editingComment = false;
-		// Clicar fora sem digitar nada apenas fecha; com texto, salva.
-		if (text) {
-			optimisticComment = text; // segura o valor novo no display até o servidor confirmar
-			onSaveComentario(text);
-		} else {
-			commentDraft = shownComment ?? '';
+		// Sem mudança apenas fecha; texto novo (inclusive vazio = remover) salva.
+		if (text === current) {
+			commentDraft = current;
+			return;
 		}
+		optimisticComment = text; // segura o valor novo no display até o servidor confirmar
+		onSaveComentario(text);
 	}
 	function cancelComment(): void {
 		editingComment = false;
