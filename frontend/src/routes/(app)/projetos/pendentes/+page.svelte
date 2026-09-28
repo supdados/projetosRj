@@ -526,6 +526,7 @@
 				value={responsavel || null}
 				onSelect={onResponsavelSelect}
 				disabled={!data || data.responsaveis_options.length === 0}
+				searchable
 				allowAll
 				allLabel="Todos os responsáveis"
 				ariaLabel="Filtrar por responsável"
