@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, g, request
+from flask import Response, current_app, g, request
 
 from models import OrgaoUnidade, Task, db
 
@@ -53,6 +53,8 @@ from .negotiation import api_login_required
 from .serializers import serialize_task_card
 from services.task_creation import create_task_record, resolve_task_creation
 from services.task_mutation import bulk_archive_finalized, move_task_to_etapa
+from services.task_attachment_storage import remove_task_attachment_files
+from ..tasks import constants as task_constants
 
 #: String herdada do legado ``delete_task`` (rota cortada na sprint 2).
 DELETE_DENIED_MESSAGE = "Somente o autor da tarefa ou um administrador pode excluí-la."
@@ -131,7 +133,11 @@ def api_tarefa_excluir(task_id: int) -> Response | tuple[Response, int]:
         _audit_denied_task_action(task, "forbidden_delete")
         return fail(DELETE_DENIED_MESSAGE, status=403, code="forbidden")
 
+    stored_filenames = [attachment.stored_filename for attachment in task.anexos]
     try:
+        upload_folder = (
+            task_constants._get_upload_folder() if stored_filenames else None
+        )
         notify_task_deleted(task)
         db.session.delete(task)
         db.session.commit()
@@ -139,6 +145,10 @@ def api_tarefa_excluir(task_id: int) -> Response | tuple[Response, int]:
         db.session.rollback()
         return fail_internal(exc, "excluir tarefa")
 
+    if upload_folder is not None:
+        remove_task_attachment_files(
+            stored_filenames, upload_folder=upload_folder, logger=current_app.logger
+        )
     return ok({"item_id": task_id, "message": "Tarefa excluída com sucesso!"})
 
 

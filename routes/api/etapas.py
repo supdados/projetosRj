@@ -51,9 +51,9 @@ from services.etapas_mutation import (
     create_etapa_record,
     delete_regular_etapa,
     etapa_tem_responsavel,
-    motivo_bloqueio_conclusao,
     save_etapa_comentario,
     update_regular_field,
+    validate_etapa_completion,
 )
 from services.authorization import PAPEL_EDITOR, require_project_rank
 from services.project_meetings import is_google_meeting_stage
@@ -190,8 +190,6 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
 
     iniciada = bool(data.get("iniciada"))
     done = bool(data.get("done"))
-    if not iniciada and done:
-        done = False
 
     try:
         new_etapa, reactivated = create_etapa_record(
@@ -203,8 +201,8 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
             comentarios=(data.get("comentarios") or "").strip() or None,
             iniciada=iniciada,
             done=done,
+            responsaveis_entries=responsaveis_entries,
         )
-        apply_responsaveis_entries(new_etapa, responsaveis_entries)
         db.session.commit()
     except ValueError as exc:
         db.session.rollback()
@@ -292,23 +290,19 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     iniciada = bool(data.get("iniciada"))
     done_requested = bool(data.get("done"))
 
-    if not iniciada and done_requested:
-        return fail(
-            "A etapa não pode ser concluída sem ser iniciada.",
-            status=422,
-            code="validation",
-        )
-    if done_requested and not etapa.done:
-        # Mesma régua do toggle, sobre os valores CANDIDATOS do request (datas e
-        # o texto legado de responsável mudam nesta mesma chamada).
-        motivo = motivo_bloqueio_conclusao(
+    try:
+        validate_etapa_completion(
+            iniciada=iniciada,
+            done=done_requested,
             data_inicio=data_inicio,
             data_fim=data_fim,
             tem_responsavel=_tem_responsavel_apos_edicao(etapa, data),
-            tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
+            tarefas_abertas=(
+                count_open_tasks_in_etapa(etapa.id) if done_requested else 0
+            ),
         )
-        if motivo is not None:
-            return fail(motivo, status=422, code="validation")
+    except ValueError as exc:
+        return fail(str(exc), status=422, code="validation")
 
     # Responsável antes de mutar `done`: o guard do caminho canônico lê o
     # done em memória e recusaria concluir + informar responsável na mesma chamada.
@@ -587,14 +581,17 @@ def api_etapa_toggle(etapa_id: int) -> Response | tuple[Response, int]:
             code="validation",
         )
     if not etapa.done:
-        motivo = motivo_bloqueio_conclusao(
-            data_inicio=etapa.data_inicio,
-            data_fim=etapa.data_fim,
-            tem_responsavel=etapa_tem_responsavel(etapa),
-            tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
-        )
-        if motivo is not None:
-            return fail(motivo, status=422, code="validation")
+        try:
+            validate_etapa_completion(
+                iniciada=etapa.iniciada,
+                done=True,
+                data_inicio=etapa.data_inicio,
+                data_fim=etapa.data_fim,
+                tem_responsavel=etapa_tem_responsavel(etapa),
+                tarefas_abertas=count_open_tasks_in_etapa(etapa.id),
+            )
+        except ValueError as exc:
+            return fail(str(exc), status=422, code="validation")
 
     etapa.done = not etapa.done
     status_text = "concluída" if etapa.done else "não concluída"

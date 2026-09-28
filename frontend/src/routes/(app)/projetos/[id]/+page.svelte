@@ -20,7 +20,7 @@
 	 *   - 401 ja redireciona em `client.ts`.
 	 * Links internos sao base-aware (`$app/paths`).
 	 */
-	import { onMount, setContext, tick } from 'svelte';
+	import { onDestroy, onMount, setContext, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { goto, replaceState } from '$app/navigation';
@@ -75,6 +75,7 @@
 	import EeggInlineEditor from '$lib/components/EeggInlineEditor.svelte';
 	import StageList from '$lib/components/StageList.svelte';
 	import { resolveFocusEtapaId } from '$lib/utils/focusEtapa';
+	import { createProjectRequestScope, type ProjectRequestContext } from '$lib/utils/projectRequestScope';
 	import { formatIsoDateBR } from '$lib/utils/dateFormat';
 	import { etapaTemResponsavel, podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import ImportModelModal from '$lib/components/ImportModelModal.svelte';
@@ -118,6 +119,8 @@
 	}
 
 	const projectId = $derived(Number($page.params.id));
+	const projectRequests = createProjectRequestScope(() => projectId);
+	onDestroy(projectRequests.dispose);
 
 	// SWR: reabre com o ultimo detalhe bom deste id (cache de modulo em
 	// $lib/api/projectDetail) e revalida em background — sem flash de loading.
@@ -163,13 +166,14 @@
 	// Offset do topnav fixo para o sticky do cabecalho (medido no mount).
 	let topOffset = $state<number>(0);
 
-	const canEdit = $derived(data?.permissions.can_edit ?? false);
+	const belongsToRoute = $derived(data?.project.id === projectId);
+	const canEdit = $derived(belongsToRoute && (data?.permissions.can_edit ?? false));
 
 	// --- Modal "Compartilhar" (S4) ------------------------------------------
 	// `can_manage_members` já embute a flag CONVITES_HABILITADOS no servidor
 	// (user_can_manage_members): contrato único, nada recalculado no cliente.
 	let shareOpen = $state(false);
-	const canShare = $derived(data?.permissions.can_manage_members ?? false);
+	const canShare = $derived(belongsToRoute && (data?.permissions.can_manage_members ?? false));
 
 	const quickAddEtapa = $derived(
 		quickAddEtapaId === null ? null : (data?.etapas.find((e) => e.id === quickAddEtapaId) ?? null)
@@ -220,6 +224,8 @@
 	 * delay e navega via router. Em erro: esconde overlay + toast.
 	 */
 	async function onConcludeProject(): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!data || concludeInFlight || !canConclude) return;
 		concludeInFlight = true;
 		celebrationPhase = 'loading';
@@ -227,29 +233,38 @@
 		celebrationMessage = 'Aguarde um instante.';
 		celebrationActive = true;
 		try {
-			const result = await concludeProject(projectId);
+			const result = await concludeProject(context.projectId);
+			if (!context.isCurrent()) return;
 			celebrationPhase = 'success';
 			celebrationTitle = 'Objetivo concluído';
 			celebrationMessage = result.message;
 			playConcludeSuccessChime();
 			await wait(reduceMotion() ? 450 : 2400);
+			if (!context.isCurrent()) return;
 			await goto(`${base}${result.redirect_to}`);
+			if (!context.isCurrent()) return;
 			// Recarrega o detalhe (agora Finalizado) caso o router mantenha a tela.
 			celebrationActive = false;
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			celebrationActive = false;
 			if (isUnauthenticated(err)) return;
 			const category =
 				err instanceof ApiClientError && err.code === 'forbidden' ? 'danger' : 'warning';
 			flash.show(messageOf(err, 'Não foi possível concluir o projeto.'), category);
 		} finally {
-			concludeInFlight = false;
+			if (context.isCurrent()) {
+				concludeInFlight = false;
+			}
 		}
 	}
 
 	/** Reabre um projeto Finalizado (status volta a Vigente) via /inline. */
 	async function onReopenProject(): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!data || reopenInFlight || !isFinalizado || !canEdit) return;
 		const titulo = data.project.titulo;
 		const ok = await confirmAction({
@@ -259,18 +274,23 @@
 			icon: 'reopen',
 			confirmLabel: 'Reabrir projeto'
 		});
-		if (!ok || !data) return;
+		if (!ok || !data || !context.isCurrent()) return;
 		reopenInFlight = true;
 		try {
-			const result = await updateProjectInline(projectId, { status: 'Vigente' });
+			const result = await updateProjectInline(context.projectId, { status: 'Vigente' });
+			if (!context.isCurrent()) return;
 			data = { ...data, project: result.project };
 			flash.success('Projeto reaberto: status Vigente.');
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			flash.danger(messageOf(err, 'Não foi possível reabrir o projeto.'));
 		} finally {
-			reopenInFlight = false;
+			if (context.isCurrent()) {
+				reopenInFlight = false;
+			}
 		}
 	}
 
@@ -341,6 +361,8 @@
 
 	/** Salva (cria/edita) a reunião; em sucesso re-busca o detalhe + toasts. */
 	async function onSaveMeeting(input: CalendarEventInput): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (meetingModalBusy) return;
 		meetingModalBusy = true;
 		meetingModalError = null;
@@ -348,22 +370,29 @@
 		try {
 			const result =
 				editingMeetingEtapaId === null
-					? await createStageMeeting(projectId, payload)
+					? await createStageMeeting(context.projectId, payload)
 					: await updateStageMeeting(editingMeetingEtapaId, payload);
+			if (!context.isCurrent()) return;
 			meetingModalOpen = false;
 			flash.success(result.message);
 			if (result.warning) flash.warning(result.warning);
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			meetingModalError = messageOf(err, 'Não foi possível salvar a reunião.');
 		} finally {
-			meetingModalBusy = false;
+			if (context.isCurrent()) {
+				meetingModalBusy = false;
+			}
 		}
 	}
 
 	/** Exclui a reunião (confirmação destrutiva); em sucesso re-busca + toast. */
 	async function onDeleteMeeting(etapaId: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		const etapa = data?.etapas.find((e) => e.id === etapaId);
 		const tituloReuniao = etapa?.meeting?.title?.trim() || 'esta reunião';
 		const nomeEtapa = etapa?.descricao?.trim();
@@ -375,19 +404,24 @@
 			icon: 'trash',
 			confirmLabel: 'Excluir reunião'
 		});
-		if (!ok) return;
+		if (!ok || !context.isCurrent()) return;
 		meetingDeleting = { ...meetingDeleting, [etapaId]: true };
 		try {
 			const result = await deleteStageMeeting(etapaId);
+			if (!context.isCurrent()) return;
 			flash.success(result.message);
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			const category =
 				err instanceof ApiClientError && err.code === 'forbidden' ? 'danger' : 'warning';
 			flash.show(messageOf(err, 'Não foi possível excluir a reunião.'), category);
 		} finally {
-			meetingDeleting = { ...meetingDeleting, [etapaId]: false };
+			if (context.isCurrent()) {
+				meetingDeleting = { ...meetingDeleting, [etapaId]: false };
+			}
 		}
 	}
 
@@ -411,11 +445,14 @@
 	}
 
 	async function load(): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent()) return;
+		const reading = projectRequests.startRead(context);
 		errorMessage = '';
 		errorKind = 'generic';
 		// SWR: com cache do id mostra o dado antigo ja (sem skeleton) e a
 		// revalidacao abaixo troca em silencio; sem cache, skeleton.
-		const cached = peekProjectDetail(projectId);
+		const cached = peekProjectDetail(context.projectId);
 		if (cached) {
 			data = cached;
 			loadState = 'ready';
@@ -424,10 +461,12 @@
 			loadState = 'loading';
 		}
 		try {
-			const result = await fetchProjectDetail(projectId);
+			const result = await fetchProjectDetail(context.projectId, reading.signal);
+			if (!reading.isCurrent()) return;
 			data = result;
 			loadState = 'ready';
 		} catch (err) {
+			if (!reading.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			errorKind = accessErrorKind(err);
 			const message = accessErrorMessage(
@@ -447,10 +486,18 @@
 	}
 
 	/** Re-busca o detalhe completo (apos mutacoes que disparam cascata). */
-	async function refresh(): Promise<void> {
+	async function refresh(context: ProjectRequestContext = projectRequests.capture()): Promise<void> {
+		if (!context.isCurrent()) return;
+		const reading = projectRequests.startRead(context);
 		try {
-			data = await fetchProjectDetail(projectId);
+			const result = await fetchProjectDetail(context.projectId, reading.signal);
+			if (!reading.isCurrent()) return;
+			data = result;
+			loadState = 'ready';
+			errorMessage = '';
+			errorKind = 'generic';
 		} catch (err) {
+			if (!reading.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			errorKind = accessErrorKind(err);
 			errorMessage = accessErrorMessage(
@@ -458,6 +505,7 @@
 				MSG_PROJETO_INACESSIVEL,
 				'Falha ao recarregar o projeto.'
 			);
+			if (!data) loadState = 'error';
 		}
 	}
 
@@ -468,7 +516,9 @@
 		if (projectId === loadedProjectId) return;
 		const isFirst = loadedProjectId === -1;
 		loadedProjectId = projectId;
+		projectRequests.capture();
 		if (isFirst) return;
+		resetProjectUi();
 		relacionadosOpen = false;
 		historyOpen = false;
 		void load();
@@ -522,7 +572,10 @@
 	}
 
 	async function focusEtapaRow(etapaId: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		await tick();
+		if (!context.isCurrent()) return;
 		const row = document.querySelector<HTMLElement>(`tr[data-etapa-id="${etapaId}"]`);
 		if (!row) return;
 		row.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -559,6 +612,26 @@
 
 	// --- Edicao inline de campos do projeto (cabecalho + demais) -------------
 
+	function hasCurrentProjectData(): boolean {
+		return data !== null && data.project.id === projectId;
+	}
+
+	/** Navegação não herda rascunhos, pendências, diálogos ou erros do projeto anterior. */
+	function resetProjectUi(): void {
+		projectFieldStates = {};
+		rowStates = {};
+		reordering = addingStage = importSubmitting = concludeInFlight = reopenInFlight = false;
+		templatesLoading = false;
+		reorderError = addStageError = importError = meetingModalError = null;
+		importOpen = shareOpen = meetingModalOpen = meetingModalBusy = celebrationActive = false;
+		quickAddEtapaId = editingMeetingEtapaId = highlightEtapaId = null;
+		dateMenu = customLinkDraft = null;
+		meetingDeleting = {};
+		focusEtapaConsumed = false;
+		if (highlightTimer) clearTimeout(highlightTimer);
+		highlightTimer = null;
+	}
+
 	function setProjectFieldState(field: string, next: FieldState): void {
 		projectFieldStates = { ...projectFieldStates, [field]: next };
 	}
@@ -569,14 +642,18 @@
 	 * campos da secao "Detalhes".
 	 */
 	async function saveProjectField(field: string, value: string): Promise<void> {
-		if (!data) return;
+		if (!hasCurrentProjectData()) return;
+		const context = projectRequests.capture();
+		if (!context.isCurrent()) return;
 		setProjectFieldState(field, { pending: true, error: null });
 		const payload: ProjectInlinePayload = { [field]: value === '' ? null : value };
 		try {
-			const result = await updateProjectInline(projectId, payload);
+			const result = await updateProjectInline(context.projectId, payload);
+			if (!context.isCurrent() || !data) return;
 			data = { ...data, project: result.project };
 			setProjectFieldState(field, { pending: false, error: null });
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			setProjectFieldState(field, {
 				pending: false,
@@ -629,13 +706,17 @@
 	 * naturalmente porque o projeto so e substituido em caso de sucesso.
 	 */
 	async function saveOrgao(value: number | null): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!data || value == null) return;
 		setProjectFieldState('orgao_id', { pending: true, error: null });
 		try {
-			const result = await updateProjectInline(projectId, { orgao_id: value });
+			const result = await updateProjectInline(context.projectId, { orgao_id: value });
+			if (!context.isCurrent()) return;
 			data = { ...data, project: result.project };
 			setProjectFieldState('orgao_id', { pending: false, error: null });
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			const forbidden = err instanceof ApiClientError && err.code === 'forbidden';
 			setProjectFieldState('orgao_id', {
@@ -674,13 +755,17 @@
 	 * Handler dedicado porque `saveProjectField` tipa o valor como string.
 	 */
 	async function saveSeiProcesses(list: string[]): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!data) return;
 		setProjectFieldState('sei_processes', { pending: true, error: null });
 		try {
-			const result = await updateProjectInline(projectId, { sei_processes: list });
+			const result = await updateProjectInline(context.projectId, { sei_processes: list });
+			if (!context.isCurrent()) return;
 			data = { ...data, project: result.project };
 			setProjectFieldState('sei_processes', { pending: false, error: null });
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			setProjectFieldState('sei_processes', {
 				pending: false,
@@ -697,14 +782,18 @@
 		next: { label: string; url: string }[],
 		stateKey: string
 	): Promise<boolean> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return false;
 		if (!data) return false;
 		setProjectFieldState(stateKey, { pending: true, error: null });
 		try {
-			const result = await updateProjectInline(projectId, { custom_links: next });
+			const result = await updateProjectInline(context.projectId, { custom_links: next });
+			if (!context.isCurrent()) return false;
 			data = { ...data, project: result.project };
 			setProjectFieldState(stateKey, { pending: false, error: null });
 			return true;
 		} catch (err) {
+			if (!context.isCurrent()) return false;
 			if (isUnauthenticated(err)) return false;
 			setProjectFieldState(stateKey, {
 				pending: false,
@@ -740,10 +829,12 @@
 	let customLinkDraft = $state<{ label: string; url: string } | null>(null);
 
 	async function confirmCustomLinkDraft(): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		const draft = customLinkDraft;
 		if (!draft || draft.label.trim() === '' || draft.url.trim() === '') return;
 		const next = [...(data?.project.custom_links ?? []), { ...draft }];
-		if (await saveCustomLinks(next, 'custom_link_add')) customLinkDraft = null;
+		if (await saveCustomLinks(next, 'custom_link_add') && context.isCurrent()) customLinkDraft = null;
 	}
 
 	// Clique fora do form ainda vazio descarta a linha em vez de deixa-la aberta.
@@ -777,13 +868,17 @@
 	 * o projeto com a resposta (descricoes EEGG atualizadas).
 	 */
 	async function saveEegg(selection: ProjectGoalsSelection): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!data) return;
 		setProjectFieldState('eegg', { pending: true, error: null });
 		try {
-			const result = await saveProjectGoals(projectId, selection);
+			const result = await saveProjectGoals(context.projectId, selection);
+			if (!context.isCurrent()) return;
 			data = { ...data, project: result.project };
 			setProjectFieldState('eegg', { pending: false, error: null });
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			setProjectFieldState('eegg', {
 				pending: false,
@@ -818,7 +913,7 @@
 
 	/** Aplica uma etapa atualizada (vinda de um endpoint que devolve 1 etapa). */
 	function replaceEtapa(updated: EtapaDetail): void {
-		if (!data) return;
+		if (!data || updated.project_id !== projectId || !hasCurrentProjectData()) return;
 		data = {
 			...data,
 			etapas: data.etapas.map((e) => (e.id === updated.id ? updated : e))
@@ -845,14 +940,18 @@
 		field: EtapaInlineField,
 		value: string
 	): Promise<boolean> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return false;
 		setRowFieldState(etapaId, field, { pending: true, error: null });
 		try {
 			const result = await updateEtapaField(etapaId, field, value === '' ? null : value);
+			if (!context.isCurrent()) return false;
 			replaceEtapa(result.etapa);
 			setRowFieldState(etapaId, field, { pending: false, error: null });
 			// Datas disparam cascata server-side nas etapas seguintes -> re-busca.
 			if (field === 'data_inicio' || field === 'data_fim') {
-				await refresh();
+				await refresh(context);
+				if (!context.isCurrent()) return false;
 				// Ao mudar data_inicio com deslocamento de dias, oferece a cascata
 				// (paridade com showCascadeConfirmModal de 07-stage-dnd.js).
 				const diff = result.field_update?.daysDiff ?? 0;
@@ -861,6 +960,7 @@
 			}
 			return true;
 		} catch (err) {
+			if (!context.isCurrent()) return false;
 			if (isUnauthenticated(err)) return false;
 			const isDateField = field === 'data_inicio' || field === 'data_fim';
 			if (isDateField) flashEtapaError(err, 'Falha ao salvar o campo da etapa.');
@@ -895,6 +995,8 @@
 	 * requisicao nao ha 422 repetido para notificar, com 1 ou 300 cliques.
 	 */
 	async function onCycleStatus(etapaId: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		const etapa = data?.etapas.find((e) => e.id === etapaId);
 		if (!etapa) return;
 		const state = etapa.done ? 'done' : etapa.iniciada ? 'started' : 'idle';
@@ -915,11 +1017,14 @@
 		try {
 			const result =
 				state === 'started' ? await toggleEtapaDone(etapaId) : await toggleEtapaIniciada(etapaId);
+			if (!context.isCurrent()) return;
 			replaceEtapa(result.etapa);
 			setRowBusy(etapaId, false);
 			flashStatusEtapa(result.etapa, wasDone);
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) {
 				setRowBusy(etapaId, false);
 				return;
@@ -927,18 +1032,23 @@
 			setRowBusy(etapaId, false);
 			flash.danger(messageOf(err, 'Falha ao alternar o status da etapa.'));
 			// Reconcilia um task_count obsoleto que tenha deixado o gate acima passar.
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		}
 	}
 
 
 	async function onSaveComentario(etapaId: number, comentario: string): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		setRowBusy(etapaId, true);
 		try {
 			const result = await saveEtapaComentario(etapaId, comentario);
+			if (!context.isCurrent()) return;
 			replaceEtapa(result.etapa);
 			setRowBusy(etapaId, false);
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			setRowBusy(etapaId, false);
 			if (isUnauthenticated(err)) return;
 			flashEtapaError(err, 'Falha ao salvar o comentario.');
@@ -956,6 +1066,8 @@
 	}
 
 	async function onDeleteEtapa(etapaId: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		const index = data?.etapas.findIndex((e) => e.id === etapaId) ?? -1;
 		const etapa = index >= 0 ? data?.etapas[index] : undefined;
 		if (!etapa) return;
@@ -971,13 +1083,15 @@
 			icon: 'trash',
 			confirmLabel: 'Excluir etapa'
 		});
-		if (!ok) return;
+		if (!ok || !context.isCurrent()) return;
 		setRowBusy(etapaId, true);
 		try {
 			await deleteEtapa(etapaId);
 			// Exclusao reordena/recalcula derivados no backend -> re-busca.
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			setRowBusy(etapaId, false);
 			if (isUnauthenticated(err)) return;
 			flashEtapaError(err, 'Falha ao excluir a etapa.');
@@ -994,18 +1108,24 @@
 	 * depende disso para não anunciar sucesso sobre uma reordenação recusada.
 	 */
 	async function onReorder(orderedIds: number[]): Promise<boolean> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return false;
 		reordering = true;
 		reorderError = null;
 		try {
-			await reorderEtapas(projectId, orderedIds);
-			await refresh();
+			await reorderEtapas(context.projectId, orderedIds);
+			await refresh(context);
+			if (!context.isCurrent()) return false;
 			return true;
 		} catch (err) {
+			if (!context.isCurrent()) return false;
 			if (isUnauthenticated(err)) return false;
 			reorderError = messageOf(err, 'Falha ao reordenar as etapas.');
 			return false;
 		} finally {
-			reordering = false;
+			if (context.isCurrent()) {
+				reordering = false;
+			}
 		}
 	}
 
@@ -1069,6 +1189,8 @@
 	}
 
 	async function applyDateDays(days: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		if (!dateMenu) return;
 		const { etapaId, field } = dateMenu;
 		const etapa = data?.etapas.find((e) => e.id === etapaId);
@@ -1081,7 +1203,7 @@
 			return;
 		}
 		// Só confirma o que o servidor gravou: o erro já saiu por flashEtapaError.
-		if (await onUpdateField(etapaId, field, newValue)) {
+		if (await onUpdateField(etapaId, field, newValue) && context.isCurrent()) {
 			flash.success(`Data atualizada: +${days} dia(s) útil(eis)`);
 		}
 	}
@@ -1094,6 +1216,8 @@
 	 * banner DENTRO dele — nunca sobra modal por cima de um toast de erro.
 	 */
 	async function promptCascade(etapaId: number, daysDiff: number): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		const ok = await confirmAction({
 			title: 'Atualizar datas subsequentes?',
 			description:
@@ -1103,10 +1227,13 @@
 			confirmLabel: 'Atualizar datas',
 			cancelLabel: 'Manter como está',
 			busyLabel: 'Atualizando…',
-			run: () => cascadeDates(projectId, { etapa_id: etapaId, days_diff: daysDiff }).then(() => {})
+			run: () => context.isCurrent()
+				? cascadeDates(context.projectId, { etapa_id: etapaId, days_diff: daysDiff }).then(() => {})
+				: Promise.resolve()
 		});
-		if (!ok) return;
-		await refresh();
+		if (!ok || !context.isCurrent()) return;
+		await refresh(context);
+		if (!context.isCurrent()) return;
 		flash.success('Datas subsequentes atualizadas.');
 	}
 
@@ -1123,6 +1250,8 @@
 
 	/** Cria a etapa; devolve `true` no sucesso (o composer fecha com essa confirmação). */
 	async function onAddStage(draft: NewStageDraft): Promise<boolean> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return false;
 		if (!draft.descricao.trim() || addingStage) return false;
 		if (draft.responsaveis.length === 0) {
 			addStageError = 'Selecione pelo menos uma área responsável para a etapa.';
@@ -1140,12 +1269,12 @@
 				icon: 'reopen',
 				confirmLabel: 'Reativar e adicionar etapa'
 			});
-			if (!ok) return false;
+			if (!ok || !context.isCurrent()) return false;
 		}
 		addingStage = true;
 		addStageError = null;
 		try {
-			await addEtapa(projectId, {
+			await addEtapa(context.projectId, {
 				descricao: draft.descricao.trim(),
 				data_inicio: draft.data_inicio || null,
 				data_fim: draft.data_fim || null,
@@ -1154,32 +1283,43 @@
 				done: draft.done,
 				reactivate: willReactivate || undefined
 			});
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return false;
 			return true;
 		} catch (err) {
+			if (!context.isCurrent()) return false;
 			if (!isUnauthenticated(err)) {
 				addStageError = messageOf(err, 'Falha ao adicionar a etapa.');
 			}
 			return false;
 		} finally {
-			addingStage = false;
+			if (context.isCurrent()) {
+				addingStage = false;
+			}
 		}
 	}
 
 	// --- Importar modelo ------------------------------------------------------
 
 	async function openImport(): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		importOpen = true;
 		importError = null;
 		if (templates.length > 0 || templatesLoading) return;
 		templatesLoading = true;
 		try {
-			templates = await fetchStageTemplates();
+			const loadedTemplates = await fetchStageTemplates();
+			if (!context.isCurrent()) return;
+			templates = loadedTemplates;
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) return;
 			importError = messageOf(err, 'Falha ao carregar os modelos de etapas.');
 		} finally {
-			templatesLoading = false;
+			if (context.isCurrent()) {
+				templatesLoading = false;
+			}
 		}
 	}
 
@@ -1193,24 +1333,31 @@
 		template_id: number;
 		start_date: string;
 	}): Promise<void> {
+		const context = projectRequests.capture();
+		if (!context.isCurrent() || !hasCurrentProjectData()) return;
 		importSubmitting = true;
 		importError = null;
 		try {
-			const result = await importStageModel(projectId, payload);
+			const result = await importStageModel(context.projectId, payload);
+			if (!context.isCurrent()) return;
 			importOpen = false;
-			await refresh();
+			await refresh(context);
+			if (!context.isCurrent()) return;
 			// A contagem é o único sinal do que entrou: o modal fecha e a tabela
 			// cresce sem dizer quantas etapas vieram do modelo.
 			const criadas = result.etapas_criadas;
 			flash.success(criadas === 1 ? '1 etapa importada do modelo.' : `${criadas} etapas importadas do modelo.`);
 		} catch (err) {
+			if (!context.isCurrent()) return;
 			if (isUnauthenticated(err)) {
 				importSubmitting = false;
 				return;
 			}
 			importError = messageOf(err, 'Falha ao importar o modelo de etapas.');
 		} finally {
-			importSubmitting = false;
+			if (context.isCurrent()) {
+				importSubmitting = false;
+			}
 		}
 	}
 
@@ -1231,8 +1378,9 @@
 	<title>ProjetosRJ — Detalhe do projeto</title>
 </svelte:head>
 
+{#key projectId}
 <section aria-labelledby="project-detail-title" class="flex flex-col gap-6">
-	{#if loadState === 'loading'}
+	{#if loadState === 'loading' || (data !== null && !belongsToRoute)}
 		<p role="status" aria-live="polite" class="sr-only">Carregando projeto…</p>
 		<ProjetoDetalheSkeleton />
 	{:else if loadState === 'error'}
@@ -1243,7 +1391,7 @@
 			backHref={`${base}/projetos`}
 			backLabel="Voltar aos projetos"
 		/>
-	{:else if data}
+	{:else if data && belongsToRoute}
 		<ProjectHeader
 			project={data.project}
 			options={data.options}
@@ -1752,7 +1900,7 @@
 	{/if}
 </section>
 
-{#if dateMenu}
+{#if dateMenu && belongsToRoute}
 	<button
 		type="button"
 		class="date-menu-backdrop"
@@ -1780,7 +1928,7 @@
 
 <!-- Aviso de conclusão (overlay) — o chime é da ação; o confete, do overlay no sucesso. -->
 <ConcludeCelebrationOverlay
-	active={celebrationActive}
+	active={celebrationActive && belongsToRoute}
 	state={celebrationPhase}
 	title={celebrationTitle}
 	message={celebrationMessage}
@@ -1788,7 +1936,7 @@
 
 <TaskDrawer store={drawer} />
 
-{#if historyOpen && data}
+{#if historyOpen && data && belongsToRoute}
 	<ProjectHistoryDrawer
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
@@ -1796,24 +1944,26 @@
 	/>
 {/if}
 
-{#if relacionadosOpen && data}
+{#if relacionadosOpen && data && belongsToRoute}
 	<ProjetosRelacionadosDrawer
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
 		{relacionados}
 		{canEdit}
-		onChanged={refresh}
+		onChanged={() => refresh()}
 		onClose={() => (relacionadosOpen = false)}
 	/>
 {/if}
 
-{#if shareOpen && data}
+{#if shareOpen && data && belongsToRoute}
 	<CompartilharProjetoModal
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
 		onClose={() => (shareOpen = false)}
 	/>
 {/if}
+
+{/key}
 
 <style>
 	/* Ficha técnica: UMA moldura para o bloco inteiro, colunas separadas por

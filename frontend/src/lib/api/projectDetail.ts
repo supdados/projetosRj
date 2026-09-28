@@ -61,7 +61,7 @@ export async function fetchProjectDetail(
 	signal?: AbortSignal
 ): Promise<ProjectDetailData> {
 	const data = await get<ProjectDetailData>(`/api/projetos/${projectId}/detalhe`, signal);
-	projectDetailCache.store(String(projectId), data);
+	if (!signal?.aborted) projectDetailCache.store(String(projectId), data);
 	return data;
 }
 

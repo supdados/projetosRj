@@ -26,7 +26,6 @@ import {
 import { deleteTarefa, moverEtapa } from '$lib/api/tasks';
 import { createAutosave, type Autosave, type AutosavePhase } from '$lib/utils/autosave';
 import { MSG_TAREFA_INACESSIVEL, accessErrorMessage } from '$lib/utils/accessErrorMessages';
-import { normalizeStatus } from '$lib/utils/taskStatus';
 import type { BoardCard } from '$lib/types/board';
 import type {
 	TaskComment,
@@ -65,7 +64,7 @@ export interface TaskDrawerState {
 export interface TaskDrawerReconcilers {
 	/** Card atualizado (campos/status/desarquivar): faz upsert na coluna certa. */
 	onCardChanged?: (card: BoardCard) => void;
-	/** Card que saiu do board (finalizar/arquivar): remove da coluna. */
+	/** Card arquivado: remove da coluna. Finalizadas não arquivadas permanecem. */
 	onCardRemoved?: (taskId: number) => void;
 }
 
@@ -130,9 +129,9 @@ function errorMessage(err: unknown, fallback: string): string {
 	return fallback;
 }
 
-/** True quando o status normalizado indica que o card saiu do board ativo. */
+/** O contrato do board inclui finalizadas e exclui somente arquivadas. */
 function leftBoard(card: BoardCard): boolean {
-	return card.is_archived || normalizeStatus(card.status) === 'finalizada';
+	return card.is_archived;
 }
 
 /** Cria uma store de drawer isolada (uma por contexto/página). */
@@ -141,7 +140,7 @@ export function createTaskDrawerStore(
 ): TaskDrawerStore {
 	const store = writable<TaskDrawerState>({ ...INITIAL });
 
-	/** Aplica o card no board: remove se saiu (finalizada/arquivada), senão upsert. */
+	/** Aplica o card no board: arquivadas saem; demais ficam na coluna do status. */
 	function reconcileBoard(card: BoardCard): void {
 		if (leftBoard(card)) {
 			reconcilers.onCardRemoved?.(card.id);

@@ -1,6 +1,7 @@
 """Substituição transacional das áreas responsáveis de uma etapa (mudança #3)."""
 
 import re
+from typing import TypedDict
 
 from sqlalchemy import func
 
@@ -13,6 +14,11 @@ MOTIVO_RESPONSAVEIS_ETAPA_CONCLUIDA = (
 )
 
 _SEPARADORES = re.compile(r"[,;/\n]+")
+
+
+class EtapaResponsavelEntry(TypedDict):
+    area_id: int | None
+    label: str
 
 
 def split_responsavel_legado(raw: object) -> list[str]:
@@ -106,14 +112,14 @@ def responsavel_display(etapa) -> str:
     return (etapa.responsavel or "").strip()
 
 
-def parse_responsaveis_entries(raw: object) -> list[dict]:
+def parse_responsaveis_entries(raw: object) -> list[EtapaResponsavelEntry]:
     """Valida/normaliza a lista de {area_id, label}. Levanta ValueError com o valor recebido."""
     if not isinstance(raw, list) or not raw:
         raise ValueError(
             f"Pelo menos uma área responsável é obrigatória (recebido: {raw!r}; "
             "esperado: lista não-vazia de objetos {area_id, label})."
         )
-    entries: list[dict] = []
+    entries: list[EtapaResponsavelEntry] = []
     seen: set[object] = set()
     for item in raw:
         entry = _parse_responsavel_item(item)
@@ -125,7 +131,7 @@ def parse_responsaveis_entries(raw: object) -> list[dict]:
     return entries
 
 
-def _parse_responsavel_item(item: object) -> dict:
+def _parse_responsavel_item(item: object) -> EtapaResponsavelEntry:
     """Valida um item {area_id, label}; resolve a sigla viva do OrgaoUnidade."""
     if not isinstance(item, dict):
         raise ValueError(
@@ -143,7 +149,7 @@ def _parse_responsavel_item(item: object) -> dict:
     return {"area_id": area.id, "label": area.sigla}
 
 
-def apply_responsaveis_entries(etapa, entries: list[dict]) -> None:
+def apply_responsaveis_entries(etapa, entries: list[EtapaResponsavelEntry]) -> None:
     """Aplica as linhas N:N já validadas e reescreve o mirror legado. Não faz commit.
 
     Reusa as linhas existentes por ``area_id`` (vira UPDATE de label/ordem) em vez

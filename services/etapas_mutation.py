@@ -1,10 +1,13 @@
 """Lógica de negócio para criação, edição e exclusão de etapas."""
 
+from __future__ import annotations
+
 import datetime
+from typing import TYPE_CHECKING
 
 from flask import current_app
 
-from models import Etapa, Task, db
+from models import Etapa, Project, Task, db
 from routes.shared import log_project_action
 from services.etapas_dates import (
     _add_business_days,
@@ -22,6 +25,9 @@ from services.project_meetings import (
     sync_local_calendar_event_mirrors,
     update_meeting_from_calendar_event,
 )
+
+if TYPE_CHECKING:
+    from services.etapa_responsaveis import EtapaResponsavelEntry
 
 
 def count_open_tasks_in_etapa(etapa_id: int) -> int:
@@ -148,17 +154,45 @@ def _clear_tasks_from_etapa(etapa) -> None:
     )
 
 
-def create_etapa_record(
-    project,
+def validate_etapa_completion(
     *,
-    descricao,
-    data_inicio,
-    data_fim,
-    responsavel,
-    comentarios,
-    iniciada,
-    done,
-):
+    iniciada: bool,
+    done: bool,
+    data_inicio: datetime.date | None,
+    data_fim: datetime.date | None,
+    tem_responsavel: bool,
+    tarefas_abertas: int = 0,
+) -> None:
+    """Valida o estado final, inclusive ao manter ``done=True`` numa edição.
+
+    Ex.: ``validate_etapa_completion(done=False, ...)`` permite reabrir legado.
+    """
+    if not done:
+        return
+    if not iniciada:
+        raise ValueError("A etapa não pode ser concluída sem ser iniciada.")
+    motivo = motivo_bloqueio_conclusao(
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        tem_responsavel=tem_responsavel,
+        tarefas_abertas=tarefas_abertas,
+    )
+    if motivo is not None:
+        raise ValueError(motivo)
+
+
+def create_etapa_record(
+    project: Project,
+    *,
+    descricao: str,
+    data_inicio: datetime.date | None,
+    data_fim: datetime.date | None,
+    responsavel: str | None,
+    comentarios: str | None,
+    iniciada: bool,
+    done: bool,
+    responsaveis_entries: list[EtapaResponsavelEntry] | None = None,
+) -> tuple[Etapa, bool]:
     """Cria uma Etapa, reativa o projeto se necessário.
 
     Não faz commit — a rota é responsável pela transação.
@@ -177,6 +211,18 @@ def create_etapa_record(
         ordem=nova_ordem,
     )
     _validate_date_range(etapa, data_inicio, data_fim)
+    if responsaveis_entries is not None:
+        # Import local evita ciclo: a edição de responsáveis usa os guards deste módulo.
+        from services.etapa_responsaveis import apply_responsaveis_entries
+
+        apply_responsaveis_entries(etapa, responsaveis_entries)
+    validate_etapa_completion(
+        iniciada=iniciada,
+        done=done,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        tem_responsavel=etapa_tem_responsavel(etapa),
+    )
     db.session.add(etapa)
 
     project_was_reactivated = False

@@ -10,6 +10,7 @@ from models import (
     db,
 )
 from services.notifications import notify_task_event
+from services.task_attachment_storage import remove_task_attachment_files
 
 from routes.blueprint import main_bp
 from routes.decorators import login_required
@@ -201,7 +202,7 @@ def delete_task_item_anexo(anexo_id):
         )
 
     upload_folder = _task_helpers._get_upload_folder()
-    file_path = os.path.join(upload_folder, anexo.stored_filename)
+    stored_filename = anexo.stored_filename
 
     try:
         notify_task_event(
@@ -213,10 +214,9 @@ def delete_task_item_anexo(anexo_id):
         )
         db.session.delete(anexo)
         db.session.commit()
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
+        remove_task_attachment_files(
+            [stored_filename], upload_folder=upload_folder, logger=current_app.logger
+        )
         return jsonify(
             {
                 "success": True,

@@ -187,7 +187,7 @@
 
 	// Rastreia o status conhecido de cada card aberto no drawer, para detectar a
 	// transição -> "finalizada" feita pelo seletor/botão do drawer e celebrar
-	// (o drawer reconcilia o board removendo o card; aqui só observamos a mudança).
+	// (o drawer mantém o card na coluna Finalizada).
 	const lastKnownStatus = new Map<number, TaskStatus>();
 
 	// Drawer de tarefa (Fase 5b-2): reconcilia mutações no card do board sem
@@ -204,22 +204,6 @@
 			board.upsertCard(card);
 		},
 		onCardRemoved: (id) => {
-			// Finalizar/arquivar via drawer remove o card do board. Só celebra a
-			// TRANSIÇÃO de um status ATIVO conhecido -> "finalizada" (paridade com
-			// shouldCelebrateFinalize). Abrir um card JÁ finalizado dispara este
-			// reconciler sem `prev` ativo registrado -> não celebra (evita confete
-			// ao só visualizar uma tarefa concluída). Arquivar também não celebra.
-			const prev = lastKnownStatus.get(id);
-			const detail = readStore(drawer).detail;
-			const becameFinalized = !!(
-				detail &&
-				detail.id === id &&
-				!detail.is_archived &&
-				normalizeStatus(detail.status) === 'finalizada'
-			);
-			if (becameFinalized && prev && prev !== 'finalizada') {
-				celebrateFinalize();
-			}
 			lastKnownStatus.delete(id);
 			board.removeCard(id);
 		}

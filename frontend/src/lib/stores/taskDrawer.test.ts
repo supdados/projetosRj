@@ -35,6 +35,7 @@ vi.mock('$lib/api/tasks', () => ({
 import { getTaskDetail, saveFields, finalizarTask, arquivarTask } from '$lib/api/taskDrawer';
 import { ApiClientError } from '$lib/api/client';
 import { createTaskDrawerStore } from './taskDrawer';
+import { createBoardStore } from './board';
 import type { TaskDrawerPayload } from '$lib/types/taskDrawer';
 
 const getTaskDetailMock = vi.mocked(getTaskDetail);
@@ -77,6 +78,8 @@ function makePayload(id: number): TaskDrawerPayload {
 
 beforeEach(() => {
 	vi.useFakeTimers();
+	vi.mocked(arquivarTask).mockReset();
+	vi.mocked(finalizarTask).mockReset();
 	getTaskDetailMock.mockReset();
 	saveFieldsMock.mockReset();
 	getTaskDetailMock.mockImplementation((id: number) => Promise.resolve(makePayload(id)));
@@ -84,6 +87,46 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.useRealTimers();
+});
+
+describe('P2-09: finalizadas permanecem no Kanban', () => {
+	it('finalizar move para a coluna correta sem remover nem duplicar o cartão', async () => {
+		const board = createBoardStore();
+		board.addCard(makePayload(7).task, 'nao_iniciada');
+		const drawer = createTaskDrawerStore({ onCardChanged: board.upsertCard, onCardRemoved: board.removeCard });
+		await drawer.open(7);
+		const finalized = makePayload(7);
+		finalized.task.status = finalized.detail.status = 'finalizada';
+		vi.mocked(finalizarTask).mockResolvedValue(finalized);
+		await expect(drawer.finalizar()).resolves.toBe(true);
+		drawer.applyExternalPayload(finalized);
+		expect(get(board).total).toBe(1);
+		expect(get(board).columns.find((column) => column.status === 'finalizada')?.tasks.map((task) => task.id)).toEqual([7]);
+	});
+
+	it('abrir/fechar mantém cartão e total; arquivar remove', async () => {
+		const payload = makePayload(7);
+		payload.task.status = payload.detail.status = 'finalizada';
+		const board = createBoardStore();
+		board.addCard(payload.task, 'finalizada');
+		const drawer = createTaskDrawerStore({
+			onCardChanged: board.upsertCard,
+			onCardRemoved: board.removeCard
+		});
+		getTaskDetailMock.mockResolvedValue(payload);
+		await drawer.open(7);
+		await drawer.close();
+		expect(get(board).total).toBe(1);
+		expect(get(board).columns.find((column) => column.status === 'finalizada')?.tasks.map((task) => task.id)).toEqual([7]);
+		await drawer.open(7);
+		vi.mocked(arquivarTask).mockResolvedValue({
+			task: { ...payload.task, is_archived: true },
+			detail: { ...payload.detail, is_archived: true }
+		});
+		await drawer.arquivar();
+		expect(get(board).total).toBe(0);
+		expect(get(board).columns.every((column) => column.tasks.length === 0)).toBe(true);
+	});
 });
 
 describe('taskDrawer open() — flush das edições pendentes (bug 2.21)', () => {

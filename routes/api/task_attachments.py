@@ -29,12 +29,13 @@ import os
 import uuid
 from typing import Any
 
-from flask import Response, g, request, send_file, url_for
+from flask import Response, current_app, g, request, send_file, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from models import Task, TaskAnexo, db
 from services.notifications import notify_task_event
+from services.task_attachment_storage import remove_task_attachment_files
 
 from ..blueprint import main_bp
 from ..tasks.constants import (
@@ -301,7 +302,8 @@ def api_anexo_delete(anexo_id: int) -> Response | tuple[Response, int]:
             code="forbidden",
         )
 
-    file_path = os.path.join(_get_upload_folder(), anexo.stored_filename)
+    stored_filename = anexo.stored_filename
+    upload_folder = _get_upload_folder()
     try:
         notify_task_event(
             task,
@@ -319,10 +321,9 @@ def api_anexo_delete(anexo_id: int) -> Response | tuple[Response, int]:
         db.session.rollback()
         return fail("Erro ao excluir o anexo.", status=422, code="validation")
 
-    try:
-        os.remove(file_path)
-    except OSError:
-        pass
+    remove_task_attachment_files(
+        [stored_filename], upload_folder=upload_folder, logger=current_app.logger
+    )
 
     anexos = _serialize_anexo_list(task)
     return ok({"anexo_id": anexo_id, "anexos": anexos, "count": len(anexos)})
