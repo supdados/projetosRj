@@ -44,15 +44,17 @@ export interface AutosaveOptions<S, R> {
 export interface Autosave<S> {
 	/** Agenda um save (debounced) com o snapshot mais recente. */
 	schedule(snapshot: S): void;
-	/** Salva o pendente AGORA (cancela o debounce). Resolve quando assenta. */
-	flush(): Promise<void>;
+	/** Salva o pendente; false em falha, preservando a edição sem retry automático. */
+	flush(): Promise<boolean>;
+	/** Tenta novamente o snapshot que falhou, uma vez por ação explícita. */
+	retry(): Promise<boolean>;
 	/** Cancela o debounce e descarta o pendente (sem salvar). */
 	cancel(): void;
 	/** Fase corrente do autosave. */
 	readonly phase: AutosavePhase;
 	/** Há um save em andamento? */
 	readonly isSaving: boolean;
-	/** Há edição pendente (debounce agendado OU coalescida)? */
+	/** Há edição não salva (agendada, coalescida ou retida após falha)? */
 	readonly hasPendingSave: boolean;
 }
 
@@ -67,6 +69,7 @@ export function createAutosave<S, R = unknown>(
 	let saveToken = 0;
 	let isSaving = false;
 	let hasPending = false;
+	let failed = false;
 	/** Snapshot mais recente agendado/pendente (a "última edição vence"). */
 	let pendingSnapshot: S | null = null;
 	let phase: AutosavePhase = 'idle';
@@ -87,6 +90,7 @@ export function createAutosave<S, R = unknown>(
 	function schedule(snapshot: S): void {
 		pendingSnapshot = snapshot;
 		hasPending = true;
+		failed = false;
 		setPhase(isSaving ? 'saving' : 'pending');
 		clearTimer();
 		timer = setTimeout(() => {
@@ -104,7 +108,7 @@ export function createAutosave<S, R = unknown>(
 	 */
 	function runSave(): Promise<void> {
 		clearTimer();
-		if (!hasPending || pendingSnapshot === null) return Promise.resolve();
+		if (failed || !hasPending || pendingSnapshot === null) return Promise.resolve();
 		if (isSaving) {
 			// Edição durante save em andamento: enfileira (coalescing).
 			hasPending = true;
@@ -124,32 +128,41 @@ export function createAutosave<S, R = unknown>(
 		try {
 			const result = await persistFn(snapshot);
 			if (token !== saveToken) return; // resposta obsoleta — descarta
-			options.onSaved?.(result, snapshot);
-			if (!hasPending) setPhase('saved');
+			if (!hasPending) {
+				options.onSaved?.(result, snapshot);
+				setPhase('saved');
+			}
 		} catch (error) {
 			if (token !== saveToken) return; // resposta obsoleta — descarta
-			// Reagenda o snapshot que falhou para não perder a edição.
-			if (pendingSnapshot === null) {
-				pendingSnapshot = snapshot;
-				hasPending = true;
-			}
+			// Uma edição mais nova pode prosseguir. A mesma edição que falhou só
+			// volta a ser enviada por retry() ou por uma nova edição (P1-03).
+			if (hasPending) return;
+			pendingSnapshot = snapshot;
+			hasPending = true;
+			failed = true;
 			options.onError?.(error, snapshot);
 			setPhase('error');
 		} finally {
 			if (token === saveToken) {
 				isSaving = false;
-				if (hasPending) void runSave();
+				if (hasPending && !failed) void runSave();
 			}
 		}
 	}
 
-	async function flush(): Promise<void> {
+	async function flush(): Promise<boolean> {
 		clearTimer();
 		// Aguarda o voo assentar: retornar com save em curso deixaria o pendente
 		// coalescido à mercê de um cancel() seguinte (perda silenciosa de edição).
-		while (isSaving || hasPending) {
+		while (isSaving || (hasPending && !failed)) {
 			await (isSaving ? inFlight : runSave());
 		}
+		return !hasPending;
+	}
+
+	function retry(): Promise<boolean> {
+		failed = false;
+		return flush();
 	}
 
 	function cancel(): void {
@@ -157,6 +170,7 @@ export function createAutosave<S, R = unknown>(
 		// Invalida qualquer resposta em voo e descarta o pendente.
 		saveToken++;
 		hasPending = false;
+		failed = false;
 		pendingSnapshot = null;
 		isSaving = false;
 		setPhase('idle');
@@ -165,6 +179,7 @@ export function createAutosave<S, R = unknown>(
 	return {
 		schedule,
 		flush,
+		retry,
 		cancel,
 		get phase() {
 			return phase;

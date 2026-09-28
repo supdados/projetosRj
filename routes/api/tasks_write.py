@@ -201,17 +201,37 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
 
     Replica ``archive_finalized_tasks``: monta a query de tarefas visíveis,
     não-arquivadas, ``status == "finalizada"`` no escopo dos filtros do corpo
-    (``project``/``orgao``/``prioridade``/``tipo``/``status``/``responsavel``),
+    (``project``/``orgao``/``prioridade``/``tipo``/``status``/``responsavel``/``search``),
     restringe a autor/admin (``_can_manage_task_restricted_actions`` — MESMO
     guard do arquivar individual; auditoria 2.6) e arquiva via
     ``bulk_archive_finalized``, disparando ``notify_task_archived_in_batch``.
     Tarefas alheias no escopo ficam intactas (não é erro do lote). Filtro de
     órgão fora do escopo => 422 (padrão do ``/api/tarefas``).
 
+    ``preview: true`` consulta IDs/total sem gravar; ``task_ids`` restringe o
+    lote aos IDs confirmados, sempre reaplicando filtros e autorização.
+
     Returns:
         ``ok({archived_count, archived_task_ids, message})`` (200); 422 órgão; 401.
     """
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if data is None and not request.get_data():
+        data = {}
+    if not isinstance(data, dict):
+        return fail("Corpo JSON inválido.", status=422, code="validation")
+    preview = data.get("preview", False)
+    task_ids = data.get("task_ids")
+    if not isinstance(preview, bool):
+        return fail("preview deve ser booleano.", status=422, code="validation")
+    if "task_ids" in data and (
+        not isinstance(task_ids, list)
+        or any(type(task_id) is not int or task_id <= 0 for task_id in task_ids)
+    ):
+        return fail(
+            "task_ids deve ser uma lista de IDs inteiros positivos.",
+            status=422,
+            code="validation",
+        )
     filter_values = _read_task_filter_values(data)
 
     orgao_filter_raw = filter_values["orgao_filter"]
@@ -227,29 +247,36 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
                 code="validation",
             )
 
-    finalized_tasks = (
-        _build_visible_tasks_query(
-            include_archived=False,
-            orgao_filter_id=orgao_filter_id,
-            apenas_orgao=filter_values["apenas_orgao_filter"],
-            project_filter=filter_values["project_filter"],
-            prioridade_filter=filter_values["prioridade_filter"],
-            tipo_filter=filter_values["tipo_filter"],
-            status_filter=filter_values["status_filter"],
-            responsavel_filter=filter_values["responsavel_filter"],
-            include_relations=False,
-        )
-        .filter(Task.status == "finalizada")
-        .all()
-    )
+    finalized_query = _build_visible_tasks_query(
+        include_archived=False,
+        orgao_filter_id=orgao_filter_id,
+        apenas_orgao=filter_values["apenas_orgao_filter"],
+        project_filter=filter_values["project_filter"],
+        prioridade_filter=filter_values["prioridade_filter"],
+        tipo_filter=filter_values["tipo_filter"],
+        status_filter=filter_values["status_filter"],
+        responsavel_filter=filter_values["responsavel_filter"],
+        search_filter=filter_values["search_filter"],
+        include_relations=False,
+    ).filter(Task.status == "finalizada")
+    if task_ids is not None:
+        finalized_query = finalized_query.filter(Task.id.in_(task_ids))
     # lote arquiva só as tarefas em que o usuário é autor/admin (auditoria 2.6);
     # as demais ficam intactas, sem erro (não é falha do lote).
     finalized_tasks = [
         task
-        for task in finalized_tasks
+        for task in finalized_query.all()
         if _can_manage_task_restricted_actions(g.user, task)
         and _can_edit_task(g.user, task)
     ]
+
+    if preview:
+        return ok(
+            {
+                "task_ids": [task.id for task in finalized_tasks],
+                "total": len(finalized_tasks),
+            }
+        )
 
     try:
         archived_ids = bulk_archive_finalized(finalized_tasks)

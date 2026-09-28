@@ -110,17 +110,7 @@ export interface TaskHubData {
 }
 
 /** Filtros aceitos pelo endpoint (espelham os query params de /api/tarefas). */
-export interface TaskHubQuery {
-	project?: string;
-	prioridade?: string;
-	tipo?: string;
-	status?: string;
-	responsavel?: string;
-	/** Busca livre por descrição da tarefa ou título do projeto. */
-	search?: string;
-	orgao?: string | number | null;
-	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
-	apenas_orgao?: boolean;
+export interface TaskHubQuery extends TaskHubFilterValues {
 	modo?: TaskHubModo;
 	/** Página (1-based) da lista paginada por grupo de projeto. */
 	page?: number;
@@ -139,6 +129,18 @@ export interface TaskHubFilterValues {
 	tipo?: string;
 	status?: string;
 	responsavel?: string;
+	/** Busca livre por descrição da tarefa ou título do projeto. */
+	search?: string;
+}
+
+export interface ArchiveFinalizadasInput extends TaskHubFilterValues {
+	/** Restringe o lote aos IDs apresentados na confirmação. */
+	task_ids?: number[];
+}
+
+export interface ArchiveFinalizadasPreview {
+	task_ids: number[];
+	total: number;
 }
 
 /**

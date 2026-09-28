@@ -34,7 +34,6 @@
 	import { fetchProjectDetail } from '$lib/api/projectDetail';
 	import type { EtapaDetail } from '$lib/types/projectDetail';
 	import { focusTrap } from '$lib/actions/focusTrap';
-	import { flash } from '$lib/stores/flash';
 	import { fade, fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import AssigneePicker from './AssigneePicker.svelte';
@@ -178,24 +177,16 @@
 		if (!etapaWarning) choosingEtapa = false;
 	}
 
-	/**
-	 * Fecha o drawer. O flush do autosave resolve DEPOIS de a store zerar: sem
-	 * capturar o erro aqui, a falha do "Salvar" morreria com o drawer desmontado.
-	 */
+	/** Falha de gravação mantém os campos e a mensagem acessíveis no drawer. */
 	async function close(): Promise<void> {
 		confirmingDelete = false;
 		choosingEtapa = false;
-		const known = $store.error;
-		const arrived: string[] = [];
-		const unsubscribe = store.subscribe((state) => {
-			if (state.error && state.error !== known) arrived.push(state.error);
-		});
-		try {
-			await store.close();
-		} finally {
-			unsubscribe();
-		}
-		if (arrived.length > 0) flash.danger(arrived[arrived.length - 1]);
+		await store.close();
+	}
+
+	async function saveAndClose(): Promise<void> {
+		if (autosaveFailed && !(await store.retry())) return;
+		await close();
 	}
 
 	function onKeydown(event: KeyboardEvent): void {
@@ -546,14 +537,23 @@
 			<footer
 				class="flex shrink-0 items-center justify-end gap-2 border-t border-border-subtle bg-surface-elevated px-5 py-3"
 			>
+				{#if autosaveFailed}
+					<button
+						type="button"
+						onclick={() => store.discardAndClose()}
+						class="rounded-md px-3 py-1.5 text-sm font-semibold text-danger hover:bg-wash-neutral focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						Descartar e fechar
+					</button>
+				{/if}
 				<button
 					type="button"
 					disabled={$store.acting}
-					onclick={() => void close()}
+					onclick={() => void saveAndClose()}
 					class="inline-flex items-center gap-1.5 rounded-md bg-brand px-4 py-1.5 text-sm font-semibold text-on-brand shadow-sm transition-colors duration-fast hover:bg-brand-hover hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
 				>
 					<i class="fas fa-check text-xs" aria-hidden="true"></i>
-					Salvar
+					{autosaveFailed ? 'Tentar salvar' : 'Salvar'}
 				</button>
 			</footer>
 		{/if}

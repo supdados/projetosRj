@@ -26,18 +26,20 @@
 		fetchTarefas,
 		peekTarefas,
 		deleteTarefa,
-		archiveFinalizadas,
 		createTarefa
 	} from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
 	import { confirmAction } from '$lib/stores/confirm';
+	import { effectiveTaskFilters } from '$lib/utils/taskFilters';
+	import { archiveFilteredTasks } from '$lib/utils/taskArchive';
 	import type {
 		TaskAssignee,
 		TaskCard,
 		TaskHubData,
 		TaskHubGroup,
 		TaskHubModo,
+		TaskHubFilterValues,
 		TaskHubQuery
 	} from '$lib/types/tasks';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -65,7 +67,7 @@
 	import { createBoardStore } from '$lib/stores/board';
 	import { createTaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { orgaoScope } from '$lib/stores/orgaoScope';
-	import type { BoardCard, BoardQuery } from '$lib/types/board';
+	import type { BoardCard } from '$lib/types/board';
 	import { normalizeStatus, type TaskStatus } from '$lib/utils/taskStatus';
 	import { priorityDotColor, priorityIconId, statusIconId } from '$lib/utils/taskLabels';
 	import {
@@ -114,20 +116,16 @@
 	let statusFilter = $state<string>('');
 	let responsavel = $state<string>('');
 
-	/** Filtros atuais montados na forma de `TaskHubQuery` (chave do cache SWR). */
+	/** Uma fonte para os filtros da lista, do Kanban e do arquivamento. */
+	function buildEffectiveFilters(): TaskHubFilterValues {
+		return effectiveTaskFilters({
+			project, orgao, apenas_orgao: apenasOrgao, search, tipo, prioridade,
+			status: modo === 'finalizadas' ? 'finalizada' : statusFilter, responsavel
+		}, readStore(orgaoScope).selectedId);
+	}
+
 	function buildActiveQuery(): TaskHubQuery {
-		return {
-			modo,
-			project,
-			orgao,
-			apenas_orgao: orgao && apenasOrgao ? true : undefined,
-			search: search.trim() || undefined,
-			tipo: tipo || undefined,
-			prioridade: prioridade || undefined,
-			status: statusFilter || undefined,
-			responsavel: responsavel || undefined,
-			page: listPage
-		};
+		return { ...buildEffectiveFilters(), modo, page: listPage };
 	}
 
 	// SWR: reabre com o ultimo dado bom desta combinacao de filtros (cache de
@@ -289,24 +287,7 @@
 		boardInFlight?.abort();
 		const controller = new AbortController();
 		boardInFlight = controller;
-		// Órgão do board: o filtro LOCAL da tela vence (paridade com a Lista, que
-		// usa `orgao` direto); sem ele, cai no ESCOPO DE ÓRGÃO global do topnav.
-		// Sem essa precedência, selecionar no filtro local não fazia efeito quando
-		// havia um escopo global ativo (caso de quem tem acesso a vários órgãos).
-		const scopeId = readStore(orgaoScope).selectedId;
-		const query: BoardQuery = {
-			project: project || undefined,
-			orgao: orgao || (scopeId !== null ? String(scopeId) : undefined),
-			// O modo "apenas" é do filtro LOCAL; não se aplica ao escopo do topnav.
-			apenas_orgao: orgao && apenasOrgao ? true : undefined,
-			// Mesmos filtros da barra compartilhada aplicados ao board (o endpoint
-			// do Kanban os suporta) — sem isso a lista filtra e o board nao.
-			tipo: tipo || undefined,
-			prioridade: prioridade || undefined,
-			status: statusFilter || undefined,
-			responsavel: responsavel || undefined
-		};
-		await board.load(query, controller.signal);
+		await board.load(buildEffectiveFilters(), controller.signal);
 		if (!controller.signal.aborted) boardLoaded = true;
 	}
 
@@ -340,10 +321,9 @@
 			// (o backend clampa páginas fora do intervalo).
 			listPage = next.pagination.page;
 			project = next.filters.project ?? '';
-			orgao =
-				next.filters.selected_orgao === null || next.filters.selected_orgao === undefined
-					? ''
-					: String(next.filters.selected_orgao);
+			// O fallback global não deve virar seleção local: isso impediria que
+			// a próxima troca do órgão global alterasse o conjunto da tela.
+			if (orgao) orgao = next.filters.selected_orgao == null ? '' : String(next.filters.selected_orgao);
 			loadState = 'ready';
 		} catch (err) {
 			if (controller.signal.aborted) return;
@@ -368,45 +348,19 @@
 	let archiving = $state(false);
 	let archiveNotice = $state<{ tone: 'danger' | 'info'; title: string } | null>(null);
 
-	/** Finalizadas já carregadas na visão ativa — base honesta da contagem. */
-	function finalizadasVisiveis(): number {
-		if (view === 'kanban') {
-			return readStore(board).columns.find((c) => c.status === 'finalizada')?.tasks.length ?? 0;
-		}
-		return (data?.groups ?? []).reduce(
-			(total, group) =>
-				total + group.tasks.filter((t) => normalizeStatus(t.status) === 'finalizada').length,
-			0
-		);
-	}
-
-	function archiveDescription(): string {
-		const visiveis = finalizadasVisiveis();
-		const contagem = visiveis === 1 ? '1 tarefa finalizada' : `${visiveis} tarefas finalizadas`;
-		// A lista é paginada por projeto: fora da 1ª página pode haver mais.
-		const parcial = view === 'list' && (data?.pagination.total_pages ?? 1) > 1;
-		const alvo = parcial ? `ao menos ${contagem} (as desta página)` : contagem;
-		return `Arquivar move ${alvo} do escopo atual para o histórico de arquivadas; dá para restaurar depois.`;
-	}
-
 	async function requestArchive(): Promise<void> {
+		if (archiving) return;
 		archiveNotice = null;
-		const ok = await confirmAction({
-			title: 'Arquivar tarefas finalizadas?',
-			description: archiveDescription(),
-			tone: 'brand',
-			icon: 'archive',
-			confirmLabel: 'Arquivar finalizadas'
-		});
-		if (!ok) return;
-
 		archiving = true;
 		try {
-			const result = await archiveFinalizadas({
-				project: project || undefined,
-				orgao: orgao || undefined,
-				apenas_orgao: orgao && apenasOrgao ? true : undefined
-			});
+			const result = await archiveFilteredTasks(buildEffectiveFilters(), (count) =>
+				confirmAction({
+					title: 'Arquivar tarefas finalizadas?',
+					description: `Arquivar ${count === 1 ? '1 tarefa finalizada' : `${count} tarefas finalizadas`} dos filtros atuais, considerando todas as páginas. Você pode restaurar depois.`,
+					tone: 'brand', icon: 'archive', confirmLabel: 'Arquivar finalizadas'
+				})
+			);
+			if (result === null) return;
 			if (result.archived_count === 0) {
 				archiveNotice = { tone: 'info', title: result.message };
 				return;
@@ -709,8 +663,7 @@
 		};
 	});
 
-	// Re-busca o board quando o ESCOPO DE ÓRGÃO global muda (topnav), enquanto a
-	// visão kanban está ativa — o escopo é propagado em `loadBoard`.
+	// O mesmo escopo global alimenta as duas visões e as ações em lote.
 	let lastScopeId: number | null | undefined;
 	let scopeInitialized = false;
 	$effect(() => {
@@ -722,7 +675,7 @@
 		}
 		if (scopeId === lastScopeId) return;
 		lastScopeId = scopeId;
-		if (view === 'kanban') void loadBoard();
+		reloadActiveView();
 	});
 
 	/**

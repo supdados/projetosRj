@@ -11,7 +11,7 @@
  */
 
 import type { TaskStatus } from '$lib/utils/taskStatus';
-import type { TaskAssignee } from '$lib/types/tasks';
+import type { TaskAssignee, TaskHubFilterValues } from '$lib/types/tasks';
 
 /** Flags de permissão por card (UX-only; servidor é autoritativo). */
 export interface BoardCardPermissions {
@@ -79,16 +79,7 @@ export interface BoardData {
 }
 
 /** Filtros aceitos pelo board (espelham os query params, iguais ao Hub). */
-export interface BoardQuery {
-	project?: string;
-	prioridade?: string;
-	tipo?: string;
-	status?: string;
-	responsavel?: string;
-	orgao?: string | number | null;
-	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
-	apenas_orgao?: boolean;
-}
+export type BoardQuery = TaskHubFilterValues;
 
 /** Resposta de `POST /api/tarefas/<id>/status`: o card atualizado. */
 export interface TaskStatusResult {

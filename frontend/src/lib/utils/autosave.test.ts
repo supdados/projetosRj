@@ -8,7 +8,7 @@
  *   - COALESCING (hasPendingSave): edição durante save em voo enfileira UM save;
  *   - flush(): salva o pendente imediatamente, cancelando o debounce;
  *   - cancel(): descarta o pendente e invalida resposta em voo;
- *   - onError: reporta o erro e reagenda o snapshot que falhou.
+ *   - onError: preserva o snapshot para uma tentativa explícita.
  *
  * NOTA: evitamos `vi.runAllTimersAsync()` porque o coalescing re-dispara saves
  * e, com promises controladas manualmente, isso pode girar o relógio fake sem
@@ -208,11 +208,9 @@ describe('createAutosave cancel', () => {
 });
 
 describe('createAutosave onError', () => {
-	it('reporta erro e reagenda o snapshot que falhou (que então é re-salvo)', async () => {
+	it('reporta erro e só repete o snapshot após retry explícito', async () => {
 		const onError = vi.fn();
 		const onSaved = vi.fn();
-		// Falha SÓ na 1ª tentativa; o retry coalescido (via finally) sucede.
-		// Falhar sempre dispararia a recursão de retry do próprio autosave.
 		let attempts = 0;
 		const persistFn = vi.fn(async (s: string) => {
 			attempts += 1;
@@ -228,10 +226,12 @@ describe('createAutosave onError', () => {
 		await vi.advanceTimersByTimeAsync(10);
 		await flushMicrotasks();
 
-		// 1ª tentativa: erro reportado e snapshot reagendado (não se perde edição).
 		expect(onError).toHaveBeenCalledTimes(1);
 		expect(onError.mock.calls[0][1]).toBe('bad');
-		// O retry (finally re-dispara) salva o mesmo snapshot com sucesso.
+		expect(persistFn).toHaveBeenCalledTimes(1);
+		expect(onSaved).not.toHaveBeenCalled();
+		expect(auto.phase).toBe('error');
+		await expect(auto.retry()).resolves.toBe(true);
 		expect(persistFn).toHaveBeenCalledTimes(2);
 		expect(onSaved).toHaveBeenCalledWith('bad', 'bad');
 		expect(auto.phase).toBe('saved');

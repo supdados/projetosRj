@@ -216,6 +216,19 @@ def test_api_reordenar_mantido_para_gestor(app, gestor, seed_data):
 # ── Drawer: campos inline exigem rank >= editor ──────────────────────────────
 
 
+def test_api_campos_descricao_vazia_preserva_texto_salvo(
+    app, client_user, seed_data
+) -> None:
+    task_id = seed_data["task_id"]
+    before = _tarefa(app, task_id).descricao
+    response = client_user.post(
+        f"/api/tarefas/{task_id}/campos", json={"descricao": ""}
+    )
+    assert response.status_code == 422
+    assert _erro(response)["code"] == "validation"
+    assert _tarefa(app, task_id).descricao == before
+
+
 def test_api_campos_negado_para_leitor(app, leitor, seed_data):
     """Antes do gate, leitor editava campos não-restritos (tipo_pedido)."""
     client, _ = leitor

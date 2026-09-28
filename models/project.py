@@ -66,6 +66,17 @@ class Project(db.Model):
         cascade="all, delete-orphan",
         order_by="ProjectCustomLink.ordem",
     )
+    # P1-01 (revisão 2026-09-25): as FKs SQLite podem estar desligadas. O ORM
+    # deve remover os filhos na mesma transação, antes de o ID ser reutilizado.
+    members = db.relationship(
+        "ProjectMember", back_populates="project", cascade="all, delete-orphan"
+    )
+    collection_items = db.relationship(
+        "ProjectCollectionItem", cascade="all, delete-orphan"
+    )
+    template_usages = db.relationship(
+        "StageTemplateUsage", cascade="all, delete-orphan"
+    )
 
     @property
     def data_inicio_projeto(self):

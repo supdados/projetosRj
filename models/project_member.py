@@ -63,7 +63,7 @@ class ProjectMember(db.Model):
     revoked_at = db.Column(db.DateTime, nullable=True)
     revoked_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
-    project = db.relationship("Project")
+    project = db.relationship("Project", back_populates="members")
     user = db.relationship("User", foreign_keys=[user_id])
     granted_by = db.relationship("User", foreign_keys=[granted_by_id])
     revoked_by = db.relationship("User", foreign_keys=[revoked_by_id])

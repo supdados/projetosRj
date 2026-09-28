@@ -32,7 +32,7 @@ from ..tasks.constants import _preview_text
 from services.comment_mentions import normalize_comment_content
 
 from ..tasks.mentions import resolve_comment_mentions
-from ..tasks.permissions import api_task_denial
+from ..tasks.permissions import _can_view_task, api_task_denial
 from .envelope import fail, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import _serialize_task_comment
@@ -48,9 +48,14 @@ def _serialize_comment_list(task: Task) -> list[dict[str, Any]]:
         task: Tarefa carregada/validada.
 
     Returns:
-        Lista de comentários JSON-safe na ordem da relação ``task.comments``.
+        Lista na ordem de ``task.comments``; vazia sem acesso atual à tarefa.
     """
-    current_user_id = getattr(getattr(g, "user", None), "id", None)
+    # P1-02 (revisão 2026-09-25): autoria autoriza a mutação do próprio texto,
+    # mas a leitura das discussões depende do acesso vigente à tarefa.
+    user = getattr(g, "user", None)
+    if not _can_view_task(user, task):
+        return []
+    current_user_id = user.id
     return [
         _serialize_task_comment(comment, current_user_id=current_user_id)
         for comment in (task.comments or [])
@@ -208,7 +213,11 @@ def api_comentario_edit(comment_id: int) -> Response | tuple[Response, int]:
 
     old_content = comment.content
     comment.content = content
-    comment.mentions = resolve_comment_mentions(comment.task, content)
+    comment.mentions = (
+        resolve_comment_mentions(comment.task, content)
+        if _can_view_task(g.user, comment.task)
+        else []
+    )
     comment.updated_at = utc_now()
 
     try:

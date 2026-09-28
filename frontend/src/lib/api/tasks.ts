@@ -12,7 +12,10 @@
 
 import { get, post } from './client';
 import { createSwrCache } from './swrCache';
+import { taskFilterParams } from '$lib/utils/taskFilters';
 import type {
+	ArchiveFinalizadasInput,
+	ArchiveFinalizadasPreview,
 	ArchiveFinalizadasResult,
 	CreateTarefaInput,
 	CreateTarefaResult,
@@ -28,17 +31,7 @@ import type {
 
 /** Monta a querystring a partir dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(query: TaskHubQuery): string {
-	const params = new URLSearchParams();
-	if (query.project) params.set('project', query.project);
-	if (query.prioridade) params.set('prioridade', query.prioridade);
-	if (query.tipo) params.set('tipo', query.tipo);
-	if (query.status) params.set('status', query.status);
-	if (query.responsavel) params.set('responsavel', query.responsavel);
-	if (query.search) params.set('search', query.search);
-	if (query.orgao !== undefined && query.orgao !== null && query.orgao !== '') {
-		params.set('orgao', String(query.orgao));
-		if (query.apenas_orgao) params.set('apenas_orgao', '1');
-	}
+	const params = taskFilterParams(query);
 	if (query.modo) params.set('modo', query.modo);
 	if (query.page && query.page > 1) params.set('page', String(query.page));
 	const qs = params.toString();
@@ -129,10 +122,20 @@ export function moverEtapa(
  * => 422. FRONT: confirmar antes; remover cada row pelo id; SEM toast/som/confete.
  */
 export function archiveFinalizadas(
-	filters: TaskHubFilterValues = {},
+	filters: ArchiveFinalizadasInput = {},
 	signal?: AbortSignal
 ): Promise<ArchiveFinalizadasResult> {
 	return post<ArchiveFinalizadasResult>('/api/tarefas/arquivar-finalizadas', filters, signal);
+}
+
+/** Consulta o conjunto arquivável em todas as páginas, sem alterar tarefas. */
+export function previewArchiveFinalizadas(
+	filters: TaskHubFilterValues,
+	signal?: AbortSignal
+): Promise<ArchiveFinalizadasPreview> {
+	return post<ArchiveFinalizadasPreview>(
+		'/api/tarefas/arquivar-finalizadas', { ...filters, preview: true }, signal
+	);
 }
 
 /**

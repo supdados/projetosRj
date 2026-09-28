@@ -14,6 +14,7 @@
  */
 
 import { get, post } from './client';
+import { taskFilterParams } from '$lib/utils/taskFilters';
 import type {
 	BoardData,
 	BoardQuery,
@@ -25,16 +26,7 @@ import type { TaskStatus } from '$lib/utils/taskStatus';
 
 /** Monta a querystring dos filtros, omitindo valores vazios/nulos. */
 function buildQuery(query: BoardQuery): string {
-	const params = new URLSearchParams();
-	if (query.project) params.set('project', query.project);
-	if (query.prioridade) params.set('prioridade', query.prioridade);
-	if (query.tipo) params.set('tipo', query.tipo);
-	if (query.status) params.set('status', query.status);
-	if (query.responsavel) params.set('responsavel', query.responsavel);
-	if (query.orgao !== undefined && query.orgao !== null && query.orgao !== '') {
-		params.set('orgao', String(query.orgao));
-		if (query.apenas_orgao) params.set('apenas_orgao', '1');
-	}
+	const params = taskFilterParams(query);
 	const qs = params.toString();
 	return qs ? `?${qs}` : '';
 }

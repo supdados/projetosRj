@@ -1,26 +1,10 @@
 /**
- * Store do DRAWER de Tarefa (Fase 5b-2) — FACTORY com ESTADO CANÔNICO.
+ * Store isolada do drawer: detalhe, autosave, comentários, anexos e ações.
+ * O board recebe cards pelos reconciliadores, sem manter outra cópia do detalhe.
  *
- * Abre UMA tarefa (a partir do board Kanban, da lista ou de uma etapa) com
- * edição inline AUTOSAVE, comentários, anexos e ações de ciclo de vida. O drawer
- * é a fonte de verdade do DETALHE; o board (Fase 5b-1) continua sendo a fonte de
- * verdade do CARD. Para NÃO duplicar estado, toda mutação que afeta o card
- * (campos/status/finalizar/arquivar/desarquivar) é reconciliada na board store
- * via os callbacks `onCardChanged`/`onCardRemoved` injetados pelo consumidor —
- * o drawer nunca mantém uma cópia rival do card no board.
- *
- * AUTOSAVE: usa `createAutosave` (debounce ~520ms + saveToken + coalescing +
- * flush no fechar/blur). O servidor é AUTORITATIVO: 403 ao finalizar/editar
- * campo restrito vira erro no drawer (sem aplicar a mutação).
- *
- * Exemplo:
- *   const drawer = createTaskDrawerStore({
- *     onCardChanged: (card) => board.upsertCard(card),   // reconcilia no board
- *     onCardRemoved: (id) => board.removeCard(id)
- *   });
- *   await drawer.open(7, { mode: 'board' });
- *   drawer.editField({ descricao: 'novo texto' });        // autosave debounced
- *   await drawer.close();                                 // flush + reset
+ * Falha de autosave preserva o rascunho e termina flush/close/open com false.
+ * A pessoa pode corrigir, usar retry() ou descartar explicitamente; uma troca
+ * de tarefa nunca envia o rascunho anterior para o novo ID.
  */
 
 import { writable, get as readStore, type Readable } from 'svelte/store';
@@ -93,10 +77,13 @@ export interface OpenDrawerOptions {
 
 /** API pública da store do drawer. */
 export interface TaskDrawerStore extends Readable<TaskDrawerState> {
-	open(taskId: number, options?: OpenDrawerOptions): Promise<void>;
-	close(): Promise<void>;
+	open(taskId: number, options?: OpenDrawerOptions): Promise<boolean>;
+	close(): Promise<boolean>;
+	/** Saída explícita quando a pessoa decide descartar uma edição não salva. */
+	discardAndClose(): void;
 	editField(fields: TaskFieldEdits): void;
-	flush(): Promise<void>;
+	flush(): Promise<boolean>;
+	retry(): Promise<boolean>;
 	finalizar(): Promise<boolean>;
 	arquivar(): Promise<boolean>;
 	desarquivar(): Promise<boolean>;
@@ -198,7 +185,10 @@ export function createTaskDrawerStore(
 			return saveFields(id, fields);
 		},
 		{
-			onSaved: (payload) => applyPayload(payload),
+			onSaved: (payload) => {
+				pendingFields = {};
+				applyPayload(payload);
+			},
 			onError: (err) =>
 				store.update((state) => ({
 					...state,
@@ -215,19 +205,18 @@ export function createTaskDrawerStore(
 	/**
 	 * Persiste edições pendentes da tarefa CORRENTE e zera o acumulador, antes de
 	 * trocar ou fechar o drawer. O `flush` precede a troca de `taskId` no store
-	 * (o `persistFn` mira a tarefa que estava aberta). Falha do save é reportada
-	 * pelo `onError` do autosave; a rejeição é engolida para não bloquear a troca.
+	 * (o `persistFn` mira a tarefa que estava aberta). Falha retorna false e
+	 * preserva o rascunho para corrigir, tentar de novo ou descartar explicitamente.
 	 */
-	async function flushPending(): Promise<void> {
-		try {
-			await autosave.flush();
-		} catch {}
+	async function flushPending(): Promise<boolean> {
+		if (!(await autosave.flush())) return false;
 		autosave.cancel();
 		pendingFields = {};
+		return true;
 	}
 
-	async function open(taskId: number, options: OpenDrawerOptions = {}): Promise<void> {
-		await flushPending();
+	async function open(taskId: number, options: OpenDrawerOptions = {}): Promise<boolean> {
+		if (!(await flushPending())) return false;
 		store.set({
 			...INITIAL,
 			status: 'loading',
@@ -237,19 +226,28 @@ export function createTaskDrawerStore(
 		try {
 			const payload = await getTaskDetail(taskId, options.signal);
 			applyPayload(payload);
+			return true;
 		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') return;
+			if (err instanceof DOMException && err.name === 'AbortError') return false;
 			store.update((state) => ({
 				...state,
 				status: 'error',
 				// 404 aqui e anti-enumeracao (nao existe OU sem acesso), S5 §6.3.
 				error: accessErrorMessage(err, MSG_TAREFA_INACESSIVEL, 'Falha ao carregar a tarefa.')
 			}));
+			return false;
 		}
 	}
 
-	async function close(): Promise<void> {
-		await flushPending();
+	async function close(): Promise<boolean> {
+		if (!(await flushPending())) return false;
+		store.set({ ...INITIAL });
+		return true;
+	}
+
+	function discardAndClose(): void {
+		autosave.cancel();
+		pendingFields = {};
 		store.set({ ...INITIAL });
 	}
 
@@ -257,11 +255,16 @@ export function createTaskDrawerStore(
 		const state = readStore(store);
 		if (state.taskId === null) return;
 		pendingFields = { ...pendingFields, ...fields };
+		store.update((current) => ({
+			...current,
+			detail: current.detail ? { ...current.detail, ...fields } : null,
+			error: null
+		}));
 		autosave.schedule(pendingFields);
 	}
 
-	async function flush(): Promise<void> {
-		await autosave.flush();
+	function flush(): Promise<boolean> {
+		return autosave.flush();
 	}
 
 	/** Executa uma ação de ciclo de vida, aplicando o payload e reconciliando. */
@@ -272,7 +275,7 @@ export function createTaskDrawerStore(
 		const id = readStore(store).taskId;
 		if (id === null) return false;
 		// Salva edições pendentes antes de mudar o ciclo de vida (não perder edição).
-		await autosave.flush();
+		if (!(await autosave.flush())) return false;
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
 			const payload = await action(id);
@@ -313,7 +316,7 @@ export function createTaskDrawerStore(
 	async function deleteTask(): Promise<boolean> {
 		const id = readStore(store).taskId;
 		if (id === null) return false;
-		await autosave.flush();
+		if (!(await autosave.flush())) return false;
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
 			await deleteTarefa(id);
@@ -343,7 +346,7 @@ export function createTaskDrawerStore(
 	): Promise<{ ok: boolean; warning?: string }> {
 		const id = readStore(store).taskId;
 		if (id === null) return { ok: false };
-		await autosave.flush();
+		if (!(await autosave.flush())) return { ok: false };
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
 			const result = await moverEtapa(id, etapaId);
@@ -474,8 +477,10 @@ export function createTaskDrawerStore(
 		subscribe: store.subscribe,
 		open,
 		close,
+		discardAndClose,
 		editField,
 		flush,
+		retry: autosave.retry,
 		finalizar,
 		arquivar,
 		desarquivar,
