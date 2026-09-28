@@ -28,7 +28,7 @@ from models import CalendarEvent, User, UserOrgao, db
 
 import routes.calendars.helpers as _cal_helpers
 from routes.tasks.queries import assignee_initials, serialize_assignee
-from services.google_calendar import is_google_calendar_enabled
+from services.google_calendar import GoogleCalendarError, is_google_calendar_enabled
 
 from ..blueprint import main_bp
 from ..calendars.helpers import (
@@ -41,7 +41,7 @@ from ..calendars.helpers import (
     _stop_watch_channel,
     _sync_events_from_google,
 )
-from .envelope import fail, ok
+from .envelope import fail, fail_internal, log_internal_error, ok
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
 
@@ -97,9 +97,9 @@ def _run_hub_auto_maintenance(connection: Any) -> list[str]:
     issues = _cal_helpers._run_auto_calendar_maintenance(connection)
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        current_app.logger.exception("Falha ao persistir manutenção do calendário")
+        log_internal_error(exc, "persistir manutenção do calendário")
         issues.append(
             "Ocorreu um erro interno ao manter o calendário. Tente recarregar a página."
         )
@@ -150,17 +150,19 @@ def api_calendars_hub() -> Response | tuple[Response, int]:
     )
 
 
-def _disconnect_for_expired_token(connection: Any) -> None:
+def _disconnect_for_expired_token(connection: Any) -> tuple[Response, int] | None:
     """Remove a conexão quando o token expirou/revogou (igual ao legado).
 
-    Tenta ``_auto_disconnect`` + commit; em falha, faz rollback silencioso —
-    o erro estruturado já será reportado ao cliente.
+    Retorna erro interno se não conseguiu persistir a remoção, sem anunciar
+    uma desconexão que foi desfeita pelo rollback.
     """
     try:
         _auto_disconnect(connection)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
+        return fail_internal(exc, "desconectar calendário expirado")
+    return None
 
 
 @main_bp.route("/api/calendarios/google/disconnect", methods=["POST"])
@@ -188,10 +190,10 @@ def api_disconnect_google_calendar() -> Response | tuple[Response, int]:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        return fail(
-            f"Falha ao desconectar Google Calendar: {exc}",
-            status=502,
-            code="server",
+        return fail_internal(
+            exc,
+            "desconectar Google Calendar",
+            public_message="Não foi possível desconectar o Google Calendar.",
         )
 
     return ok({"disconnected": True})
@@ -225,17 +227,20 @@ def api_sync_google_calendar_now() -> Response | tuple[Response, int]:
         db.session.rollback()
         desc = _describe_calendar_issue(exc)
         if desc in _EXPIRED_TOKEN_CODES:
-            _disconnect_for_expired_token(connection)
+            disconnect_error = _disconnect_for_expired_token(connection)
+            if disconnect_error is not None:
+                return disconnect_error
             return fail(
                 "Sua conexão com o Google Calendar expirou e foi removida. "
                 "Conecte novamente para retomar a sincronização.",
                 status=401,
                 code="unauthenticated",
             )
-        return fail(
-            f"Erro ao sincronizar com Google Calendar: {exc}",
-            status=502,
-            code="server",
+        return fail_internal(
+            exc,
+            "sincronizar Google Calendar",
+            status=502 if isinstance(exc, GoogleCalendarError) else 500,
+            public_message="Não foi possível sincronizar com o Google Calendar.",
         )
 
     return ok(
@@ -335,17 +340,20 @@ def api_renew_google_calendar_watch() -> Response | tuple[Response, int]:
         db.session.rollback()
         desc = _describe_calendar_issue(exc)
         if desc in _EXPIRED_TOKEN_CODES:
-            _disconnect_for_expired_token(connection)
+            disconnect_error = _disconnect_for_expired_token(connection)
+            if disconnect_error is not None:
+                return disconnect_error
             return fail(
                 "Sua conexão com o Google Calendar expirou e foi removida. "
                 "Conecte novamente para retomar a sincronização.",
                 status=401,
                 code="unauthenticated",
             )
-        return fail(
-            f"Erro ao renovar watch do Google Calendar: {desc}",
-            status=502,
-            code="server",
+        return fail_internal(
+            exc,
+            "renovar watch do Google Calendar",
+            status=502 if isinstance(exc, GoogleCalendarError) else 500,
+            public_message="Não foi possível renovar a sincronização do Google Calendar.",
         )
 
     return ok(

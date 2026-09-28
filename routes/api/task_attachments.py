@@ -50,7 +50,7 @@ from ..tasks.permissions import (
     _can_manage_task_restricted_actions,
     api_task_denial,
 )
-from .envelope import fail, fail_not_found, ok
+from .envelope import fail, fail_not_found, ok, fail_internal
 from .negotiation import api_login_required
 from .serializers import _serialize_task_anexo
 
@@ -219,13 +219,14 @@ def api_tarefa_anexo_upload(task_id: int) -> Response | tuple[Response, int]:
             ),
         )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
-        return fail("Erro ao salvar o anexo.", status=422, code="validation")
+        remove_task_attachment_files(
+            [stored_name], upload_folder=upload_folder, logger=current_app.logger
+        )
+        return fail_internal(
+            exc, "api_tarefa_anexo_upload", public_message="Erro ao salvar o anexo."
+        )
 
     anexos = _serialize_anexo_list(task)
     return ok(
@@ -317,9 +318,11 @@ def api_anexo_delete(anexo_id: int) -> Response | tuple[Response, int]:
         )
         db.session.delete(anexo)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao excluir o anexo.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_anexo_delete", public_message="Erro ao excluir o anexo."
+        )
 
     remove_task_attachment_files(
         [stored_filename], upload_folder=upload_folder, logger=current_app.logger

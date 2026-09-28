@@ -260,12 +260,12 @@ def api_projeto_concluir(project_id: int) -> Response | tuple[Response, int]:
         db.session.rollback()
         code = "forbidden" if exc.status == 403 else "validation"
         return fail(exc.message, status=exc.status, code=code)
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail(
-            "Erro ao concluir projeto. Tente novamente em instantes.",
-            status=500,
-            code="server",
+        return fail_internal(
+            exc,
+            "api_projeto_concluir",
+            public_message="Erro ao concluir projeto. Tente novamente em instantes.",
         )
 
     return ok(
@@ -311,12 +311,12 @@ def api_projeto_excluir(project_id: int) -> Response | tuple[Response, int]:
         remover_relacoes_do_projeto(project.id)
         db.session.delete(project)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail(
-            "Erro ao excluir projeto. Tente novamente em instantes.",
-            status=500,
-            code="server",
+        return fail_internal(
+            exc,
+            "api_projeto_excluir",
+            public_message="Erro ao excluir projeto. Tente novamente em instantes.",
         )
 
     return ok({"deleted": True, "id": project_id})

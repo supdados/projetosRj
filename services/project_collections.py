@@ -22,6 +22,7 @@ from typing import Any, Iterable
 
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import contains_eager
 
 from catalogs.collection_identity import (
     COLLECTION_COLORS,
@@ -120,6 +121,7 @@ def _colecoes_compartilhadas_com(user_id: int) -> list[tuple[ProjectCollection, 
             ProjectCollectionShare.collection_id == ProjectCollection.id,
         )
         .join(User, User.id == ProjectCollection.owner_user_id)
+        .options(contains_eager(ProjectCollection.owner))
         .filter(
             _share_alcanca_usuario(user),
             ProjectCollection.owner_user_id != user_id,

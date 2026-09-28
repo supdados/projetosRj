@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Any
 
 from flask import Response, g, request
+from services.card_statistics import TaskCardCounts, task_card_counts
 
 from ..blueprint import main_bp
 from ..orgao_scope import (
@@ -42,7 +43,9 @@ from .serializers import serialize_orgao_option, serialize_task_card
 _HUB_LIST_MODES = {"ativas", "arquivadas", "finalizadas"}
 
 
-def _serialize_hub_group(group: dict[str, Any]) -> dict[str, Any]:
+def _serialize_hub_group(
+    group: dict[str, Any], counts: dict[int, TaskCardCounts]
+) -> dict[str, Any]:
     """Serializa um grupo de projeto do hub em payload JSON-safe.
 
     Reusa ``serialize_task_card`` para cada tarefa do grupo (campos reais; sem
@@ -59,7 +62,7 @@ def _serialize_hub_group(group: dict[str, Any]) -> dict[str, Any]:
     """
     tasks = []
     for task in group["tasks"]:
-        card = serialize_task_card(task)
+        card = serialize_task_card(task, counts=counts[task.id])
         card["etapa_titulo"] = getattr(task, "hub_stage_titulo", None)
         card["etapa_display_id"] = getattr(task, "hub_stage_display_id", None) or None
         card["is_first_of_stage"] = bool(getattr(task, "hub_is_first_of_stage", False))
@@ -88,8 +91,11 @@ def _serialize_task_hub_context(context: dict[str, Any]) -> dict[str, Any]:
         ``dict`` JSON-safe com ``groups``, ``project_options``, ``filters`` e
         ``total_items``.
     """
+    counts = task_card_counts(
+        task.id for group in context["groups"] for task in group["tasks"]
+    )
     return {
-        "groups": [_serialize_hub_group(group) for group in context["groups"]],
+        "groups": [_serialize_hub_group(group, counts) for group in context["groups"]],
         "project_options": context["project_options"],
         "filters": {
             "project": context["selected_project"],

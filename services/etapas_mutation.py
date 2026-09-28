@@ -18,6 +18,7 @@ from services.etapas_dates import (
 from services.calendar_core import to_local_datetime
 from services.calendar_sync import delete_remote_event, sync_local_event_to_google
 from services.task_status import FINALIZED_TASK_STATUSES
+from services.error_logging import log_internal_error
 from services.project_meetings import (
     can_manage_project_meeting,
     delete_local_calendar_event_mirrors,
@@ -262,7 +263,8 @@ def delete_meeting_etapa(etapa, connection):
                 google_calendar_id=meeting.google_calendar_id,
             )
         except Exception as exc:
-            remote_warning = str(exc)
+            log_internal_error(exc, "excluir reunião no Google Calendar")
+            remote_warning = "Não foi possível excluir a reunião no Google Calendar."
 
     if remote_warning:
         return remote_warning
@@ -340,8 +342,11 @@ def update_meeting_dates(etapa, field, new_date, connection):
                 create_conference=False,
             )
         except Exception as exc:
+            log_internal_error(exc, "sincronizar datas da reunião")
             event.sync_status = "error"
-            event.sync_error = str(exc)
+            event.sync_error = (
+                "Não foi possível sincronizar a reunião com o Google Calendar."
+            )
         update_meeting_from_calendar_event(meeting, event)
 
     sync_etapa_from_meeting(etapa, meeting, title=etapa.descricao)

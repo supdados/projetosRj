@@ -1,10 +1,8 @@
 import csv
 import datetime
 import io
-from collections import defaultdict
 
-from sqlalchemy import func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 from flask import (
     flash,
@@ -16,13 +14,10 @@ from flask import (
 )
 
 from models import (
-    Etapa,
-    EtapaResponsavel,
     Project,
     ProjectCollection,
     ProjectCollectionItem,
     ProjectHistory,
-    Task,
     TIPO_COLECAO_FAVORITOS,
     db,
 )
@@ -33,17 +28,13 @@ from catalogs.inventario import any_orgao_allows_inventario
 from routes.blueprint import main_bp
 from routes.decorators import login_required
 from routes.orgao_scope import (
-    expand_orgao_filter_ids,
     get_user_orgao_options,
     get_user_orgao_siglas,
-    sanitize_orgao_filter_for_current_user,
     scoped_orgao_options,
-    user_can_access_project,
 )
-from services.atraso import etapa_esta_vencida, hoje_utc
+from services.atraso import hoje_utc
 from services.authorization import project_visibility_criterion
 from services.csv_safety import safe_csv_text as _safe_csv_text
-from services.etapa_positions import build_etapa_position_map
 from routes.projects.list_filters import (
     ProjectsListFilters,
     apply_projects_list_filters,
@@ -51,8 +42,6 @@ from routes.projects.list_filters import (
 from routes.shared import (
     get_or_404,
     get_goal_catalog_context,
-    parse_db_integer_id,
-    project_orgao_search_filter,
 )
 
 
@@ -161,7 +150,11 @@ def build_projects_list_context(
         page = max(1, min(page or 1, total_pages))
 
     projects_paginated = (
-        query.order_by(Project.id).offset((page - 1) * per_page).limit(per_page).all()
+        query.options(joinedload(Project.orgao_ref))
+        .order_by(Project.id)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
     )
 
     options_query = Project.query
@@ -265,421 +258,29 @@ def list_projects():
     return redirect("/projetos" + ("?" + query if query else ""))
 
 
-def _etapas_abertas_criterios(project_ids):
-    """Filtros comuns às etapas em aberto dos projetos visíveis."""
-    return (
-        Etapa.project_id.in_(project_ids),
-        Etapa.done.is_(False),
-        Etapa.entry_type != "google_meeting",
-    )
-
-
-def _build_responsaveis_options(project_ids):
-    """Rótulos individuais para o filtro de responsável da tela de pendentes.
-
-    SELECT DISTINCT direto na N:N ``EtapaResponsavel`` (fonte da verdade desde
-    o backfill da Sprint 3.1) — cada área vira UMA opção, nunca a string
-    concatenada do espelho legado.
-
-    Exemplo:
-        >>> _build_responsaveis_options([1])
-        ['COOACES', 'COODADOS', 'SUBEXE']
-    """
-    rotulos = (
-        db.session.query(EtapaResponsavel.label)
-        .join(Etapa, Etapa.id == EtapaResponsavel.etapa_id)
-        .filter(*_etapas_abertas_criterios(project_ids))
-        .distinct()
-        .all()
-    )
-    # Dedupe por casefold: o DISTINCT roda no banco ANTES do strip ("SUPIM" e
-    # "SUPIM " são linhas distintas no SQL), e chave duplicada derruba o {#each}
-    # do filtro na SPA (each_key_duplicate).
-    unicos: dict[str, str] = {}
-    for (rotulo,) in rotulos:
-        nome = " ".join((rotulo or "").split())
-        if nome:
-            unicos.setdefault(nome.casefold(), nome)
-    return sorted(unicos.values(), key=lambda value: value.casefold())
-
-
-def _responsavel_criterion(nome):
-    """Casa etapas cuja área responsável na N:N é EXATAMENTE ``nome``.
-
-    Substring não serve: "COO" casaria "COODADOS". Comparação direta no label
-    da N:N — o espelho legado saiu do filtro com o backfill da Sprint 3.1.
-    """
-    alvo = " ".join(nome.split()).casefold()
-    return Etapa.responsaveis.any(func.lower(func.trim(EtapaResponsavel.label)) == alvo)
-
-
 def build_projetos_pendentes_context(
-    selected_orgao_id,
+    selected_orgao_id: int | None,
     *,
-    apenas_orgao=False,
-    filtro_periodo="atrasados",
-    selected_responsavel="",
-    selected_priority="",
-    search_query="",
-    pending_page=1,
-):
-    """Monta os dados da tela "Projetos Pendentes", respeitando o escopo de órgão.
+    apenas_orgao: bool = False,
+    filtro_periodo: str = "atrasados",
+    selected_responsavel: str = "",
+    selected_priority: str = "",
+    search_query: str = "",
+    pending_page: int = 1,
+) -> dict[str, object]:
+    """Monta Pendentes com paginação e projeções SQL, usando o relógio canônico."""
+    from .views_pending import build_pending_context
 
-    Centraliza queries/agregações num único lugar para o endpoint JSON da SPA
-    (``GET /api/projetos-pendentes``) — sucessor da extinta rota Jinja
-    ``/projetos_pendentes`` — sem recalcular buckets/contadores no cliente. A
-    autorização por órgão é server-side: usuários não-admin ficam restritos à
-    sua subárvore (``orgao_scope``).
-
-    Args:
-        selected_orgao_id: ID do órgão já validado/sanitizado para o usuário
-            corrente (``None`` quando nenhum filtro está aplicado). O chamador é
-            responsável por sanitizar via
-            ``sanitize_orgao_filter_for_current_user``.
-        filtro_periodo: Janela de visibilidade ("atrasados" | "7dias" | "14dias"
-            | "21dias"); valores fora do conjunto caem para "atrasados".
-        selected_responsavel: Rótulo EXATO de uma área responsável (uma etapa
-            com várias áreas casa por qualquer uma delas), case-insensitive.
-        pending_page: Página solicitada (1-based) da lista paginada de projetos.
-
-    Returns:
-        ``dict`` com a lista paginada (``projetos_com_etapas``), os mapas de
-        bucket/progresso, os contadores agregados e os metadados de paginação,
-        consumidos pelo serializer do endpoint JSON da SPA.
-
-    Exemplo:
-        >>> ctx = build_projetos_pendentes_context(None)
-        >>> ctx["summary_counts"]["total_projects"]
-        3
-    """
-    pending_per_page = 15
-
-    valid_periods = {"atrasados", "7dias", "14dias", "21dias"}
-    if filtro_periodo not in valid_periods:
-        filtro_periodo = "atrasados"
-
-    data_atual = hoje_utc()
-    data_7_dias = data_atual + datetime.timedelta(days=7)
-    data_14_dias = data_atual + datetime.timedelta(days=14)
-    data_21_dias = data_atual + datetime.timedelta(days=21)
-
-    def classify_bucket(etapa):
-        # Decisão de produto: buckets classificam por data_fim (services/atraso.py);
-        # data_inicio saiu do critério.
-        if etapa.data_fim is None:
-            return "sem_data"
-        if etapa_esta_vencida(etapa, data_atual):
-            return "atrasada"
-        if etapa.data_fim <= data_7_dias:
-            return "7dias"
-        if etapa.data_fim <= data_14_dias:
-            return "14dias"
-        if etapa.data_fim <= data_21_dias:
-            return "21dias"
-        return "futuro"
-
-    visible_buckets_by_period = {
-        "atrasados": {"atrasada"},
-        "7dias": {"atrasada", "7dias"},
-        "14dias": {"atrasada", "7dias", "14dias"},
-        "21dias": {"atrasada", "7dias", "14dias", "21dias"},
-    }
-    visible_buckets = visible_buckets_by_period[filtro_periodo]
-
-    query_projetos_base = Project.query.filter(Project.status == "Vigente")
-
-    if not g.user.is_admin:
-        query_projetos_base = query_projetos_base.filter(
-            project_visibility_criterion(g.user)
-        )
-
-    if selected_orgao_id is not None:
-        orgao_subtree = expand_orgao_filter_ids(
-            selected_orgao_id, incluir_descendentes=not apenas_orgao
-        )
-        if orgao_subtree:
-            query_projetos_base = query_projetos_base.filter(
-                Project.orgao_id.in_(orgao_subtree)
-            )
-
-    # Filtro de prioridade e busca textual (paridade com a tela de Projetos):
-    # restringem o conjunto de projetos vigentes ANTES do cálculo de buckets.
-    if selected_priority:
-        query_projetos_base = query_projetos_base.filter(
-            Project.prioridade == selected_priority
-        )
-
-    if search_query:
-        search_pattern = f"%{search_query}%"
-        search_id = parse_db_integer_id(search_query)
-        text_filters = db.or_(
-            Project.titulo.ilike(search_pattern),
-            project_orgao_search_filter(search_pattern),
-            Project.abep_indicator.ilike(search_pattern),
-        )
-        query_projetos_base = query_projetos_base.filter(
-            db.or_(Project.id == search_id, text_filters)
-            if search_id is not None
-            else text_filters
-        )
-
-    projetos_vigentes = query_projetos_base.order_by(Project.titulo.asc()).all()
-    project_ids = [p.id for p in projetos_vigentes]
-
-    objetivos, _, _ = get_goal_catalog_context()
-
-    # Subárvore de órgãos visível ao usuário (escopo server-side) para popular o
-    # <select> de filtro de órgão na SPA. A árvore é a mesma usada pela topnav;
-    # aqui só repassamos os nós (a serialização em opções fica no endpoint JSON).
-    orgaos_options = get_user_orgao_options(g.user)
-
-    if not project_ids:
-        return {
-            "projetos_com_etapas": [],
-            "objetivos": objetivos,
-            "orgaos_options": orgaos_options,
-            "selected_orgao": selected_orgao_id,
-            "filtro_periodo": filtro_periodo,
-            "selected_responsavel": selected_responsavel,
-            "selected_priority": selected_priority,
-            "search_query": search_query,
-            "responsaveis_options": [],
-            "period_options": [
-                ("atrasados", "Projetos Atrasados"),
-                ("7dias", "Próximos 7 Dias"),
-                ("14dias", "Próximos 14 Dias"),
-                ("21dias", "Próximos 21 Dias"),
-            ],
-            "period_label_map": {
-                "atrasados": "Atrasados",
-                "7dias": "Próximos 7 Dias",
-                "14dias": "Próximos 14 Dias",
-                "21dias": "Próximos 21 Dias",
-            },
-            "etapa_bucket_map": {},
-            "etapa_position_map": {},
-            "etapa_task_progress": {},
-            "summary_counts": {
-                "total_projects": 0,
-                "atrasada": 0,
-                "7dias": 0,
-                "14dias": 0,
-                "21dias": 0,
-                "sem_data": 0,
-            },
-            "pending_page": 1,
-            "pending_total_pages": 0,
-            "pending_per_page": pending_per_page,
-            "pending_total_projects": 0,
-        }
-
-    responsaveis_options = _build_responsaveis_options(project_ids)
-
-    # selectinload: serialize_etapa_card chama etapa_tem_responsavel(), que toca
-    # Etapa.responsaveis (lazy="select") — sem isso é 1 SELECT por etapa do card.
-    etapas_query = Etapa.query.options(selectinload(Etapa.responsaveis)).filter(
-        Etapa.project_id.in_(project_ids),
-        Etapa.done.is_(False),
-        Etapa.entry_type != "google_meeting",
+    return build_pending_context(
+        selected_orgao_id,
+        today=hoje_utc(),
+        apenas_orgao=apenas_orgao,
+        filtro_periodo=filtro_periodo,
+        selected_responsavel=selected_responsavel,
+        selected_priority=selected_priority,
+        search_query=search_query,
+        pending_page=pending_page,
     )
-    if selected_responsavel:
-        etapas_query = etapas_query.filter(_responsavel_criterion(selected_responsavel))
-
-    etapas_abertas = etapas_query.order_by(
-        Etapa.project_id.asc(),
-        Etapa.ordem.asc(),
-        Etapa.id.asc(),
-    ).all()
-
-    # Progresso de tarefas (concluídas / total) por etapa aberta — exibido na
-    # pílula "Tarefas" de cada linha, no mesmo formato "3/10" da tela do projeto.
-    etapa_ids_abertas = [etapa.id for etapa in etapas_abertas]
-    if etapa_ids_abertas:
-        total_task_counts = dict(
-            db.session.query(Task.etapa_id, db.func.count(Task.id))
-            .filter(
-                Task.etapa_id.in_(etapa_ids_abertas),
-                Task.is_archived.is_(False),
-            )
-            .group_by(Task.etapa_id)
-            .all()
-        )
-        done_task_counts = dict(
-            db.session.query(Task.etapa_id, db.func.count(Task.id))
-            .filter(
-                Task.etapa_id.in_(etapa_ids_abertas),
-                Task.is_archived.is_(False),
-                Task.status == "finalizada",
-            )
-            .group_by(Task.etapa_id)
-            .all()
-        )
-    else:
-        total_task_counts = {}
-        done_task_counts = {}
-    etapa_task_progress = {
-        etapa_id: {
-            "total": int(total_task_counts.get(etapa_id, 0)),
-            "done": int(done_task_counts.get(etapa_id, 0)),
-        }
-        for etapa_id in etapa_ids_abertas
-    }
-
-    etapas_por_projeto = defaultdict(list)
-    etapa_bucket_map = {}
-    summary_counts = {
-        "total_projects": 0,
-        "atrasada": 0,
-        "7dias": 0,
-        "14dias": 0,
-        "21dias": 0,
-        "sem_data": 0,
-    }
-
-    for etapa in etapas_abertas:
-        bucket = classify_bucket(etapa)
-        etapa_bucket_map[etapa.id] = bucket
-        etapas_por_projeto[etapa.project_id].append(etapa)
-        if bucket in summary_counts:
-            summary_counts[bucket] += 1
-
-    projetos_pendentes_com_etapas = []
-    project_by_id = {p.id: p for p in projetos_vigentes}
-
-    for project_id, etapas_project in etapas_por_projeto.items():
-        projeto = project_by_id.get(project_id)
-        if not projeto:
-            continue
-
-        etapas_project_sorted = sorted(
-            etapas_project,
-            key=lambda etapa: (
-                etapa.data_fim is None,
-                etapa.data_fim or datetime.date.max,
-                etapa.data_inicio is None,
-                etapa.data_inicio or datetime.date.max,
-                etapa.ordem if etapa.ordem is not None else 10**9,
-                etapa.id,
-            ),
-        )
-
-        etapas_visiveis = []
-        etapas_outras = []
-        counts = {
-            "qtd_atrasadas": 0,
-            "bucket_7dias": 0,
-            "bucket_14dias": 0,
-            "bucket_21dias": 0,
-            "qtd_sem_data": 0,
-        }
-        max_overdue_days = 0
-
-        for etapa in etapas_project_sorted:
-            bucket = etapa_bucket_map.get(etapa.id, "futuro")
-
-            if bucket == "atrasada":
-                counts["qtd_atrasadas"] += 1
-                overdue_days = (data_atual - etapa.data_fim).days
-                if overdue_days > max_overdue_days:
-                    max_overdue_days = overdue_days
-            elif bucket == "7dias":
-                counts["bucket_7dias"] += 1
-            elif bucket == "14dias":
-                counts["bucket_14dias"] += 1
-            elif bucket == "21dias":
-                counts["bucket_21dias"] += 1
-            elif bucket == "sem_data":
-                counts["qtd_sem_data"] += 1
-
-            if bucket in visible_buckets:
-                etapas_visiveis.append(etapa)
-            else:
-                etapas_outras.append(etapa)
-
-        if not etapas_visiveis:
-            continue
-
-        qtd_7dias = counts["bucket_7dias"]
-        qtd_14dias = counts["bucket_7dias"] + counts["bucket_14dias"]
-        qtd_21dias = (
-            counts["bucket_7dias"] + counts["bucket_14dias"] + counts["bucket_21dias"]
-        )
-
-        projetos_pendentes_com_etapas.append(
-            {
-                "projeto": projeto,
-                "etapas_visiveis": etapas_visiveis,
-                "etapas_outras": etapas_outras,
-                "qtd_visiveis": len(etapas_visiveis),
-                "qtd_outras": len(etapas_outras),
-                "qtd_atrasadas": counts["qtd_atrasadas"],
-                "qtd_7dias": qtd_7dias,
-                "qtd_14dias": qtd_14dias,
-                "qtd_21dias": qtd_21dias,
-                "qtd_sem_data": counts["qtd_sem_data"],
-                "max_overdue_days": max_overdue_days,
-            }
-        )
-
-    projetos_pendentes_com_etapas.sort(
-        key=lambda item: (
-            -item["max_overdue_days"],
-            -item["qtd_visiveis"],
-            (item["projeto"].titulo or "").casefold(),
-        )
-    )
-    pending_total_projects = len(projetos_pendentes_com_etapas)
-    summary_counts["total_projects"] = pending_total_projects
-
-    pending_total_pages = (
-        (pending_total_projects + pending_per_page - 1) // pending_per_page
-        if pending_total_projects > 0
-        else 0
-    )
-    if pending_total_pages == 0:
-        pending_page = 1
-    else:
-        pending_page = max(1, min(pending_page or 1, pending_total_pages))
-
-    start_idx = (pending_page - 1) * pending_per_page
-    end_idx = start_idx + pending_per_page
-    projetos_pendentes_paginated = projetos_pendentes_com_etapas[start_idx:end_idx]
-
-    etapa_position_map = build_etapa_position_map(
-        [item["projeto"].id for item in projetos_pendentes_paginated]
-    )
-
-    return {
-        "projetos_com_etapas": projetos_pendentes_paginated,
-        "objetivos": objetivos,
-        "orgaos_options": orgaos_options,
-        "selected_orgao": selected_orgao_id,
-        "filtro_periodo": filtro_periodo,
-        "selected_responsavel": selected_responsavel,
-        "selected_priority": selected_priority,
-        "search_query": search_query,
-        "responsaveis_options": responsaveis_options,
-        "period_options": [
-            ("atrasados", "Projetos Atrasados"),
-            ("7dias", "Próximos 7 Dias"),
-            ("14dias", "Próximos 14 Dias"),
-            ("21dias", "Próximos 21 Dias"),
-        ],
-        "period_label_map": {
-            "atrasados": "Atrasados",
-            "7dias": "Próximos 7 Dias",
-            "14dias": "Próximos 14 Dias",
-            "21dias": "Próximos 21 Dias",
-        },
-        "etapa_bucket_map": etapa_bucket_map,
-        "etapa_position_map": etapa_position_map,
-        "etapa_task_progress": etapa_task_progress,
-        "summary_counts": summary_counts,
-        "pending_page": pending_page,
-        "pending_total_pages": pending_total_pages,
-        "pending_per_page": pending_per_page,
-        "pending_total_projects": pending_total_projects,
-    }
 
 
 @main_bp.route("/project/<int:project_id>")

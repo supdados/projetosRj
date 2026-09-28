@@ -59,7 +59,7 @@ from ..tasks.permissions import (
     api_task_denial,
     task_permission_flags,
 )
-from .envelope import fail, ok
+from .envelope import fail, ok, fail_internal
 from .negotiation import api_login_required
 from .serializers import serialize_task_card, serialize_task_detail
 
@@ -297,9 +297,11 @@ def api_tarefa_campos(task_id: int) -> Response | tuple[Response, int]:
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao salvar a tarefa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_tarefa_campos", public_message="Erro ao salvar a tarefa."
+        )
 
     return ok(_drawer_detail_payload(task))
 
@@ -340,9 +342,11 @@ def api_tarefa_finalizar(task_id: int) -> Response | tuple[Response, int]:
         if old_status != task.status:
             notify_task_finalized(task)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao finalizar a tarefa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_tarefa_finalizar", public_message="Erro ao finalizar a tarefa."
+        )
 
     return ok(_drawer_detail_payload(task))
 
@@ -380,9 +384,11 @@ def api_tarefa_arquivar(task_id: int) -> Response | tuple[Response, int]:
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao arquivar a tarefa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_tarefa_arquivar", public_message="Erro ao arquivar a tarefa."
+        )
 
     return ok(_drawer_detail_payload(task))
 
@@ -418,9 +424,13 @@ def _unarchive_and_respond(task_id: int) -> Response | tuple[Response, int]:
     try:
         notify_task_unarchived(task)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao desarquivar a tarefa.", status=422, code="validation")
+        return fail_internal(
+            exc,
+            "_unarchive_and_respond",
+            public_message="Erro ao desarquivar a tarefa.",
+        )
 
     return ok(_drawer_detail_payload(task))
 
@@ -527,11 +537,12 @@ def api_tarefa_responsaveis(task_id: int) -> Response | tuple[Response, int]:
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        current_app.logger.exception(
-            "Erro ao salvar responsaveis da tarefa %s", task_id
+        return fail_internal(
+            exc,
+            "api_tarefa_responsaveis",
+            public_message="Erro ao salvar responsáveis.",
         )
-        return fail("Erro ao salvar responsáveis.", status=422, code="validation")
 
     return ok(_drawer_detail_payload(task))

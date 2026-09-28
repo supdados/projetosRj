@@ -57,7 +57,7 @@ from services.authorization import (
     project_access_verdict,
     require_project_rank,
 )
-from .envelope import fail, fail_internal, fail_not_found, ok
+from .envelope import fail, fail_internal, fail_not_found, log_internal_error, ok
 from .etapa_payload import etapa_detail_payload
 from .negotiation import api_login_required
 from .serializers import serialize_calendar_event
@@ -145,9 +145,12 @@ def api_calendar_event_create() -> Response | tuple[Response, int]:
                 event, connection, create_conference=payload["create_conference"]
             )
         except Exception as exc:
+            log_internal_error(exc, "sincronizar evento criado")
             event.sync_status = "error"
-            event.sync_error = str(exc)
-            sync_warning = str(exc)
+            event.sync_error = (
+                "Não foi possível sincronizar o evento com o Google Calendar."
+            )
+            sync_warning = event.sync_error
     else:
         event.sync_status = "pending"
         event.sync_error = (
@@ -255,9 +258,12 @@ def api_calendar_event_edit(event_id: int) -> Response | tuple[Response, int]:
                 event, connection, create_conference=payload["create_conference"]
             )
         except Exception as exc:
+            log_internal_error(exc, "sincronizar evento editado")
             event.sync_status = "error"
-            event.sync_error = str(exc)
-            sync_warning = str(exc)
+            event.sync_error = (
+                "Não foi possível sincronizar o evento com o Google Calendar."
+            )
+            sync_warning = event.sync_error
     else:
         event.sync_status = "pending"
         event.sync_error = (
@@ -386,7 +392,8 @@ def api_calendar_event_delete(event_id: int) -> Response | tuple[Response, int]:
                 google_calendar_id=event.google_calendar_id,
             )
         except Exception as exc:
-            remote_warning = str(exc)
+            log_internal_error(exc, "excluir evento remoto")
+            remote_warning = "Não foi possível excluir o evento no Google Calendar."
 
     if linked_meeting is not None:
         if remote_warning:
@@ -486,9 +493,13 @@ def api_project_meeting_create(
                 description=weekend_shift_message,
             )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao adicionar reunião ao projeto.", status=500, code="server")
+        return fail_internal(
+            exc,
+            "api_project_meeting_create",
+            public_message="Erro ao adicionar reunião ao projeto.",
+        )
 
     message = "Reunião adicionada ao projeto com sucesso!"
     if sync_warning:
@@ -575,9 +586,11 @@ def api_project_meeting_edit(etapa_id: int) -> Response | tuple[Response, int]:
                 description=weekend_shift_message,
             )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao salvar a reunião.", status=500, code="server")
+        return fail_internal(
+            exc, "api_project_meeting_edit", public_message="Erro ao salvar a reunião."
+        )
 
     message = "Reunião atualizada com sucesso!"
     if sync_warning:
@@ -641,9 +654,11 @@ def api_project_meeting_delete(etapa_id: int) -> Response | tuple[Response, int]
             db.session.rollback()
             return fail(remote_warning, status=502, code="server")
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao excluir reunião.", status=500, code="server")
+        return fail_internal(
+            exc, "api_project_meeting_delete", public_message="Erro ao excluir reunião."
+        )
 
     project = db.session.get(Project, project_id)
     total = project.total_workflow_etapas if project is not None else 0

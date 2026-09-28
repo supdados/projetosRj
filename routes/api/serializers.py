@@ -21,6 +21,7 @@ from services.authorization import PAPEL_GESTOR
 from services.calendar_core import format_human_datetime, format_input_datetime
 from services.etapa_responsaveis import responsavel_display, responsavel_label
 from services.etapas_mutation import etapa_tem_responsavel
+from services.card_statistics import ProjectCardStatistics, TaskCardCounts
 from services.project_collections import PAPEL_COLECAO_DONO
 from services.project_membership import project_access_via, project_permission_flags
 from time_utils import iso_utc
@@ -307,7 +308,9 @@ def _project_access_block(viewer: Any, project: Any) -> dict[str, Any]:
     }
 
 
-def serialize_project_card(project: Any, *, viewer: Any = None) -> dict[str, Any]:
+def serialize_project_card(
+    project: Any, *, viewer: Any = None, statistics: ProjectCardStatistics | None = None
+) -> dict[str, Any]:
     """Serializa um projeto no formato de "card" para listas/dashboard.
 
     Usa CAMPOS REAIS do modelo ``Project`` mais os derivados read-only
@@ -318,6 +321,8 @@ def serialize_project_card(project: Any, *, viewer: Any = None) -> dict[str, Any
         project: Instância de ``Project``.
         viewer: Usuário para quem as flags são calculadas; por padrão o
             ``g.user`` do request corrente.
+        statistics: Agregados de ``project_card_statistics``. Listagens passam
+            esta projeção para não carregar a coleção de etapas de cada card.
 
     Returns:
         ``dict`` JSON-safe com os campos do card, mais ``permissions`` e
@@ -338,11 +343,29 @@ def serialize_project_card(project: Any, *, viewer: Any = None) -> dict[str, Any
         # o tipo de entrega sem precisar do payload completo de detalhe.
         "delivery_type": project.delivery_type,
         # derivados read-only (computados no backend; NÃO recalcular no cliente)
-        "data_inicio_projeto": _iso_or_none(project.data_inicio_projeto),
-        "data_fim_projeto": _iso_or_none(project.data_fim_projeto),
-        "total_workflow_etapas": project.total_workflow_etapas,
-        "etapas_concluidas": project.etapas_concluidas,
-        "todas_etapas_concluidas": project.todas_etapas_concluidas,
+        "data_inicio_projeto": _iso_or_none(
+            statistics.data_inicio
+            if statistics is not None
+            else project.data_inicio_projeto
+        ),
+        "data_fim_projeto": _iso_or_none(
+            statistics.data_fim if statistics is not None else project.data_fim_projeto
+        ),
+        "total_workflow_etapas": (
+            statistics.total
+            if statistics is not None
+            else project.total_workflow_etapas
+        ),
+        "etapas_concluidas": (
+            statistics.concluidas
+            if statistics is not None
+            else project.etapas_concluidas
+        ),
+        "todas_etapas_concluidas": (
+            (statistics.total > 0 and statistics.concluidas == statistics.total)
+            if statistics is not None
+            else project.todas_etapas_concluidas
+        ),
     }
     card.update(
         _project_access_block(
@@ -493,7 +516,9 @@ def serialize_etapa_detail(
     return payload
 
 
-def serialize_pending_project_row(row: dict[str, Any]) -> dict[str, Any]:
+def serialize_pending_project_row(
+    row: dict[str, Any], *, statistics: ProjectCardStatistics | None = None
+) -> dict[str, Any]:
     """Serializa uma linha de "Projetos Pendentes" (projeto + etapas + contadores).
 
     Reusa ``serialize_project_card`` para o projeto e ``serialize_etapa_card``
@@ -510,7 +535,7 @@ def serialize_pending_project_row(row: dict[str, Any]) -> dict[str, Any]:
         ``etapas_outras`` e os contadores da linha.
     """
     return {
-        "project": serialize_project_card(row["projeto"]),
+        "project": serialize_project_card(row["projeto"], statistics=statistics),
         "etapas_visiveis": [
             serialize_etapa_card(etapa) for etapa in row["etapas_visiveis"]
         ],
@@ -657,6 +682,7 @@ def serialize_task_card(
     *,
     with_manage_permissions: bool = False,
     with_context_labels: bool = False,
+    counts: TaskCardCounts | None = None,
 ) -> dict[str, Any]:
     """Serializa uma tarefa no formato de "card" para listas/dashboard/Kanban.
 
@@ -678,6 +704,8 @@ def serialize_task_card(
         with_context_labels: soma os rótulos de contexto do composer
             (``etapa_descricao``/``project_orgao_sigla``, ``project_titulo`` com
             fallback ``"Sem projeto"``).
+        counts: Agregados de ``task_card_counts`` para listagens; evita carregar
+            o conteúdo de comentários/anexos apenas para contá-los.
 
     Returns:
         ``dict`` JSON-safe com os campos do card da tarefa, incluindo
@@ -689,7 +717,7 @@ def serialize_task_card(
     from routes.tasks.permissions import task_permission_flags
 
     flags = task_permission_flags(task)
-    card = _task_card_fields(task, flags)
+    card = _task_card_fields(task, flags, counts)
     if with_manage_permissions:
         card["permissions"]["can_delete"] = bool(flags["can_delete"])
         card["permissions"]["is_author"] = bool(flags["is_author"])
@@ -698,7 +726,9 @@ def serialize_task_card(
     return card
 
 
-def _task_card_fields(task: Any, flags: dict[str, Any]) -> dict[str, Any]:
+def _task_card_fields(
+    task: Any, flags: dict[str, Any], counts: TaskCardCounts | None = None
+) -> dict[str, Any]:
     """Campos base do card (sem os opcionais de permissão/contexto)."""
     from routes.tasks.queries import serialize_task_assignees
 
@@ -721,11 +751,9 @@ def _task_card_fields(task: Any, flags: dict[str, Any]) -> dict[str, Any]:
         "created_at": _iso_or_none(task.created_at),
         "is_archived": bool(task.is_archived),
         "archived_at": _iso_or_none(task.archived_at),
-        # Contadores exibidos no rodapé do card do Kanban (balão de comentários e
-        # clipe de anexos). A query do board (`_build_visible_tasks_query` com
-        # ``include_relations=True``) já faz joinedload de ambos — sem N+1 ali.
-        "comments_count": len(task.comments),
-        "anexos_count": len(task.anexos),
+        # Listagens fornecem agregados; escritas/detalhe isolado podem usar a relação.
+        "comments_count": counts.comments if counts is not None else len(task.comments),
+        "anexos_count": counts.attachments if counts is not None else len(task.anexos),
         "permissions": {"can_finalize": bool(flags["can_finalize"])},
     }
 

@@ -42,7 +42,7 @@ from ..calendars.helpers import _connection_for_current_user
 from ..orgao_scope import scoped_orgao_options
 from ..projects.ajax import ProjectInlineError, apply_project_inline_changes
 from ..shared import log_project_action
-from .envelope import fail, ok
+from .envelope import fail, ok, fail_internal
 from .etapa_payload import project_etapas_payload
 from .negotiation import api_login_required
 from .serializers import serialize_project_detail, serialize_task_card
@@ -205,9 +205,11 @@ def api_projeto_inline(project_id: int) -> Response | tuple[Response, int]:
         if exc.status == 403:
             return fail(exc.message, status=403, code="forbidden")
         return fail(exc.message, status=422, code="validation")
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao atualizar projeto.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_projeto_inline", public_message="Erro ao atualizar projeto."
+        )
 
     return ok({"project": serialize_project_detail(project), "changed": changes})
 

@@ -5,12 +5,12 @@ from flask import g, request, url_for
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
 from services.task_assignees import task_assignee_criterion
+from services.card_statistics import task_card_load_options
 
 from models import (
     Project,
     Task,
     TaskAssignee,
-    TaskComment,
     User,
     db,
 )
@@ -271,10 +271,8 @@ def _build_visible_tasks_query(
     query = Task.query
     if include_relations:
         query = query.options(
-            joinedload(Task.project),
+            *task_card_load_options(),
             joinedload(Task.etapa),
-            joinedload(Task.comments).joinedload(TaskComment.author),
-            joinedload(Task.anexos),
         )
 
     query = query.outerjoin(Project, Task.project_id == Project.id)

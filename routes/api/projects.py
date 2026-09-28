@@ -22,6 +22,7 @@ from flask import Response, request
 from werkzeug.exceptions import NotFound
 
 from services.authorization import PAPEL_LEITOR, require_project_rank
+from services.card_statistics import ProjectCardStatistics, project_card_statistics
 
 from ..blueprint import main_bp
 from ..orgao_scope import (
@@ -59,9 +60,13 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
         ``summary_counts`` e a paginação.
     """
     period_label_map = context["period_label_map"]
+    statistics = project_card_statistics(
+        row["projeto"].id for row in context["projetos_com_etapas"]
+    )
     return {
         "projetos": [
-            serialize_pending_project_row(row) for row in context["projetos_com_etapas"]
+            serialize_pending_project_row(row, statistics=statistics[row["projeto"].id])
+            for row in context["projetos_com_etapas"]
         ],
         "filtro_periodo": context["filtro_periodo"],
         # Rótulo legível do período selecionado, derivado da MESMA fonte de
@@ -147,9 +152,11 @@ def api_projetos_pendentes() -> Response | tuple[Response, int]:
     return ok(_serialize_pending_context(context))
 
 
-def _card_com_favorito(project: Any, favoritos: set[int]) -> dict[str, Any]:
+def _card_com_favorito(
+    project: Any, favoritos: set[int], statistics: ProjectCardStatistics
+) -> dict[str, Any]:
     """Card da lista + ``favorito`` (estrela), resolvido do conjunto pré-carregado."""
-    card = serialize_project_card(project)
+    card = serialize_project_card(project, statistics=statistics)
     card["favorito"] = project.id in favoritos
     return card
 
@@ -170,9 +177,11 @@ def _serialize_projects_list_context(context: dict[str, Any]) -> dict[str, Any]:
         selecionados, ``options`` de filtro e ``pagination``.
     """
     favoritos = context["favorito_project_ids"]
+    statistics = project_card_statistics(project.id for project in context["projects"])
     return {
         "projetos": [
-            _card_com_favorito(project, favoritos) for project in context["projects"]
+            _card_com_favorito(project, favoritos, statistics[project.id])
+            for project in context["projects"]
         ],
         "filters": {
             "status": context["selected_status"],

@@ -34,6 +34,11 @@ from flask import Response, g, request
 from sqlalchemy.orm import joinedload, selectinload
 
 from models import Task, db
+from services.card_statistics import (
+    TaskCardCounts,
+    task_card_counts,
+    task_card_load_options,
+)
 
 from ..blueprint import main_bp
 from ..orgao_scope import sanitize_orgao_filter_for_current_user
@@ -52,7 +57,7 @@ from ..tasks.permissions import (
     api_task_denial,
 )
 from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
-from .envelope import fail, fail_not_found, ok
+from .envelope import fail, fail_not_found, ok, fail_internal
 from .negotiation import api_login_required
 from .serializers import serialize_task_card
 
@@ -73,17 +78,22 @@ def _load_active_board_tasks(filter_values: dict[str, str], orgao_id: int | None
     Returns:
         Lista de ``Task`` ativas, ordenadas pela ordem natural do Hub.
     """
-    return _build_visible_tasks_query(
-        include_archived=False,
-        project_filter=filter_values["project_filter"],
-        prioridade_filter=filter_values["prioridade_filter"],
-        tipo_filter=filter_values["tipo_filter"],
-        status_filter=filter_values["status_filter"],
-        responsavel_filter=filter_values["responsavel_filter"],
-        search_filter=filter_values["search_filter"],
-        orgao_filter_id=orgao_id,
-        apenas_orgao=filter_values["apenas_orgao_filter"],
-    ).all()
+    return (
+        _build_visible_tasks_query(
+            include_archived=False,
+            include_relations=False,
+            project_filter=filter_values["project_filter"],
+            prioridade_filter=filter_values["prioridade_filter"],
+            tipo_filter=filter_values["tipo_filter"],
+            status_filter=filter_values["status_filter"],
+            responsavel_filter=filter_values["responsavel_filter"],
+            search_filter=filter_values["search_filter"],
+            orgao_filter_id=orgao_id,
+            apenas_orgao=filter_values["apenas_orgao_filter"],
+        )
+        .options(*task_card_load_options())
+        .all()
+    )
 
 
 def _sort_cards_by_priority(cards: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -97,7 +107,9 @@ def _sort_cards_by_priority(cards: list[dict[str, Any]]) -> list[dict[str, Any]]
     return sorted(cards, key=lambda card: task_priority_sort_rank(card["prioridade"]))
 
 
-def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
+def _group_tasks_into_columns(
+    tasks: list[Any], counts: dict[int, TaskCardCounts]
+) -> list[dict[str, Any]]:
     """Agrupa as tarefas nas 5 colunas por status, na ordem ``TASK_STATUS_ORDER``.
 
     Sempre devolve as 5 colunas (mesmo vazias), para que o cliente monte o board
@@ -120,7 +132,7 @@ def _group_tasks_into_columns(tasks: list[Any]) -> list[dict[str, Any]]:
         # Status fora do conjunto canônico (dado legado) cai na primeira coluna,
         # para não sumir silenciosamente do board.
         bucket = task.status if task.status in by_status else TASK_STATUS_ORDER[0]
-        by_status[bucket].append(serialize_task_card(task))
+        by_status[bucket].append(serialize_task_card(task, counts=counts[task.id]))
     return [
         {
             "status": status,
@@ -213,7 +225,9 @@ def api_tarefas_board() -> Response | tuple[Response, int]:
         )
 
     tasks = _load_active_board_tasks(filter_values, selected_orgao_id)
-    columns = _group_tasks_into_columns(tasks)
+    columns = _group_tasks_into_columns(
+        tasks, task_card_counts(task.id for task in tasks)
+    )
     return ok(
         {
             "columns": columns,
@@ -268,10 +282,12 @@ def api_tarefa_status(task_id: int) -> Response | tuple[Response, int]:
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail(
-            "Erro ao atualizar status da tarefa.", status=422, code="validation"
+        return fail_internal(
+            exc,
+            "api_tarefa_status",
+            public_message="Erro ao atualizar status da tarefa.",
         )
 
     return ok({"task": serialize_task_card(task)})
@@ -505,9 +521,13 @@ def api_tarefas_board_reordenar() -> Response | tuple[Response, int]:
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao reordenar tarefas.", status=422, code="validation")
+        return fail_internal(
+            exc,
+            "api_tarefas_board_reordenar",
+            public_message="Erro ao reordenar tarefas.",
+        )
 
     affected = [
         {

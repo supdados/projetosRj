@@ -28,9 +28,10 @@ from __future__ import annotations
 from flask import Response, request
 from flask_wtf.csrf import CSRFError
 from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound
+from models import db
 
 from ..blueprint import main_bp
-from .envelope import fail, fail_not_found
+from .envelope import fail, fail_internal, fail_not_found
 
 
 def _is_api_request() -> bool:
@@ -141,4 +142,7 @@ def api_internal_error(
         return error
     if not _is_api_request():
         raise error
-    return fail("Erro interno do servidor.", status=500, code="server")
+    db.session.rollback()
+    return fail_internal(
+        error, "processar requisição", public_message="Erro interno do servidor."
+    )

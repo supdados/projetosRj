@@ -61,7 +61,7 @@ from services.project_meetings import is_google_meeting_stage
 from ..blueprint import main_bp
 from ..calendars.helpers import _connection_for_current_user
 from ..shared import log_project_action
-from .envelope import fail, fail_not_found, ok
+from .envelope import fail, fail_not_found, ok, fail_internal
 from .etapa_payload import etapa_detail_payload, project_etapas_payload
 from .negotiation import api_login_required
 
@@ -207,9 +207,11 @@ def api_etapa_add(project_id: int) -> Response | tuple[Response, int]:
     except ValueError as exc:
         db.session.rollback()
         return fail(str(exc), status=422, code="validation")
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao adicionar etapa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_add", public_message="Erro ao adicionar etapa."
+        )
 
     return ok(
         {
@@ -287,6 +289,11 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
     except ValueError as exc:
         return fail(str(exc), status=422, code="validation")
 
+    descricao = data.get("descricao")
+    if not isinstance(descricao, str) or not descricao.strip():
+        return fail(
+            "A descrição da etapa é obrigatória.", status=422, code="validation"
+        )
     iniciada = bool(data.get("iniciada"))
     done_requested = bool(data.get("done"))
 
@@ -312,7 +319,7 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
         return responsavel_error
 
     old_descricao = etapa.descricao
-    etapa.descricao = data.get("descricao")
+    etapa.descricao = descricao
     etapa.comentarios = data.get("comentarios")
     etapa.iniciada = iniciada
     etapa.done = done_requested
@@ -326,9 +333,11 @@ def api_etapa_edit(etapa_id: int) -> Response | tuple[Response, int]:
             description=f'Editou a etapa "{old_descricao}"',
         )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao atualizar etapa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_edit", public_message="Erro ao atualizar etapa."
+        )
 
     return ok({"etapa": _etapa_payload(etapa)})
 
@@ -362,9 +371,11 @@ def api_etapa_delete(etapa_id: int) -> Response | tuple[Response, int]:
     except EtapaNaoEditavelError as exc:
         db.session.rollback()
         return _fail_nao_editavel(exc)
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao excluir etapa.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_delete", public_message="Erro ao excluir etapa."
+        )
 
     project = db.session.get(Project, project_id)
     total = project.total_workflow_etapas if project is not None else 0
@@ -411,9 +422,11 @@ def api_etapa_update_field(etapa_id: int) -> Response | tuple[Response, int]:
     except ValueError as exc:
         db.session.rollback()
         return fail(str(exc), status=422, code="validation")
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao salvar a alteração.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_update_field", public_message="Erro ao salvar a alteração."
+        )
 
     return ok(
         {
@@ -456,9 +469,11 @@ def api_etapa_comentario(etapa_id: int) -> Response | tuple[Response, int]:
     except EtapaNaoEditavelError as exc:
         db.session.rollback()
         return _fail_nao_editavel(exc)
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao salvar comentário.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_comentario", public_message="Erro ao salvar comentário."
+        )
 
     return ok({"message": message, "etapa": _etapa_payload(etapa)})
 
@@ -505,9 +520,11 @@ def api_etapa_responsaveis(etapa_id: int) -> Response | tuple[Response, int]:
     except ValueError as exc:
         db.session.rollback()
         return fail(str(exc), status=422, code="validation")
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao salvar responsáveis.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapa_responsaveis", public_message="Erro ao salvar responsáveis."
+        )
 
     return ok({"etapa": _etapa_payload(etapa)})
 
@@ -655,9 +672,11 @@ def api_etapas_reordenar(project_id: int) -> Response | tuple[Response, int]:
             cascade_subsequent_dates(project_id, base_ordem, days_diff)
 
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao reordenar etapas.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_etapas_reordenar", public_message="Erro ao reordenar etapas."
+        )
 
     return ok({"etapas": _ordered_etapas_payload(project)})
 
@@ -777,10 +796,12 @@ def api_projeto_cascade(project_id: int) -> Response | tuple[Response, int]:
         base_ordem, days_diff = cascade_info
         cascade_subsequent_dates(project_id, base_ordem, days_diff)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail(
-            "Erro ao atualizar datas subsequentes.", status=422, code="validation"
+        return fail_internal(
+            exc,
+            "api_projeto_cascade",
+            public_message="Erro ao atualizar datas subsequentes.",
         )
 
     return ok({"etapas": _ordered_etapas_payload(project)})
@@ -892,9 +913,13 @@ def api_projeto_importar_modelo(project_id: int) -> Response | tuple[Response, i
     except EtapaNaoEditavelError as exc:
         db.session.rollback()
         return _fail_nao_editavel(exc)
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao importar modelo.", status=422, code="validation")
+        return fail_internal(
+            exc,
+            "api_projeto_importar_modelo",
+            public_message="Erro ao importar modelo.",
+        )
 
     return ok(
         {

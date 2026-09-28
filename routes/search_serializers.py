@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from flask import url_for
 
 from services.etapa_responsaveis import responsavel_display
+from services.etapa_positions import build_etapa_position_map
 from services.task_assignees import task_assignee_display
 
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
@@ -70,15 +71,13 @@ def _build_project_display_title(project, max_length: int = 120) -> str:
     return _truncate_text(f"{project.id}-{base_title}", max_length)
 
 
-def _build_stage_display_title(stage, project, max_length: int = 120) -> str:
+def _build_stage_display_title(
+    stage, project, max_length: int = 120, *, position: int | None = None
+) -> str:
     """Prefixa a numeração de exibição "projectId.posição" (mesma do StageList)."""
     base_title = stage.descricao or f"Etapa #{stage.id}"
-    if project is None:
+    if project is None or position is None:
         return _truncate_text(base_title, max_length)
-    etapa_ids = [etapa.id for etapa in project.etapas]
-    if stage.id not in etapa_ids:
-        return _truncate_text(base_title, max_length)
-    position = etapa_ids.index(stage.id) + 1
     return _truncate_text(f"{project.id}.{position}-{base_title}", max_length)
 
 
@@ -173,6 +172,7 @@ def _serialize_project_rows(projects, term: str) -> list[dict]:
 
 
 def _serialize_stage_rows(stages, term: str) -> list[dict]:
+    positions = build_etapa_position_map(list({stage.project_id for stage in stages}))
     stage_results = []
     for stage in stages:
         project = stage.project
@@ -190,7 +190,9 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
                 "type": "stage",
                 "type_label": "Etapa",
                 "title": _truncate_text(stage.descricao or f"Etapa #{stage.id}", 120),
-                "display_title": _build_stage_display_title(stage, project),
+                "display_title": _build_stage_display_title(
+                    stage, project, position=positions.get(stage.id)
+                ),
                 "subtitle": (
                     f"Projeto: {_truncate_text(project.titulo, 95)}" if project else ""
                 ),

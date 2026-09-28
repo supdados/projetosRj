@@ -1,5 +1,7 @@
 import datetime
 
+from services.error_logging import log_internal_error
+
 from services.calendar_core import format_human_datetime, to_local_datetime
 from services.calendar_sync import sync_local_event_to_google
 from models import CalendarEvent, Etapa, ProjectStageMeeting, db
@@ -265,9 +267,12 @@ def create_stage_meeting(app_config, project, connection, payload, *, actor_user
             create_conference=payload["create_conference"],
         )
     except Exception as exc:
+        log_internal_error(exc, "sincronizar reunião criada")
         event.sync_status = "error"
-        event.sync_error = str(exc)
-        sync_warning = str(exc)
+        event.sync_error = (
+            "Não foi possível sincronizar a reunião com o Google Calendar."
+        )
+        sync_warning = event.sync_error
 
     meeting = ProjectStageMeeting(
         etapa_id=etapa.id,
@@ -355,9 +360,12 @@ def update_stage_meeting(app_config, etapa, connection, payload):
             create_conference=payload["create_conference"],
         )
     except Exception as exc:
+        log_internal_error(exc, "sincronizar reunião editada")
         event.sync_status = "error"
-        event.sync_error = str(exc)
-        sync_warning = str(exc)
+        event.sync_error = (
+            "Não foi possível sincronizar a reunião com o Google Calendar."
+        )
+        sync_warning = event.sync_error
 
     update_meeting_from_calendar_event(meeting, event)
     sync_etapa_from_meeting(etapa, meeting, title=event.title)

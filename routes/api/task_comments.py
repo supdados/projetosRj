@@ -33,7 +33,7 @@ from services.comment_mentions import normalize_comment_content
 
 from ..tasks.mentions import resolve_comment_mentions
 from ..tasks.permissions import _can_view_task, api_task_denial
-from .envelope import fail, fail_not_found, ok
+from .envelope import fail, fail_not_found, ok, fail_internal
 from .negotiation import api_login_required
 from .serializers import _serialize_task_comment
 
@@ -174,9 +174,13 @@ def api_tarefa_comentario_add(task_id: int) -> Response | tuple[Response, int]:
             message=f'{g.user.name} comentou: "{_preview_text(comment.content, 120)}".',
         )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao adicionar comentário.", status=422, code="validation")
+        return fail_internal(
+            exc,
+            "api_tarefa_comentario_add",
+            public_message="Erro ao adicionar comentário.",
+        )
 
     return ok(
         {
@@ -234,9 +238,11 @@ def api_comentario_edit(comment_id: int) -> Response | tuple[Response, int]:
             ),
         )
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao atualizar comentário.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_comentario_edit", public_message="Erro ao atualizar comentário."
+        )
 
     return ok(
         {
@@ -279,9 +285,11 @@ def api_comentario_delete(comment_id: int) -> Response | tuple[Response, int]:
         )
         db.session.delete(comment)
         db.session.commit()
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
-        return fail("Erro ao excluir comentário.", status=422, code="validation")
+        return fail_internal(
+            exc, "api_comentario_delete", public_message="Erro ao excluir comentário."
+        )
 
     return ok(
         {

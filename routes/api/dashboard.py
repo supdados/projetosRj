@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from flask import Response, request
+from services.card_statistics import project_card_statistics, task_card_counts
 
 from ..blueprint import main_bp
 from ..dashboard import build_dashboard_context
@@ -40,11 +41,19 @@ def _serialize_dashboard(context: dict[str, Any]) -> dict[str, Any]:
         ``dict`` JSON-safe com ``projects``/``tasks`` serializados e os
         contadores ``counts`` agregados.
     """
+    projects = project_card_statistics(
+        project.id for project in context["recent_projects"]
+    )
+    tasks = task_card_counts(task.id for task in context["recent_tasks"])
     return {
         "recent_projects": [
-            serialize_project_card(project) for project in context["recent_projects"]
+            serialize_project_card(project, statistics=projects[project.id])
+            for project in context["recent_projects"]
         ],
-        "recent_tasks": [serialize_task_card(task) for task in context["recent_tasks"]],
+        "recent_tasks": [
+            serialize_task_card(task, counts=tasks[task.id])
+            for task in context["recent_tasks"]
+        ],
         "objetivos": context["objetivos"],
         "selected_orgao": context["selected_orgao"],
         "counts": {

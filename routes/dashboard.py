@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 from flask import g, request
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 
 from models import Project, Task, db
 
@@ -9,6 +10,7 @@ from .blueprint import main_bp
 from .decorators import login_required
 from services.atraso import contar_projetos_atrasados
 from services.authorization import project_visibility_criterion
+from services.card_statistics import task_card_load_options
 
 from .orgao_scope import (
     expand_orgao_filter_ids,
@@ -60,7 +62,8 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
     # o suficiente para encher telas altas sem deixar sobra.
     RECENT_PROJECTS_LIMIT = 30
     recent_projects = (
-        project_query_base.order_by(Project.id.desc())
+        project_query_base.options(joinedload(Project.orgao_ref))
+        .order_by(Project.id.desc())
         .limit(RECENT_PROJECTS_LIMIT)
         .all()
     )
@@ -201,7 +204,12 @@ def build_dashboard_context(selected_orgao_id: Optional[int]) -> dict[str, Any]:
 
     recent_tasks_q = Task.query.filter(Task.status != "finalizada")
     recent_tasks_q = apply_task_visibility_rules(recent_tasks_q, include_archived=False)
-    recent_tasks = recent_tasks_q.order_by(Task.id.desc()).limit(9).all()
+    recent_tasks = (
+        recent_tasks_q.options(*task_card_load_options())
+        .order_by(Task.id.desc())
+        .limit(9)
+        .all()
+    )
 
     dashboard_tasks = []
     dashboard_tasks_pagination = {

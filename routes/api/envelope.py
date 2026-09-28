@@ -32,7 +32,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Response, current_app, jsonify
+from flask import Response, jsonify
+
+from services.error_logging import log_internal_error
 
 
 def ok(
@@ -132,7 +134,7 @@ def fail_internal(
     com a mensagem curada.
 
     Args:
-        exc: A exceção capturada (logada com traceback via ``logger.exception``).
+        exc: A exceção capturada (logada com contexto estruturado e traceback).
         log_label: Rótulo curto da operação para o log (ex.: ``"criar projeto"``).
         status: HTTP a retornar (default 500).
         code: Código canônico do envelope (default ``"server"``).
@@ -146,5 +148,5 @@ def fail_internal(
         ...     db.session.rollback()
         ...     return fail_internal(exc, "criar projeto")
     """
-    current_app.logger.exception("Falha ao %s: %s", log_label, type(exc).__name__)
+    log_internal_error(exc, log_label)
     return fail(public_message, status=status, code=code)
