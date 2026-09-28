@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from flask import url_for
 
 from services.etapa_responsaveis import responsavel_display
+from services.task_assignees import task_assignee_display
 
 TIMEZONE_BR = ZoneInfo("America/Sao_Paulo")
 
@@ -212,11 +213,12 @@ def _serialize_stage_rows(stages, term: str) -> list[dict]:
 def _serialize_task_rows(tasks, term: str) -> list[dict]:
     task_results = []
     for task in tasks:
+        responsavel = task_assignee_display(task)
         task_match = _resolve_match_info(
             term,
             [
                 ("descricao", "Descrição", task.descricao),
-                ("responsavel", "Responsável", task.responsavel),
+                ("responsavel", "Responsável", responsavel),
                 ("status", "Status", task.status),
                 ("prioridade", "Prioridade", task.prioridade),
                 ("tipo_pedido", "Tipo", task.tipo_pedido),
@@ -226,10 +228,8 @@ def _serialize_task_rows(tasks, term: str) -> list[dict]:
         task_meta_parts = []
         if status_label:
             task_meta_parts.append(f"Status: {status_label}")
-        if task.responsavel:
-            task_meta_parts.append(
-                f"Responsável: {_truncate_text(task.responsavel, 80)}"
-            )
+        if responsavel:
+            task_meta_parts.append(f"Responsável: {_truncate_text(responsavel, 80)}")
         if task.prioridade:
             task_meta_parts.append(f"Prioridade: {task.prioridade}")
 

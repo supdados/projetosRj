@@ -1,8 +1,10 @@
+from collections.abc import Iterable
 from urllib.parse import urlencode
 
 from flask import g, request, url_for
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import joinedload
+from services.task_assignees import task_assignee_criterion
 
 from models import (
     Project,
@@ -56,7 +58,9 @@ def serialize_task_assignees(task: Task) -> list:
     return [serialize_assignee(a.user) for a in rows]
 
 
-def set_task_assignees(task: Task, desired_user_ids) -> tuple[list, list]:
+def set_task_assignees(
+    task: Task, desired_user_ids: Iterable[int], *, preserve_legacy: bool = False
+) -> tuple[list[int], list[int]]:
     """Reconcilia os responsáveis da tarefa com ``desired_user_ids``.
 
     Usa a coleção ORM (cascade delete-orphan) para manter ``task.assignees``
@@ -64,6 +68,10 @@ def set_task_assignees(task: Task, desired_user_ids) -> tuple[list, list]:
     como listas ordenadas de user_id. O caller faz o commit.
     """
     desired = {int(uid) for uid in desired_user_ids if uid}
+    # Substituir a atribuição é explícito: não ressuscitar o nome antigo quando
+    # a última linha N:N sair. Na criação, preserva-se o texto legado enviado.
+    if not preserve_legacy:
+        task.responsavel = None
     current = {a.user_id: a for a in task.assignees}
     to_remove = sorted(set(current) - desired)
     to_add = sorted(desired - set(current))
@@ -320,15 +328,7 @@ def _build_visible_tasks_query(
 
     if responsavel_filter:
         pattern = f"%{_escape_like_pattern(responsavel_filter)}%"
-        # Pós-backfill (scripts/migrations/backfill_task_assignees.py) os
-        # responsáveis vivem em task_assignee; o texto legado só guarda nomes
-        # sem usuário correspondente — o filtro precisa cobrir as duas fontes.
-        assignee_name_match = Task.assignees.any(
-            TaskAssignee.user.has(User.name.ilike(pattern, escape="\\"))
-        )
-        query = query.filter(
-            or_(Task.responsavel.ilike(pattern, escape="\\"), assignee_name_match)
-        )
+        query = query.filter(task_assignee_criterion(pattern, escape="\\"))
 
     query = query.filter(Task.is_archived.is_(bool(include_archived)))
 

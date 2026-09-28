@@ -7,9 +7,10 @@ vi.mock('$lib/api/board', () => ({
 	updateTaskStatus: vi.fn()
 }));
 
-import { reorderBoard } from '$lib/api/board';
+import { getBoard, reorderBoard } from '$lib/api/board';
 import { createBoardStore } from './board';
 import type { BoardCard, BoardReorderPayload } from '$lib/types/board';
+import type { BoardReorderResult, BoardData } from '$lib/types/board';
 
 function makeCard(id: number): BoardCard {
 	return {
@@ -33,6 +34,128 @@ function makeCard(id: number): BoardCard {
 		permissions: { can_finalize: false }
 	};
 }
+
+class DeferredBoardResult<T = BoardReorderResult> {
+	resolve!: (value: T) => void;
+	reject!: (error: Error) => void;
+	promise = new Promise<T>((resolve, reject) => {
+		this.resolve = resolve;
+		this.reject = reject;
+	});
+}
+
+describe('P2-11: sucesso de reorder preserva mudanças durante o voo', () => {
+	beforeEach(() => vi.mocked(reorderBoard).mockReset());
+	it.each(['add', 'remove', 'edit'])('preserva %s ao aplicar resposta parcial', async (change) => {
+		const response = new DeferredBoardResult();
+		vi.mocked(reorderBoard).mockReturnValueOnce(response.promise);
+		const board = createBoardStore();
+		board.addCard(makeCard(1), 'nao_iniciada');
+		board.addCard(makeCard(2), 'nao_iniciada');
+		const reordering = board.reorder('nao_iniciada', [1, 2]);
+		if (change === 'add') board.addCard(makeCard(3), 'nao_iniciada');
+		if (change === 'remove') board.removeCard(2);
+		if (change === 'edit') board.upsertCard({ ...makeCard(1), descricao: 'Texto novo' });
+		response.resolve({ columns: [{ status: 'nao_iniciada', label: '', tasks: [makeCard(1), makeCard(2)] }] });
+		await reordering;
+		const tasks = get(board).columns.flatMap((column) => column.tasks);
+		if (change === 'add') expect(tasks.map((card) => card.id)).toEqual([3, 1, 2]);
+		if (change === 'remove') expect(tasks.map((card) => card.id)).toEqual([1]);
+		if (change === 'edit') expect(tasks.find((card) => card.id === 1)?.descricao).toBe('Texto novo');
+		expect(get(board).total).toBe(tasks.length);
+	});
+});
+
+function loadedBoard(cards: BoardCard[]): BoardData {
+	return {
+		columns: [{ status: 'nao_iniciada', label: '', tasks: cards }],
+		filters: { project: '', prioridade: '', tipo: '', status: '', responsavel: '', selected_orgao: null },
+		total: cards.length
+	};
+}
+
+describe('P2-11: ordenação de escritas e revalidação', () => {
+	beforeEach(() => {
+		vi.mocked(reorderBoard).mockReset();
+		vi.mocked(getBoard).mockReset();
+	});
+	it('movimentos sobrepostos do mesmo cartão são enviados na ordem das ações', async () => {
+		const first = new DeferredBoardResult();
+		const second = new DeferredBoardResult();
+		vi.mocked(reorderBoard).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		const board = createBoardStore();
+		board.addCard(makeCard(1), 'nao_iniciada');
+		const movingA = board.moveCard(1, 'nao_iniciada', 'em_andamento', 0);
+		const movingB = board.moveCard(1, 'em_andamento', 'para_validacao', 0);
+		expect(reorderBoard).toHaveBeenCalledTimes(1);
+		second.resolve({ columns: [{ status: 'para_validacao', label: '', tasks: [{ ...makeCard(1), status: 'para_validacao' }] }] });
+		first.resolve({ columns: [{ status: 'em_andamento', label: '', tasks: [{ ...makeCard(1), status: 'em_andamento' }] }] });
+		await Promise.all([movingA, movingB]);
+		expect(reorderBoard).toHaveBeenCalledTimes(2);
+		expect(vi.mocked(reorderBoard).mock.calls[1][0].columns).toEqual([
+			{ status: 'em_andamento', task_ids: [] }, { status: 'para_validacao', task_ids: [1] }
+		]);
+		expect(get(board).columns.find((column) => column.status === 'para_validacao')?.tasks.map((card) => card.id)).toEqual([1]);
+		expect(get(board).total).toBe(1);
+	});
+
+	it('cartão criado durante reorder continua e o board é revalidado', async () => {
+		const response = new DeferredBoardResult();
+		vi.mocked(getBoard).mockResolvedValueOnce(loadedBoard([makeCard(1)]))
+			.mockResolvedValueOnce(loadedBoard([makeCard(2), makeCard(1)]));
+		const board = createBoardStore();
+		await board.load({ project: '7' });
+		vi.mocked(reorderBoard).mockReturnValueOnce(response.promise);
+		const writing = board.reorder('nao_iniciada', [1]);
+		board.addCard(makeCard(2), 'nao_iniciada');
+		response.resolve({ columns: loadedBoard([makeCard(1)]).columns });
+		await writing;
+		expect(getBoard).toHaveBeenCalledTimes(2);
+		expect(getBoard).toHaveBeenLastCalledWith({ project: '7' });
+		expect(get(board).total).toBe(2);
+		expect(get(board).columns.flatMap((column) => column.tasks.map((card) => card.id))).toEqual([2, 1]);
+	});
+
+	it('revalidação atrasada não descarta cartão que chegou depois dela', async () => {
+		const refresh = new DeferredBoardResult<BoardData>();
+		const response = new DeferredBoardResult();
+		vi.mocked(getBoard).mockResolvedValueOnce(loadedBoard([makeCard(1)])).mockReturnValueOnce(refresh.promise);
+		const board = createBoardStore();
+		await board.load();
+		vi.mocked(reorderBoard).mockReturnValueOnce(response.promise);
+		const writing = board.reorder('nao_iniciada', [1]);
+		board.addCard(makeCard(2), 'nao_iniciada');
+		response.resolve({ columns: loadedBoard([makeCard(1)]).columns });
+		await Promise.resolve();
+		board.addCard(makeCard(3), 'nao_iniciada');
+		refresh.resolve(loadedBoard([makeCard(2), makeCard(1)]));
+		await writing;
+		expect(get(board).total).toBe(3);
+	});
+
+	it('trocar de consulta invalida a resposta e a escrita ainda na fila', async () => {
+		const response = new DeferredBoardResult();
+		vi.mocked(reorderBoard).mockReturnValueOnce(response.promise);
+		const board = createBoardStore();
+		board.addCard(makeCard(1), 'nao_iniciada');
+		const writing = board.reorder('nao_iniciada', [1]);
+		const queued = board.moveCard(1, 'nao_iniciada', 'em_andamento', 0);
+		vi.mocked(getBoard).mockResolvedValueOnce(loadedBoard([makeCard(9)]));
+		await board.load({ project: '9' });
+		response.resolve({ columns: loadedBoard([makeCard(1)]).columns });
+		await writing;
+		await expect(queued).resolves.toBe(false);
+		expect(reorderBoard).toHaveBeenCalledTimes(1);
+		expect(get(board).columns.flatMap((column) => column.tasks.map((card) => card.id))).toEqual([9]);
+	});
+
+	it('reconciliação de cartão novo ou repetido mantém o total correto', () => {
+		const board = createBoardStore();
+		board.upsertCard(makeCard(1));
+		board.addCard(makeCard(1), 'nao_iniciada');
+		expect(get(board).total).toBe(1);
+	});
+});
 
 describe('board store — total sincronizado com addCard/removeCard', () => {
 	it('addCard incrementa total (baseline)', () => {
@@ -117,7 +240,7 @@ describe('board store — rollback não apaga mudanças concorrentes confirmadas
 			.tasks.map((task) => task.id);
 	}
 
-	it('falha de moveCard reverte só o card movido, preservando move confirmado no meio', async () => {
+	it('falha de moveCard reverte só o card movido e não cancela o próximo movimento', async () => {
 		const board = createBoardStore();
 		board.addCard(makeCard(1), 'nao_iniciada');
 		board.addCard(makeCard(2), 'nao_iniciada'); // ordem: [2, 1]
@@ -133,11 +256,12 @@ describe('board store — rollback não apaga mudanças concorrentes confirmadas
 			.mockResolvedValueOnce({ columns: [] });
 
 		const moveX = board.moveCard(1, 'nao_iniciada', 'em_andamento', 0); // request lenta
-		const okY = await board.moveCard(2, 'nao_iniciada', 'para_validacao', 0); // confirmado antes
-		expect(okY).toBe(true);
+		const moveY = board.moveCard(2, 'nao_iniciada', 'para_validacao', 0);
+		expect(reorderBoard).toHaveBeenCalledTimes(1);
 
 		rejectMoveX(new Error('servidor recusou'));
 		expect(await moveX).toBe(false);
+		expect(await moveY).toBe(true);
 
 		expect(columnTaskIds(board, 'em_andamento')).toEqual([]);
 		expect(columnTaskIds(board, 'nao_iniciada')).toEqual([1]);

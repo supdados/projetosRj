@@ -3,8 +3,8 @@
  *
  * A store Svelte é a ÚNICA fonte de verdade do board (colunas + cards). O DOM é
  * derivado dela — NUNCA o contrário. Mutações de DnD são OTIMISTAS: aplicamos na
- * store, depois confirmamos com o backend (autoritativo) e revertemos (rollback)
- * se o servidor recusar — ex.: 403 ao finalizar sem permissão.
+ * store ao iniciar cada escrita, confirmamos com o backend e revertemos se
+ * recusada. Escritas aguardam a anterior para preservar a ordem das ações.
  *
  * Projetada para 2 modos sem acoplar a UI:
  *   - 'board'  -> board completo (5 colunas), usado por /tarefas (kanban).
@@ -20,7 +20,7 @@
 
 import { writable, get as readStore, type Readable } from 'svelte/store';
 import { ApiClientError } from '$lib/api/client';
-import { getBoard, reorderBoard, updateTaskStatus } from '$lib/api/board';
+import { getBoard, reorderBoard } from '$lib/api/board';
 import {
 	TASK_STATUS_ORDER,
 	STATUS_LABELS,
@@ -28,11 +28,15 @@ import {
 	canItemMoveToStatus,
 	type TaskStatus
 } from '$lib/utils/taskStatus';
+import {
+	columnsFromData, findCard, cloneColumns, withCardMoved,
+	withColumnReordered, columnIds, withColumnsMerged, totalCards
+} from './boardColumns';
+import { createSerialMutationQueue } from '$lib/utils/serialMutationQueue';
 import { sortByPriority } from '$lib/utils/taskPriority';
 import type {
 	BoardCard,
 	BoardColumn,
-	BoardData,
 	BoardFilters,
 	BoardQuery,
 	BoardReorderColumn
@@ -76,11 +80,10 @@ export interface BoardStore extends Readable<BoardState> {
 	/**
 	 * Insere um card NOVO (composer) na coluna do `status` informado, no topo
 	 * (paridade com `insertItemFromPayload` do composer legado, que move o novo
-	 * card para a dropzone do status escolhido). Cards finalizados/arquivados não
-	 * entram no board ativo (no-op).
+	 * card para a dropzone do status escolhido). Arquivadas não entram no board.
 	 */
 	addCard(card: BoardCard, status: TaskStatus): void;
-	/** Remove um card do board (ex.: tarefa finalizada/arquivada pelo drawer). */
+	/** Remove um card do board (ex.: tarefa arquivada pelo drawer). */
 	removeCard(taskId: number): void;
 	reset(): void;
 }
@@ -115,117 +118,6 @@ function initialState(mode: BoardMode): BoardState {
 	};
 }
 
-/**
- * Reconstrói as 5 colunas canônicas a partir de uma carga do backend,
- * garantindo ordem fixa e bucketização por `normalizeStatus` (status legado
- * desconhecido cai na primeira coluna — igual ao backend).
- */
-function columnsFromData(data: BoardData): BoardColumn[] {
-	const byStatus = new Map<TaskStatus, BoardCard[]>(
-		TASK_STATUS_ORDER.map((status) => [status, []])
-	);
-	for (const column of data.columns) {
-		for (const card of column.tasks) {
-			byStatus.get(normalizeStatus(card.status))!.push(card);
-		}
-	}
-	return TASK_STATUS_ORDER.map((status) => ({
-		status,
-		label: STATUS_LABELS[status],
-		tasks: byStatus.get(status)!
-	}));
-}
-
-/** Localiza um card e sua coluna no snapshot atual. */
-function findCard(
-	columns: BoardColumn[],
-	cardId: number
-): { card: BoardCard; status: TaskStatus } | null {
-	for (const column of columns) {
-		const card = column.tasks.find((task) => task.id === cardId);
-		if (card) return { card, status: column.status };
-	}
-	return null;
-}
-
-/** Cópia rasa por coluna (clona a lista `tasks`; cards são imutáveis aqui). */
-function cloneColumns(columns: BoardColumn[]): BoardColumn[] {
-	return columns.map((column) => ({ ...column, tasks: [...column.tasks] }));
-}
-
-/** Move um card entre/dentro de colunas, retornando colunas NOVAS (imutável). */
-function withCardMoved(
-	columns: BoardColumn[],
-	cardId: number,
-	toStatus: TaskStatus,
-	index: number,
-	overrideStatus = true
-): BoardColumn[] {
-	const next = cloneColumns(columns);
-	let moved: BoardCard | null = null;
-	for (const column of next) {
-		const at = column.tasks.findIndex((task) => task.id === cardId);
-		if (at !== -1) {
-			moved = column.tasks[at];
-			column.tasks.splice(at, 1);
-			break;
-		}
-	}
-	if (!moved) return columns;
-	const target = next.find((column) => column.status === toStatus);
-	if (!target) return columns;
-	const card = overrideStatus && moved.status !== toStatus
-		? { ...moved, status: toStatus }
-		: moved;
-	const clamped = Math.max(0, Math.min(index, target.tasks.length));
-	target.tasks.splice(clamped, 0, card);
-	return next;
-}
-
-/** Reaplica a ordem `orderedIds` numa coluna (cards desconhecidos ignorados). */
-function withColumnReordered(
-	columns: BoardColumn[],
-	status: TaskStatus,
-	orderedIds: number[]
-): BoardColumn[] {
-	const next = cloneColumns(columns);
-	const column = next.find((c) => c.status === status);
-	if (!column) return columns;
-	const byId = new Map(column.tasks.map((task) => [task.id, task]));
-	const reordered: BoardCard[] = [];
-	for (const id of orderedIds) {
-		const card = byId.get(id);
-		if (card) {
-			reordered.push(card);
-			byId.delete(id);
-		}
-	}
-	// Mantém quaisquer cards remanescentes (defensivo) ao final.
-	for (const card of byId.values()) reordered.push(card);
-	column.tasks = reordered;
-	return next;
-}
-
-/** IDs ordenados de uma coluna no snapshot. */
-function columnIds(columns: BoardColumn[], status: TaskStatus): number[] {
-	const column = columns.find((c) => c.status === status);
-	return column ? column.tasks.map((task) => task.id) : [];
-}
-
-/** Mescla colunas afetadas (resposta de reordenar) sobre o snapshot atual. */
-function withColumnsMerged(
-	columns: BoardColumn[],
-	affected: BoardColumn[]
-): BoardColumn[] {
-	const byStatus = new Map(affected.map((column) => [normalizeStatus(column.status), column]));
-	return columns.map((column) => {
-		const replacement = byStatus.get(column.status);
-		return replacement
-			? { status: column.status, label: column.label, tasks: [...replacement.tasks] }
-			: column;
-	});
-}
-
 /** Extrai mensagem amigável de um erro de API/desconhecido. */
 function errorMessage(err: unknown, fallback: string): string {
 	if (err instanceof ApiClientError) return err.message;
@@ -241,11 +133,18 @@ function errorMessage(err: unknown, fallback: string): string {
 export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardStore {
 	const mode: BoardMode = options.mode ?? 'board';
 	const store = writable<BoardState>(initialState(mode));
+	const writes = createSerialMutationQueue();
+	let generation = 0;
+	let externalRevision = 0;
+	let activeQuery: BoardQuery | null = null;
 
 	async function load(filters: BoardQuery = {}, signal?: AbortSignal): Promise<void> {
+		const context = ++generation;
+		activeQuery = { ...filters };
 		store.update((state) => ({ ...state, status: 'loading', error: null }));
 		try {
 			const data = await getBoard(filters, signal);
+			if (context !== generation || signal?.aborted) return;
 			store.update((state) => ({
 				...state,
 				status: 'ready',
@@ -255,6 +154,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 				error: null
 			}));
 		} catch (err) {
+			if (context !== generation || signal?.aborted) return;
 			if (err instanceof DOMException && err.name === 'AbortError') return;
 			store.update((state) => ({
 				...state,
@@ -262,6 +162,38 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 				error: errorMessage(err, 'Falha ao carregar o board.')
 			}));
 		}
+	}
+
+	/** Revalida após alterações concorrentes; uma leitura velha não apaga novas edições. */
+	async function revalidate(context: number): Promise<void> {
+		if (activeQuery === null || context !== generation) return;
+		const revision = externalRevision;
+		try {
+			const fresh = await getBoard(activeQuery);
+			if (context !== generation || revision !== externalRevision) return;
+			const columns = columnsFromData(fresh);
+			store.update((state) => ({ ...state, columns, total: totalCards(columns) }));
+		} catch (err) {
+			if (context === generation) {
+				store.update((state) => ({ ...state, error: errorMessage(err, 'Falha ao atualizar o board.') }));
+			}
+		}
+	}
+
+	async function confirmColumns(
+		context: number, revision: number, submitted: BoardColumn[], affected: BoardColumn[]
+	): Promise<void> {
+		if (context !== generation) return;
+		store.update((state) => {
+			const columns = withColumnsMerged(state.columns, affected, submitted);
+			return { ...state, columns, total: totalCards(columns) };
+		});
+		const returned = new Set(affected.flatMap((column) => column.tasks.map((card) => card.id)));
+		const statuses = new Set(affected.map((column) => column.status));
+		const omitted = submitted.some((column) =>
+			statuses.has(column.status) && column.tasks.some((card) => !returned.has(card.id))
+		);
+		if (externalRevision !== revision || omitted) await revalidate(context);
 	}
 
 	/**
@@ -272,15 +204,27 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	 * já reprova (ex.: finalizar sem permissão), nem chamamos o backend e
 	 * sinalizamos o erro. Caso contrário, o servidor decide.
 	 */
-	async function moveCard(
+	function moveCard(
 		cardId: number,
-		fromStatus: TaskStatus,
+		_fromStatus: TaskStatus,
 		toStatus: TaskStatus,
 		index: number
 	): Promise<boolean> {
+		const context = generation;
+		store.update((state) => ({ ...state, error: null }));
+		return writes.run(() => performMove(cardId, toStatus, index, context));
+	}
+
+	async function performMove(
+		cardId: number, toStatus: TaskStatus, index: number, context: number
+	): Promise<boolean> {
+		if (context !== generation) return false;
+		const revision = externalRevision;
 		const before = readStore(store).columns;
 		const found = findCard(before, cardId);
 		if (!found) return false;
+		// A origem pode mudar enquanto a ação aguarda na fila.
+		const fromStatus = found.status;
 		const originIndex = columnIds(before, found.status).indexOf(cardId);
 
 		// Guard de UX: bloqueia drop inválido sem ir ao servidor.
@@ -294,7 +238,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 
 		// 1) Otimista: aplica na store imediatamente.
 		const optimistic = withCardMoved(before, cardId, toStatus, index);
-		store.update((state) => ({ ...state, columns: optimistic, error: null }));
+		store.update((state) => ({ ...state, columns: optimistic }));
 
 		// 2) Confirma no backend (autoritativo). Persistimos ordem + status numa
 		//    chamada de reordenação, refletindo as colunas afetadas pelo move.
@@ -310,22 +254,20 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 			// `moved_task_id` diz ao backend qual card pode transicionar de status
 			// (ids stale de mudança concorrente são ignorados lá — bug 2.10).
 			const result = await reorderBoard({ columns: affected, moved_task_id: cardId });
-			store.update((state) => ({
-				...state,
-				columns: withColumnsMerged(state.columns, result.columns),
-				error: null
-			}));
+			await confirmColumns(context, revision, optimistic, result.columns);
 			return true;
 		} catch (err) {
+			if (context !== generation) return false;
 			// 3) Rollback pela operação INVERSA sobre o estado ATUAL — restaurar o
 			//    snapshot `before` apagaria moves concorrentes já confirmados (bug 2.11).
 			store.update((state) => ({
 				...state,
-				columns: findCard(state.columns, cardId)
+				columns: findCard(state.columns, cardId)?.card === findCard(optimistic, cardId)?.card
 					? withCardMoved(state.columns, cardId, found.status, originIndex)
 					: state.columns,
 				error: errorMessage(err, 'Não foi possível mover a tarefa.')
 			}));
+			if (externalRevision !== revision) await revalidate(context);
 			return false;
 		}
 	}
@@ -334,25 +276,32 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	 * Reordena cards DENTRO de uma coluna (sem mudar status). Update OTIMISTA +
 	 * confirmação + ROLLBACK. `orderedIds` é a nova ordem canônica da coluna.
 	 */
-	async function reorder(
+	function reorder(
 		status: TaskStatus,
 		orderedIds: number[]
 	): Promise<boolean> {
+		const context = generation;
+		store.update((state) => ({ ...state, error: null }));
+		return writes.run(() => performReorder(status, [...orderedIds], context));
+	}
+
+	async function performReorder(
+		status: TaskStatus, orderedIds: number[], context: number
+	): Promise<boolean> {
+		if (context !== generation) return false;
+		const revision = externalRevision;
 		const before = readStore(store).columns;
 		const optimistic = withColumnReordered(before, status, orderedIds);
-		store.update((state) => ({ ...state, columns: optimistic, error: null }));
+		store.update((state) => ({ ...state, columns: optimistic }));
 
 		try {
 			const result = await reorderBoard({
 				columns: [{ status, task_ids: columnIds(optimistic, status) }]
 			});
-			store.update((state) => ({
-				...state,
-				columns: withColumnsMerged(state.columns, result.columns),
-				error: null
-			}));
+			await confirmColumns(context, revision, optimistic, result.columns);
 			return true;
 		} catch (err) {
+			if (context !== generation) return false;
 			// Rollback só da coluna afetada, sobre o estado ATUAL: reaplica a ordem
 			// anterior aos ids ainda presentes; cards que chegaram em voo vão ao fim.
 			const previousIds = columnIds(before, status);
@@ -361,6 +310,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 				columns: withColumnReordered(state.columns, status, previousIds),
 				error: errorMessage(err, 'Não foi possível reordenar a coluna.')
 			}));
+			if (externalRevision !== revision) await revalidate(context);
 			return false;
 		}
 	}
@@ -374,6 +324,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	 * coluna entra ordenado na coluna do status (autoritativo do servidor).
 	 */
 	function upsertCard(card: BoardCard): void {
+		externalRevision++;
 		store.update((state) => {
 			const targetStatus = normalizeStatus(card.status);
 			const next = cloneColumns(state.columns);
@@ -394,7 +345,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 					target.tasks = sortByPriority(target.tasks);
 				}
 			}
-			return { ...state, columns: next };
+			return { ...state, columns: next, total: totalCards(next) };
 		});
 	}
 
@@ -409,6 +360,7 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	function addCard(card: BoardCard, status: TaskStatus): void {
 		// Card arquivado não pertence ao board ativo (paridade: só tarefas ativas).
 		if (card.is_archived) return;
+		externalRevision++;
 		const targetStatus = normalizeStatus(status);
 		store.update((state) => {
 			const next = cloneColumns(state.columns);
@@ -421,12 +373,13 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 				target.tasks.unshift(card);
 				target.tasks = sortByPriority(target.tasks);
 			}
-			return { ...state, columns: next, total: state.total + 1 };
+			return { ...state, columns: next, total: totalCards(next) };
 		});
 	}
 
-	/** Remove um card do board (tarefa saiu do board ativo: finalizada/arquivada). */
+	/** Remove um card que saiu do board (exclusão ou arquivamento). */
 	function removeCard(taskId: number): void {
+		externalRevision++;
 		store.update((state) => {
 			const next = cloneColumns(state.columns);
 			let removed = false;
@@ -444,6 +397,8 @@ export function createBoardStore(options: CreateBoardStoreOptions = {}): BoardSt
 	}
 
 	function reset(): void {
+		generation++;
+		activeQuery = null;
 		store.set(initialState(mode));
 	}
 

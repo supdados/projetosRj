@@ -7,7 +7,7 @@
  * de tarefa nunca envia o rascunho anterior para o novo ID.
  */
 
-import { writable, get as readStore, type Readable } from 'svelte/store';
+import { writable, get as readStore } from 'svelte/store';
 import { ApiClientError } from '$lib/api/client';
 import {
 	getTaskDetail,
@@ -24,93 +24,27 @@ import {
 	deleteAttachment
 } from '$lib/api/taskDrawer';
 import { deleteTarefa, moverEtapa } from '$lib/api/tasks';
-import { createAutosave, type Autosave, type AutosavePhase } from '$lib/utils/autosave';
+import { createAutosave, type Autosave } from '$lib/utils/autosave';
 import { MSG_TAREFA_INACESSIVEL, accessErrorMessage } from '$lib/utils/accessErrorMessages';
 import type { BoardCard } from '$lib/types/board';
 import type {
 	TaskComment,
 	TaskAttachment,
-	TaskDetail,
 	TaskDrawerPayload,
 	TaskFieldEdits
 } from '$lib/types/taskDrawer';
 
-/** Origem de abertura do drawer (metadado de UX; não muda o contrato). */
-export type DrawerMode = 'board' | 'list' | 'etapa';
+import type {
+	OpenDrawerOptions, TaskDrawerReconcilers, TaskDrawerState, TaskDrawerStore
+} from '$lib/types/taskDrawerStore';
+export type {
+	DrawerMode, DrawerStatus, OpenDrawerOptions, TaskDrawerReconcilers, TaskDrawerState, TaskDrawerStore
+} from '$lib/types/taskDrawerStore';
 
-/** Fase de carregamento do detalhe. */
-export type DrawerStatus = 'closed' | 'loading' | 'ready' | 'error';
-
-/** Estado canônico exposto pela store do drawer. */
-export interface TaskDrawerState {
-	status: DrawerStatus;
-	mode: DrawerMode;
-	/** ID da tarefa aberta (ou `null` quando fechado). */
-	taskId: number | null;
-	/** Detalhe completo (ou `null` enquanto carrega/fechado). */
-	detail: TaskDetail | null;
-	/** Fase do autosave de campos (para a UI mostrar "Salvando…/Salvo/Erro"). */
-	autosave: AutosavePhase;
-	/** Há uma ação de ciclo de vida (finalizar/arquivar/…) em andamento? */
-	acting: boolean;
-	/** Mensagem do último erro (carregamento/autosave/ação/comentário/anexo). */
-	error: string | null;
-}
-
-/**
- * Reconciliadores injetados pelo consumidor para refletir a mutação no board
- * SEM duplicar estado (o drawer não conhece a implementação do board).
- */
-export interface TaskDrawerReconcilers {
-	/** Card atualizado (campos/status/desarquivar): faz upsert na coluna certa. */
-	onCardChanged?: (card: BoardCard) => void;
-	/** Card arquivado: remove da coluna. Finalizadas não arquivadas permanecem. */
-	onCardRemoved?: (taskId: number) => void;
-}
-
-/** Opções de `open`. */
-export interface OpenDrawerOptions {
-	mode?: DrawerMode;
-	signal?: AbortSignal;
-}
-
-/** API pública da store do drawer. */
-export interface TaskDrawerStore extends Readable<TaskDrawerState> {
-	open(taskId: number, options?: OpenDrawerOptions): Promise<boolean>;
-	close(): Promise<boolean>;
-	/** Saída explícita quando a pessoa decide descartar uma edição não salva. */
-	discardAndClose(): void;
-	editField(fields: TaskFieldEdits): void;
-	flush(): Promise<boolean>;
-	retry(): Promise<boolean>;
-	finalizar(): Promise<boolean>;
-	arquivar(): Promise<boolean>;
-	desarquivar(): Promise<boolean>;
-	reativar(): Promise<boolean>;
-	/**
-	 * Exclui a tarefa aberta (botão lixeira do drawer). Server-autoritativo
-	 * (403 só autor/admin). Em sucesso remove o card do board (`onCardRemoved`)
-	 * e FECHA o drawer; em erro mantém aberto e expõe a mensagem.
-	 */
-	deleteTask(): Promise<boolean>;
-	/**
-	 * Move a tarefa aberta para outra etapa (`etapaId` ou `"sem_etapa"`). Recarrega
-	 * o detalhe (reconciliando o card no board). Devolve um `warning` opcional
-	 * quando a etapa de destino está concluída (paridade com o legado).
-	 */
-	moveEtapa(etapaId: number | 'sem_etapa' | null): Promise<{ ok: boolean; warning?: string }>;
-	/**
-	 * Aplica um envelope `{task, detail}` vindo de um save EXTERNO à store (ex.:
-	 * o AssigneePicker persiste responsáveis direto na API): atualiza o detalhe
-	 * aberto (se for a mesma tarefa) e reconcilia o card no board.
-	 */
-	applyExternalPayload(payload: TaskDrawerPayload): void;
-	addComment(content: string): Promise<boolean>;
-	editComment(commentId: number, content: string): Promise<boolean>;
-	deleteComment(commentId: number): Promise<boolean>;
-	refreshAttachments(): Promise<void>;
-	uploadAttachment(file: File): Promise<boolean>;
-	deleteAttachment(anexoId: number): Promise<boolean>;
+interface DrawerContext {
+	taskId: number;
+	selection: number;
+	intent: number;
 }
 
 const INITIAL: TaskDrawerState = {
@@ -139,6 +73,30 @@ export function createTaskDrawerStore(
 	reconcilers: TaskDrawerReconcilers = {}
 ): TaskDrawerStore {
 	const store = writable<TaskDrawerState>({ ...INITIAL });
+	let navigation = 0;
+	let selection = 0;
+	let loadingRequest: AbortController | null = null;
+
+	function beginNavigation(): number {
+		loadingRequest?.abort();
+		loadingRequest = null;
+		return ++navigation;
+	}
+
+	function captureContext(): DrawerContext | null {
+		const { taskId } = readStore(store);
+		return taskId === null ? null : { taskId, selection, intent: navigation };
+	}
+
+	function isCurrent(context: DrawerContext | null): boolean {
+		return context !== null && context.selection === selection
+			&& readStore(store).taskId === context.taskId;
+	}
+
+	function contextError(context: DrawerContext, error: unknown, fallback: string): void {
+		if (!isCurrent(context)) return;
+		store.update((state) => ({ ...state, error: errorMessage(error, fallback) }));
+	}
 
 	/** Aplica o card no board: arquivadas saem; demais ficam na coluna do status. */
 	function reconcileBoard(card: BoardCard): void {
@@ -155,22 +113,16 @@ export function createTaskDrawerStore(
 	 * board é reconciliado sempre (o card mudou no servidor de todo jeito).
 	 */
 	function applyExternalPayload(payload: TaskDrawerPayload): void {
-		store.update((state) => {
-			if (state.status === 'closed' || state.taskId !== payload.detail.id) return state;
-			return { ...state, detail: payload.detail };
-		});
-		reconcileBoard(payload.task);
+		applyPayload(payload, captureContext());
 	}
 
 	/** Aplica o envelope `{task, detail}` no drawer e reconcilia o board. */
-	function applyPayload(payload: TaskDrawerPayload): void {
-		store.update((state) => ({
-			...state,
-			status: 'ready',
-			taskId: payload.detail.id,
-			detail: payload.detail,
-			error: null
-		}));
+	function applyPayload(payload: TaskDrawerPayload, context = captureContext()): void {
+		if (isCurrent(context) && context?.taskId === payload.detail.id) {
+			store.update((state) => ({
+				...state, status: 'ready', detail: { ...payload.detail, ...pendingFields }, error: null
+			}));
+		}
 		reconcileBoard(payload.task);
 	}
 
@@ -207,15 +159,24 @@ export function createTaskDrawerStore(
 	 * (o `persistFn` mira a tarefa que estava aberta). Falha retorna false e
 	 * preserva o rascunho para corrigir, tentar de novo ou descartar explicitamente.
 	 */
-	async function flushPending(): Promise<boolean> {
-		if (!(await autosave.flush())) return false;
+	async function flushPending(intent: number): Promise<boolean> {
+		if (!(await autosave.flush()) || intent !== navigation) return false;
 		autosave.cancel();
 		pendingFields = {};
 		return true;
 	}
 
 	async function open(taskId: number, options: OpenDrawerOptions = {}): Promise<boolean> {
-		if (!(await flushPending())) return false;
+		if (options.signal?.aborted) return false;
+		const intent = beginNavigation();
+		if (!(await flushPending(intent))) return false;
+		selection++;
+		const context = { taskId, selection, intent };
+		const controller = new AbortController();
+		loadingRequest = controller;
+		const abort = (): void => controller.abort();
+		options.signal?.addEventListener('abort', abort, { once: true });
+		if (options.signal?.aborted) abort();
 		store.set({
 			...INITIAL,
 			status: 'loading',
@@ -223,11 +184,12 @@ export function createTaskDrawerStore(
 			taskId
 		});
 		try {
-			const payload = await getTaskDetail(taskId, options.signal);
-			applyPayload(payload);
+			const payload = await getTaskDetail(taskId, controller.signal);
+			if (intent !== navigation || !isCurrent(context) || controller.signal.aborted) return false;
+			applyPayload(payload, context);
 			return true;
 		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') return false;
+			if (intent !== navigation || !isCurrent(context) || controller.signal.aborted) return false;
 			store.update((state) => ({
 				...state,
 				status: 'error',
@@ -235,16 +197,24 @@ export function createTaskDrawerStore(
 				error: accessErrorMessage(err, MSG_TAREFA_INACESSIVEL, 'Falha ao carregar a tarefa.')
 			}));
 			return false;
+		} finally {
+			options.signal?.removeEventListener('abort', abort);
+			if (loadingRequest === controller) loadingRequest = null;
+			if (intent === navigation && isCurrent(context) && controller.signal.aborted) discardAndClose();
 		}
 	}
 
 	async function close(): Promise<boolean> {
-		if (!(await flushPending())) return false;
+		const intent = beginNavigation();
+		if (!(await flushPending(intent))) return false;
+		selection++;
 		store.set({ ...INITIAL });
 		return true;
 	}
 
 	function discardAndClose(): void {
+		beginNavigation();
+		selection++;
 		autosave.cancel();
 		pendingFields = {};
 		store.set({ ...INITIAL });
@@ -252,7 +222,7 @@ export function createTaskDrawerStore(
 
 	function editField(fields: TaskFieldEdits): void {
 		const state = readStore(store);
-		if (state.taskId === null) return;
+		if (state.taskId === null || state.status !== 'ready') return;
 		pendingFields = { ...pendingFields, ...fields };
 		store.update((current) => ({
 			...current,
@@ -271,23 +241,20 @@ export function createTaskDrawerStore(
 		action: (id: number) => Promise<TaskDrawerPayload>,
 		fallback: string
 	): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		// Salva edições pendentes antes de mudar o ciclo de vida (não perder edição).
-		if (!(await autosave.flush())) return false;
+		if (!(await autosave.flush()) || !isCurrent(context) || context.intent !== navigation) return false;
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
-			const payload = await action(id);
-			applyPayload(payload);
+			const payload = await action(context.taskId);
+			applyPayload(payload, context);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, fallback)
-			}));
+			contextError(context, err, fallback);
 			return false;
 		} finally {
-			store.update((state) => ({ ...state, acting: false }));
+			if (isCurrent(context)) store.update((state) => ({ ...state, acting: false }));
 		}
 	}
 
@@ -313,25 +280,21 @@ export function createTaskDrawerStore(
 	 * o drawer aberto e mostra a mensagem do backend (paridade com `delete_task`).
 	 */
 	async function deleteTask(): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
-		if (!(await autosave.flush())) return false;
+		const context = captureContext();
+		if (!context) return false;
+		if (!(await autosave.flush()) || !isCurrent(context) || context.intent !== navigation) return false;
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
-			await deleteTarefa(id);
+			await deleteTarefa(context.taskId);
 			// Reconcilia o board (remove o card) e fecha o drawer.
-			reconcilers.onCardRemoved?.(id);
-			autosave.cancel();
-			pendingFields = {};
-			store.set({ ...INITIAL });
+			reconcilers.onCardRemoved?.(context.taskId);
+			if (isCurrent(context) && context.intent === navigation) discardAndClose();
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				acting: false,
-				error: errorMessage(err, 'Não foi possível excluir a tarefa.')
-			}));
+			contextError(context, err, 'Não foi possível excluir a tarefa.');
 			return false;
+		} finally {
+			if (isCurrent(context)) store.update((state) => ({ ...state, acting: false }));
 		}
 	}
 
@@ -343,131 +306,113 @@ export function createTaskDrawerStore(
 	async function moveEtapa(
 		etapaId: number | 'sem_etapa' | null
 	): Promise<{ ok: boolean; warning?: string }> {
-		const id = readStore(store).taskId;
-		if (id === null) return { ok: false };
-		if (!(await autosave.flush())) return { ok: false };
+		const context = captureContext();
+		if (!context) return { ok: false };
+		if (!(await autosave.flush()) || !isCurrent(context) || context.intent !== navigation) return { ok: false };
 		store.update((state) => ({ ...state, acting: true, error: null }));
 		try {
-			const result = await moverEtapa(id, etapaId);
-			await open(id, { mode: readStore(store).mode });
+			const result = await moverEtapa(context.taskId, etapaId);
+			const payload = await getTaskDetail(context.taskId);
+			applyPayload(payload, context);
 			return { ok: true, warning: result.warning };
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível mover a tarefa.')
-			}));
+			contextError(context, err, 'Não foi possível mover a tarefa.');
 			return { ok: false };
 		} finally {
-			store.update((state) => ({ ...state, acting: false }));
+			if (isCurrent(context)) store.update((state) => ({ ...state, acting: false }));
 		}
 	}
 
 	/** Substitui a lista de comentários do detalhe corrente (mesma tarefa). */
-	function setComments(taskId: number, comentarios: TaskComment[]): void {
+	function setComments(context: DrawerContext, comentarios: TaskComment[]): void {
+		if (!isCurrent(context)) return;
 		store.update((state) => {
-			if (state.detail === null || state.detail.id !== taskId) return state;
+			if (state.detail === null || state.detail.id !== context.taskId) return state;
 			return { ...state, detail: { ...state.detail, comentarios }, error: null };
 		});
 	}
 
 	/** Substitui a lista de anexos do detalhe corrente (mesma tarefa). */
-	function setAttachments(taskId: number, anexos: TaskAttachment[]): void {
+	function setAttachments(context: DrawerContext, anexos: TaskAttachment[]): void {
+		if (!isCurrent(context)) return;
 		store.update((state) => {
-			if (state.detail === null || state.detail.id !== taskId) return state;
+			if (state.detail === null || state.detail.id !== context.taskId) return state;
 			return { ...state, detail: { ...state.detail, anexos }, error: null };
 		});
 	}
 
 	async function addCommentAction(content: string): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		try {
-			const result = await addComment(id, content);
-			setComments(id, result.comentarios);
+			const result = await addComment(context.taskId, content);
+			setComments(context, result.comentarios);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível adicionar o comentário.')
-			}));
+			contextError(context, err, 'Não foi possível adicionar o comentário.');
 			return false;
 		}
 	}
 
 	async function editCommentAction(commentId: number, content: string): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		try {
 			const result = await editComment(commentId, content);
-			setComments(id, result.comentarios);
+			setComments(context, result.comentarios);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível editar o comentário.')
-			}));
+			contextError(context, err, 'Não foi possível editar o comentário.');
 			return false;
 		}
 	}
 
 	async function deleteCommentAction(commentId: number): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		try {
 			const result = await deleteComment(commentId);
-			setComments(id, result.comentarios);
+			setComments(context, result.comentarios);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível excluir o comentário.')
-			}));
+			contextError(context, err, 'Não foi possível excluir o comentário.');
 			return false;
 		}
 	}
 
 	async function refreshAttachments(): Promise<void> {
-		const id = readStore(store).taskId;
-		if (id === null) return;
+		const context = captureContext();
+		if (!context) return;
 		try {
-			const result = await listAttachments(id);
-			setAttachments(id, result.anexos);
+			const result = await listAttachments(context.taskId);
+			setAttachments(context, result.anexos);
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível listar os anexos.')
-			}));
+			contextError(context, err, 'Não foi possível listar os anexos.');
 		}
 	}
 
 	async function uploadAttachmentAction(file: File): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		try {
-			const result = await uploadAttachment(id, file);
-			setAttachments(id, result.anexos);
+			const result = await uploadAttachment(context.taskId, file);
+			setAttachments(context, result.anexos);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível enviar o anexo.')
-			}));
+			contextError(context, err, 'Não foi possível enviar o anexo.');
 			return false;
 		}
 	}
 
 	async function deleteAttachmentAction(anexoId: number): Promise<boolean> {
-		const id = readStore(store).taskId;
-		if (id === null) return false;
+		const context = captureContext();
+		if (!context) return false;
 		try {
 			const result = await deleteAttachment(anexoId);
-			setAttachments(id, result.anexos);
+			setAttachments(context, result.anexos);
 			return true;
 		} catch (err) {
-			store.update((state) => ({
-				...state,
-				error: errorMessage(err, 'Não foi possível excluir o anexo.')
-			}));
+			contextError(context, err, 'Não foi possível excluir o anexo.');
 			return false;
 		}
 	}

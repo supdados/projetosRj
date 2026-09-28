@@ -32,7 +32,8 @@ vi.mock('$lib/api/tasks', () => ({
 	moverEtapa: vi.fn()
 }));
 
-import { getTaskDetail, saveFields, finalizarTask, arquivarTask } from '$lib/api/taskDrawer';
+import { getTaskDetail, saveFields, finalizarTask, arquivarTask, addComment } from '$lib/api/taskDrawer';
+import { deleteTarefa, moverEtapa } from '$lib/api/tasks';
 import { ApiClientError } from '$lib/api/client';
 import { createTaskDrawerStore } from './taskDrawer';
 import { createBoardStore } from './board';
@@ -78,11 +79,179 @@ function makePayload(id: number): TaskDrawerPayload {
 
 beforeEach(() => {
 	vi.useFakeTimers();
+	vi.clearAllMocks();
 	vi.mocked(arquivarTask).mockReset();
 	vi.mocked(finalizarTask).mockReset();
 	getTaskDetailMock.mockReset();
 	saveFieldsMock.mockReset();
 	getTaskDetailMock.mockImplementation((id: number) => Promise.resolve(makePayload(id)));
+});
+
+class DeferredDrawerPayload<T = TaskDrawerPayload> {
+	resolve!: (value: T) => void;
+	reject!: (error: Error) => void;
+	promise = new Promise<T>((resolve, reject) => {
+		this.resolve = resolve;
+		this.reject = reject;
+	});
+}
+
+describe('P2-10: respostas de seleções antigas do drawer', () => {
+	it('fechar no mesmo tick impede até o início da leitura antiga', async () => {
+		const drawer = createTaskDrawerStore();
+		await Promise.all([drawer.open(1), drawer.close()]);
+		expect(getTaskDetailMock).not.toHaveBeenCalled();
+		expect(get(drawer).status).toBe('closed');
+	});
+
+	it('A → B → A não aceita o primeiro GET de A', async () => {
+		const old = new DeferredDrawerPayload();
+		getTaskDetailMock.mockReturnValueOnce(old.promise);
+		const drawer = createTaskDrawerStore();
+		const first = drawer.open(1);
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.open(2);
+		const fresh = makePayload(1);
+		fresh.detail.descricao = 'A atual';
+		getTaskDetailMock.mockResolvedValueOnce(fresh);
+		await drawer.open(1);
+		old.resolve(makePayload(1));
+		await first;
+		expect(get(drawer).detail?.descricao).toBe('A atual');
+	});
+
+	it('última abertura vence enquanto o autosave da anterior está em voo', async () => {
+		const drawer = createTaskDrawerStore();
+		await drawer.open(1);
+		const saving = new DeferredDrawerPayload();
+		saveFieldsMock.mockReturnValueOnce(saving.promise);
+		drawer.editField({ descricao: 'rascunho A' });
+		const first = drawer.open(2);
+		const latest = drawer.open(3);
+		saving.resolve(makePayload(1));
+		await Promise.all([first, latest]);
+		expect(get(drawer).taskId).toBe(3);
+		expect(getTaskDetailMock.mock.calls.map(([id]) => id)).toEqual([1, 3]);
+		expect(saveFieldsMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('sinal externo cancela a leitura atual e encerra o carregamento', async () => {
+		const result = new DeferredDrawerPayload();
+		getTaskDetailMock.mockReturnValueOnce(result.promise);
+		const drawer = createTaskDrawerStore();
+		const controller = new AbortController();
+		const opening = drawer.open(1, { signal: controller.signal });
+		await vi.advanceTimersByTimeAsync(0);
+		controller.abort();
+		result.resolve(makePayload(1));
+		await opening;
+		expect(getTaskDetailMock.mock.calls[0][1]?.aborted).toBe(true);
+		expect(get(drawer).status).toBe('closed');
+	});
+
+	it('excluir A depois de abrir B remove o cartão A e mantém B aberto', async () => {
+		const result = new DeferredDrawerPayload<Awaited<ReturnType<typeof deleteTarefa>>>();
+		vi.mocked(deleteTarefa).mockReturnValueOnce(result.promise);
+		const removed = vi.fn();
+		const drawer = createTaskDrawerStore({ onCardRemoved: removed });
+		await drawer.open(1);
+		const deleting = drawer.deleteTask();
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.open(2);
+		result.resolve({ item_id: 1, message: 'Excluída' });
+		await deleting;
+		expect(get(drawer)).toMatchObject({ taskId: 2, status: 'ready' });
+		expect(removed).toHaveBeenCalledWith(1);
+	});
+
+	it('mover etapa de A não usa open para substituir B', async () => {
+		const result = new DeferredDrawerPayload<Awaited<ReturnType<typeof moverEtapa>>>();
+		vi.mocked(moverEtapa).mockReturnValueOnce(result.promise);
+		const drawer = createTaskDrawerStore();
+		await drawer.open(1);
+		const moving = drawer.moveEtapa(10);
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.open(2);
+		result.resolve({ task_id: 1, etapa_id: 10, previous_etapa_id: null });
+		await moving;
+		expect(get(drawer)).toMatchObject({ taskId: 2, status: 'ready', error: null });
+	});
+
+	it('erro de comentário antigo não aparece na outra tarefa', async () => {
+		const result = new DeferredDrawerPayload<Awaited<ReturnType<typeof addComment>>>();
+		vi.mocked(addComment).mockReturnValueOnce(result.promise);
+		const drawer = createTaskDrawerStore();
+		await drawer.open(1);
+		const adding = drawer.addComment('texto');
+		await drawer.open(2);
+		result.reject(new Error('erro antigo'));
+		await adding;
+		expect(get(drawer).error).toBeNull();
+	});
+
+	it('finalizar antigo não limpa o estado busy da ação nova', async () => {
+		const first = new DeferredDrawerPayload();
+		const second = new DeferredDrawerPayload();
+		vi.mocked(finalizarTask).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+		const drawer = createTaskDrawerStore();
+		await drawer.open(1);
+		const actionA = drawer.finalizar();
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.open(2);
+		const actionB = drawer.finalizar();
+		await vi.advanceTimersByTimeAsync(0);
+		first.resolve(makePayload(1));
+		await actionA;
+		expect(get(drawer)).toMatchObject({ taskId: 2, acting: true });
+		second.resolve(makePayload(2));
+		await actionB;
+		expect(get(drawer).acting).toBe(false);
+	});
+
+	it('GET atrasado não reabre após fechar', async () => {
+		const response = new DeferredDrawerPayload();
+		getTaskDetailMock.mockReturnValueOnce(response.promise);
+		const changed = vi.fn();
+		const drawer = createTaskDrawerStore({ onCardChanged: changed });
+		const opening = drawer.open(1);
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.close();
+		expect(getTaskDetailMock.mock.calls[0][1]?.aborted).toBe(true);
+		response.resolve(makePayload(1));
+		await opening;
+		expect(get(drawer).status).toBe('closed');
+		expect(changed).not.toHaveBeenCalled();
+	});
+
+	it.each(['success', 'error'])('resposta %s de A não substitui B', async (outcome) => {
+		const response = new DeferredDrawerPayload();
+		getTaskDetailMock.mockReturnValueOnce(response.promise);
+		const drawer = createTaskDrawerStore();
+		const opening = drawer.open(1);
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.open(2);
+		if (outcome === 'error') response.reject(new Error('Erro antigo'));
+		else response.resolve(makePayload(1));
+		await opening;
+		expect(get(drawer)).toMatchObject({ taskId: 2, status: 'ready', error: null });
+	});
+
+	it('ação concluída após fechar reconcilia o cartão sem reabrir', async () => {
+		const response = new DeferredDrawerPayload();
+		const changed = vi.fn();
+		const drawer = createTaskDrawerStore({ onCardChanged: changed });
+		await drawer.open(1);
+		vi.mocked(finalizarTask).mockReturnValueOnce(response.promise);
+		const action = drawer.finalizar();
+		await vi.advanceTimersByTimeAsync(0);
+		await drawer.close();
+		const finalized = makePayload(1);
+		finalized.task.status = finalized.detail.status = 'finalizada';
+		response.resolve(finalized);
+		await action;
+		expect(get(drawer).status).toBe('closed');
+		expect(changed).toHaveBeenLastCalledWith(finalized.task);
+	});
 });
 
 afterEach(() => {
@@ -158,7 +327,7 @@ describe('taskDrawer open() — flush das edições pendentes (bug 2.21)', () =>
 		await expect(drawer.close()).resolves.toBe(false);
 		await vi.advanceTimersByTimeAsync(10000);
 		expect(saveFieldsMock).toHaveBeenCalledTimes(1);
-		expect(getTaskDetailMock).not.toHaveBeenCalledWith(2, undefined);
+		expect(getTaskDetailMock.mock.calls.map(([id]) => id)).not.toContain(2);
 		expect(get(drawer)).toMatchObject({ taskId: 1, autosave: 'error', error: 'Descrição obrigatória.' });
 		expect(get(drawer).detail?.descricao).toBe('');
 

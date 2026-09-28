@@ -20,8 +20,17 @@ from flask import g, jsonify, request
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import joinedload, selectinload
 
-from models import CalendarEvent, Etapa, EtapaResponsavel, Project, Task, db
+from models import (
+    CalendarEvent,
+    Etapa,
+    EtapaResponsavel,
+    Project,
+    Task,
+    TaskAssignee,
+    db,
+)
 from services.authorization import project_visibility_criterion
+from services.task_assignees import task_assignee_criterion
 
 from .blueprint import main_bp
 from .decorators import login_required
@@ -156,11 +165,14 @@ def _task_search_query(term: str, user, scope: _SearchScope):
     search_pattern = f"%{term}%"
     task_query = (
         Task.query.outerjoin(Project, Task.project_id == Project.id)
-        .options(joinedload(Task.project))
+        .options(
+            joinedload(Task.project),
+            selectinload(Task.assignees).joinedload(TaskAssignee.user),
+        )
         .filter(
             or_(
                 Task.descricao.ilike(search_pattern),
-                Task.responsavel.ilike(search_pattern),
+                task_assignee_criterion(search_pattern),
                 Task.status.ilike(search_pattern),
                 Task.prioridade.ilike(search_pattern),
                 Task.tipo_pedido.ilike(search_pattern),

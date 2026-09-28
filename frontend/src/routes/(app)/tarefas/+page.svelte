@@ -290,8 +290,9 @@
 		// SWR: com cache desta combinacao de filtros mostra o dado antigo ja (sem
 		// skeleton) e a revalidacao abaixo troca em silencio; sem cache, skeleton.
 		const cached = peekTarefas(query);
+		// Nunca apresenta dados de outra consulta como fallback destes filtros.
+		data = cached;
 		if (cached) {
-			data = cached;
 			loadState = 'ready';
 		} else {
 			loadState = 'loading';

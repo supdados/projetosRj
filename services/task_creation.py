@@ -118,7 +118,9 @@ def create_task_record(data: TaskCreationInput, *, author: Any) -> Task:
     db.session.add(task)
     db.session.flush()
 
-    added, removed = set_task_assignees(task, _allowed_assignee_ids(data))
+    added, removed = set_task_assignees(
+        task, _allowed_assignee_ids(data), preserve_legacy=True
+    )
     _notify_task_created(task, author=author, added=added, removed=removed)
     return task
 

@@ -163,8 +163,9 @@
 		// SWR: com cache dos filtros correntes mostra o dado antigo já (sem
 		// skeleton) e a revalidação abaixo troca em silêncio; sem cache, skeleton.
 		const cached = peekPendentes(filters);
+		// Sem cache destes filtros, descarta as linhas da consulta anterior.
+		data = cached;
 		if (cached) {
-			data = cached;
 			loadState = 'ready';
 		} else {
 			loadState = 'loading';

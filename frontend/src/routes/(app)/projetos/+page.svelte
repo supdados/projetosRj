@@ -378,8 +378,9 @@
 		// skeleton) e a revalidação abaixo troca em silêncio; sem cache,
 		// skeleton.
 		const cached = peekProjects(query);
+		// O dado exibido pertence à consulta atual; a consulta anterior não é fallback.
+		data = cached;
 		if (cached) {
-			data = cached;
 			loadState = 'ready';
 		} else {
 			loadState = 'loading';
@@ -1458,4 +1459,3 @@
 	hasFiltrosAtivos={hasActiveFilters}
 	onClose={() => (exportModalOpen = false)}
 />
-
