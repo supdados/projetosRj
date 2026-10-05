@@ -22,6 +22,7 @@ from services.authorization import (
     PAPEL_LEITOR,
     project_access_verdict,
 )
+from services.project_membership import active_invitee_user_ids
 
 
 def _format_invalid_responsavel_message(invalid_names):
@@ -109,7 +110,7 @@ def _resolve_project_token(raw_project_value, allow_empty=False, *, for_write=Fa
     return project, None, 200
 
 
-def _get_assignable_users_for_orgao(orgao_id):
+def _orgao_candidate_ids(orgao_id: int | None) -> set[int]:
     candidate_ids = {g.user.id}
 
     admin_ids = [
@@ -133,7 +134,10 @@ def _get_assignable_users_for_orgao(orgao_id):
             )
         ]
         candidate_ids.update(orgao_user_ids)
+    return candidate_ids
 
+
+def _load_assignable_users(candidate_ids: set[int]) -> list[User]:
     if not candidate_ids:
         return []
 
@@ -145,9 +149,17 @@ def _get_assignable_users_for_orgao(orgao_id):
     )
 
 
+def _get_assignable_users_for_orgao(orgao_id):
+    return _load_assignable_users(_orgao_candidate_ids(orgao_id))
+
+
 def _get_assignable_users_for_project(project):
     orgao_id = project.orgao_id if project is not None else None
-    return _get_assignable_users_for_orgao(orgao_id)
+    candidate_ids = _orgao_candidate_ids(orgao_id)
+    project_id = getattr(project, "id", None)
+    if isinstance(project_id, int):
+        candidate_ids |= active_invitee_user_ids(project_id)
+    return _load_assignable_users(candidate_ids)
 
 
 def _validate_task_responsavel(project, raw_value):

@@ -22,6 +22,7 @@ from services.project_membership import (
     ACCESS_VIA_AMBOS,
     ACCESS_VIA_AREA,
     ACCESS_VIA_CONVITE,
+    active_invitee_user_ids,
     convites_habilitados,
     list_inherited_members,
     project_access_via,
@@ -350,3 +351,18 @@ def test_convite_expirado_some_da_via_de_acesso(app, arvore):
         convite.expires_at = utc_now() - timedelta(days=1)
         db.session.flush()
         assert project_access_via(FakeViewer(14), arvore["projeto"]) is None
+
+
+def test_active_invitee_user_ids_so_conta_convite_ativo_do_projeto(app, arvore):
+    with app.app_context():
+        ativo = _add_user("convidado_ativo")
+        revogado = _add_user("convidado_revogado")
+        vencido = _add_user("convidado_vencido")
+        _convida(arvore["projeto_id"], ativo.id, PAPEL_LEITOR)
+        _convida(arvore["projeto_id"], revogado.id, PAPEL_EDITOR, revogado=True)
+        expirado = _convida(arvore["projeto_id"], vencido.id, PAPEL_EDITOR)
+        expirado.expires_at = utc_now() - timedelta(days=1)
+        db.session.flush()
+
+        assert active_invitee_user_ids(arvore["projeto_id"]) == {ativo.id}
+        assert active_invitee_user_ids(arvore["projeto_id"] + 1) == set()

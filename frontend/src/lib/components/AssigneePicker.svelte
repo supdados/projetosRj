@@ -1,13 +1,3 @@
-<script lang="ts" module>
-	import type { TaskAssignee } from '$lib/types/tasks';
-
-	// Cache da lista COMPLETA de candidatos por chave (tarefa OU projeto). Tarefas
-	// de um mesmo projeto não compartilham chave (a fonte por-tarefa cobre tarefas
-	// sem projeto), mas o cache evita refetch ao reabrir o mesmo picker e permite
-	// saber `hasMore` (se há mais alguém p/ atribuir) já na montagem.
-	const candidatesCache = new Map<string, Promise<TaskAssignee[]>>();
-</script>
-
 <script lang="ts">
 	/**
 	 * Picker de responsáveis MÚLTIPLOS estilo "membros".
@@ -23,8 +13,9 @@
 	 * (setas/Enter/Esc) e com roles listbox/option.
 	 */
 	import { tick } from 'svelte';
-	import type { TaskCard } from '$lib/types/tasks';
+	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
 	import AssigneeAvatar from './AssigneeAvatar.svelte';
+	import { assigneeCandidatesEpoch, loadAssigneeCandidates } from '$lib/utils/assigneeCandidates';
 	import { fetchHubResponsaveis, fetchTaskCandidates, saveTaskAssignees } from '$lib/api/tasks';
 	import { ApiClientError } from '$lib/api/client';
 	import { flash } from '$lib/stores/flash';
@@ -57,6 +48,7 @@
 	let allCandidates = $state<TaskAssignee[]>([]);
 	let candidatesLoaded = $state(false);
 	let loadingCandidates = $state(false);
+	let loadedEpoch = -1;
 	let highlight = $state(-1);
 	let pos = $state<{ top: number; left: number; width: number; flip: boolean }>({
 		top: 0,
@@ -108,6 +100,7 @@
 	}
 
 	async function ensureCandidates(): Promise<void> {
+		if (candidatesLoaded && loadedEpoch !== assigneeCandidatesEpoch()) candidatesLoaded = false;
 		if (candidatesLoaded || loadingCandidates) return;
 		const key = cacheKey();
 		if (!key) {
@@ -115,16 +108,11 @@
 			return;
 		}
 		loadingCandidates = true;
+		loadedEpoch = assigneeCandidatesEpoch();
 		try {
-			let promise = candidatesCache.get(key);
-			if (!promise) {
-				promise = fetchCandidatesRaw();
-				candidatesCache.set(key, promise);
-			}
-			allCandidates = await promise;
+			allCandidates = await loadAssigneeCandidates(key, fetchCandidatesRaw);
 		} catch {
 			allCandidates = [];
-			candidatesCache.delete(key); // permite novo retry
 		} finally {
 			candidatesLoaded = true;
 			loadingCandidates = false;

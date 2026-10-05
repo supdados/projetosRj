@@ -120,6 +120,17 @@ def active_member_criterion() -> "ColumnElement[bool]":
     )
 
 
+def active_invitee_user_ids(project_id: int) -> set[int]:
+    """IDs dos convidados (leitor ou editor) com convite ativo no projeto.
+
+    Exemplo: ``user.id in active_invitee_user_ids(projeto.id)``.
+    """
+    rows = db.session.query(ProjectMember.user_id).filter(
+        ProjectMember.project_id == project_id, active_member_criterion()
+    )
+    return {user_id for (user_id,) in rows}
+
+
 def list_inherited_members(project: Any) -> list[InheritedMember]:
     """Membros herdados pelo órgão do projeto — READ-ONLY, UMA query (§6.5).
 

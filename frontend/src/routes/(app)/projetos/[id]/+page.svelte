@@ -65,6 +65,7 @@
 	import ProjectHistoryDrawer from '$lib/components/ProjectHistoryDrawer.svelte';
 	import ProjetosRelacionadosDrawer from '$lib/components/ProjetosRelacionadosDrawer.svelte';
 	import CompartilharProjetoModal from '$lib/components/CompartilharProjetoModal.svelte';
+	import { invalidateAssigneeCandidates } from '$lib/utils/assigneeCandidates';
 	import type { CalendarEvent, CalendarEventInput } from '$lib/types/calendar';
 	import ProjectHeader from '$lib/components/ProjectHeader.svelte';
 	import InlineEditField from '$lib/components/InlineEditField.svelte';
@@ -1959,7 +1960,10 @@
 	<CompartilharProjetoModal
 		projectId={data.project.id}
 		projectTitulo={data.project.titulo}
-		onClose={() => (shareOpen = false)}
+		onClose={() => {
+			shareOpen = false;
+			invalidateAssigneeCandidates();
+		}}
 	/>
 {/if}
 
