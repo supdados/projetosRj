@@ -10,8 +10,11 @@ import ast
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-# seed_fake_data cria schema so em banco descartavel e vazio (guarda no proprio script)
-ALLOWED_CREATE_ALL = {"scripts/seed_fake_data.py"}
+# Ambos criam schema so em SQLite descartavel e novo (guarda no proprio script).
+ALLOWED_CREATE_ALL = {
+    "scripts/seed_fake_data.py",
+    "scripts/benchmarks/review_read_costs.py",
+}
 
 SCANNED_DIRS = ("routes", "services", "models", "scripts", "migrations", "catalogs")
 SCANNED_FILES = ("app.py", "startup.py", "wsgi.py")

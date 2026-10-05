@@ -48,7 +48,9 @@ def test_add_etapa_requires_descricao(client_user, seed_data):
     assert "descrição" in payload["error"]["message"].lower()
 
 
-def test_add_etapa_normalizes_done_when_not_started(client_user, seed_data):
+def test_add_etapa_rejects_done_when_not_started(app, client_user, seed_data):
+    # 19bce60 (revisão 2026-09-25, item 06): criação segue a régua da edição e
+    # recusa "concluída sem iniciada" em vez de normalizar `done` em silêncio.
     response = client_user.post(
         f"/api/projetos/{seed_data['project_id']}/etapas",
         json={
@@ -58,10 +60,9 @@ def test_add_etapa_normalizes_done_when_not_started(client_user, seed_data):
         },
     )
 
-    assert response.status_code == 200
-    etapa_payload = _data(response)["etapa"]
-    assert etapa_payload["iniciada"] is False
-    assert etapa_payload["done"] is False
+    assert response.status_code == 422
+    with app.app_context():
+        assert Etapa.query.filter_by(descricao="Etapa com done inválido").count() == 0
 
 
 def test_add_etapa_requires_confirmation_for_finalized_project(
