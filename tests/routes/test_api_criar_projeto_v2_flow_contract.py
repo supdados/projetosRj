@@ -157,6 +157,18 @@ def test_secao_objetivos_rejeita_indicador_de_outro_resultado(client_user, seed_
     _fail(response, code="validation")
 
 
+def test_secao_objetivos_rejeita_abep_fora_do_catalogo(client_user, seed_data):
+    project_id = _criar_projeto_essencial(client_user, seed_data)
+
+    response = client_user.post(
+        f"/api/projetos/{project_id}/inline",
+        json={"abep_indicator": "indicador-inexistente"},
+    )
+
+    assert response.status_code == 422
+    _fail(response, code="validation")
+
+
 # ── Seção 2 — Detalhes ────────────────────────────────────────────────────────
 
 

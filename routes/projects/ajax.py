@@ -129,6 +129,24 @@ def _normalize_inline_link(raw_value: object) -> str | None:
         raise ProjectInlineError(str(exc), status=400) from exc
 
 
+def _normalize_inline_abep(raw_value: object) -> str | None:
+    """Valida o indicador ABEP; valor fora do catálogo vira ProjectInlineError 400."""
+    try:
+        return normalize_abep_indicator(raw_value)
+    except ValueError as exc:
+        raise ProjectInlineError(str(exc), status=400) from exc
+
+
+def _normalize_inline_goals(
+    objetivo_raw: object, resultado_raw: object, indicadores_raw: object
+) -> tuple[int | None, int | None, list[int]]:
+    """Valida objetivo/resultado/indicadores; combinação inválida vira ProjectInlineError 400."""
+    try:
+        return normalize_goal_selection(objetivo_raw, resultado_raw, indicadores_raw)
+    except ValueError as exc:
+        raise ProjectInlineError(str(exc), status=400) from exc
+
+
 def apply_project_inline_changes(project_to_edit, data):
     """Aplica os campos editáveis inline a um projeto (sem ``commit``).
 
@@ -253,7 +271,7 @@ def apply_project_inline_changes(project_to_edit, data):
 
     if "abep_indicator" in data:
         old_abep = project_to_edit.abep_indicator
-        new_abep = normalize_abep_indicator(data["abep_indicator"])
+        new_abep = _normalize_inline_abep(data["abep_indicator"])
         if old_abep != new_abep:
             changes.append(
                 f'indicador ABEP de "{old_abep or "vazio"}" para "{new_abep or "vazio"}"'
@@ -291,10 +309,8 @@ def apply_project_inline_changes(project_to_edit, data):
             [ip.indicador_id for ip in project_to_edit.indicadores],
         )
 
-        objetivo_norm, resultado_norm, indicadores_norm = normalize_goal_selection(
-            objetivo_raw,
-            resultado_raw,
-            indicadores_raw,
+        objetivo_norm, resultado_norm, indicadores_norm = _normalize_inline_goals(
+            objetivo_raw, resultado_raw, indicadores_raw
         )
 
         project_to_edit.objetivo_id = objetivo_norm
