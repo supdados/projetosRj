@@ -19,7 +19,7 @@ from routes.shared import (
     parse_db_integer_id,
     project_orgao_search_filter,
 )
-from services.authorization import project_visibility_criterion
+from services.authorization import apply_project_visibility
 from services.etapa_positions import build_etapa_position_map
 
 PERIOD_OPTIONS = [
@@ -40,9 +40,9 @@ VISIBLE_BUCKETS = {
 def _base_project_ids(
     orgao_id: int | None, apenas_orgao: bool, priority: str, search: str
 ) -> Select:
-    query = select(Project.id).where(Project.status == "Vigente")
-    if not g.user.is_admin:
-        query = query.where(project_visibility_criterion(g.user))
+    query = apply_project_visibility(
+        select(Project.id).where(Project.status == "Vigente"), g.user
+    )
     if orgao_id is not None:
         query = query.where(
             Project.orgao_id.in_(
