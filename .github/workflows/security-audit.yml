@@ -34,9 +34,12 @@ jobs:
         # Defesa supply-chain: falha se algum artefato do PyPI não bater com o hash
         # fixado em requirements*.lock (republicação maliciosa com a mesma versão).
         # --only-binary :all: recusa sdists -> nenhum setup.py executa código no install.
+        # Exceção: ibm-cos-sdk{,-core,-s3transfer} (via ibm-watsonx-ai) só publicam sdist
+        # no PyPI; liberados por nome no --no-binary, que precisa vir DEPOIS do
+        # --only-binary :all: (senão o :all: o anula). O hash do sdist continua exigido.
         # Instala em venvs efêmeros e isolados — não interfere no job de auditoria.
         run: |
-          python -m venv /tmp/lock-prod && /tmp/lock-prod/bin/pip install --require-hashes --only-binary :all: -r requirements.lock
+          python -m venv /tmp/lock-prod && /tmp/lock-prod/bin/pip install --require-hashes --only-binary :all: --no-binary ibm-cos-sdk,ibm-cos-sdk-core,ibm-cos-sdk-s3transfer -r requirements.lock
           python -m venv /tmp/lock-dev && /tmp/lock-dev/bin/pip install --require-hashes --only-binary :all: -r requirements-dev.lock
 
   lock-drift:
@@ -83,7 +86,9 @@ jobs:
       - name: Instalar dependências (lockfile)
         run: npm ci
       - name: Auditar dependências do frontend
-        run: npm audit --audit-level=high
+        # Equivale a `npm audit --audit-level=high`, mas aceita as exceções por GHSA
+        # registradas (com motivo) em frontend/audit-allowlist.json.
+        run: node scripts/audit-gate.js
 
   osv-scanner:
     # OSV.dev cobre pip e npm numa só ferramenta, incluindo deps transitivas.
@@ -97,7 +102,8 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Scan de lockfiles (OSV.dev)
         continue-on-error: true # reporta achados sem bloquear o build (rever p/ gate depois)
-        uses: google/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        # A action fica no subdiretório osv-scanner-action/; o action.yml da raiz não tem `runs:`.
+        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
         with:
           # requirements.lock não é auto-detectado pelo nome -> declarar o parser explicitamente.
           scan-args: |-

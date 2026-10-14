@@ -1,0 +1,7 @@
+[
+	{
+		"id": "GHSA-vfj7-8cjw-p6xm",
+		"pacote": "braces",
+		"motivo": "Sem versão corrigida (afeta braces <=3.0.3, a última publicada). Só entra pelo tailwindcss 3 (fast-glob, micromatch, chokidar) no build, expandindo os globs de `content` do tailwind.config.ts; nenhuma entrada externa chega ao braces. Sai quando migrarmos para o Tailwind 4, que não depende dele."
+	}
+]
