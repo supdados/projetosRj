@@ -14,8 +14,8 @@ Python/Flask e, na `v5.0`, frontend em SvelteKit). Copie `.env.example` para
 (`*.db`/`*.sql`) ou arquivos de `instance/`.
 
 ### Branches
-- `main` — produção · `v4.5` — estável/homologação · `v5.0` — reescrita ativa.
-- Baseie novas contribuições na branch que você está alterando (em geral `v5.0`).
+- `main` é a única branch do projeto (produção). Versões antigas estão nas tags `legado/*`.
+- Baseie novas contribuições na `main`.
 - Crie uma branch a partir dela: `git checkout -b feat/minha-mudanca`.
 
 ### Padrões de código
@@ -50,8 +50,8 @@ variables. **Never** commit secrets, `.env`, databases (`*.db`/`*.sql`) or
 anything under `instance/`.
 
 ### Branches
-- `main` — production · `v4.5` — stable/staging · `v5.0` — active rewrite.
-- Base new work on the branch you're changing (usually `v5.0`).
+- `main` is the project's only branch (production). Older versions live in the `legado/*` tags.
+- Base new work on `main`.
 - Branch off from it: `git checkout -b feat/my-change`.
 
 ### Code style

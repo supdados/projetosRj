@@ -12,9 +12,9 @@ name: migracao
 
 on:
   push:
-    branches: [main, v5.0]
+    branches: [main]
   pull_request:
-    branches: [main, v5.0]
+    branches: [main]
 
 permissions:
   contents: read

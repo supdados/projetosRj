@@ -26,9 +26,9 @@ A autenticação usa **Gov.br (OpenID Connect)**.
 - **Testes:** `pytest` (backend) · `vitest` (frontend).
 
 ### Versões (branches)
-- **`main`** — versão em produção (Flask + templates Jinja).
-- **`v4.5`** — versão estável/homologação (refinamentos sobre a main).
-- **`v5.0`** — reescrita moderna: SPA em SvelteKit + API Flask (em evolução).
+- **`main`** — única branch do projeto; contém a v5.0 (SPA em SvelteKit + API Flask).
+- As versões anteriores ficam preservadas nas tags `legado/main-2026-10-14`
+  (antiga `main`, Flask + Jinja), `legado/v4.5` e `legado/v5.0-pre-main`.
 
 ### Como rodar (desenvolvimento)
 ```bash
