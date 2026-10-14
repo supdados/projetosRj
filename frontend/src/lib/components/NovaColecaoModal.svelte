@@ -725,6 +725,7 @@
 							<ColecaoProjectPicker
 								{selecionados}
 								preencher
+								mostrarTodosInicial={(projectIdsIniciais?.length ?? 0) > 0}
 								onchange={(ids) => (selecionados = ids)}
 								ontotal={(total) => (totalProjetos = total)}
 							/>

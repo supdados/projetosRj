@@ -6,16 +6,23 @@
 	 * página interna. A seleção é CONTROLADA pelo pai (`selecionados` +
 	 * `onchange`).
 	 *
-	 * A lista pede `status: ''` (todos os status — sem isso o backend defaulta
-	 * "Vigente" e projetos Finalizado/Suspenso ficariam inadicionáveis) e delega
-	 * a exclusão dos já-membros ao servidor via `colecaoId` (`excluir_colecao`),
-	 * para não filtrar em cima de uma única página. `exclude` fica como reforço
-	 * client-side (esconde na hora, sem esperar o refetch).
+	 * A lista abre só com projetos Vigentes (o que costuma entrar numa coleção);
+	 * o switch "Mostrar todos" pede `status: ''` e traz Finalizado/Suspenso, que
+	 * ganham bolinha de status (cor + tooltip) na linha. O filtro é server-side
+	 * como a busca: com `per_page` 100, filtrar no cliente deixaria vigentes fora
+	 * da página.
+	 * Selecionado que o filtro esconderia fica fixado no topo
+	 * (`pinSelectedProjects`). A exclusão dos já-membros também é do servidor,
+	 * via `colecaoId` (`excluir_colecao`), para não filtrar em cima de uma única
+	 * página. `exclude` fica como reforço client-side (esconde na hora, sem
+	 * esperar o refetch).
 	 */
 	import { onMount } from 'svelte';
 	import { fetchProjects } from '$lib/api/projects';
 	import type { Project } from '$lib/types/entities';
 	import type { ProjectsListQuery } from '$lib/types/projects';
+	import { projectStatusDotClass } from '$lib/utils/projectLabels';
+	import { pinSelectedProjects } from '$lib/utils/pinnedPickerSelection';
 
 	interface Props {
 		/** Ids marcados (estado controlado pelo pai). */
@@ -35,6 +42,11 @@
 		 * senão 100 projetos esticariam a página inteira.
 		 */
 		preencher?: boolean;
+		/**
+		 * Abre com "Mostrar todos" ligado — ex.: sugestão de IA, que pode
+		 * pré-marcar projetos encerrados e precisa exibi-los para revisão.
+		 */
+		mostrarTodosInicial?: boolean;
 	}
 
 	let {
@@ -43,14 +55,18 @@
 		exclude = [],
 		onchange,
 		ontotal,
-		preencher = false
+		preencher = false,
+		mostrarTodosInicial = false
 	}: Props = $props();
 
 	const DEBOUNCE_MS = 300;
 	const PER_PAGE = 100;
 
 	let term = $state('');
+	let mostrarTodos = $state(false);
 	let projetos = $state<Project[]>([]);
+	// Todo projeto já visto numa busca: base para fixar selecionados escondidos.
+	const conhecidos = new Map<number, Project>();
 	let carregando = $state(true);
 	let erro = $state(false);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -61,6 +77,8 @@
 	const selecionadosSet = $derived(new Set(selecionados));
 	const excludeSet = $derived(new Set(exclude));
 	const visiveis = $derived(projetos.filter((p) => !excludeSet.has(p.id)));
+	const ehVigente = (projeto: Project): boolean => projeto.status === 'Vigente';
+	const temOutrosStatus = $derived(visiveis.some((p) => !ehVigente(p)));
 
 	async function buscar(q: string): Promise<void> {
 		const minhaGen = ++gen;
@@ -69,12 +87,17 @@
 		carregando = true;
 		erro = false;
 		try {
-			const query: ProjectsListQuery = { status: '', per_page: PER_PAGE };
+			const query: ProjectsListQuery = {
+				status: mostrarTodos ? '' : 'Vigente',
+				per_page: PER_PAGE
+			};
 			if (q) query.q = q;
 			if (colecaoId !== undefined) query.excluir_colecao = colecaoId;
 			const data = await fetchProjects(query, abortController.signal);
 			if (minhaGen !== gen) return;
-			projetos = data.projetos;
+			for (const projeto of data.projetos) conhecidos.set(projeto.id, projeto);
+			// Com busca ativa vale só o que casa com o termo (comportamento de busca).
+			projetos = q ? data.projetos : pinSelectedProjects(data.projetos, selecionados, conhecidos);
 			if (!q) ontotal?.(data.pagination.total);
 			carregando = false;
 		} catch (err) {
@@ -93,6 +116,14 @@
 		}, DEBOUNCE_MS);
 	}
 
+	function definirMostrarTodos(valor: boolean): void {
+		mostrarTodos = valor;
+		// Busca pendente no debounce sai já, com o termo atual e o novo filtro.
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = null;
+		void buscar(term.trim());
+	}
+
 	function toggle(projectId: number): void {
 		const proximos = selecionadosSet.has(projectId)
 			? selecionados.filter((id) => id !== projectId)
@@ -108,6 +139,7 @@
 	}
 
 	onMount(() => {
+		mostrarTodos = mostrarTodosInicial;
 		void buscar('');
 		return () => {
 			if (debounceTimer) clearTimeout(debounceTimer);
@@ -117,20 +149,47 @@
 </script>
 
 <div class="flex flex-col gap-2 {preencher ? 'md:min-h-0 md:flex-1' : ''}">
-	<div class="relative">
-		<i
-			class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-			aria-hidden="true"
-		></i>
-		<input
-			type="search"
-			bind:value={term}
-			oninput={onTermInput}
-			placeholder="Buscar por nome ou área"
-			aria-label="Buscar projeto por nome ou área"
-			autocomplete="off"
-			class="h-[var(--control-h-md)] w-full rounded-control border border-border-strong bg-surface pl-9 pr-3 text-md text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none"
-		/>
+	<div class="flex items-center gap-2">
+		<div class="relative min-w-0 flex-1">
+			<i
+				class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
+				aria-hidden="true"
+			></i>
+			<input
+				type="search"
+				bind:value={term}
+				oninput={onTermInput}
+				placeholder="Buscar por nome ou área"
+				aria-label="Buscar projeto por nome ou área"
+				autocomplete="off"
+				class="h-[var(--control-h-md)] w-full rounded-control border border-border-strong bg-surface pl-9 pr-3 text-md text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:border-brand focus:outline-none"
+			/>
+		</div>
+		<!-- Mesmo switch do "Só eu" do modal Nova coleção; o rótulo inteiro é clicável. -->
+		<button
+			type="button"
+			role="switch"
+			aria-checked={mostrarTodos}
+			onclick={() => definirMostrarTodos(!mostrarTodos)}
+			title="Inclui projetos finalizados e suspensos"
+			class="inline-flex h-[var(--control-h-md)] shrink-0 items-center gap-2.5 rounded-control border border-border-subtle bg-surface px-3 text-sm font-medium transition-colors duration-fast hover:bg-surface-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {mostrarTodos
+				? 'text-text-primary'
+				: 'text-text-secondary'}"
+		>
+			Mostrar todos
+			<span
+				class="grid h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-fast {mostrarTodos
+					? 'bg-brand'
+					: 'bg-border-strong'}"
+				aria-hidden="true"
+			>
+				<span
+					class="h-3.5 w-3.5 rounded-full bg-surface-elevated shadow-sm transition-transform duration-fast {mostrarTodos
+						? 'translate-x-[1.125rem]'
+						: 'translate-x-[0.1875rem]'}"
+				></span>
+			</span>
+		</button>
 	</div>
 
 	<div
@@ -154,11 +213,25 @@
 				</button>
 			</div>
 		{:else if visiveis.length === 0}
-			<p class="px-3 py-4 text-center text-sm text-text-muted">
-				{term.trim()
-					? `Nenhum projeto encontrado para "${term.trim()}".`
-					: 'Nenhum projeto disponível.'}
-			</p>
+			<div class="flex flex-col items-center gap-2 px-3 py-4 text-center">
+				<p class="text-sm text-text-muted">
+					{#if term.trim()}
+						Nenhum projeto{mostrarTodos ? '' : ' vigente'} encontrado para "{term.trim()}".
+					{:else}
+						Nenhum projeto{mostrarTodos ? '' : ' vigente'} disponível.
+					{/if}
+				</p>
+				{#if !mostrarTodos}
+					<!-- Atalho para o switch: o vazio pode ser só o filtro de status. -->
+					<button
+						type="button"
+						onclick={() => definirMostrarTodos(true)}
+						class="text-sm font-semibold text-brand hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+					>
+						{term.trim() ? 'Buscar também nos finalizados e suspensos' : 'Mostrar todos'}
+					</button>
+				{/if}
+			</div>
 		{:else}
 			<ul
 				role="listbox"
@@ -206,6 +279,27 @@
 							</span>
 							<span class="min-w-0 flex-1 truncate text-sm text-text-primary">{projeto.titulo}</span>
 							<span class="shrink-0 pl-3 text-xs text-text-muted">{metaProjeto(projeto)}</span>
+							<!-- Bolinha só no que foge do padrão (vigente é o caso comum); a coluna
+							     é reservada em toda linha quando a lista mistura status, para a
+							     meta continuar alinhada à direita. Tooltip no padrão do Gantt, aberto
+							     à ESQUERDA: acima, a rolagem da lista o cortaria na primeira linha. -->
+							{#if temOutrosStatus}
+								<span class="group/dot relative grid h-4 w-4 shrink-0 place-items-center">
+									{#if !ehVigente(projeto)}
+										<span
+											class="h-2 w-2 rounded-full {projectStatusDotClass(projeto.status)}"
+											aria-hidden="true"
+										></span>
+										<span class="sr-only">Status: {projeto.status}</span>
+										<span
+											class="pointer-events-none invisible absolute right-full top-1/2 z-20 mr-1.5 w-max -translate-y-1/2 rounded-md border border-border-subtle bg-surface-elevated px-2 py-1 text-xs font-medium text-text-primary opacity-0 shadow-popover transition-opacity duration-fast group-hover/dot:visible group-hover/dot:opacity-100"
+											aria-hidden="true"
+										>
+											{projeto.status}
+										</span>
+									{/if}
+								</span>
+							{/if}
 						</button>
 					</li>
 				{/each}

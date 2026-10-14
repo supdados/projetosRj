@@ -68,6 +68,25 @@ export function projectStatusChipClass(
 	return 'chip--neutral';
 }
 
+export type ProjectStatusDotClass =
+	| 'bg-primary-600'
+	| 'bg-success-600'
+	| 'bg-warning-600'
+	| 'bg-danger-600'
+	| 'bg-neutral-600';
+
+/** Cor da BOLINHA de status onde a pílula não cabe (ex.: linhas do seletor de
+ *  projetos de coleção); mesma família de `projectStatusChipClass`.
+ *  @example projectStatusDotClass('Suspenso') // 'bg-warning-600' */
+export function projectStatusDotClass(status: string | null | undefined): ProjectStatusDotClass {
+	const chip = projectStatusChipClass(status);
+	if (chip === 'chip--brand') return 'bg-primary-600';
+	if (chip === 'chip--success') return 'bg-success-600';
+	if (chip === 'chip--warning') return 'bg-warning-600';
+	if (chip === 'chip--danger') return 'bg-danger-600';
+	return 'bg-neutral-600';
+}
+
 export type ProjectStatusToneTextClass =
 	| 'text-success'
 	| 'text-brand'
