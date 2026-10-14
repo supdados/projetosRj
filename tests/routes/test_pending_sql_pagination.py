@@ -20,19 +20,29 @@ def fixed_pending_clock(monkeypatch) -> None:
     monkeypatch.setattr("routes.projects.views.hoje_utc", PendingClock())
 
 
+def offset_day(days: int | None) -> date | None:
+    return TODAY + timedelta(days=days) if days is not None else None
+
+
 def add_pending_project(
-    orgao_id: int, title: str, ends: list[int | None], responsible: str = "PERF"
+    orgao_id: int,
+    title: str,
+    ends: list[int | None],
+    responsible: str = "PERF",
+    starts: list[int | None] | None = None,
 ) -> Project:
+    """Etapas com fim em ``ends`` dias; início em ``starts`` (padrão: há 30 dias)."""
     project = Project(titulo=title, orgao_id=orgao_id, prioridade="alta")
     db.session.add(project)
     db.session.flush()
-    for order, days in enumerate(ends):
+    starts = starts if starts is not None else [-30] * len(ends)
+    for order, (start, end) in enumerate(zip(starts, ends, strict=True)):
         stage = Etapa(
             descricao=f"Etapa {order}",
             project_id=project.id,
             ordem=order,
-            data_inicio=TODAY - timedelta(days=30),
-            data_fim=TODAY + timedelta(days=days) if days is not None else None,
+            data_inicio=offset_day(start),
+            data_fim=offset_day(end),
         )
         stage.responsaveis = [
             EtapaResponsavel(area_id=None, label=responsible, ordem=0)
@@ -45,15 +55,28 @@ def add_pending_project(
 @pytest.fixture
 def pending_windows(app, seed_data) -> dict[str, int]:
     with app.app_context():
+        # Faixas por etapa (início, fim): atrasada; andamento x2 (termina hoje /
+        # começou hoje); começa em 7, 14, 21 e 22 dias; legada sem início que
+        # termina em 5 dias (conta pelo fim); sem datas.
         alpha = add_pending_project(
             seed_data["auditoria_orgao_id"],
             "P2 Janela Alfa",
-            [-2, 0, 7, 14, 21, 22, None],
+            ends=[-2, 0, 90, 90, 90, 90, 90, 5, None],
+            starts=[-30, -30, 0, 7, 14, 21, 22, None, None],
         )
         beta = add_pending_project(
-            seed_data["auditoria_orgao_id"], "P2 Janela Beta", [14], "OUTRO"
+            seed_data["auditoria_orgao_id"],
+            "P2 Janela Beta",
+            ends=[90],
+            responsible="OUTRO",
+            starts=[10],
         )
-        add_pending_project(seed_data["auditoria_orgao_id"], "P2 Janela Futuro", [22])
+        add_pending_project(
+            seed_data["auditoria_orgao_id"],
+            "P2 Janela Futuro",
+            ends=[90],
+            starts=[22],
+        )
         stage = Etapa.query.filter_by(project_id=alpha.id, ordem=0).one()
         stage.responsaveis.append(
             EtapaResponsavel(
@@ -106,7 +129,7 @@ def pending_windows(app, seed_data) -> dict[str, int]:
 
 @pytest.mark.parametrize(
     "period,visible,total",
-    [("atrasados", 1, 1), ("7dias", 3, 1), ("14dias", 4, 2), ("21dias", 5, 2)],
+    [("atrasados", 1, 1), ("7dias", 5, 1), ("14dias", 6, 2), ("21dias", 7, 2)],
 )
 def test_windows_boundaries_global_counts_and_progress(
     client_user, pending_windows, period, visible, total
@@ -120,23 +143,57 @@ def test_windows_boundaries_global_counts_and_progress(
     assert payload["summary_counts"] == {
         "total_projects": total,
         "atrasada": 1,
+        "andamento": 2,
         "7dias": 2,
         "14dias": 2,
         "21dias": 1,
         "sem_data": 1,
     }
+    assert payload["data_referencia"] == TODAY.isoformat()
     alpha = payload["projetos"][0]
     assert alpha["project"]["id"] == pending_windows["alpha"]
     assert alpha["qtd_visiveis"] == visible
-    assert alpha["qtd_outras"] == 7 - visible
+    assert alpha["qtd_outras"] == 9 - visible
+    assert alpha["qtd_andamento"] == 2
     assert [alpha["qtd_7dias"], alpha["qtd_14dias"], alpha["qtd_21dias"]] == [2, 3, 4]
     assert payload["etapa_task_progress"][str(pending_windows["stage"])] == {
         "total": 2,
         "done": 1,
     }
     assert (
-        len(payload["etapa_bucket_map"]) == 9
+        len(payload["etapa_bucket_map"]) == 11
     )  # Inclui também as etapas fora do período.
+
+
+def test_in_progress_stage_shows_in_every_window_and_cards_read_by_risk(
+    client_user, pending_windows
+) -> None:
+    """Regressão da demanda 2026-10-13: etapa longa em andamento não some."""
+    payload = client_user.get(
+        "/api/projetos-pendentes",
+        query_string={"search": "P2 Janela Alfa", "periodo": "7dias"},
+    ).get_json()["data"]
+    buckets = payload["etapa_bucket_map"]
+    visible = payload["projetos"][0]["etapas_visiveis"]
+    assert [buckets[str(stage["id"])] for stage in visible] == [
+        "atrasada",
+        "andamento",
+        "andamento",
+        "7dias",
+        "7dias",
+    ]
+    # Termina hoje antes de começou hoje: dentro da faixa vale o fim mais próximo.
+    assert [stage["data_fim"] for stage in visible[1:3]] == [
+        TODAY.isoformat(),
+        offset_day(90).isoformat(),
+    ]
+    others = payload["projetos"][0]["etapas_outras"]
+    assert [buckets[str(stage["id"])] for stage in others] == [
+        "14dias",
+        "21dias",
+        "futuro",
+        "sem_data",
+    ]
 
 
 def test_responsavel_matches_nn_exactly_without_narrowing_options(

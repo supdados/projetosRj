@@ -29,11 +29,22 @@ PERIOD_OPTIONS = [
     ("21dias", "Próximos 21 Dias"),
 ]
 PERIOD_LABELS = {"atrasados": "Atrasados", **dict(PERIOD_OPTIONS[1:])}
+# Demanda 2026-10-13: Pendentes acompanha o andamento, não só o vencimento —
+# toda janela de dias inclui as atrasadas e as em andamento (por mais longe
+# que terminem), além das previstas até o horizonte escolhido.
 VISIBLE_BUCKETS = {
     "atrasados": ("atrasada",),
-    "7dias": ("atrasada", "7dias"),
-    "14dias": ("atrasada", "7dias", "14dias"),
-    "21dias": ("atrasada", "7dias", "14dias", "21dias"),
+    "7dias": ("atrasada", "andamento", "7dias"),
+    "14dias": ("atrasada", "andamento", "7dias", "14dias"),
+    "21dias": ("atrasada", "andamento", "7dias", "14dias", "21dias"),
+}
+# Ordem de leitura dentro do card: risco primeiro, depois o que está correndo,
+# depois o que vem pela frente.
+BUCKET_ORDER = {
+    bucket: rank
+    for rank, bucket in enumerate(
+        ("atrasada", "andamento", "7dias", "14dias", "21dias", "futuro", "sem_data")
+    )
 }
 
 
@@ -89,17 +100,35 @@ def _responsavel_options(project_ids: Select) -> list[str]:
     return sorted(unique.values(), key=str.casefold)
 
 
-def _stage_projection(project_ids: Select, responsible: str, today: date) -> Subquery:
-    bucket = case(
-        (Etapa.data_fim.is_(None), "sem_data"),
+def _expected_within(today: date, days: int) -> ColumnElement[bool]:
+    # Etapa legada pode não ter início: aí o fim é o marco que entra na janela.
+    limit = today + timedelta(days=days)
+    return or_(Etapa.data_inicio <= limit, Etapa.data_fim <= limit)
+
+
+def _stage_bucket(today: date) -> ColumnElement[str]:
+    """Classifica a etapa aberta por início/fim em relação a ``today``.
+
+    Exemplo: início 01/10 e fim 31/12, com hoje em 13/10, cai em ``andamento``.
+    """
+    return case(
+        (and_(Etapa.data_inicio.is_(None), Etapa.data_fim.is_(None)), "sem_data"),
         (Etapa.data_fim < today, "atrasada"),
-        (Etapa.data_fim <= today + timedelta(days=7), "7dias"),
-        (Etapa.data_fim <= today + timedelta(days=14), "14dias"),
-        (Etapa.data_fim <= today + timedelta(days=21), "21dias"),
+        (Etapa.data_inicio <= today, "andamento"),
+        (_expected_within(today, 7), "7dias"),
+        (_expected_within(today, 14), "14dias"),
+        (_expected_within(today, 21), "21dias"),
         else_="futuro",
     )
+
+
+def _stage_projection(project_ids: Select, responsible: str, today: date) -> Subquery:
     query = select(
-        Etapa.id, Etapa.project_id, Etapa.data_fim, Etapa.ordem, bucket.label("bucket")
+        Etapa.id,
+        Etapa.project_id,
+        Etapa.data_fim,
+        Etapa.ordem,
+        _stage_bucket(today).label("bucket"),
     ).where(*_open_stage_conditions(project_ids))
     if responsible:
         query = query.where(
@@ -208,6 +237,7 @@ def _summary(stages: Subquery, total_projects: int) -> dict[str, int]:
     counts = {
         "total_projects": total_projects,
         "atrasada": 0,
+        "andamento": 0,
         "7dias": 0,
         "14dias": 0,
         "21dias": 0,
@@ -267,8 +297,10 @@ def _project_row(
     today: date,
 ) -> dict[str, object]:
     counts = Counter(buckets[stage.id] for stage in stages)
-    shown = [stage for stage in stages if buckets[stage.id] in visible]
-    others = [stage for stage in stages if buckets[stage.id] not in visible]
+    # sort estável: dentro de cada faixa vale a ordem por data_fim do SQL.
+    ordered = sorted(stages, key=lambda stage: BUCKET_ORDER[buckets[stage.id]])
+    shown = [stage for stage in ordered if buckets[stage.id] in visible]
+    others = [stage for stage in ordered if buckets[stage.id] not in visible]
     overdue = [
         (today - stage.data_fim).days
         for stage in stages
@@ -281,6 +313,7 @@ def _project_row(
         "qtd_visiveis": len(shown),
         "qtd_outras": len(others),
         "qtd_atrasadas": counts["atrasada"],
+        "qtd_andamento": counts["andamento"],
         "qtd_7dias": counts["7dias"],
         "qtd_14dias": counts["7dias"] + counts["14dias"],
         "qtd_21dias": counts["7dias"] + counts["14dias"] + counts["21dias"],
@@ -321,6 +354,7 @@ def build_pending_context(
         "orgaos_options": get_user_orgao_options(g.user),
         "selected_orgao": selected_orgao_id,
         "filtro_periodo": period,
+        "data_referencia": today,
         "selected_responsavel": selected_responsavel,
         "selected_priority": selected_priority,
         "search_query": search_query,

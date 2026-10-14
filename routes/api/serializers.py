@@ -545,6 +545,7 @@ def serialize_pending_project_row(
         "qtd_visiveis": row["qtd_visiveis"],
         "qtd_outras": row["qtd_outras"],
         "qtd_atrasadas": row["qtd_atrasadas"],
+        "qtd_andamento": row["qtd_andamento"],
         "qtd_7dias": row["qtd_7dias"],
         "qtd_14dias": row["qtd_14dias"],
         "qtd_21dias": row["qtd_21dias"],

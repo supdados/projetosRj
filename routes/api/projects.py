@@ -69,6 +69,9 @@ def _serialize_pending_context(context: dict[str, Any]) -> dict[str, Any]:
             for row in context["projetos_com_etapas"]
         ],
         "filtro_periodo": context["filtro_periodo"],
+        # "Hoje" do servidor: o card mede dias até início/fim sem depender do
+        # relógio/fuso do navegador (perto da meia-noite UTC eles divergem).
+        "data_referencia": context["data_referencia"].isoformat(),
         # Rótulo legível do período selecionado, derivado da MESMA fonte de
         # verdade do Jinja (``period_label_map``). O front consome este campo em
         # vez de recalcular o rótulo (débito técnico #4 — evita drift).

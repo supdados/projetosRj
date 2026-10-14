@@ -26,6 +26,7 @@
 	import { normalizeStatus } from '$lib/utils/taskStatus';
 	import { podeConcluirEtapa } from '$lib/utils/etapaPrecondicoes';
 	import { formatIsoDateBR } from '$lib/utils/dateFormat';
+	import { pendingStageMark } from '$lib/utils/pendingStageMark';
 	import type {
 		PendingProjectRow,
 		PendingEtapa,
@@ -56,6 +57,8 @@
 		 * "<projeto>.<posição>" idêntica à do Detalhe. Opcional (backend antigo).
 		 */
 		positionMap?: Record<string, number>;
+		/** "Hoje" do servidor (ISO), base dos dias exibidos nas marcas de prazo. */
+		dataReferencia: string;
 		/** Store do drawer (compartilhada pela página). */
 		drawer: TaskDrawerStore;
 		/** Set de IDs de projeto expandidos (persistido em localStorage). */
@@ -73,6 +76,7 @@
 		bucketMap,
 		progressMap,
 		positionMap = {},
+		dataReferencia,
 		drawer,
 		expandedProjects,
 		onToggleExpanded,
@@ -94,6 +98,7 @@
 	/** Contadores de chips locais (decrementam ao concluir etapas). */
 	let counts = $state({
 		atrasadas: 0,
+		andamento: 0,
 		'7dias': 0,
 		'14dias': 0,
 		'21dias': 0,
@@ -118,6 +123,7 @@
 		);
 		counts = {
 			atrasadas: row.qtd_atrasadas,
+			andamento: row.qtd_andamento,
 			'7dias': row.qtd_7dias,
 			'14dias': row.qtd_14dias,
 			'21dias': row.qtd_21dias,
@@ -164,6 +170,10 @@
 			counts.atrasadas = Math.max(0, counts.atrasadas - 1);
 			return;
 		}
+		if (bucket === 'andamento') {
+			counts.andamento = Math.max(0, counts.andamento - 1);
+			return;
+		}
 		if (bucket === '7dias') {
 			counts['7dias'] = Math.max(0, counts['7dias'] - 1);
 			counts['14dias'] = Math.max(0, counts['14dias'] - 1);
@@ -188,7 +198,12 @@
 	function maybeDefocusProject(): void {
 		if (projectDefocused) return;
 		const remaining =
-			counts.atrasadas + counts['7dias'] + counts['14dias'] + counts['21dias'] + counts.sem_data;
+			counts.atrasadas +
+			counts.andamento +
+			counts['7dias'] +
+			counts['14dias'] +
+			counts['21dias'] +
+			counts.sem_data;
 		if (remaining <= 0) {
 			projectDefocused = true;
 			onProjectDefocused();
@@ -339,9 +354,18 @@
 	{@const progress = progressOf(etapa)}
 	{@const key = statusKey(etapa.id)}
 	{@const isDone = key === 'done'}
+	{@const mark = isDone ? null : pendingStageMark(etapaBucket(etapa), etapa, dataReferencia)}
 	<tr class="group border-b border-border-subtle transition-colors duration-fast last:border-0 hover:bg-surface-muted">
-		<td class="truncate px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
-			<span class="font-normal tabular-nums text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}
+		<td class="px-2 py-2.5 align-middle {isDone ? 'text-text-muted line-through' : 'text-text-primary'}" title={`${etapaDisplayNumber(etapa)} - ${etapa.descricao}`}>
+			<!-- Marca de prazo encostada à direita da célula: alinha como coluna entre
+				 as linhas sem tirar largura fixa da descrição (que trunca antes dela).
+				 Etapa concluída sai do prazo, então a marca some junto com o riscado. -->
+			<div class="flex min-w-0 items-center gap-2">
+				<span class="min-w-0 truncate"><span class="font-normal tabular-nums text-text-muted">{etapaDisplayNumber(etapa)}</span> - {etapa.descricao}</span>
+				{#if mark}
+					<span class="chip {mark.chipClass} ml-auto shrink-0" title={mark.title}>{mark.label}</span>
+				{/if}
+			</div>
 		</td>
 		<td class="truncate px-2 py-2.5 text-center align-middle {isDone ? 'text-text-muted line-through' : 'text-text-secondary'}" title={etapa.responsavel || 'Não informado'}>
 			{etapa.responsavel || 'Não informado'}

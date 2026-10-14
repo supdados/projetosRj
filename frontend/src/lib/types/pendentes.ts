@@ -16,9 +16,14 @@ import type { TaskAssignee } from './tasks';
 /** Janela de visibilidade ativa (espelha `filtro_periodo` do backend). */
 export type PendingPeriodo = 'atrasados' | '7dias' | '14dias' | '21dias';
 
-/** Classificação de urgência de uma etapa (valores de `etapa_bucket_map`). */
+/**
+ * Classificação de uma etapa aberta (valores de `etapa_bucket_map`):
+ * `andamento` = já começou e não venceu; `7dias`/`14dias`/`21dias` = início
+ * (ou fim, em etapa legada sem início) previsto até o horizonte.
+ */
 export type EtapaBucket =
 	| 'atrasada'
+	| 'andamento'
 	| '7dias'
 	| '14dias'
 	| '21dias'
@@ -61,6 +66,7 @@ export interface PendingProjectRow {
 	qtd_visiveis: number;
 	qtd_outras: number;
 	qtd_atrasadas: number;
+	qtd_andamento: number;
 	qtd_7dias: number;
 	qtd_14dias: number;
 	qtd_21dias: number;
@@ -72,6 +78,7 @@ export interface PendingProjectRow {
 export interface PendingSummaryCounts {
 	total_projects: number;
 	atrasada: number;
+	andamento: number;
 	'7dias': number;
 	'14dias': number;
 	'21dias': number;
@@ -112,6 +119,8 @@ export interface PendingPeriodOption {
 export interface PendingData {
 	projetos: PendingProjectRow[];
 	filtro_periodo: PendingPeriodo;
+	/** "Hoje" do servidor (ISO `YYYY-MM-DD`), base dos dias exibidos nas marcas. */
+	data_referencia: string;
 	/** Rótulo legível do período selecionado (fonte de verdade no backend). */
 	periodo_label: string;
 	/** Mapa `PendingPeriodo` -> rótulo legível (`period_label_map`). */

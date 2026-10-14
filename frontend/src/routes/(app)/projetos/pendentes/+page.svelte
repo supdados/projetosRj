@@ -595,6 +595,7 @@
 							{row}
 							bucketMap={data.etapa_bucket_map}
 							positionMap={data.etapa_position_map}
+							dataReferencia={data.data_referencia}
 							progressMap={data.etapa_task_progress}
 							{drawer}
 							{expandedProjects}
