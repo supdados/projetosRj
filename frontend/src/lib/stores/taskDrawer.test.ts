@@ -68,6 +68,7 @@ function makePayload(id: number): TaskDrawerPayload {
 		task: card,
 		detail: {
 			...card,
+			created_by_name: 'Usuário Teste',
 			etapa: null,
 			project: null,
 			comentarios: [],

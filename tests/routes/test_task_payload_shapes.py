@@ -149,6 +149,7 @@ def test_drawer_detail_soma_contexto_comentarios_e_anexos(client_user, seed_data
     data = _data(response)
     assert set(data["task"]) == TASK_CARD_KEYS
     assert set(data["detail"]) == TASK_CARD_KEYS | {
+        "created_by_name",
         "etapa",
         "project",
         "comentarios",
@@ -159,3 +160,24 @@ def test_drawer_detail_soma_contexto_comentarios_e_anexos(client_user, seed_data
         "can_finalize",
         "can_delete",
     }
+
+
+def test_drawer_detail_informa_quem_criou_a_tarefa(client_user, seed_data):
+    response = client_user.get(f"/api/tarefas/{seed_data['task_id']}/detalhe")
+
+    assert response.status_code == 200
+    assert _data(response)["detail"]["created_by_name"] == "Usuario Auditoria"
+
+
+def test_drawer_detail_sinaliza_criador_removido(app, seed_data):
+    from models import Task, User, db
+    from routes.api.serializers import serialize_task_detail
+    from time_utils import utc_now
+
+    with app.test_request_context():
+        task = db.session.get(Task, seed_data["task_id"])
+        db.session.get(User, task.created_by_id).deleted_at = utc_now()
+        detail = serialize_task_detail(task)
+        db.session.rollback()
+
+    assert detail["created_by_name"] == "Usuario Auditoria (removido)"

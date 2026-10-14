@@ -867,8 +867,9 @@ def serialize_task_detail(
             ``None``, ``url`` do anexo fica ``None`` (ex.: uso fora de request).
 
     Returns:
-        ``dict`` JSON-safe com os campos do card mais ``etapa``/``project``
-        (contexto), ``comentarios: [...]``, ``anexos: [...]`` e ``permissions``.
+        ``dict`` JSON-safe com os campos do card mais ``created_by_name``,
+        ``etapa``/``project`` (contexto), ``comentarios: [...]``, ``anexos: [...]``
+        e ``permissions``.
     """
     from flask import g
 
@@ -881,6 +882,8 @@ def serialize_task_detail(
     project = getattr(task, "project", None)
     card.update(
         {
+            # Só no drawer: as listagens não exibem o criador e evitam o join.
+            "created_by_name": _author_display_name(getattr(task, "created_by", None)),
             "etapa": (
                 {"id": etapa.id, "descricao": etapa.descricao, "done": bool(etapa.done)}
                 if etapa is not None

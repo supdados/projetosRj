@@ -489,14 +489,12 @@
 					</div>
 				</section>
 
-				{#if formatIsoDateBRLocalTz(detail.created_at)}
-					<p class="m-0 -mt-2 text-xs text-text-muted">
-						Criada em {formatIsoDateBRLocalTz(detail.created_at)}{detail.is_archived &&
-						formatIsoDateBRLocalTz(detail.archived_at)
-							? ` · arquivada em ${formatIsoDateBRLocalTz(detail.archived_at)}`
-							: ''}
-					</p>
-				{/if}
+				{@const createdOn = formatIsoDateBRLocalTz(detail.created_at)}
+				{@const archivedOn = detail.is_archived ? formatIsoDateBRLocalTz(detail.archived_at) : ''}
+				<p class="m-0 -mt-2 text-xs text-text-muted">
+					Criada por <span class="font-semibold text-text-secondary">{detail.created_by_name}</span
+					>{createdOn ? ` em ${createdOn}` : ''}{archivedOn ? ` · arquivada em ${archivedOn}` : ''}
+				</p>
 
 				<!-- Comentários: MESMO componente da lista (árvore com avatares), numa
 				     seção COLAPSÁVEL — o cabeçalho aqui substitui o do componente. -->

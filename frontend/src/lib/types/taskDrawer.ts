@@ -82,6 +82,8 @@ export interface TaskAttachment {
  * autoritativos.
  */
 export interface TaskDetail extends BoardCard {
+	/** Nome de quem criou a tarefa (sufixo "(removido)" se o usuário foi excluído). */
+	created_by_name: string;
 	etapa: TaskDrawerEtapa | null;
 	project: TaskDrawerProject | null;
 	comentarios: TaskComment[];
