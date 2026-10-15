@@ -1,6 +1,6 @@
 # Dependências de desenvolvimento/testes (backend).
 # Instale junto das de produção: pip install -r requirements -r requirements-dev.txt
-pytest==9.0.2
+pytest==9.0.3
 pytest-xdist==3.8.0      # execução paralela: pytest -n auto
 pytest-cov==7.0.0        # cobertura: pytest --cov
 coverage==7.13.4
