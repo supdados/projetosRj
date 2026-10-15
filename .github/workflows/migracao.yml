@@ -6,9 +6,9 @@ name: migracao
 # Este workflow reprova o merge quando (1) `alembic upgrade head` quebra num banco
 # vazio (elo faltando/duplicado, migração não idempotente), (2) o autogenerate acha
 # diferença entre os modelos e o schema da cadeia (migração esquecida) ou (3) o teste
-# de completude de schema falha. Produção roda SQLite hoje e a ida a MySQL será
-# instalação limpa (upgrade head em banco vazio) — por isso os dois dialetos partem
-# do zero aqui, e não de um dump legado.
+# de completude de schema falha. Produção roda MySQL 8 e o dev local, SQLite; os
+# dois dialetos partem do zero aqui (upgrade head em banco vazio), e não de um
+# dump legado.
 
 on:
   push:
