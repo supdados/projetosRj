@@ -39,6 +39,9 @@ def _sem_credenciais_watsonx(monkeypatch):
     """Suíte determinística mesmo com WATSONX_* no .env da máquina (rota → 503)."""
     monkeypatch.delenv("WATSONX_API_KEY", raising=False)
     monkeypatch.delenv("WATSONX_PROJECT_ID", raising=False)
+    # O .env do setup_local traz WATSONX_ENABLED=0: sem isto, teste que liga
+    # as credenciais via setenv veria a IA desligada só nessa máquina.
+    monkeypatch.delenv("WATSONX_ENABLED", raising=False)
 
 
 def _ensure_setd():
@@ -127,6 +130,7 @@ def app(tmp_path):
             # Chave vazia = integração desconfigurada: nenhum teste sai para a
             # rede do SIORG só porque o .env local tem SIORG_API_KEY.
             "SIORG_API_KEY": "",
+            "SIORG_ENABLED": "",
         }
     )
 

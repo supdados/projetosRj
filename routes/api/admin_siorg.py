@@ -14,7 +14,12 @@ from typing import Any
 from flask import Response, current_app, g, jsonify
 
 from models import SiorgSyncLog
-from services.siorg_client import SiorgApiError, siorg_client_from_config
+from services.siorg_client import (
+    SiorgApiError,
+    siorg_api_key_configurada,
+    siorg_client_from_config,
+    siorg_habilitado,
+)
 from services.siorg_sync import SiorgSyncEmAndamento, executar_sync_siorg
 from time_utils import iso_utc
 
@@ -46,7 +51,7 @@ def _serialize_sync_log(log: SiorgSyncLog) -> dict[str, Any]:
 @api_admin_required
 def api_admin_siorg_status() -> Response:
     """Configuração da integração + última sincronização registrada."""
-    configurado = bool(str(current_app.config.get("SIORG_API_KEY", "") or "").strip())
+    configurado = siorg_habilitado(current_app.config)
     ultimo = SiorgSyncLog.query.order_by(
         SiorgSyncLog.iniciado_em.desc(), SiorgSyncLog.id.desc()
     ).first()
@@ -65,11 +70,16 @@ def api_admin_siorg_status() -> Response:
 def api_admin_siorg_sync() -> Response | tuple[Response, int]:
     """Dispara o full-sync SIORG→ProjetosRJ (lock anti-concorrência no banco)."""
     # Config ausente é erro do operador, não indisponibilidade do SIORG (502).
-    if not str(current_app.config.get("SIORG_API_KEY", "") or "").strip():
+    if not siorg_api_key_configurada(current_app.config):
         return (
             jsonify(
                 {"error": "Integração SIORG não configurada (defina SIORG_API_KEY)"}
             ),
+            503,
+        )
+    if not siorg_habilitado(current_app.config):
+        return (
+            jsonify({"error": "Integração SIORG desligada (SIORG_ENABLED=0)"}),
             503,
         )
     try:

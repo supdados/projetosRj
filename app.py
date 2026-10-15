@@ -1,6 +1,7 @@
 import os
 import secrets
 import time
+from typing import TypedDict
 from urllib.parse import urlparse
 
 from flask import (
@@ -15,7 +16,9 @@ from flask import (
     url_for,
 )
 
-from config import build_app_config, _env_flag_is_true
+from sqlalchemy.engine import make_url
+
+from config import build_app_config, _env_flag_is_true, _env_int
 from extensions import (
     csrf,
     db,
@@ -25,6 +28,7 @@ from extensions import (
 from models import User, UserNotification
 from routes import inject_current_year, main_bp
 from services.govbr_oidc import is_govbr_oidc_enabled
+from services.integrations_status import log_integration_statuses
 from startup import verify_schema_version
 from time_utils import register_sqlite_adapters
 
@@ -223,6 +227,21 @@ def _apply_proxy_fix(app: Flask) -> None:
     )
 
 
+def ensure_sqlite_dir(database_uri: str) -> None:
+    """Cria a pasta do arquivo SQLite (ex.: ``instance/``), que não vem no clone.
+
+    Sem ela o primeiro ``flask db upgrade`` falha com "unable to open database
+    file", sem dizer qual pasta falta. MySQL e SQLite em memória: no-op.
+    Ex.: ``ensure_sqlite_dir("sqlite:////tmp/x/app.db")`` cria ``/tmp/x``.
+    """
+    if not database_uri.startswith("sqlite"):
+        return
+    caminho = make_url(database_uri).database
+    if not caminho or caminho == ":memory:" or caminho.startswith("file:"):
+        return
+    os.makedirs(os.path.dirname(os.path.abspath(caminho)), exist_ok=True)
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
 
@@ -241,6 +260,7 @@ def create_app(test_config=None):
 
     if str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).startswith("sqlite:"):
         register_sqlite_adapters()
+        ensure_sqlite_dir(str(app.config["SQLALCHEMY_DATABASE_URI"]))
 
     _apply_proxy_fix(app)
 
@@ -257,16 +277,33 @@ def create_app(test_config=None):
     # scripts de backfill que rodam contra banco em migração.
     if not app.config.get("TESTING") and not app.config.get("SKIP_STARTUP_DB_INIT"):
         _verify_schema_on_boot(app)
+        log_integration_statuses(app)
 
     return app
+
+
+class DevServerOptions(TypedDict):
+    host: str
+    port: int
+    debug: bool
+
+
+def dev_server_options() -> DevServerOptions:
+    """Opções do ``python app.py`` (só dev; produção sobe por gunicorn).
+
+    Default 127.0.0.1: com FLASK_DEBUG ligado o debugger do Werkzeug executa
+    código — em 0.0.0.0 qualquer máquina da rede chegaria nele.
+    Ex.: ``APP_HOST=0.0.0.0 APP_PORT=8000 python app.py``.
+    """
+    return DevServerOptions(
+        host=os.getenv("APP_HOST", "").strip() or "127.0.0.1",
+        port=_env_int("APP_PORT", default=5002),
+        debug=_env_flag_is_true("FLASK_DEBUG", default="false"),
+    )
 
 
 app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(
-        debug=os.getenv("FLASK_DEBUG", "false").lower() == "true",
-        host="0.0.0.0",
-        port=5002,
-    )
+    app.run(**dev_server_options())

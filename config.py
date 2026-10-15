@@ -12,6 +12,22 @@ def _env_flag_is_true(name, default="false"):
     return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def resolve_integration_flag(raw: object, *, configurado: bool) -> bool:
+    """Liga/desliga de integração que já tem credencial como gate implícito.
+
+    Ausente/vazia preserva o comportamento anterior à flag (liga quando há
+    credencial) — produção não muda sem editar o `.env`. `0`/`false`/`off`
+    força OFF mesmo com credencial; `1`/`true` sem credencial continua OFF.
+
+    Ex.: `resolve_integration_flag(None, configurado=True)` → `True`;
+    `resolve_integration_flag("0", configurado=True)` → `False`.
+    """
+    texto = str(raw if raw is not None else "").strip().lower()
+    if texto in {"0", "false", "no", "off"}:
+        return False
+    return configurado
+
+
 def _env_int(name, default=10):
     raw = os.getenv(name)
     if raw is None:
@@ -137,6 +153,8 @@ def build_app_config(*, is_testing=False, is_debug=False):
         .rstrip("/")
         or "http://localhost:5000",
         SIORG_API_KEY=os.getenv("SIORG_API_KEY", "").strip(),
+        # Cru de propósito: vazio = "segue a credencial" (resolve_integration_flag).
+        SIORG_ENABLED=os.getenv("SIORG_ENABLED", "").strip(),
         SIORG_TIMEOUT_SECONDS=_env_int("SIORG_TIMEOUT_SECONDS", default=10),
         SIORG_RAIZ_CODIGO=_env_int("SIORG_RAIZ_CODIGO", default=2),
         # Gate das rotas de convite (S4/F3-23); a RESOLUÇÃO de convites já

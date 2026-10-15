@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Protocol
 
 from flask import current_app
 
+from config import resolve_integration_flag
+
 if TYPE_CHECKING:
     from langchain_ibm import ChatWatsonx
 
@@ -36,10 +38,20 @@ class ClienteChatIA(Protocol):
     def invocar(self, system_prompt: str, user_prompt: str) -> str: ...
 
 
-def ia_habilitada() -> bool:
-    """Feature flag implícita: sem as DUAS credenciais a IA fica invisível."""
+def watsonx_credenciais_presentes() -> bool:
+    """True quando as DUAS credenciais (API key + project id) estão no ambiente."""
     return bool(
         os.environ.get("WATSONX_API_KEY") and os.environ.get("WATSONX_PROJECT_ID")
+    )
+
+
+def ia_habilitada() -> bool:
+    """Sem as DUAS credenciais a IA fica invisível; ``WATSONX_ENABLED=0`` força OFF.
+
+    Ex.: credenciais no `.env` e ``WATSONX_ENABLED`` ausente → ``True``.
+    """
+    return resolve_integration_flag(
+        os.environ.get("WATSONX_ENABLED"), configurado=watsonx_credenciais_presentes()
     )
 
 

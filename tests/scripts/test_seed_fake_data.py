@@ -1,5 +1,11 @@
+import pytest
+
 from models import Etapa, Project, Task, TaskItem, TaskItemComment, User
-from scripts.seed_fake_data import SEED_ORGAO_SIGLAS, seed_fake_data
+from scripts.seed_fake_data import (
+    SEED_ORGAO_SIGLAS,
+    ensure_disposable_database,
+    seed_fake_data,
+)
 
 
 def test_seed_fake_data_creates_expected_volume(app):
@@ -81,3 +87,16 @@ def test_seed_fake_data_reset_replaces_previous_data(app):
         assert Task.query.count() == 3
         assert TaskItem.query.count() == 3
         assert TaskItemComment.query.count() == 0
+
+
+def test_seed_recusa_reset_em_banco_nao_sqlite():
+    with pytest.raises(RuntimeError) as erro:
+        ensure_disposable_database("mysql+pymysql://root:segredo@localhost/projetosRj")
+
+    mensagem = str(erro.value)
+    assert "segredo" not in mensagem
+    assert "mysql+pymysql://root:***@localhost/projetosRj" in mensagem
+
+
+def test_seed_aceita_reset_em_sqlite():
+    ensure_disposable_database("sqlite:///instance/descartavel.db")

@@ -9,8 +9,8 @@ interest in contributing to **ProjetosRJ**!_
 
 ### Ambiente
 Siga o passo a passo de instalação no [`README.md`](README.md) (backend em
-Python/Flask e, na `v5.0`, frontend em SvelteKit). Copie `.env.example` para
-`.env` e preencha as variáveis. **Nunca** commite segredos, `.env`, bancos
+Python/Flask, frontend em SvelteKit): `python scripts/dev/setup_local.py` gera
+o `.env`, o banco SQLite e o primeiro admin, sem precisar de nenhuma conta externa. **Nunca** commite segredos, `.env`, bancos
 (`*.db`/`*.sql`) ou arquivos de `instance/`.
 
 ### Branches
@@ -44,9 +44,9 @@ se possível, ambiente (SO, versões).
 ## 🇬🇧 English
 
 ### Environment
-Follow the setup steps in [`README.md`](README.md) (Python/Flask backend and, on
-`v5.0`, a SvelteKit frontend). Copy `.env.example` to `.env` and fill in the
-variables. **Never** commit secrets, `.env`, databases (`*.db`/`*.sql`) or
+Follow the setup steps in [`README.md`](README.md) (Python/Flask backend,
+SvelteKit frontend): `python scripts/dev/setup_local.py` writes `.env`, the SQLite
+database and the first admin, with no external accounts needed. **Never** commit secrets, `.env`, databases (`*.db`/`*.sql`) or
 anything under `instance/`.
 
 ### Branches

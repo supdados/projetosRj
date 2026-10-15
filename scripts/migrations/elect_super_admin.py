@@ -58,6 +58,19 @@ def find_initial_super_admin_id() -> int | None:
     ).scalar()
 
 
+def existe_admin_ativo() -> bool:
+    """True se há algum admin não removido (instalação: criar o 1º admin ou não).
+
+    Ex.: banco recém-migrado → ``False``.
+    """
+    return (
+        db.session.execute(
+            text("SELECT 1 FROM `user` WHERE is_admin = 1 AND deleted_at IS NULL")
+        ).first()
+        is not None
+    )
+
+
 def elect_initial_super_admin() -> int | None:
     """Promove o candidato de ``find_initial_super_admin_id``; devolve o id ou None.
 

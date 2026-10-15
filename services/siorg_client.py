@@ -15,6 +15,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from config import resolve_integration_flag
+
 SIORG_MANIFESTO_PATH = "/api/publica/v1/sync/manifesto"
 SIORG_ARVORE_PATH_TEMPLATE = "/api/publica/v1/unidades/{codigo}/arvore"
 
@@ -158,6 +160,22 @@ class SiorgClient:
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "application/json",
         }
+
+
+def siorg_api_key_configurada(config: Mapping[str, Any]) -> bool:
+    """True quando ``SIORG_API_KEY`` está preenchida no config do Flask."""
+    return bool(str(config.get("SIORG_API_KEY", "") or "").strip())
+
+
+def siorg_habilitado(config: Mapping[str, Any]) -> bool:
+    """SIORG utilizável: API key presente e ``SIORG_ENABLED`` não força OFF.
+
+    Ex.: ``siorg_habilitado({"SIORG_API_KEY": "tok"})`` → ``True``;
+    com ``"SIORG_ENABLED": "0"`` → ``False``.
+    """
+    return resolve_integration_flag(
+        config.get("SIORG_ENABLED"), configurado=siorg_api_key_configurada(config)
+    )
 
 
 def siorg_client_from_config(config: Mapping[str, Any]) -> SiorgClient:

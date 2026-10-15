@@ -3,7 +3,8 @@
 Gera dados fake para visualizacao e testes funcionais.
 
 Padrao:
-- reseta e recria o banco atual;
+- reseta e recria o banco atual (so SQLite: recusa MySQL/outros, que seriam
+  banco de verdade);
 - cria 100 projetos;
 - 5 etapas por projeto;
 - 2 tarefas por projeto;
@@ -22,6 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy import inspect
+from sqlalchemy.engine import make_url
 
 from catalogs.abep import ABEP_INDICADORES_OPTIONS
 from app import create_app
@@ -157,6 +159,20 @@ def _create_seed_users(orgaos):
     return admin, users_by_sigla
 
 
+def ensure_disposable_database(database_uri: str) -> None:
+    """Reset (`drop_all`) so em SQLite; em MySQL seria apagar banco de verdade.
+
+    Ex.: ``ensure_disposable_database("mysql+pymysql://u:p@h/db")`` -> RuntimeError.
+    """
+    if database_uri.startswith("sqlite"):
+        return
+    masked = make_url(database_uri).render_as_string(hide_password=True)
+    raise RuntimeError(
+        f"seed com reset recusado para o banco {masked!r}: esperado SQLite "
+        "descartavel (sqlite:///...). Para popular sem apagar use --no-reset."
+    )
+
+
 def _existing_model_tables() -> set[str]:
     """Tabelas de modelo ja presentes no banco (ignora `alembic_version`)."""
     return set(inspect(db.engine).get_table_names()) & set(db.metadata.tables)
@@ -187,6 +203,7 @@ def seed_fake_data(
 
     with app.app_context():
         if reset:
+            ensure_disposable_database(str(app.config["SQLALCHEMY_DATABASE_URI"]))
             db.drop_all()
 
         # Unico DDL fora de tests/: seed de banco descartavel, e so em banco vazio
@@ -429,17 +446,21 @@ def main(argv=None):
             return 1
 
     app = create_app({"SKIP_STARTUP_DB_INIT": True})
-    summary = seed_fake_data(
-        app,
-        reset=reset,
-        projects=args.projects,
-        stages_per_project=args.stages_per_project,
-        tasks_per_project=args.tasks_per_project,
-        items_per_task=args.items_per_task,
-        comments_per_item=args.comments_per_item,
-        orphan_tasks=args.orphan_tasks,
-        rng_seed=args.seed,
-    )
+    try:
+        summary = seed_fake_data(
+            app,
+            reset=reset,
+            projects=args.projects,
+            stages_per_project=args.stages_per_project,
+            tasks_per_project=args.tasks_per_project,
+            items_per_task=args.items_per_task,
+            comments_per_item=args.comments_per_item,
+            orphan_tasks=args.orphan_tasks,
+            rng_seed=args.seed,
+        )
+    except RuntimeError as exc:
+        print(f"ERRO: {exc}")
+        return 2
 
     print("Seed finalizado com sucesso.")
     print(f"Usuarios: {summary['users']}")
