@@ -103,7 +103,7 @@ jobs:
       - name: Scan de lockfiles (OSV.dev)
         continue-on-error: true # reporta achados sem bloquear o build (rever p/ gate depois)
         # A action fica no subdiretório osv-scanner-action/; o action.yml da raiz não tem `runs:`.
-        uses: google/osv-scanner-action/osv-scanner-action@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+        uses: google/osv-scanner-action/osv-scanner-action@a345acffa64b0eaede81a3d9aae6141214d9c8fc # v2.6.0
         with:
           # requirements.lock não é auto-detectado pelo nome -> declarar o parser explicitamente.
           scan-args: |-
