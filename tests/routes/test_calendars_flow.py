@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import routes.calendars.helpers as calendar_helpers
 import routes.calendars.oauth as calendar_oauth
@@ -267,11 +268,31 @@ def test_upsert_google_all_day_event_normalizes_exclusive_end(app, seed_data):
         )
 
 
+def _write_fake_google_client_secret(directory) -> str:
+    """client_secret.json falso: o real é gitignored, e sem arquivo o Calendar
+    se autodesliga — o teste só passava na máquina de quem tinha o segredo."""
+    path = directory / "client_secret.json"
+    path.write_text(
+        json.dumps(
+            {
+                "web": {
+                    "client_id": "fake-client-id.apps.googleusercontent.com",
+                    "client_secret": "fake-client-secret",
+                    "redirect_uris": ["http://localhost:5002/calendar/oauth/callback"],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
 def test_google_calendar_oauth_callback_persists_refresh_token(
-    app, client_user, seed_data, monkeypatch
+    app, client_user, seed_data, monkeypatch, tmp_path
 ):
     app.config.update(
         GOOGLE_CALENDAR_ENABLED=True,
+        GOOGLE_CALENDAR_CLIENT_SECRET_FILE=_write_fake_google_client_secret(tmp_path),
         GOOGLE_CALENDAR_REDIRECT_URI="http://localhost:5002/calendar/oauth/callback",
         GOOGLE_CALENDAR_DEFAULT_ID="primary",
     )
