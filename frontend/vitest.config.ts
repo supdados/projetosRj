@@ -7,7 +7,11 @@
  * (e adicionar `jsdom` como devDependency).
  *
  * Separado do `vite.config.ts` (SvelteKit) de propósito: rodar os testes não
- * deve arrastar o plugin do SvelteKit nem exigir `svelte-kit sync`.
+ * deve arrastar o plugin do SvelteKit. O `svelte-kit sync` ainda é necessário
+ * porque o tsconfig.json estende `.svelte-kit/tsconfig.json`, e o esbuild do
+ * Vite lê esse arquivo ao transformar os `.ts`; por isso o script `npm test`
+ * roda o sync antes (com `ignore-scripts=true` no .npmrc, o `npm ci` não roda
+ * nenhum script que o gere).
  */
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
