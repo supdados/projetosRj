@@ -12,6 +12,13 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    # Minor/patch num PR só por semana; major continua em PR separado.
+    # O Dependabot não regenera os .lock (uv): no branch do PR, rode os dois
+    # `uv pip compile` do job lock-drift (security-audit.yml) e faça commit.
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: [minor, patch]
 
   # Frontend SvelteKit/Vite (package.json em frontend/).
   - package-ecosystem: npm
@@ -21,6 +28,17 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    # Major do frontend exige migração coordenada (ex.: vite-plugin-svelte 7 só
+    # aceita vite 8; o adapter-static atual não aceita o SvelteKit 3). O Dependabot
+    # sobe um pacote por vez e o `npm ci` quebra por conflito de peer, então major
+    # se faz à mão. Não afeta updates de segurança.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Workflows de CI — propõe bumps de SHA mantendo o pin imutável (ver security-audit.yml).
   - package-ecosystem: github-actions
@@ -29,3 +47,6 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
