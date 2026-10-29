@@ -256,12 +256,18 @@ def test_export_com_etapas_neutraliza_formulas_em_comentarios(
 
 QUICK_HEADERS = [
     "ID",
-    "Nome",
-    "Descrição",
+    "Situação",
+    "Objeto / Produto",
+    "Localização",
+    "Escopo",
+    "Execução física e financeira",
+    "Contratos e instrumentos",
+    "Datas de início e fim previstas",
+    "Próximas etapas e prazos",
+    "Ponto crítico / Riscos",
     "Processo SEI",
-    "Data início",
-    "Data fim",
-    "Status",
+    "TCE",
+    "Responsável",
 ]
 
 
@@ -284,17 +290,29 @@ def test_export_rapida_colunas_fixas_e_todos_status(app, client_admin, seed_data
     )
     rows = _rows(response)
     assert rows[0] == QUICK_HEADERS
-    status_por_nome = {row[1]: row[6] for row in rows[1:]}
+    status_por_nome = {row[2]: row[1] for row in rows[1:]}
     assert status_por_nome["Projeto Auditoria"] == "Vigente"
     assert status_por_nome["Projeto Finalizado Rápido"] == "Concluído"
     assert status_por_nome["Projeto Suspenso Rápido"] == "Suspenso"
 
 
-def test_export_rapida_datas_vem_das_etapas(client_user, seed_data):
+def test_export_rapida_campos_do_sistema_e_colunas_vazias(client_user, seed_data):
     rows = _rows(client_user.get("/api/projetos/exportar?rapida=1"))
-    linha = next(row for row in rows[1:] if row[1] == "Projeto Auditoria")
-    assert linha[0] == str(seed_data["project_id"])
-    assert linha[4:6] == ["10/01/2026", "20/01/2026"]
+    linha = dict(
+        zip(QUICK_HEADERS, next(r for r in rows[1:] if r[2] == "Projeto Auditoria"))
+    )
+    assert linha["ID"] == str(seed_data["project_id"])
+    assert linha["Localização"] == "Orgao A"
+    assert linha["Execução física e financeira"] == "0/2 etapas"
+    assert linha["Objeto / Produto"] == "Projeto Auditoria"
+    assert linha["Datas de início e fim previstas"] == "10/01/2026 a 20/01/2026"
+    assert linha["Próximas etapas e prazos"] == (
+        "Etapa Planejada (10/01/2026 a 15/01/2026) — Usuario Auditoria"
+    )
+    assert linha["TCE"] == "Não"
+    assert linha["Responsável"] == "Auditoria"
+    vazias = ["Contratos e instrumentos", "Ponto crítico / Riscos"]
+    assert [linha[coluna] for coluna in vazias] == ["", ""]
 
 
 def test_export_rapida_filtra_so_por_area(app, client_admin, seed_data):
@@ -306,7 +324,7 @@ def test_export_rapida_filtra_so_por_area(app, client_admin, seed_data):
         "&status=Vigente&prioridade=alta&q=inexistente&colunas=foo"
     )
     assert response.status_code == 200
-    nomes = [row[1] for row in _rows(response)[1:]]
+    nomes = [row[2] for row in _rows(response)[1:]]
     assert "Projeto Auditoria" in nomes
     assert "Projeto Finalizado Rápido" in nomes
     assert "Projeto VPD" not in nomes

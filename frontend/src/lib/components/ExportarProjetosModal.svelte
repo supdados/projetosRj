@@ -25,7 +25,7 @@
 		type ExportColumn
 	} from '$lib/utils/exportColumns';
 	import {
-		QUICK_EXPORT_COLUMN_LABELS,
+		QUICK_EXPORT_COLUMNS,
 		buildQuickExportParams,
 		describeQuickExportScope
 	} from '$lib/utils/quickExport';
@@ -385,20 +385,27 @@
 							Colunas fixas
 						</span>
 						<span class="font-mono text-xs tabular-nums text-text-muted">
-							{QUICK_EXPORT_COLUMN_LABELS.length} colunas
+							{QUICK_EXPORT_COLUMNS.length} colunas
 						</span>
 					</div>
 					<ul class="grid grid-cols-3 gap-1.5">
-						{#each QUICK_EXPORT_COLUMN_LABELS as rotulo (rotulo)}
+						{#each QUICK_EXPORT_COLUMNS as coluna (coluna.rotulo)}
 							<li
-								class="inline-flex h-8 items-center rounded-sm border border-border-subtle bg-surface-muted px-2.5 text-xs font-medium text-text-secondary"
+								class={[
+									'inline-flex h-8 items-center rounded-sm border px-2.5 text-xs font-medium',
+									coluna.aPreencher
+										? 'border-dashed border-border-subtle text-text-muted'
+										: 'border-border-subtle bg-surface-muted text-text-secondary'
+								]}
+								title={coluna.aPreencher ? `${coluna.rotulo} — sai vazia` : coluna.rotulo}
 							>
-								<span class="truncate">{rotulo}</span>
+								<span class="truncate">{coluna.rotulo}</span>
 							</li>
 						{/each}
 					</ul>
 					<p class="text-xs text-text-muted">
-						Baixa direto, sem escolher colunas. Datas de início e fim vêm das etapas.
+						Baixa direto, sem escolher colunas. Datas e próxima etapa (só em vigentes) vêm das
+						etapas; colunas tracejadas saem vazias, para preenchimento posterior.
 					</p>
 				{:else}
 					<ExportColumnPicker
