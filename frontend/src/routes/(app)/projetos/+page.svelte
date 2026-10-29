@@ -281,6 +281,12 @@
 		orgao !== '' &&
 			orgaoOptions.some((o) => o.pai_id != null && Number(o.pai_id) === Number(orgao))
 	);
+	/** Sigla (ou rótulo) da área para o escopo da exportação rápida; null se desconhecida. */
+	function rotuloDaArea(orgaoId: number | null | undefined): string | null {
+		if (orgaoId == null) return null;
+		const opcao = orgaoOptions.find((o) => Number(o.value) === orgaoId);
+		return opcao ? opcao.sigla || opcao.label : null;
+	}
 	const specialOptions = $derived(data?.options.special_projects_options ?? []);
 	const abepOptions = $derived(data?.options.abep_indicadores_options ?? []);
 	const pagination = $derived(data?.pagination ?? null);
@@ -1451,11 +1457,12 @@
 	onCreatedDismissed={onProjectCreatedDismissed}
 />
 
-<!-- Exportação de projetos em CSV (GET /api/projetos/exportar) — todos os logados. -->
+<!-- Exportação de projetos em CSV (GET /api/projetos/exportar; rápida = ?rapida=1) — todos os logados. -->
 <ExportarProjetosModal
 	open={exportModalOpen}
 	filtros={buildProjectsQuery()}
 	totalFiltrado={totalProjects}
 	hasFiltrosAtivos={hasActiveFilters}
+	areaRotulo={rotuloDaArea(buildProjectsQuery().orgao)}
 	onClose={() => (exportModalOpen = false)}
 />

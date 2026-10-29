@@ -252,3 +252,84 @@ def test_export_com_etapas_neutraliza_formulas_em_comentarios(
     rows = _rows(client_admin.get("/api/projetos/exportar?com_etapas=1&colunas=titulo"))
     injetada = next(row for row in rows[1:] if row[2] == "Etapa Injetada")
     assert injetada[7].startswith("'=")
+
+
+QUICK_HEADERS = [
+    "ID",
+    "Nome",
+    "Descrição",
+    "Processo SEI",
+    "Data início",
+    "Data fim",
+    "Status",
+]
+
+
+def _add_projeto(app, titulo: str, orgao_id: int, status: str) -> None:
+    with app.app_context():
+        db.session.add(Project(titulo=titulo, orgao_id=orgao_id, status=status))
+        db.session.commit()
+
+
+def test_export_rapida_colunas_fixas_e_todos_status(app, client_admin, seed_data):
+    auditoria_id = seed_data["auditoria_orgao_id"]
+    _add_projeto(app, "Projeto Finalizado Rápido", auditoria_id, "Finalizado")
+    _add_projeto(app, "Projeto Suspenso Rápido", auditoria_id, "Suspenso")
+
+    response = client_admin.get("/api/projetos/exportar?rapida=1")
+    assert response.status_code == 200
+    assert re.fullmatch(
+        r'attachment; filename="projetos-rapida-\d{8}-\d{4}\.csv"',
+        response.headers["Content-Disposition"],
+    )
+    rows = _rows(response)
+    assert rows[0] == QUICK_HEADERS
+    status_por_nome = {row[1]: row[6] for row in rows[1:]}
+    assert status_por_nome["Projeto Auditoria"] == "Vigente"
+    assert status_por_nome["Projeto Finalizado Rápido"] == "Concluído"
+    assert status_por_nome["Projeto Suspenso Rápido"] == "Suspenso"
+
+
+def test_export_rapida_datas_vem_das_etapas(client_user, seed_data):
+    rows = _rows(client_user.get("/api/projetos/exportar?rapida=1"))
+    linha = next(row for row in rows[1:] if row[1] == "Projeto Auditoria")
+    assert linha[0] == str(seed_data["project_id"])
+    assert linha[4:6] == ["10/01/2026", "20/01/2026"]
+
+
+def test_export_rapida_filtra_so_por_area(app, client_admin, seed_data):
+    auditoria_id = seed_data["auditoria_orgao_id"]
+    _add_projeto(app, "Projeto Finalizado Rápido", auditoria_id, "Finalizado")
+
+    response = client_admin.get(
+        f"/api/projetos/exportar?rapida=1&orgao={auditoria_id}"
+        "&status=Vigente&prioridade=alta&q=inexistente&colunas=foo"
+    )
+    assert response.status_code == 200
+    nomes = [row[1] for row in _rows(response)[1:]]
+    assert "Projeto Auditoria" in nomes
+    assert "Projeto Finalizado Rápido" in nomes
+    assert "Projeto VPD" not in nomes
+
+
+def test_export_rapida_escopo_nao_admin(client_user, seed_data):
+    corpo = client_user.get("/api/projetos/exportar?rapida=1").get_data(as_text=True)
+    assert "Projeto Auditoria" in corpo
+    assert "Projeto VPD" not in corpo
+
+
+def test_export_rapida_orgao_invalido_422(client_user, seed_data):
+    response = client_user.get(
+        f"/api/projetos/exportar?rapida=1&orgao={seed_data['vpd_orgao_id']}"
+    )
+    assert response.status_code == 422
+
+
+def test_export_rapida_teto_de_linhas_422(client_user, seed_data, monkeypatch):
+    monkeypatch.setattr("routes.api.projects_export.MAX_EXPORT_ROWS", 0)
+    response = client_user.get("/api/projetos/exportar?rapida=1")
+    assert response.status_code == 422
+    assert (
+        response.get_json()["error"]["message"]
+        == "Exportação acima de 10.000 projetos — refine os filtros."
+    )

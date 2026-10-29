@@ -117,3 +117,17 @@ def test_api_board_aceita_apenas_orgao(app, client_admin):
     resposta = client_admin.get(f"/api/tarefas/board?orgao={pai_id}&apenas_orgao=1")
     assert resposta.status_code == 200
     assert resposta.get_json()["ok"] is True
+
+
+def test_api_projetos_export_rapida_apenas_orgao(app, client_admin):
+    pai_id, _ = _criar_pai_filho_com_projetos(app)
+
+    hierarquico = client_admin.get(f"/api/projetos/exportar?rapida=1&orgao={pai_id}")
+    apenas = client_admin.get(
+        f"/api/projetos/exportar?rapida=1&orgao={pai_id}&apenas_orgao=1"
+    )
+    assert hierarquico.status_code == 200 and apenas.status_code == 200
+    assert "Projeto do Filho" in hierarquico.get_data(as_text=True)
+    corpo = apenas.get_data(as_text=True)
+    assert "Projeto do Pai" in corpo
+    assert "Projeto do Filho" not in corpo

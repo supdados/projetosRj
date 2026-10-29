@@ -23,6 +23,7 @@ from services.project_export import (
     build_export_headers_with_stages,
     build_export_rows,
     build_export_rows_with_stages,
+    build_quick_export_table,
     write_tabular_bytes,
 )
 
@@ -285,3 +286,43 @@ def test_area_e_orgao_sao_colunas_independentes():
     projeto.orgao_ref = None
     assert EXPORT_COLUMNS["area"].render(projeto) == ""
     assert EXPORT_COLUMNS["orgao"].render(projeto) != ""
+
+
+def test_quick_export_colunas_fixas_e_datas_das_etapas():
+    cabecalhos, linhas = build_quick_export_table([_projeto_completo()])
+    assert cabecalhos == [
+        "ID",
+        "Nome",
+        "Descrição",
+        "Processo SEI",
+        "Data início",
+        "Data fim",
+        "Status",
+    ]
+    assert list(linhas) == [
+        [
+            "1",
+            "Portal Único",
+            "Descrição longa",
+            "SEI-380001/000664/2026; SEI-380001/000665/2026",
+            "10/01/2026",
+            "05/02/2026",
+            "Vigente",
+        ]
+    ]
+
+
+def test_quick_export_projeto_sem_etapas_nem_sei_sai_vazio():
+    _, linhas = build_quick_export_table([_projeto_minimo()])
+    assert list(linhas) == [["7", "Projeto Mínimo", "", "", "", "", ""]]
+
+
+@pytest.mark.parametrize(
+    ("status", "esperado"),
+    [("Finalizado", "Concluído"), ("Vigente", "Vigente"), ("Suspenso", "Suspenso")],
+)
+def test_quick_export_status_finalizado_vira_concluido(status, esperado):
+    projeto = _projeto_minimo()
+    projeto.status = status
+    _, linhas = build_quick_export_table([projeto])
+    assert next(linhas)[6] == esperado
