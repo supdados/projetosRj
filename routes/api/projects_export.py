@@ -5,6 +5,8 @@
 ``services/project_export.py``) e devolve o arquivo tabular para download.
 ``?com_etapas=1`` troca para o formato longo (1 linha por etapa), com as colunas
 de etapa em ``?colunas_etapa=``.
+``?rapida=1`` é a exportação rápida: colunas fixas (``QUICK_EXPORT_COLUMNS``),
+todos os status e só o filtro de área (``?orgao=``/``?apenas_orgao=``).
 A rota legada ``/projects/download`` permanece intocada (KEEP-ENDPOINT).
 """
 
@@ -28,6 +30,7 @@ from services.project_export import (
     build_export_query,
     build_export_rows,
     build_export_rows_with_stages,
+    build_quick_export_table,
     write_tabular_bytes,
 )
 from time_utils import utc_now
@@ -91,6 +94,14 @@ def _export_filters_from_request(selected_orgao_id: int | None) -> ProjectsListF
     )
 
 
+def _quick_export_filters(selected_orgao_id: int | None) -> ProjectsListFilters:
+    """Exportação rápida: só a área filtra; status e demais filtros são ignorados."""
+    return ProjectsListFilters(
+        selected_orgao_id=selected_orgao_id,
+        apenas_orgao=parse_apenas_orgao_flag(request.args.get("apenas_orgao")),
+    )
+
+
 def _count_stage_export_rows(query: Query) -> int:
     """Linhas do formato longo: uma por etapa de workflow + uma por projeto sem etapa."""
     ids = query.order_by(None).with_entities(Project.id).subquery()
@@ -123,16 +134,32 @@ def _export_table(
     )
 
 
-def _tabular_download_response(
-    projects: list[Project], slugs: list[str], stage_slugs: list[str] | None
+def _csv_attachment_response(
+    cabecalhos: list[str], linhas: Iterator[list[str]], prefixo: str
 ) -> Response:
-    cabecalhos, linhas = _export_table(projects, slugs, stage_slugs)
     body = write_tabular_bytes(cabecalhos, linhas)
-    filename = f"projetos-{utc_now().strftime('%Y%m%d-%H%M')}.csv"
+    filename = f"{prefixo}-{utc_now().strftime('%Y%m%d-%H%M')}.csv"
     response = Response(body, mimetype="text/csv")
     response.headers["Content-Type"] = "text/csv; charset=utf-8"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+def _tabular_download_response(
+    projects: list[Project], slugs: list[str], stage_slugs: list[str] | None
+) -> Response:
+    cabecalhos, linhas = _export_table(projects, slugs, stage_slugs)
+    return _csv_attachment_response(cabecalhos, linhas, "projetos")
+
+
+def _quick_export_response(
+    selected_orgao_id: int | None,
+) -> Response | tuple[Response, int]:
+    query = build_export_query(_quick_export_filters(selected_orgao_id), g.user)
+    if query.count() > MAX_EXPORT_ROWS:
+        return fail(_teto_excedido_message(False), status=422, code="validation")
+    cabecalhos, linhas = build_quick_export_table(query.all())
+    return _csv_attachment_response(cabecalhos, linhas, "projetos-rapida")
 
 
 @main_bp.route("/api/projetos/exportar", methods=["GET"])
@@ -148,6 +175,8 @@ def api_projetos_exportar() -> Response | tuple[Response, int]:
             status=422,
             code="validation",
         )
+    if request.args.get("rapida") == "1":
+        return _quick_export_response(selected_orgao_id)
     com_etapas = request.args.get("com_etapas") == "1"
     try:
         slugs = _parse_export_slugs(request.args.get("colunas"))

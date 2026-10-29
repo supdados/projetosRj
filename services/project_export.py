@@ -178,6 +178,28 @@ DEFAULT_EXPORT_STAGE_SLUGS: tuple[str, ...] = tuple(EXPORT_STAGE_COLUMNS)
 
 REF_PROJETO_HEADER = "Ref Projeto"
 
+# A gestão chama de "Concluído" o que o modelo grava como "Finalizado"
+# (transição única via POST /api/projetos/<id>/concluir).
+_QUICK_EXPORT_STATUS_LABELS: dict[str, str] = {"Finalizado": "Concluído"}
+
+
+def _render_status_rapida(project: Project) -> str:
+    status = project.status or ""
+    return safe_csv_text(_QUICK_EXPORT_STATUS_LABELS.get(status, status))
+
+
+# Exportação rápida: colunas fixas (sem escolha do usuário), na ordem pedida
+# pela gestão. Reusa os renders do registry para não divergir do export completo.
+QUICK_EXPORT_COLUMNS: tuple[ExportColumn, ...] = (
+    ExportColumn("id", "ID", EXPORT_COLUMNS["id"].render),
+    ExportColumn("nome", "Nome", EXPORT_COLUMNS["titulo"].render),
+    ExportColumn("descricao", "Descrição", EXPORT_COLUMNS["descricao"].render),
+    ExportColumn("sei", "Processo SEI", _render_sei),
+    ExportColumn("data_inicio", "Data início", EXPORT_COLUMNS["data_inicio"].render),
+    ExportColumn("data_fim", "Data fim", EXPORT_COLUMNS["data_fim"].render),
+    ExportColumn("status", "Status", _render_status_rapida),
+)
+
 
 def build_export_query(filters: "ProjectsListFilters", user: User) -> Query:
     """Query do export: filtros da listagem + eager loading das relações lidas."""
@@ -203,6 +225,24 @@ def build_export_rows(
     columns = [EXPORT_COLUMNS[slug] for slug in slugs]
     for project in projects:
         yield [column.render(project) for column in columns]
+
+
+def build_quick_export_table(
+    projects: Iterable[Project],
+) -> tuple[list[str], Iterator[list[str]]]:
+    """Cabeçalhos + linhas da exportação rápida (colunas fixas, sem escolha).
+
+    Exemplo:
+        >>> cabecalhos, linhas = build_quick_export_table([projeto])
+        >>> cabecalhos[:2], next(linhas)[:2]
+        (['ID', 'Nome'], ['12', 'Portal Único'])
+    """
+    cabecalhos = [column.header for column in QUICK_EXPORT_COLUMNS]
+    linhas = (
+        [column.render(project) for column in QUICK_EXPORT_COLUMNS]
+        for project in projects
+    )
+    return cabecalhos, linhas
 
 
 def build_export_headers_with_stages(

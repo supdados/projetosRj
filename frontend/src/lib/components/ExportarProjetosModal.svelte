@@ -1,9 +1,10 @@
 <script lang="ts">
 	/**
 	 * Modal de exportação de projetos em CSV (`GET /api/projetos/exportar`):
-	 * escopo (lista filtrada × todos), conteúdo (só projetos × com etapas),
-	 * seleção de colunas persistida em `localStorage` e download via blob +
-	 * `<a download>` programático.
+	 * escopo (lista filtrada × todos), conteúdo (só projetos × com etapas ×
+	 * exportação rápida), seleção de colunas persistida em `localStorage` e
+	 * download via blob + `<a download>` programático. A exportação rápida tem
+	 * colunas fixas e só respeita o filtro de área (todos os status).
 	 */
 	import { tick, untrack } from 'svelte';
 	import { slide } from 'svelte/transition';
@@ -23,6 +24,11 @@
 		saveStoredStageSlugs,
 		type ExportColumn
 	} from '$lib/utils/exportColumns';
+	import {
+		QUICK_EXPORT_COLUMN_LABELS,
+		buildQuickExportParams,
+		describeQuickExportScope
+	} from '$lib/utils/quickExport';
 	import type { ProjectsListQuery } from '$lib/types/projects';
 	import Modal from '$lib/components/Modal.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -30,7 +36,7 @@
 	import ExportColumnPicker from '$lib/components/ExportColumnPicker.svelte';
 
 	type EscopoExport = 'lista' | 'todos';
-	type ConteudoExport = 'projetos' | 'etapas';
+	type ConteudoExport = 'projetos' | 'etapas' | 'rapida';
 	type FaseExport = 'repouso' | 'gerando' | 'pronto';
 
 	interface Props {
@@ -40,6 +46,8 @@
 		hasFiltrosAtivos?: boolean;
 		/** `false` esconde o escopo e exporta sempre todos os projetos. */
 		permitirEscopoLista?: boolean;
+		/** Sigla/nome da área em `filtros.orgao`, exibido no escopo da exportação rápida. */
+		areaRotulo?: string | null;
 		onClose: () => void;
 	}
 
@@ -49,6 +57,7 @@
 		totalFiltrado = 0,
 		hasFiltrosAtivos = false,
 		permitirEscopoLista = true,
+		areaRotulo = null,
 		onClose
 	}: Props = $props();
 
@@ -70,12 +79,19 @@
 	const pendente = delayedPending({ showAfterMs: 150, minVisibleMs: 350 });
 
 	const comEtapas = $derived(conteudo === 'etapas');
+	const rapida = $derived(conteudo === 'rapida');
+	// Rápida ignora o escopo "lista": só a área filtrada vale (sem área = todos).
+	const areaRapida = $derived(permitirEscopoLista ? filtros : null);
+	const escopoRapida = $derived(describeQuickExportScope(areaRapida, areaRotulo));
 	const selecionadas = $derived(new Set(slugs));
 	const selecionadasEtapa = $derived(new Set(slugsEtapa));
-	const selecaoIncompleta = $derived(slugs.length === 0 || (comEtapas && slugsEtapa.length === 0));
-	// No modo com etapas o total de linhas não é o de projetos — não prometer contagem.
+	const selecaoIncompleta = $derived(
+		!rapida && (slugs.length === 0 || (comEtapas && slugsEtapa.length === 0))
+	);
+	// Com etapas o total de linhas não é o de projetos, e a rápida ignora o filtro
+	// de status — em ambos o total da lista não vale, então não prometer contagem.
 	const rotuloRepouso = $derived(
-		escopo === 'lista' && !comEtapas
+		escopo === 'lista' && conteudo === 'projetos'
 			? `Exportar ${totalFiltrado} ${totalFiltrado === 1 ? 'projeto' : 'projetos'}`
 			: 'Exportar CSV'
 	);
@@ -177,6 +193,7 @@
 	}
 
 	function montarParams(): URLSearchParams {
+		if (rapida) return buildQuickExportParams(areaRapida);
 		const params = new URLSearchParams();
 		if (escopo === 'lista') {
 			if (filtros.status) params.set('status', filtros.status);
@@ -304,22 +321,27 @@
 					<legend class="mb-1.5 text-2xs font-bold uppercase tracking-caps text-text-label">
 						Escopo
 					</legend>
-					<div class="flex items-center gap-5">
-						{@render opcaoRadio(
-							'exportar-projetos-escopo',
-							'lista',
-							'Lista filtrada atual',
-							escopo === 'lista',
-							() => (escopo = 'lista')
-						)}
-						{@render opcaoRadio(
-							'exportar-projetos-escopo',
-							'todos',
-							'Todos os projetos',
-							escopo === 'todos',
-							() => (escopo = 'todos')
-						)}
-					</div>
+					{#if rapida}
+						<!-- Mesma altura da linha de radios: trocar o conteúdo não desloca o modal. -->
+						<p class="flex h-5 items-center text-sm text-text-secondary">{escopoRapida}</p>
+					{:else}
+						<div class="flex items-center gap-5">
+							{@render opcaoRadio(
+								'exportar-projetos-escopo',
+								'lista',
+								'Lista filtrada atual',
+								escopo === 'lista',
+								() => (escopo = 'lista')
+							)}
+							{@render opcaoRadio(
+								'exportar-projetos-escopo',
+								'todos',
+								'Todos os projetos',
+								escopo === 'todos',
+								() => (escopo = 'todos')
+							)}
+						</div>
+					{/if}
 				</fieldset>
 			{/if}
 
@@ -331,7 +353,7 @@
 				<legend class="mb-1.5 text-2xs font-bold uppercase tracking-caps text-text-label">
 					Conteúdo
 				</legend>
-				<div class="flex items-center gap-5">
+				<div class="flex flex-wrap items-center gap-x-5 gap-y-2">
 					{@render opcaoRadio(
 						'exportar-projetos-conteudo',
 						'projetos',
@@ -346,20 +368,50 @@
 						conteudo === 'etapas',
 						() => (conteudo = 'etapas')
 					)}
+					{@render opcaoRadio(
+						'exportar-projetos-conteudo',
+						'rapida',
+						'Exportação rápida',
+						conteudo === 'rapida',
+						() => (conteudo = 'rapida')
+					)}
 				</div>
 			</fieldset>
 
 			<section class="flex flex-col gap-2 border-t border-border-hairline pt-4">
-				<ExportColumnPicker
-					titulo="Colunas"
-					registro={EXPORT_COLUMNS}
-					selecao={slugs}
-					pop={montado && popPermitido}
-					aviso={slugs.length === 0 ? 'Escolha ao menos uma coluna.' : ''}
-					alternar={alternarColuna}
-					todas={selecionarTodas}
-					limpar={limparColunas}
-				/>
+				{#if rapida}
+					<div class="flex items-baseline justify-between">
+						<span class="text-2xs font-bold uppercase tracking-caps text-text-label">
+							Colunas fixas
+						</span>
+						<span class="font-mono text-xs tabular-nums text-text-muted">
+							{QUICK_EXPORT_COLUMN_LABELS.length} colunas
+						</span>
+					</div>
+					<ul class="grid grid-cols-3 gap-1.5">
+						{#each QUICK_EXPORT_COLUMN_LABELS as rotulo (rotulo)}
+							<li
+								class="inline-flex h-8 items-center rounded-sm border border-border-subtle bg-surface-muted px-2.5 text-xs font-medium text-text-secondary"
+							>
+								<span class="truncate">{rotulo}</span>
+							</li>
+						{/each}
+					</ul>
+					<p class="text-xs text-text-muted">
+						Baixa direto, sem escolher colunas. Datas de início e fim vêm das etapas.
+					</p>
+				{:else}
+					<ExportColumnPicker
+						titulo="Colunas"
+						registro={EXPORT_COLUMNS}
+						selecao={slugs}
+						pop={montado && popPermitido}
+						aviso={slugs.length === 0 ? 'Escolha ao menos uma coluna.' : ''}
+						alternar={alternarColuna}
+						todas={selecionarTodas}
+						limpar={limparColunas}
+					/>
+				{/if}
 			</section>
 
 			{#if comEtapas}
