@@ -59,12 +59,18 @@ def _render_indicadores(project: Project) -> str:
     )
 
 
-def _render_cumprimento(project: Project) -> str:
+def _count_workflow_etapas_concluidas(project: Project) -> tuple[int, int]:
+    """(concluídas, total) das etapas de workflow; concluída = iniciada e feita."""
     etapas = project.workflow_etapas
-    if not etapas:
-        return "0%"
     concluidas = sum(1 for etapa in etapas if etapa.iniciada and etapa.done)
-    return f"{round(concluidas * 100 / len(etapas))}%"
+    return concluidas, len(etapas)
+
+
+def _render_cumprimento(project: Project) -> str:
+    concluidas, total = _count_workflow_etapas_concluidas(project)
+    if not total:
+        return "0%"
+    return f"{round(concluidas * 100 / total)}%"
 
 
 EXPORT_COLUMNS: dict[str, ExportColumn] = {
@@ -182,22 +188,109 @@ REF_PROJETO_HEADER = "Ref Projeto"
 # (transição única via POST /api/projetos/<id>/concluir).
 _QUICK_EXPORT_STATUS_LABELS: dict[str, str] = {"Finalizado": "Concluído"}
 
+_STATUS_VIGENTE = "Vigente"
+
+# Valor de ``Project.special_project`` que marca projeto acompanhado pelo TCE-RJ.
+_TCE_SPECIAL_PROJECT = "TCE"
+
 
 def _render_status_rapida(project: Project) -> str:
     status = project.status or ""
     return safe_csv_text(_QUICK_EXPORT_STATUS_LABELS.get(status, status))
 
 
-# Exportação rápida: colunas fixas (sem escolha do usuário), na ordem pedida
-# pela gestão. Reusa os renders do registry para não divergir do export completo.
+def _render_objeto_produto(project: Project) -> str:
+    """Título e descrição numa célula só, como pede a ficha ("Objeto / Produto")."""
+    partes = [texto for texto in (project.titulo, project.short_description) if texto]
+    return safe_csv_text(" — ".join(partes))
+
+
+def _render_execucao_rapida(project: Project) -> str:
+    # O sufixo " etapas" impede o Excel de converter "3/10" na data 03/out.
+    concluidas, total = _count_workflow_etapas_concluidas(project)
+    return f"{concluidas}/{total} etapas"
+
+
+def _render_tce_rapida(project: Project) -> str:
+    return "Sim" if project.special_project == _TCE_SPECIAL_PROJECT else "Não"
+
+
+def _format_periodo(
+    inicio_data: datetime.date | None, fim_data: datetime.date | None
+) -> str:
+    """Período numa célula só; aceita início ou fim ausente.
+
+    Exemplo:
+        >>> _format_periodo(datetime.date(2026, 1, 10), None)
+        'a partir de 10/01/2026'
+    """
+    inicio, fim = _format_date(inicio_data), _format_date(fim_data)
+    if inicio and fim:
+        return f"{inicio} a {fim}"
+    if inicio:
+        return f"a partir de {inicio}"
+    return f"até {fim}" if fim else ""
+
+
+def _render_periodo_previsto(project: Project) -> str:
+    return _format_periodo(project.data_inicio_projeto, project.data_fim_projeto)
+
+
+def _describe_proxima_etapa(etapa: Etapa) -> str:
+    """Etapa + período + responsáveis, omitindo o que estiver vazio.
+
+    Exemplo:
+        >>> _describe_proxima_etapa(etapa)
+        'Execução (01/02/2026 a 05/02/2026) — SUBEXE, COODADOS'
+    """
+    # Import tardio: services.etapa_responsaveis puxa routes.* e fecharia o ciclo.
+    from services.etapa_responsaveis import responsavel_display
+
+    texto = etapa.descricao or ""
+    periodo = _format_periodo(etapa.data_inicio, etapa.data_fim)
+    if periodo:
+        texto = f"{texto} ({periodo})"
+    responsavel = responsavel_display(etapa)
+    return f"{texto} — {responsavel}" if responsavel else texto
+
+
+def _render_proxima_etapa_rapida(project: Project) -> str:
+    """Próxima etapa não concluída do projeto vigente; vazio nos demais status."""
+    if project.status != _STATUS_VIGENTE:
+        return ""
+    proxima = next(
+        (e for e in project.workflow_etapas if not (e.iniciada and e.done)), None
+    )
+    return safe_csv_text(_describe_proxima_etapa(proxima)) if proxima else ""
+
+
+def _render_a_preencher(_project: Project) -> str:
+    """Coluna sem campo no sistema: sai vazia para preenchimento posterior."""
+    return ""
+
+
+# Exportação rápida: colunas fixas (sem escolha do usuário) na ordem da ficha
+# "Projetos estratégicos, obras e investimentos" da gestão. Reusa os renders do
+# registry para não divergir do export completo.
 QUICK_EXPORT_COLUMNS: tuple[ExportColumn, ...] = (
     ExportColumn("id", "ID", EXPORT_COLUMNS["id"].render),
-    ExportColumn("nome", "Nome", EXPORT_COLUMNS["titulo"].render),
-    ExportColumn("descricao", "Descrição", EXPORT_COLUMNS["descricao"].render),
+    ExportColumn("situacao", "Situação", _render_status_rapida),
+    ExportColumn("objeto", "Objeto / Produto", _render_objeto_produto),
+    # Localização = órgão digitado na criação (Project.orgao), não a área dona.
+    ExportColumn("localizacao", "Localização", _render_orgao),
+    ExportColumn("escopo", "Escopo", EXPORT_COLUMNS["tipo_entrega"].render),
+    ExportColumn("execucao", "Execução física e financeira", _render_execucao_rapida),
+    ExportColumn("contratos", "Contratos e instrumentos", _render_a_preencher),
+    ExportColumn(
+        "periodo", "Datas de início e fim previstas", _render_periodo_previsto
+    ),
+    ExportColumn(
+        "proxima_etapa", "Próximas etapas e prazos", _render_proxima_etapa_rapida
+    ),
+    ExportColumn("ponto_critico", "Ponto crítico / Riscos", _render_a_preencher),
     ExportColumn("sei", "Processo SEI", _render_sei),
-    ExportColumn("data_inicio", "Data início", EXPORT_COLUMNS["data_inicio"].render),
-    ExportColumn("data_fim", "Data fim", EXPORT_COLUMNS["data_fim"].render),
-    ExportColumn("status", "Status", _render_status_rapida),
+    ExportColumn("tce", "TCE", _render_tce_rapida),
+    ExportColumn("responsavel", "Responsável", _render_area),
 )
 
 
@@ -234,8 +327,8 @@ def build_quick_export_table(
 
     Exemplo:
         >>> cabecalhos, linhas = build_quick_export_table([projeto])
-        >>> cabecalhos[:2], next(linhas)[:2]
-        (['ID', 'Nome'], ['12', 'Portal Único'])
+        >>> cabecalhos[:3], next(linhas)[:3]
+        (['ID', 'Situação', 'Objeto / Produto'], ['12', 'Vigente', 'Portal Único'])
     """
     cabecalhos = [column.header for column in QUICK_EXPORT_COLUMNS]
     linhas = (

@@ -2,21 +2,34 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-	QUICK_EXPORT_COLUMN_LABELS,
+	QUICK_EXPORT_COLUMNS,
 	buildQuickExportParams,
 	describeQuickExportScope
 } from './quickExport';
 
-describe('QUICK_EXPORT_COLUMN_LABELS', () => {
+describe('QUICK_EXPORT_COLUMNS', () => {
 	it('espelha os cabeçalhos fixos do backend, na ordem', () => {
-		expect(QUICK_EXPORT_COLUMN_LABELS).toEqual([
+		expect(QUICK_EXPORT_COLUMNS.map((c) => c.rotulo)).toEqual([
 			'ID',
-			'Nome',
-			'Descrição',
+			'Situação',
+			'Objeto / Produto',
+			'Localização',
+			'Escopo',
+			'Execução física e financeira',
+			'Contratos e instrumentos',
+			'Datas de início e fim previstas',
+			'Próximas etapas e prazos',
+			'Ponto crítico / Riscos',
 			'Processo SEI',
-			'Data início',
-			'Data fim',
-			'Status'
+			'TCE',
+			'Responsável'
+		]);
+	});
+
+	it('marca como "a preencher" só as colunas sem campo no sistema', () => {
+		expect(QUICK_EXPORT_COLUMNS.filter((c) => c.aPreencher).map((c) => c.rotulo)).toEqual([
+			'Contratos e instrumentos',
+			'Ponto crítico / Riscos'
 		]);
 	});
 });

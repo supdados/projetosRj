@@ -3,16 +3,31 @@
  * fixas, todos os status e só o filtro de área da lista. Sem escolha de colunas.
  */
 
-/** Cabeçalhos fixos do CSV rápido (espelha `QUICK_EXPORT_COLUMNS`); só exibição. */
-export const QUICK_EXPORT_COLUMN_LABELS: readonly string[] = [
-	'ID',
-	'Nome',
-	'Descrição',
-	'Processo SEI',
-	'Data início',
-	'Data fim',
-	'Status'
-] as const;
+/** Coluna fixa do CSV rápido; `aPreencher` = sem campo no sistema, sai vazia. */
+export interface QuickExportColumn {
+	rotulo: string;
+	aPreencher: boolean;
+}
+
+/**
+ * Cabeçalhos fixos do CSV rápido, na ordem da ficha de projetos estratégicos
+ * (espelha `QUICK_EXPORT_COLUMNS` do backend); só exibição.
+ */
+export const QUICK_EXPORT_COLUMNS: readonly QuickExportColumn[] = [
+	{ rotulo: 'ID', aPreencher: false },
+	{ rotulo: 'Situação', aPreencher: false },
+	{ rotulo: 'Objeto / Produto', aPreencher: false },
+	{ rotulo: 'Localização', aPreencher: false },
+	{ rotulo: 'Escopo', aPreencher: false },
+	{ rotulo: 'Execução física e financeira', aPreencher: false },
+	{ rotulo: 'Contratos e instrumentos', aPreencher: true },
+	{ rotulo: 'Datas de início e fim previstas', aPreencher: false },
+	{ rotulo: 'Próximas etapas e prazos', aPreencher: false },
+	{ rotulo: 'Ponto crítico / Riscos', aPreencher: true },
+	{ rotulo: 'Processo SEI', aPreencher: false },
+	{ rotulo: 'TCE', aPreencher: false },
+	{ rotulo: 'Responsável', aPreencher: false }
+];
 
 /** Filtro de área da lista — o único que a exportação rápida respeita. */
 export interface QuickExportArea {

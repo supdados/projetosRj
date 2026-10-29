@@ -288,33 +288,67 @@ def test_area_e_orgao_sao_colunas_independentes():
     assert EXPORT_COLUMNS["orgao"].render(projeto) != ""
 
 
-def test_quick_export_colunas_fixas_e_datas_das_etapas():
+QUICK_COL = {
+    header: index
+    for index, header in enumerate(
+        [
+            "ID",
+            "Situação",
+            "Objeto / Produto",
+            "Localização",
+            "Escopo",
+            "Execução física e financeira",
+            "Contratos e instrumentos",
+            "Datas de início e fim previstas",
+            "Próximas etapas e prazos",
+            "Ponto crítico / Riscos",
+            "Processo SEI",
+            "TCE",
+            "Responsável",
+        ]
+    )
+}
+
+
+def _quick_cell(projeto: Project, header: str) -> str:
+    _, linhas = build_quick_export_table([projeto])
+    return next(linhas)[QUICK_COL[header]]
+
+
+def test_quick_export_colunas_da_ficha_e_valores():
     cabecalhos, linhas = build_quick_export_table([_projeto_completo()])
-    assert cabecalhos == [
-        "ID",
-        "Nome",
-        "Descrição",
-        "Processo SEI",
-        "Data início",
-        "Data fim",
-        "Status",
-    ]
+    assert cabecalhos == list(QUICK_COL)
     assert list(linhas) == [
         [
             "1",
-            "Portal Único",
-            "Descrição longa",
-            "SEI-380001/000664/2026; SEI-380001/000665/2026",
-            "10/01/2026",
-            "05/02/2026",
             "Vigente",
+            "Portal Único — Descrição longa",
+            "Secretaria de Estado de Transformação Digital",
+            "Sistema",
+            "1/2 etapas",
+            "",
+            "10/01/2026 a 05/02/2026",
+            "Execução (01/02/2026 a 05/02/2026)",
+            "",
+            "SEI-380001/000664/2026; SEI-380001/000665/2026",
+            "Não",
+            "SETD",
         ]
     ]
 
 
-def test_quick_export_projeto_sem_etapas_nem_sei_sai_vazio():
+def test_quick_export_projeto_sem_dados_sai_com_colunas_vazias():
     _, linhas = build_quick_export_table([_projeto_minimo()])
-    assert list(linhas) == [["7", "Projeto Mínimo", "", "", "", "", ""]]
+    assert list(linhas) == [
+        ["7", "", "Projeto Mínimo", "", "", "0/0 etapas", "", "", "", "", "", "Não", ""]
+    ]
+
+
+def test_quick_export_objeto_produto_neutraliza_formula():
+    projeto = _projeto_minimo()
+    projeto.titulo = '=HYPERLINK("https://attacker.example","x")'
+    projeto.short_description = "Descrição"
+    assert _quick_cell(projeto, "Objeto / Produto").startswith("'=")
 
 
 @pytest.mark.parametrize(
@@ -324,5 +358,80 @@ def test_quick_export_projeto_sem_etapas_nem_sei_sai_vazio():
 def test_quick_export_status_finalizado_vira_concluido(status, esperado):
     projeto = _projeto_minimo()
     projeto.status = status
-    _, linhas = build_quick_export_table([projeto])
-    assert next(linhas)[6] == esperado
+    assert _quick_cell(projeto, "Situação") == esperado
+
+
+@pytest.mark.parametrize(
+    ("special_project", "esperado"),
+    [("TCE", "Sim"), ("ABEP", "Não"), ("Fórum de simplificação", "Não"), (None, "Não")],
+)
+def test_quick_export_tce_sim_so_com_projeto_especial_tce(special_project, esperado):
+    projeto = _projeto_minimo()
+    projeto.special_project = special_project
+    assert _quick_cell(projeto, "TCE") == esperado
+
+
+def test_quick_export_execucao_conta_so_etapas_iniciadas_e_feitas():
+    projeto = _projeto_completo()
+    projeto.etapas[1].done = True  # feita sem iniciar não conta como concluída
+    assert _quick_cell(projeto, "Execução física e financeira") == "1/2 etapas"
+
+
+@pytest.mark.parametrize(
+    ("inicio", "fim", "esperado"),
+    [
+        (
+            datetime.date(2026, 1, 10),
+            datetime.date(2026, 2, 5),
+            "10/01/2026 a 05/02/2026",
+        ),
+        (datetime.date(2026, 1, 10), None, "a partir de 10/01/2026"),
+        (None, datetime.date(2026, 2, 5), "até 05/02/2026"),
+        (None, None, ""),
+    ],
+)
+def test_quick_export_datas_previstas_numa_coluna(inicio, fim, esperado):
+    projeto = _projeto_minimo()
+    projeto.etapas = [
+        Etapa(descricao="Única", data_inicio=inicio, data_fim=fim, ordem=0)
+    ]
+    assert _quick_cell(projeto, "Datas de início e fim previstas") == esperado
+
+
+def test_quick_export_proxima_etapa_sem_datas_sai_so_o_nome():
+    projeto = _projeto_completo()
+    projeto.etapas[1].data_inicio = None
+    projeto.etapas[1].data_fim = None
+    assert _quick_cell(projeto, "Próximas etapas e prazos") == "Execução"
+
+
+@pytest.mark.parametrize("status", ["Finalizado", "Suspenso"])
+def test_quick_export_proxima_etapa_vazia_fora_de_vigente(status):
+    projeto = _projeto_completo()
+    projeto.status = status
+    assert _quick_cell(projeto, "Próximas etapas e prazos") == ""
+
+
+def test_quick_export_proxima_etapa_vazia_com_todas_concluidas():
+    projeto = _projeto_completo()
+    projeto.etapas[1].iniciada = True
+    projeto.etapas[1].done = True
+    assert _quick_cell(projeto, "Próximas etapas e prazos") == ""
+
+
+def test_quick_export_proxima_etapa_traz_os_responsaveis():
+    projeto = _projeto_completo()
+    projeto.etapas[1].responsaveis = [
+        _etapa_responsavel("SUBEXE"),
+        _etapa_responsavel("COODADOS"),
+    ]
+    assert (
+        _quick_cell(projeto, "Próximas etapas e prazos")
+        == "Execução (01/02/2026 a 05/02/2026) — SUBEXE, COODADOS"
+    )
+
+
+def test_quick_export_escopo_e_o_tipo_de_entrega():
+    projeto = _projeto_minimo()
+    projeto.delivery_type = "Sistema"
+    assert _quick_cell(projeto, "Escopo") == "Sistema"
