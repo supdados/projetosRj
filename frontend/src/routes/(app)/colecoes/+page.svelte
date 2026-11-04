@@ -15,22 +15,27 @@
 	 * minhas — os chips de escopo apenas ESTREITAM a lista (nenhum ativo = tudo)
 	 * e só aparecem quando existe alguma coleção alheia. Editar/compartilhar/
 	 * apagar seguem exclusivos do dono.
+	 *
+	 * Convites PENDENTES (`GET /api/colecoes/convites`) ficam num painel próprio
+	 * no topo (ColecaoConvitesPainel), fora do grid, das contagens e do
+	 * catálogo de `/projetos`. A lista se re-busca quando o sino percebe que o
+	 * conjunto de convites mudou (convite novo chegou ou foi revogado).
 	 */
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { base } from '$app/paths';
 	import {
 		apagarColecao,
-		editarColecao,
 		fetchColecoes,
+		fetchConvites,
 		peekColecoes,
+		peekConvites,
 		peekIaSugestoesDisponivel
 	} from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
 		ColecaoResumo,
 		ColecaoSugerida,
-		CollectionColorId,
-		CollectionIconId
+		ConviteColecao
 	} from '$lib/types/collections';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -39,19 +44,19 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
 	import ColecaoCard from '$lib/components/ColecaoCard.svelte';
-	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
+	import ColecaoConvitesPainel from '$lib/components/ColecaoConvitesPainel.svelte';
 	import NovaColecaoModal from '$lib/components/NovaColecaoModal.svelte';
 	import SugerirColecoesModal from '$lib/components/SugerirColecoesModal.svelte';
 	import CompartilharColecaoModal from '$lib/components/CompartilharColecaoModal.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import StateBanner from '$lib/components/StateBanner.svelte';
+	import EditarColecaoModal from '$lib/components/EditarColecaoModal.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecoesSkeleton from '$lib/components/skeletons/ColecoesSkeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import TopnavIcon from '$lib/components/TopnavIcon.svelte';
-	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
+	import { notificationSummary } from '$lib/stores/notificationSummary';
+	import { indiceRecarregaApos, type DesfechoConvite } from '$lib/utils/conviteColecao';
 
 	type LoadState = 'loading' | 'ready' | 'error';
 	type Ordenacao = 'criacao' | 'nome';
@@ -112,9 +117,51 @@
 		}
 	}
 
+	// ── Convites pendentes (painel próprio no topo; fora do grid e das contagens) ─
+	let convites = $state<ConviteColecao[]>(peekConvites() ?? []);
+	let convitesInFlight: AbortController | null = null;
+
+	/** Falha aqui é silenciosa: o painel é extra e o sino continua avisando. */
+	async function loadConvites(): Promise<void> {
+		convitesInFlight?.abort();
+		const controller = new AbortController();
+		convitesInFlight = controller;
+		try {
+			const next = await fetchConvites(controller.signal);
+			if (!controller.signal.aborted) convites = next;
+		} catch {
+			// Mantém a última lista boa.
+		}
+	}
+
+	function onConviteRespondido(convite: ConviteColecao, desfecho: DesfechoConvite): void {
+		if (desfecho.tipo === 'cancelado' || desfecho.tipo === 'erro') return;
+		convites = convites.filter((c) => c.id !== convite.id);
+		if (indiceRecarregaApos(desfecho)) void load();
+	}
+
+	// O sino vê convite novo (ou revogado) antes desta tela: re-busca quando o
+	// CONJUNTO de ids muda. A 1ª leitura só registra a base (o mount já buscou).
+	let assinaturaConvites: string | null = null;
+	$effect(() => {
+		const resumo = $notificationSummary;
+		if (!resumo) return;
+		const assinatura = resumo.convites
+			.map((c) => c.collection_id)
+			.sort((a, b) => a - b)
+			.join(',');
+		const anterior = assinaturaConvites;
+		assinaturaConvites = assinatura;
+		if (anterior !== null && anterior !== assinatura) void loadConvites();
+	});
+
 	onMount(() => {
 		void load();
-		return () => inFlight?.abort();
+		void loadConvites();
+		return () => {
+			inFlight?.abort();
+			convitesInFlight?.abort();
+		};
 	});
 
 	const COMBINING_MARKS = /[̀-ͯ]/g;
@@ -165,7 +212,14 @@
 	}
 
 	function onColecaoCriada(colecao: ColecaoResumo): void {
-		flash.success(`Coleção "${colecao.nome}" criada.`);
+		// Compartilhamento inicial nasce convite pendente: o recibo diz isso.
+		const convidados = colecao.destinatarios_total ?? 0;
+		flash.success(`Coleção "${colecao.nome}" criada.`, {
+			description:
+				convidados > 0
+					? `Convite enviado para ${convidados} ${convidados === 1 ? 'destinatário' : 'destinatários'}.`
+					: undefined
+		});
 		// Aceite de sugestão: fecha o modal de sugestões; reabrir refaz o GET
 		// barato e o cartão aceito já não volta (deixou de ser pendente).
 		if (sugestaoAceita) sugerirOpen = false;
@@ -183,100 +237,15 @@
 		createOpen = true;
 	}
 
-	// ── Editar (mesmo formulário do passo 1 do modal de criação) ─────────────
-	const DESCRICAO_MAX = 200;
-
-	const ICONE_OPTIONS: { id: CollectionIconId; label: string }[] = [
-		{ id: 'camadas', label: 'Camadas' },
-		{ id: 'servidores', label: 'Servidores' },
-		{ id: 'pessoas', label: 'Pessoas' },
-		{ id: 'documento', label: 'Documento' },
-		{ id: 'estrela', label: 'Estrela' },
-		{ id: 'rede', label: 'Rede' },
-		{ id: 'capacitacao', label: 'Capacitação' },
-		{ id: 'calendario', label: 'Calendário' }
-	];
-
-	// Mapas ESTÁTICOS por família: classe montada em runtime não compila.
-	const COR_OPTIONS: {
-		id: CollectionColorId;
-		label: string;
-		wash: string;
-		dot: string;
-		ativo: string;
-	}[] = [
-		{ id: 'primary', label: 'Azul', wash: 'bg-wash-brand', dot: 'bg-primary-600', ativo: 'border-primary-600' },
-		{ id: 'success', label: 'Verde', wash: 'bg-wash-success', dot: 'bg-success-600', ativo: 'border-success-600' },
-		{ id: 'warning', label: 'Âmbar', wash: 'bg-wash-warning', dot: 'bg-warning-600', ativo: 'border-warning-600' },
-		{ id: 'attention', label: 'Laranja', wash: 'bg-wash-attention', dot: 'bg-attention-600', ativo: 'border-attention-600' },
-		{ id: 'danger', label: 'Vermelho', wash: 'bg-wash-danger', dot: 'bg-danger-600', ativo: 'border-danger-600' },
-		{ id: 'neutral', label: 'Cinza', wash: 'bg-wash-neutral', dot: 'bg-neutral-600', ativo: 'border-neutral-600' }
-	];
-
-	const ICONE_ATIVO_CLASS: Record<CollectionColorId, string> = {
-		primary: 'border-primary-600 bg-wash-brand text-brand',
-		success: 'border-success-600 bg-wash-success text-success',
-		warning: 'border-warning-600 bg-wash-warning text-warning',
-		attention: 'border-attention-600 bg-wash-attention text-attention',
-		danger: 'border-danger-600 bg-wash-danger text-danger',
-		neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
-	};
-
+	// ── Editar (modal próprio: mesmo formulário do passo 1 da criação) ───────
 	let editTarget = $state<ColecaoResumo | null>(null);
-	let editNome = $state('');
-	let editDescricao = $state('');
-	let editIcone = $state<CollectionIconId>('camadas');
-	let editCor = $state<CollectionColorId>('primary');
-	let editTriedSave = $state(false);
-	let editSaving = $state(false);
-	let editErro = $state<string | null>(null);
-	let editNomeInputEl = $state<HTMLInputElement | null>(null);
 
-	const editNomeInvalido = $derived(editTriedSave && !editNome.trim());
-
-	function abrirEdicao(colecao: ColecaoResumo): void {
-		editTarget = colecao;
-		editNome = colecao.nome;
-		editDescricao = colecao.descricao ?? '';
-		editIcone = colecao.icone;
-		editCor = colecao.cor;
-		editTriedSave = false;
-		editSaving = false;
-		editErro = null;
-		void tick().then(() => editNomeInputEl?.focus());
-	}
-
-	function fecharEdicao(): void {
-		if (editSaving) return;
+	function onColecaoEditada(atualizada: ColecaoResumo): void {
 		editTarget = null;
+		flash.success(`Coleção "${atualizada.nome}" atualizada.`);
+		void load();
 	}
 
-	async function salvarEdicao(): Promise<void> {
-		if (!editTarget || editSaving) return;
-		editTriedSave = true;
-		if (!editNome.trim()) {
-			editNomeInputEl?.focus();
-			return;
-		}
-		editSaving = true;
-		editErro = null;
-		try {
-			const atualizada = await editarColecao(editTarget.id, {
-				nome: editNome.trim(),
-				descricao: editDescricao.trim() || null,
-				icone: editIcone,
-				cor: editCor
-			});
-			editSaving = false;
-			editTarget = null;
-			flash.success(`Coleção "${atualizada.nome}" atualizada.`);
-			void load();
-		} catch (err) {
-			editSaving = false;
-			editErro =
-				err instanceof ApiClientError ? err.message : 'Não foi possível salvar a coleção.';
-		}
-	}
 
 	// ── Compartilhar (só dono; o modal cuida das concessões) ─────────────────
 	let shareTarget = $state<ColecaoResumo | null>(null);
@@ -297,10 +266,6 @@
 		flash.success(`Coleção "${colecao.nome}" apagada.`);
 		void load();
 	}
-
-	const labelCls = 'text-xs font-medium text-text-secondary';
-	const fieldCls =
-		'h-[var(--control-h-md)] w-full rounded-control border bg-surface px-3.5 text-md text-text-primary placeholder:text-text-faint transition-colors duration-fast focus:outline-none';
 </script>
 
 <svelte:head>
@@ -387,6 +352,10 @@
 		</form>
 	</div>
 
+	{#if convites.length > 0}
+		<ColecaoConvitesPainel {convites} onRespondido={onConviteRespondido} />
+	{/if}
+
 	{#if loadState === 'loading' && !colecoes}
 		<p role="status" aria-live="polite" class="sr-only">Carregando coleções…</p>
 		<ColecoesSkeleton />
@@ -425,7 +394,7 @@
 					<ColecaoCard
 						{colecao}
 						href={`${base}/colecoes/${colecao.id}`}
-						onEditar={gerenciavel ? () => abrirEdicao(colecao) : undefined}
+						onEditar={gerenciavel ? () => (editTarget = colecao) : undefined}
 						onCompartilhar={gerenciavel ? () => (shareTarget = colecao) : undefined}
 						onApagar={gerenciavel ? () => void confirmarApagar(colecao) : undefined}
 					/>
@@ -478,125 +447,9 @@
 
 <!-- Edição de identidade: mesmo formulário do passo 1 do modal de criação. -->
 {#if editTarget}
-	<Modal labelId="editar-colecao-title" maxWidth="max-w-[540px]" onBackdrop={fecharEdicao}>
-		<form
-			class="flex flex-col gap-4"
-			onsubmit={(e) => {
-				e.preventDefault();
-				void salvarEdicao();
-			}}
-		>
-			<div class="flex items-center gap-3">
-				<h2 id="editar-colecao-title" class="font-heading text-xl font-bold text-text-primary">
-					Editar coleção
-				</h2>
-				<button
-					type="button"
-					onclick={fecharEdicao}
-					disabled={editSaving}
-					aria-label="Fechar"
-					class="ml-auto grid h-8 w-8 place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<svg
-						viewBox="0 0 20 20"
-						class="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"
-						aria-hidden="true"
-					>
-						<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
-					</svg>
-				</button>
-			</div>
-
-			<div class="flex items-end gap-3">
-				<ColecaoIconTile icone={editIcone} cor={editCor} size={52} />
-				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-					<label for="ec-nome" class={labelCls}>Nome da coleção</label>
-					<input
-						id="ec-nome"
-						bind:this={editNomeInputEl}
-						bind:value={editNome}
-						type="text"
-						aria-invalid={editNomeInvalido}
-						placeholder="Ex.: Modernização Digital 2026"
-						class="{fieldCls} {editNomeInvalido
-							? 'border-danger'
-							: 'border-border-strong focus:border-brand'}"
-					/>
-				</div>
-			</div>
-			{#if editNomeInvalido}
-				<p class="text-xs text-danger">Informe o nome da coleção.</p>
-			{/if}
-
-			<div class="flex flex-col gap-1.5">
-				<label for="ec-descricao" class={labelCls}>Descrição (opcional)</label>
-				<input
-					id="ec-descricao"
-					bind:value={editDescricao}
-					type="text"
-					maxlength={DESCRICAO_MAX}
-					placeholder="Para que serve esta coleção"
-					class="{fieldCls} border-border-strong focus:border-brand"
-				/>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<span id="ec-icone-label" class={labelCls}>Ícone</span>
-				<div role="group" aria-labelledby="ec-icone-label" class="grid grid-cols-8 gap-2">
-					{#each ICONE_OPTIONS as opcao (opcao.id)}
-						{@const ativo = editIcone === opcao.id}
-						<button
-							type="button"
-							aria-pressed={ativo}
-							aria-label={opcao.label}
-							onclick={() => (editIcone = opcao.id)}
-							class="grid aspect-square place-items-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {ativo
-								? ICONE_ATIVO_CLASS[editCor]
-								: 'border-border-subtle text-text-secondary hover:bg-surface-muted'}"
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-								{#each COLLECTION_ICONS[opcao.id] as p (p.d)}
-									<path d={p.d} opacity={p.opacity} fill-rule={p.fillRule} />
-								{/each}
-							</svg>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<span id="ec-cor-label" class={labelCls}>Cor</span>
-				<div role="group" aria-labelledby="ec-cor-label" class="flex gap-2">
-					{#each COR_OPTIONS as opcao (opcao.id)}
-						{@const ativo = editCor === opcao.id}
-						<button
-							type="button"
-							aria-pressed={ativo}
-							aria-label={opcao.label}
-							onclick={() => (editCor = opcao.id)}
-							class="grid h-8 w-8 place-items-center rounded-md border-2 transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 {opcao.wash} {ativo
-								? opcao.ativo
-								: 'border-transparent hover:border-border-subtle'}"
-						>
-							<span class="h-3.5 w-3.5 rounded-full {opcao.dot}" aria-hidden="true"></span>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			{#if editErro}
-				<StateBanner tone="danger" title={editErro} />
-			{/if}
-
-			<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
-				<Button variant="secondary" onclick={fecharEdicao} disabled={editSaving}>Cancelar</Button>
-				<Button type="submit" disabled={editSaving}>
-					{editSaving ? 'Salvando…' : 'Salvar alterações'}
-				</Button>
-			</footer>
-		</form>
-	</Modal>
+	<EditarColecaoModal
+		colecao={editTarget}
+		onClose={() => (editTarget = null)}
+		onSalva={onColecaoEditada}
+	/>
 {/if}

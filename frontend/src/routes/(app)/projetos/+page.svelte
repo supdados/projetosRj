@@ -37,6 +37,7 @@
 	import type { Project } from '$lib/types/entities';
 	import { isAcessoPorConvite } from '$lib/utils/projectMembers';
 	import { formatIsoDateBR } from '$lib/utils/dateFormat';
+	import { opcoesDoFiltroColecao } from '$lib/utils/colecaoFiltro';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
@@ -341,12 +342,9 @@
 	const objetivoMenuOptions = $derived<SelectMenuOption[]>(
 		objetivosCatalog.map((o) => ({ value: String(o.id), label: o.descricao }))
 	);
-	// Só coleções próprias: o filtro server-side ignora coleções compartilhadas (anti-enumeração).
-	const colecaoMenuOptions = $derived<SelectMenuOption[]>(
-		colecoesCatalog
-			.filter((c) => c.papel === 'dono')
-			.map((c) => ({ value: String(c.id), label: c.nome }))
-	);
+	// Minhas + recebidas (share aceito/legado), como o `?colecao=` do servidor
+	// aceita — sempre cruzado com a visibilidade de cada projeto.
+	const colecaoMenuOptions = $derived<SelectMenuOption[]>(opcoesDoFiltroColecao(colecoesCatalog));
 
 	/** Reflete os filtros ativos na URL (replaceState) para reload/voltar/deep-link. */
 	function syncUrlFromFilters(): void {

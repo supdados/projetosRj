@@ -25,6 +25,10 @@ EVENTOS_AUTORIZACAO: tuple[str, ...] = (
     "colecao_share_revogado",
     "colecao_projeto_adicionado",
     "colecao_projeto_removido",
+    "colecao_convite_aceito",
+    "colecao_convite_recusado",
+    "colecao_convite_reenviado",
+    "colecao_participante_saiu",
 )
 
 ALVO_ORGAO = "orgao"

@@ -21,12 +21,23 @@
  *   flash.success('Tarefa criada com sucesso.');
  *   flash.success('Projeto criado', { description: 'Já está na sua lista.' });
  *   flash.warning('Finalize as tarefas pendentes.', { key: 'etapa-tarefas-pendentes' });
+ *   flash.info('Você recebeu um convite', { action: { label: 'Ver convite', href: '/colecoes/4' } });
  */
 
 import { writable, type Readable } from 'svelte/store';
 
 /** Categorias espelhando as do flash legado (Flask `flash(msg, category)`). */
 export type FlashCategory = 'success' | 'info' | 'warning' | 'danger';
+
+/**
+ * Caminho de ação dentro do toast: um LINK (navegação), nunca um callback —
+ * o cartão some sozinho, e uma ação que só existe na memória da tela que a
+ * disparou não pode sobreviver à troca de rota.
+ */
+export interface FlashAction {
+	label: string;
+	href: string;
+}
 
 export interface FlashOptions {
 	/** Agrupa repetições cujo texto varia mas o evento é o mesmo. */
@@ -35,6 +46,8 @@ export interface FlashOptions {
 	description?: string;
 	/** Override de duração (ms), com teto de 10000. IGNORADO em `danger`. */
 	durationMs?: number;
+	/** Link de ação abaixo do texto (ex.: "Ver convite"). */
+	action?: FlashAction;
 }
 
 /** Um toast ativo na pilha. */
@@ -44,6 +57,8 @@ export interface FlashMessage {
 	category: FlashCategory;
 	/** Texto secundário opcional (o título é `message`). */
 	description?: string;
+	/** Link de ação opcional; clicar nele navega e dispensa o toast. */
+	action?: FlashAction;
 	/** Chave de dedupe (explícita ou `${category}|${message}`). */
 	key: string;
 	/** 1 na primeira exibição do texto atual; incrementa a cada repetição coalescida. */
@@ -228,6 +243,7 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 						message,
 						category,
 						description: options.description,
+						action: options.action,
 						count: 1,
 						firstShownAt: at,
 						revision: item.revision + 1
@@ -288,6 +304,7 @@ export function createFlashStore(now: () => number = () => Date.now()): FlashSto
 				message,
 				category,
 				description: options.description,
+				action: options.action,
 				key,
 				count: 1,
 				firstShownAt: at,

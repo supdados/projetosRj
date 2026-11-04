@@ -9,6 +9,10 @@ projetos e o cronograma (Gantt) da coleção.
 O service não commita: os testes rodam dentro de ``app.test_request_context``
 (``project_visibility_criterion`` usa cache de request) e usam ``flush``/commit
 explícitos.
+
+Share novo nasce CONVITE pendente: o helper ``_compartilhar`` aceita pelos
+alcançados (``aceitar=True``), preservando a intenção dos testes de acesso
+derivado; o ciclo do convite em si está em ``tests/test_collection_shares_unit.py``.
 """
 
 import datetime
@@ -34,10 +38,17 @@ from models import (
     db,
 )
 from services.authorization import (
-    PAPEL_EDITOR,
     PAPEL_LEITOR,
     PAPEL_RANK,
     effective_project_rank,
+)
+from services.collection_shares import (
+    aceitar_convite,
+    compartilhar_colecao,
+    convite_pendente,
+    destinatarios_do_share,
+    listar_shares,
+    revogar_share,
 )
 from services.orgao_tree import rebuild_orgao_closure
 from services.project_collections import (
@@ -57,16 +68,13 @@ from services.project_collections import (
     colecao_do_usuario,
     colecao_project_rows,
     collection_rollups,
-    compartilhar_colecao,
     criar_colecao,
     editar_colecao,
     get_or_create_favoritos,
     listar_colecoes,
-    listar_shares,
     papel_do_usuario,
     projeto_visivel_para,
     remover_projeto,
-    revogar_share,
     toggle_favorito,
 )
 from time_utils import utc_now
@@ -679,12 +687,23 @@ def _colecao_do_dono(share, *, com_projeto: bool = True) -> ProjectCollection:
     return colecao
 
 
-def _compartilhar(colecao, share, papel=PAPEL_SHARE_VIEWER, **destino):
+def _compartilhar(colecao, share, papel=PAPEL_SHARE_VIEWER, *, aceitar=True, **destino):
+    """Concede e, por padrão, aceita pelos alcançados (efeito "imediato" antigo)."""
     resultado = compartilhar_colecao(
         colecao, ator=share["dono"], papel=papel, **destino
     )
     db.session.commit()
+    if aceitar:
+        _aceitar_pelos_alcancados(colecao, resultado)
     return resultado
+
+
+def _aceitar_pelos_alcancados(colecao, share_row) -> None:
+    for pessoa_id in destinatarios_do_share(colecao, share_row):
+        pessoa = db.session.get(User, pessoa_id)
+        if convite_pendente(colecao.id, pessoa) is not None:
+            aceitar_convite(colecao.id, pessoa)
+    db.session.commit()
 
 
 def _eventos_de(colecao: ProjectCollection) -> list[str]:
@@ -1116,7 +1135,9 @@ def test_editor_nao_adiciona_projeto_que_nao_enxerga(app, cenario_share):
             )
 
 
-def test_editor_remove_projeto_da_colecao(app, cenario_share):
+def test_editor_remove_so_o_projeto_que_incluiu(app, cenario_share):
+    """Mudou de expectativa: antes o editor removia qualquer item; agora só os
+    que ELE incluiu — o item do dono (e o legado sem autoria) é 403."""
     with app.test_request_context("/"):
         colecao = _colecao_do_dono(cenario_share)
         _compartilhar(
@@ -1125,14 +1146,19 @@ def test_editor_remove_projeto_da_colecao(app, cenario_share):
             papel=PAPEL_SHARE_EDITOR,
             user_id=cenario_share["convidado"].id,
         )
+        convidado = cenario_share["convidado"]
+        adicionar_projeto(colecao, cenario_share["do_convidado_id"], ator=convidado)
+        db.session.commit()
+        with pytest.raises(ColecaoSemPermissao):
+            remover_projeto(colecao, cenario_share["do_dono_id"], ator=convidado)
         assert (
-            remover_projeto(
-                colecao, cenario_share["do_dono_id"], ator=cenario_share["convidado"]
-            )
+            remover_projeto(colecao, cenario_share["do_convidado_id"], ator=convidado)
             is True
         )
         db.session.commit()
-        assert ProjectCollectionItem.query.count() == 0
+        assert [item.project_id for item in ProjectCollectionItem.query.all()] == [
+            cenario_share["do_dono_id"]
+        ]
 
 
 def test_viewer_nao_muta_itens_da_colecao(app, cenario_share):
@@ -1169,13 +1195,14 @@ def test_auditoria_registra_ciclo_de_vida_do_share(app, cenario_share):
     with app.test_request_context("/"):
         colecao = _colecao_do_dono(cenario_share)
         share = _compartilhar(
-            colecao, cenario_share, user_id=cenario_share["convidado"].id
+            colecao, cenario_share, user_id=cenario_share["convidado"].id, aceitar=False
         )
         _compartilhar(
             colecao,
             cenario_share,
             papel=PAPEL_SHARE_EDITOR,
             user_id=cenario_share["convidado"].id,
+            aceitar=False,
         )
         revogar_share(colecao, share.id, ator=cenario_share["dono"])
         db.session.commit()
@@ -1232,7 +1259,9 @@ def test_auditoria_registra_itens_de_colecao_compartilhada(app, cenario_share):
             colecao, cenario_share["do_convidado_id"], ator=cenario_share["convidado"]
         )
         db.session.commit()
-        assert _eventos_de(colecao)[1:] == [
+        eventos = _eventos_de(colecao)
+        assert eventos[:2] == ["colecao_share_concedido", "colecao_convite_aceito"]
+        assert eventos[2:] == [
             "colecao_projeto_adicionado",
             "colecao_projeto_removido",
         ]
@@ -1262,7 +1291,9 @@ def test_auditoria_ignora_itens_de_colecao_pessoal(app, cenario_share):
 
 def test_dono_nao_se_auto_eleva_compartilhando_com_o_proprio_orgao(app):
     """Leitor cria coleção com projeto que só LÊ e compartilha editor com o
-    próprio órgão: o rank do DONO não muda; o do colega (uso legítimo) sim."""
+    próprio órgão: o rank do DONO não muda e — mudou de expectativa com o teto
+    do item — o colega que ACEITA continua leitor (antes virava EDITOR: o dono
+    distribuía uma edição que ele mesmo não tinha)."""
     with app.test_request_context("/"):
         area = _add_orgao("AREALEITORA")
         dono_leitor = _add_user("dono_leitor", orgao_id=area, papel="leitor")
@@ -1276,10 +1307,12 @@ def test_dono_nao_se_auto_eleva_compartilhando_com_o_proprio_orgao(app):
             colecao, ator=dono_leitor, orgao_id=area, papel=PAPEL_SHARE_EDITOR
         )
         db.session.commit()
+        aceitar_convite(colecao.id, colega)
+        db.session.commit()
         assert effective_project_rank(dono_leitor, projeto) == (
             PAPEL_RANK[PAPEL_LEITOR]
         )
-        assert effective_project_rank(colega, projeto) == PAPEL_RANK[PAPEL_EDITOR]
+        assert effective_project_rank(colega, projeto) == PAPEL_RANK[PAPEL_LEITOR]
 
 
 def test_apagar_colecao_remove_shares_e_nova_colecao_nao_herda(app, cenario_share):

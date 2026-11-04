@@ -11,13 +11,17 @@
 	 * Variante Favoritos (`tipo === 'favoritos'`): badge "Padrão" no lugar do
 	 * kebab — coleção de sistema não é renomeável nem deletável.
 	 *
-	 * Fase 2 (compartilhamento): coleção MINHA e compartilhada ganha o chip
-	 * "Compartilhada"; coleção que chegou por share mostra a procedência
+	 * Compartilhamento: coleção que chegou por share mostra a procedência
 	 * ("Compartilhada por Fulano · Leitura") e NÃO tem kebab — editar, apagar e
-	 * gerir acessos são só do dono.
+	 * gerir acessos são só do dono. A linha "Compartilhada com"
+	 * (`ColecaoDestinatarios`) fica ACIMA do bloco de progresso: o `mt-auto`
+	 * dele segura as barras alinhadas na linha do grid com ou sem a pilha. O
+	 * dono a vê sempre que convidou alguém (com status); quem participa, só
+	 * quando há alguém além do dono (que a procedência já cita).
 	 */
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
+	import ColecaoDestinatarios from '$lib/components/ColecaoDestinatarios.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { ColecaoResumo } from '$lib/types/collections';
@@ -47,6 +51,13 @@
 	);
 
 	const PAPEL_LABEL: Record<string, string> = { viewer: 'Leitura', editor: 'Edição' };
+
+	// `?? []`/`?? 0`: payload antigo em cache SWR (pré-aceite) não quebra o card.
+	const destinatarios = $derived(colecao.destinatarios ?? []);
+	const destinatariosTotal = $derived(colecao.destinatarios_total ?? destinatarios.length);
+	const mostrarDestinatarios = $derived(
+		!isFavoritos && (isDono ? destinatariosTotal > 0 : destinatariosTotal > 1)
+	);
 
 	// Procedência de coleção alheia; `owner` só vem preenchido quando papel ≠ dono.
 	const procedencia = $derived(
@@ -89,13 +100,6 @@
 				<span class="min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
 			{/if}
 		</div>
-		{#if colecao.compartilhada && isDono}
-			<span
-				class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
-			>
-				Compartilhada
-			</span>
-		{/if}
 		{#if isFavoritos}
 			<span
 				class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
@@ -127,6 +131,14 @@
 
 	{#if colecao.descricao}
 		<p class="m-0 line-clamp-1 text-sm text-text-secondary">{colecao.descricao}</p>
+	{/if}
+
+	{#if mostrarDestinatarios}
+		<!-- Acima do link sobreposto (z-20, só na largura da pilha): o title de cada
+		     avatar é o único jeito de saber quem é cada iniciais no hover. -->
+		<div class="relative z-20 max-w-full self-start">
+			<ColecaoDestinatarios {destinatarios} total={destinatariosTotal} souDono={isDono} />
+		</div>
 	{/if}
 
 	<div class="mt-auto">

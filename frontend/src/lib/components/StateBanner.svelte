@@ -3,7 +3,12 @@
 	 * Estado persistente dentro do container (spec Grupo 5). Não é modal nem
 	 * toast: ocupa lugar RESERVADO — o consumidor deve reservar o espaço (ex.:
 	 * altura mínima) para o banner não empurrar o layout ao aparecer/sumir.
+	 *
+	 * `actions` (snippet) põe controles próprios no lugar do botão único — ex.:
+	 * Recusar/Aceitar de um convite. Em tela estreita eles descem para baixo do
+	 * texto, alinhados a ele (o texto não espreme até virar coluna de 1 palavra).
 	 */
+	import type { Snippet } from 'svelte';
 	import FeedbackIcon from './FeedbackIcon.svelte';
 	import type { FeedbackIconId } from '$lib/icons/feedbackIcons';
 
@@ -17,9 +22,11 @@
 		actionLabel?: string;
 		onAction?: () => void;
 		onDismiss?: () => void;
+		actions?: Snippet;
 	}
 
-	let { tone, title, description, icon, actionLabel, onAction, onDismiss }: Props = $props();
+	let { tone, title, description, icon, actionLabel, onAction, onDismiss, actions }: Props =
+		$props();
 
 	const DEFAULT_ICON: Record<StateBannerTone, FeedbackIconId> = {
 		danger: 'x',
@@ -49,7 +56,12 @@
 	const role = $derived(tone === 'danger' ? 'alert' : 'status');
 </script>
 
-<div {role} class="flex items-start gap-3 rounded-sm border px-4 py-3.5 {TONE_SURFACE[tone]}">
+<div
+	{role}
+	class="flex items-start gap-3 rounded-sm border px-4 py-3.5 {actions
+		? 'flex-wrap sm:flex-nowrap'
+		: ''} {TONE_SURFACE[tone]}"
+>
 	<FeedbackIcon id={iconId} size={20} class="mt-px shrink-0 {TONE_INK[tone]}" />
 	<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 		<span class="text-md font-semibold text-text-primary">{title}</span>
@@ -57,6 +69,12 @@
 			<span class="text-sm text-text-secondary">{description}</span>
 		{/if}
 	</div>
+	{#if actions}
+		<!-- Abaixo de sm, linha própria; pl-8 = ícone (20px) + gap (12px), alinhado ao texto. -->
+		<div class="shrink-0 basis-full self-center pl-8 sm:basis-auto sm:pl-0">
+			{@render actions()}
+		</div>
+	{/if}
 	{#if actionLabel && onAction}
 		<button
 			type="button"

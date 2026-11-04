@@ -28,6 +28,7 @@ from services.authorization import (
     PAPEL_RANK,
     area_project_rank,
     get_active_membership_map,
+    get_collection_project_rank_map,
     user_can_edit_project,
     user_can_manage_project,
 )
@@ -40,6 +41,7 @@ ACCESS_VIA_ADMIN = "admin"
 ACCESS_VIA_AREA = "area"
 ACCESS_VIA_CONVITE = "convite"
 ACCESS_VIA_AMBOS = "ambos"
+ACCESS_VIA_COLECAO = "colecao"
 
 
 class ProjectPermissionFlags(TypedDict):
@@ -97,19 +99,26 @@ def project_permission_flags(user: Any, project: Any) -> ProjectPermissionFlags:
 
 
 def project_access_via(user: Any, project: Any) -> str | None:
-    """Via de acesso ao projeto: ``admin``/``area``/``convite``/``ambos``.
+    """Via de acesso: ``admin``/``area``/``convite``/``ambos``/``colecao``.
 
     ``None`` quando o usuário não alcança o projeto. ``admin`` vence tudo (o
     badge "Convidado" da SPA não aparece para admin); quem tem vínculo de área E
     convite ativo sai como ``ambos``, que a SPA também trata como convidado.
+    ``colecao`` só quando a coleção compartilhada é a ÚNICA via (rank map já
+    cacheado em ``g``: zero query extra por projeto).
     """
     rank_de_area = area_project_rank(user, project)
     if rank_de_area >= ADMIN_RANK:
         return ACCESS_VIA_ADMIN
-    convidado = getattr(project, "id", None) in get_active_membership_map(user)
+    project_id = getattr(project, "id", None)
+    convidado = project_id in get_active_membership_map(user)
     if rank_de_area > 0:
         return ACCESS_VIA_AMBOS if convidado else ACCESS_VIA_AREA
-    return ACCESS_VIA_CONVITE if convidado else None
+    if convidado:
+        return ACCESS_VIA_CONVITE
+    if get_collection_project_rank_map(user).get(project_id, 0) > 0:
+        return ACCESS_VIA_COLECAO
+    return None
 
 
 def active_member_criterion() -> "ColumnElement[bool]":

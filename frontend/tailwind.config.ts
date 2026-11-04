@@ -211,9 +211,12 @@ export default {
 				'warning-soft': 'var(--ds-color-border-warning-soft)',
 				'attention-soft': 'var(--ds-color-border-attention-soft)',
 				'danger-soft': 'var(--ds-color-border-danger-soft)',
-				danger: 'var(--ds-color-border-danger)',
-				success: 'var(--ds-color-border-success)',
-				warning: 'var(--ds-color-border-warning)',
+				// DEFAULT = papel. A chave em string SUBSTITUÍA a escala de `colors`
+				// e `border-success-600` sumia em silêncio (swatch ativo das coleções
+				// sem borda): o degrau 600 volta, fixo como nas outras famílias.
+				danger: { DEFAULT: 'var(--ds-color-border-danger)', 600: 'var(--ds-color-danger-600)' },
+				success: { DEFAULT: 'var(--ds-color-border-success)', 600: 'var(--ds-color-success-600)' },
+				warning: { DEFAULT: 'var(--ds-color-border-warning)', 600: 'var(--ds-color-warning-600)' },
 				'on-brand-divider': 'var(--ds-color-on-brand-divider)'
 			},
 			ringColor: {

@@ -8,9 +8,14 @@
 	 *
 	 * "Quem enxerga": a coleção NASCE PESSOAL — o toggle "Só eu" começa
 	 * LIGADO e só quem o desliga escolhe destinatários (pessoa ou órgão exato).
-	 * Versão compacta do formulário de `CompartilharColecaoModal.svelte`, que é
-	 * quem gerencia as concessões depois de a coleção existir (só o dono).
+	 * Cada destinatário recebe um CONVITE pendente (nada é visto antes do
+	 * aceite). Versão compacta do formulário de `CompartilharColecaoModal.svelte`,
+	 * que é quem gerencia os convites depois de a coleção existir (só o dono).
 	 * Favoritos nunca passa por aqui — este modal só cria coleções `custom`.
+	 *
+	 * O picker lista só o que o backend aceita na criação (`visibilidade:
+	 * propria` — área ou convite, sem a visibilidade derivada de outra coleção):
+	 * um projeto recusado derrubaria a criação inteira.
 	 *
 	 * Pode abrir PRÉ-PREENCHIDO (`nomeInicial`/`descricaoInicial`/
 	 * `projectIdsIniciais`) no aceite de uma sugestão de IA — daí em diante o
@@ -25,20 +30,25 @@
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
 	import ColecaoProjectPicker from '$lib/components/ColecaoProjectPicker.svelte';
-	import { criarColecao } from '$lib/api/collections';
+	import { buscarDestinatarios, criarColecao } from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
 	import { fetchAreas, type AreaOption } from '$lib/api/areas';
-	import { searchInvitableUsers } from '$lib/api/projectMembers';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
+	import {
+		COLECAO_COR_OPTIONS,
+		COLECAO_ICONE_ATIVO_CLASS,
+		COLECAO_ICONE_OPTIONS
+	} from '$lib/icons/collectionIdentity';
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
+	import { PAPEIS_COMPARTILHAMENTO } from '$lib/utils/colecaoShares';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
-	import type { UsuarioConvidavel } from '$lib/types/projectMembers';
 	import type {
 		ColecaoResumo,
 		ColecaoShareCreatePayload,
 		CollectionColorId,
 		CollectionIconId,
-		PapelCompartilhamento
+		PapelCompartilhamento,
+		PessoaDestinavel
 	} from '$lib/types/collections';
 
 	interface Props {
@@ -69,42 +79,6 @@
 	}: Props = $props();
 
 	const DESCRICAO_MAX = 200;
-
-	const ICONE_OPTIONS: { id: CollectionIconId; label: string }[] = [
-		{ id: 'camadas', label: 'Camadas' },
-		{ id: 'servidores', label: 'Servidores' },
-		{ id: 'pessoas', label: 'Pessoas' },
-		{ id: 'documento', label: 'Documento' },
-		{ id: 'estrela', label: 'Estrela' },
-		{ id: 'rede', label: 'Rede' },
-		{ id: 'capacitacao', label: 'Capacitação' },
-		{ id: 'calendario', label: 'Calendário' }
-	];
-
-	// Mapas ESTÁTICOS por família: classe montada em runtime não compila.
-	const COR_OPTIONS: {
-		id: CollectionColorId;
-		label: string;
-		wash: string;
-		dot: string;
-		ativo: string;
-	}[] = [
-		{ id: 'primary', label: 'Azul', wash: 'bg-wash-brand', dot: 'bg-primary-600', ativo: 'border-primary-600' },
-		{ id: 'success', label: 'Verde', wash: 'bg-wash-success', dot: 'bg-success-600', ativo: 'border-success-600' },
-		{ id: 'warning', label: 'Âmbar', wash: 'bg-wash-warning', dot: 'bg-warning-600', ativo: 'border-warning-600' },
-		{ id: 'attention', label: 'Laranja', wash: 'bg-wash-attention', dot: 'bg-attention-600', ativo: 'border-attention-600' },
-		{ id: 'danger', label: 'Vermelho', wash: 'bg-wash-danger', dot: 'bg-danger-600', ativo: 'border-danger-600' },
-		{ id: 'neutral', label: 'Cinza', wash: 'bg-wash-neutral', dot: 'bg-neutral-600', ativo: 'border-neutral-600' }
-	];
-
-	const ICONE_ATIVO_CLASS: Record<CollectionColorId, string> = {
-		primary: 'border-primary-600 bg-wash-brand text-brand',
-		success: 'border-success-600 bg-wash-success text-success',
-		warning: 'border-warning-600 bg-wash-warning text-warning',
-		attention: 'border-attention-600 bg-wash-attention text-attention',
-		danger: 'border-danger-600 bg-wash-danger text-danger',
-		neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
-	};
 
 	let nome = $state('');
 	let descricao = $state('');
@@ -137,14 +111,13 @@
 		papel: PapelCompartilhamento;
 	}
 
-	const PAPEL_MENU: SelectMenuOption[] = [
-		{ value: 'viewer', label: 'Leitor' },
-		{ value: 'editor', label: 'Editor' }
-	];
-	const PAPEL_HINT: Record<PapelCompartilhamento, string> = {
-		viewer: 'Vê a coleção e seus projetos',
-		editor: 'Também adiciona e remove projetos'
-	};
+	const PAPEL_MENU: SelectMenuOption[] = PAPEIS_COMPARTILHAMENTO.map((o) => ({
+		value: o.id,
+		label: o.label
+	}));
+	const PAPEL_HINT = Object.fromEntries(
+		PAPEIS_COMPARTILHAMENTO.map((o) => [o.id, o.hint])
+	) as Record<PapelCompartilhamento, string>;
 
 	let soEu = $state(true);
 	let destinatarios = $state<Destinatario[]>([]);
@@ -152,9 +125,9 @@
 	let alvoPapel = $state<PapelCompartilhamento>('viewer');
 
 	let termoPessoa = $state('');
-	let pessoas = $state<UsuarioConvidavel[]>([]);
+	let pessoas = $state<PessoaDestinavel[]>([]);
 	let pessoaListaAberta = $state(false);
-	let pessoa = $state<UsuarioConvidavel | null>(null);
+	let pessoa = $state<PessoaDestinavel | null>(null);
 
 	let orgaos = $state<AreaOption[]>([]);
 	let termoOrgao = $state('');
@@ -179,7 +152,7 @@
 		}
 		const controller = new AbortController();
 		const timer = setTimeout(() => {
-			searchInvitableUsers(q, controller.signal)
+			buscarDestinatarios(q, controller.signal)
 				.then((achados) => {
 					pessoas = achados;
 					pessoaListaAberta = true;
@@ -231,7 +204,7 @@
 		orgaoListaAberta = false;
 	}
 
-	function escolherPessoa(usuario: UsuarioConvidavel): void {
+	function escolherPessoa(usuario: PessoaDestinavel): void {
 		pessoa = usuario;
 		termoPessoa = usuario.name;
 		pessoas = [];
@@ -442,7 +415,7 @@
 						<div class="flex flex-col gap-2">
 							<span id="nc-icone-label" class={labelCls}>Ícone</span>
 							<div role="group" aria-labelledby="nc-icone-label" class="grid grid-cols-8 gap-2">
-								{#each ICONE_OPTIONS as opcao (opcao.id)}
+								{#each COLECAO_ICONE_OPTIONS as opcao (opcao.id)}
 									{@const ativo = icone === opcao.id}
 									<button
 										type="button"
@@ -450,7 +423,7 @@
 										aria-label={opcao.label}
 										onclick={() => (icone = opcao.id)}
 										class="grid aspect-square place-items-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {ativo
-											? ICONE_ATIVO_CLASS[cor]
+											? COLECAO_ICONE_ATIVO_CLASS[cor]
 											: 'border-border-subtle text-text-secondary hover:bg-surface-muted'}"
 									>
 										<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -466,7 +439,7 @@
 						<div class="flex flex-col gap-2">
 							<span id="nc-cor-label" class={labelCls}>Cor</span>
 							<div role="group" aria-labelledby="nc-cor-label" class="flex gap-2">
-								{#each COR_OPTIONS as opcao (opcao.id)}
+								{#each COLECAO_COR_OPTIONS as opcao (opcao.id)}
 									{@const ativo = cor === opcao.id}
 									<button
 										type="button"
@@ -493,7 +466,7 @@
 										Só eu
 									</span>
 									{#if !soEu}
-										<span class="text-xs text-text-muted">Escolha abaixo quem recebe acesso.</span>
+										<span class="text-xs text-text-muted">Cada pessoa recebe um convite para aceitar.</span>
 									{/if}
 								</div>
 								<button
@@ -537,7 +510,7 @@
 												aria-controls="nc-pessoa-lista"
 												aria-autocomplete="list"
 												aria-label="Buscar pessoa"
-												placeholder="Nome ou usuário…"
+												placeholder="Nome da pessoa…"
 												bind:value={termoPessoa}
 												oninput={() => {
 													pessoa = null;
@@ -585,10 +558,7 @@
 														onclick={() => escolherPessoa(usuario)}
 														class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-muted"
 													>
-														<span class="min-w-0 truncate">
-															{usuario.name}
-															<span class="text-text-muted">@{usuario.username}</span>
-														</span>
+														<span class="min-w-0 truncate">{usuario.name}</span>
 														{#if usuario.orgao_sigla}
 															<span class="shrink-0 text-xs text-text-secondary">
 																{usuario.orgao_sigla}
@@ -640,18 +610,20 @@
 											size="sm"
 											ariaLabel="Papel do compartilhamento"
 										/>
-										<span class="min-w-0 flex-1 truncate text-xs text-text-muted">
-											{PAPEL_HINT[alvoPapel]}
-										</span>
-										<Button
-											variant="secondary"
-											size="sm"
-											onclick={adicionarDestinatario}
-											disabled={!alvoEscolhido}
-										>
-											Adicionar
-										</Button>
+										<div class="ml-auto">
+											<Button
+												variant="secondary"
+												size="sm"
+												onclick={adicionarDestinatario}
+												disabled={!alvoEscolhido}
+											>
+												Adicionar
+											</Button>
+										</div>
 									</div>
+									<!-- Linha própria e sem truncate: o texto do Editor é o contrato do
+									     papel e, espremido entre os controles, quebraria em 4 linhas. -->
+									<p class="m-0 text-xs leading-snug text-text-muted">{PAPEL_HINT[alvoPapel]}</p>
 
 									{#if compartilharErro}
 										<p role="alert" class="text-xs text-danger">{compartilharErro}</p>
@@ -724,6 +696,7 @@
 							</div>
 							<ColecaoProjectPicker
 								{selecionados}
+								visibilidade="propria"
 								preencher
 								mostrarTodosInicial={(projectIdsIniciais?.length ?? 0) > 0}
 								onchange={(ids) => (selecionados = ids)}

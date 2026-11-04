@@ -64,11 +64,13 @@ def shared_project(app, client_user, seed_data) -> int:
                 ProjectCollectionItem(
                     collection_id=collection.id, project_id=seed_data["project_id"]
                 ),
+                # Legado (sem aceite): o teste exige acesso imediato do destinatário.
                 ProjectCollectionShare(
                     collection_id=collection.id,
                     user_id=seed_data["deletable_user_id"],
                     created_by_user_id=seed_data["user_id"],
                     papel="editor",
+                    exige_aceite=False,
                 ),
                 StageTemplateUsage(
                     template_id=seed_data["template_id"],

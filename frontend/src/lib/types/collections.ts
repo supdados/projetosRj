@@ -4,8 +4,10 @@
  * Espelham `ColecaoResumo`/`ProjetoColecaoRow` do contrato fixo (ver
  * `docs/analise-pastas-personalizadas.md` §5/§6 e `docs/parecer-design-colecoes.md`)
  * — Fase 1 (coleções pessoais + Favoritos) + Fase 2 (compartilhamento com
- * concessão de acesso e cronograma). O envelope `{ok, data}` é desempacotado
- * por `client.ts`; os tipos abaixo descrevem apenas `data`.
+ * concessão de acesso e cronograma) + convite com aceite e curadoria (o share
+ * novo nasce pendente; editor inclui e remove só o que incluiu). O envelope
+ * `{ok, data}` é desempacotado por `client.ts`; os tipos abaixo descrevem
+ * apenas `data`.
  *
  * `icone`/`cor` são whitelists fechadas validadas no backend (`@validates`);
  * o cliente NUNCA envia hex cru — `cor` é NOME de família da régua de cor
@@ -62,6 +64,55 @@ export interface ColecaoShare {
 	created_at: string;
 	user: ColecaoShareUsuario | null;
 	orgao: ColecaoShareOrgao | null;
+	/** `false` = share anterior ao aceite (legado): vale sem resposta do destinatário. */
+	exige_aceite: boolean;
+	/** Situação do convite — SÓ em share de pessoa (`null` em share de órgão). */
+	status: StatusConvite | null;
+	/** Agregado por pessoa lotada — SÓ em share de órgão (`null` em share de pessoa). */
+	resumo: ResumoShareOrgao | null;
+	/**
+	 * Projetos que SAEM da coleção se este share for revogado (incluídos por
+	 * quem perde o papel). Não conta os órfãos (`CollectionSharesData.itens_orfaos`).
+	 */
+	itens_incluidos: number;
+}
+
+/**
+ * Situação do convite de UMA pessoa num share (`GET .../compartilhamentos`).
+ * `legado` = share anterior ao aceite, vale sem resposta; `pendente` ainda não
+ * concede nada; `recusado`/`saiu` só voltam por "Reenviar" do dono.
+ */
+export type StatusConvite = 'pendente' | 'aceito' | 'recusado' | 'saiu' | 'legado';
+
+/** Contagem das pessoas lotadas no órgão de um share de área (`aceitos` inclui legado). */
+export interface ResumoShareOrgao {
+	membros: number;
+	aceitos: number;
+	pendentes: number;
+	recusados: number;
+	sairam: number;
+}
+
+/**
+ * Situação de um destinatário na linha "Compartilhada com" do card. `dono`
+ * aparece só para quem participa (o dono abre a lista dos membros); o dono da
+ * coleção recebe todos os status, quem participa só `aceito`/`legado`.
+ */
+export type StatusDestinatario = 'dono' | StatusConvite;
+
+/**
+ * Um destinatário do card (`ColecaoResumo.destinatarios`), já filtrado pela
+ * regra de quem vê no backend (`destinatarios_por_colecao`). `tipo` decide o
+ * avatar: pessoa (iniciais) ou área (sigla).
+ */
+export interface DestinatarioColecao {
+	tipo: 'user' | 'orgao';
+	id: number;
+	nome: string;
+	/** Sigla do órgão; `null` em pessoa. */
+	sigla: string | null;
+	papel: PapelColecao;
+	status: StatusDestinatario;
 }
 
 /**
@@ -92,8 +143,13 @@ export interface ColecaoResumo {
 	/** ISO 8601, `null` em linha legada; bumpado à mão nas mutações de item. */
 	updated_at: string | null;
 	papel: PapelColecao;
+	/** Há algum destinatário (qualquer status para o dono; sempre `true` para quem participa). */
 	compartilhada: boolean;
 	owner: ColecaoShareUsuario | null;
+	/** Até 5 destinatários para a pilha de avatares; a regra de quem vê já veio aplicada. */
+	destinatarios: DestinatarioColecao[];
+	/** Total de destinatários (base do "+N" da pilha). */
+	destinatarios_total: number;
 }
 
 /**
@@ -121,6 +177,16 @@ export interface ProjetoColecaoRow {
 	data_fim: string | null;
 	status: string;
 	atrasado: boolean;
+	/** Quem incluiu o projeto; `null` = item anterior à autoria (conta como do dono). */
+	adicionado_por: ColecaoIncluidor | null;
+	/** Decidido no servidor: dono remove tudo, editor só o que incluiu, leitor nada. */
+	pode_remover: boolean;
+}
+
+/** Autor da inclusão de um item — `{id, name}` (sic: `name`, não `nome`, como no backend). */
+export interface ColecaoIncluidor {
+	id: number;
+	name: string;
 }
 
 /** Carga de GET /api/colecoes (já desempacotada). Favoritos sempre presente e primeiro. */
@@ -134,6 +200,10 @@ export interface CollectionsListData {
 export interface CollectionDetailData {
 	colecao: ColecaoResumo;
 	projetos: ProjetoColecaoRow[];
+	/** Projetos incluídos pelo ator que saem junto se ele sair (0 para o dono). */
+	itens_incluidos_por_mim: number;
+	/** Órfãos que também saem se ele sair — ver `CollectionSharesData.itens_orfaos`. */
+	itens_orfaos?: number;
 }
 
 /** Estado da barra no Gantt: backend decide, cliente só pinta. */
@@ -267,9 +337,81 @@ export interface SugestoesResponse {
 /** Carga de GET /api/colecoes/<id>/compartilhamentos (já desempacotada; só dono). */
 export interface CollectionSharesData {
 	compartilhamentos: ColecaoShare[];
+	/**
+	 * Itens ÓRFÃOS: incluídos por quem (não dono) já não tem papel editor
+	 * efetivo — desativado, mudou de área. Saem em QUALQUER próxima poda
+	 * (revogar, sair, recusar, rebaixar), seja qual for o share mexido, e por
+	 * isso NÃO entram no `itens_incluidos` de nenhum share (sem dupla contagem).
+	 * Opcional: backend anterior ao campo conta 0.
+	 */
+	itens_orfaos?: number;
 }
 
 /** Carga de POST /api/colecoes/<id>/compartilhamentos (já desempacotada; upsert de papel). */
 export interface CollectionShareMutationData {
 	compartilhamento: ColecaoShare;
+}
+
+/** Carga de POST /api/colecoes/<id>/compartilhamentos/<sid>/reenviar (só dono). */
+export interface CollectionShareReenvioData {
+	/** Pessoas que voltaram a ficar pendentes (recusaram ou saíram antes). */
+	reconvidados: number;
+	compartilhamento: ColecaoShare;
+}
+
+/**
+ * Convite PENDENTE de coleção (`GET /api/colecoes/convites` e `.../convite`):
+ * só metadados — nenhum projeto, contagem ou cronograma antes do aceite.
+ * `id` é o da COLEÇÃO (aceite/recusa resolvem por coleção × usuário logado);
+ * pessoa + área na mesma coleção viram UM convite com o papel mais alto.
+ */
+export interface ConviteColecao {
+	id: number;
+	nome: string;
+	descricao: string | null;
+	icone: CollectionIconId;
+	cor: CollectionColorId;
+	/** Dono vivo; `null` só em drift. */
+	owner: ColecaoShareUsuario | null;
+	papel: PapelCompartilhamento;
+	/** ISO 8601 (UTC). */
+	convidado_em: string | null;
+}
+
+/** Carga de GET /api/colecoes/convites (já desempacotada), mais recentes primeiro. */
+export interface ConvitesListData {
+	convites: ConviteColecao[];
+}
+
+/** Carga de GET /api/colecoes/<id>/convite (404 idêntico sem convite para mim). */
+export interface ConviteData {
+	convite: ConviteColecao;
+}
+
+/** Carga de POST /api/colecoes/<id>/convite/aceitar: card já com o papel novo. */
+export interface ConviteAceitoData {
+	status: 'aceito';
+	colecao: ColecaoResumo;
+}
+
+/** Carga de POST /api/colecoes/<id>/sair. */
+export interface SaidaColecaoData {
+	status: 'saiu';
+	/** Projetos incluídos pelo ator que saíram junto. */
+	itens_removidos: number;
+}
+
+/**
+ * Pessoa encontrada pela busca do compartilhamento (`GET /api/colecoes/destinatarios`).
+ * Sem `username` de propósito: pode ser o CPF, e a busca é aberta a qualquer logado.
+ */
+export interface PessoaDestinavel {
+	id: number;
+	name: string;
+	orgao_sigla: string | null;
+}
+
+/** Carga de GET /api/colecoes/destinatarios?q= (já desempacotada). */
+export interface DestinatariosBuscaData {
+	usuarios: PessoaDestinavel[];
 }

@@ -380,11 +380,13 @@ def _compartilhar_oculto_com_dono(cenario_ia: dict[str, int]) -> None:
         )
     )
     db.session.add(
+        # Legado (sem aceite): o projeto precisa ficar visível só via share.
         ProjectCollectionShare(
             collection_id=colecao.id,
             user_id=cenario_ia["dono_id"],
             papel=PAPEL_SHARE_VIEWER,
             created_by_user_id=cenario_ia["sem_area_id"],
+            exige_aceite=False,
         )
     )
     db.session.commit()

@@ -103,6 +103,9 @@ export interface ProjectsListData {
 	pagination: ProjectsListPagination;
 }
 
+/** Valores de `?visibilidade=` aceitos por GET /api/projetos (outro valor = 422). */
+export type ProjectsVisibilidadePicker = 'area' | 'propria';
+
 /** Filtros aceitos pelo endpoint (espelham os query params de /api/projetos). */
 export interface ProjectsListQuery {
 	/** Omitido = backend aplica "Vigente"; `''` = todos os status. */
@@ -117,10 +120,16 @@ export interface ProjectsListQuery {
 	orgao?: number | null;
 	/** Com `orgao`: restringe ao próprio órgão, sem os descendentes. */
 	apenas_orgao?: boolean;
-	/** Restringe aos projetos desta coleção do próprio usuário. */
+	/** Restringe aos projetos desta coleção (minha ou recebida e aceita). */
 	colecao?: number;
-	/** Omite os projetos já pertencentes a esta coleção do próprio usuário. */
+	/** Omite os projetos já pertencentes a esta coleção (minha ou recebida e aceita). */
 	excluir_colecao?: number;
+	/**
+	 * Picker de coleção: estreita ao que o backend aceita incluir — `area` (editor:
+	 * só o que vejo pela minha área) ou `propria` (dono: área ou convite, sem a
+	 * visibilidade derivada de coleção).
+	 */
+	visibilidade?: ProjectsVisibilidadePicker;
 	/** Tamanho da página; o backend limita a 100 (default 40). */
 	per_page?: number;
 	page?: number;

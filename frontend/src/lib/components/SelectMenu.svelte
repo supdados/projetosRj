@@ -2,12 +2,14 @@
 	/**
 	 * Seletor base com painel custom (substitui `<select>` nativo). Controlado por
 	 * callback (`value` + `onSelect`), mesma linguagem visual do OrgaoTreeSelect.
+	 * Opções com `group` ganham cabeçalho por grupo (`selectMenuGroups.ts`).
 	 */
 	import { tick, type Snippet } from 'svelte';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import StateIcon from '$lib/components/StateIcon.svelte';
 	import ProjectIcon from '$lib/components/ProjectIcon.svelte';
 	import { isStateIconId } from '$lib/icons/stateIcons';
+	import { posicoesNosGrupos } from '$lib/utils/selectMenuGroups';
 
 	interface Props {
 		options: SelectMenuOption[];
@@ -102,6 +104,8 @@
 		}
 		return out;
 	});
+
+	const grupos = $derived(posicoesNosGrupos(navItems.map((item) => item.option)));
 
 	const selected = $derived(
 		value == null ? null : (options.find((o) => o.value === value) ?? null)
@@ -408,10 +412,21 @@
 				{#each navItems as item, index (item.isAll ? '__all__' : item.optValue)}
 					{@const isSelected = item.isAll ? value == null : item.optValue === value}
 					{@const isHighlighted = index === highlightedIndex}
+					{@const grupo = grupos[index]}
+					{#if grupo?.cabecalho}
+						<div
+							id={`${listboxId}-grupo-${index}`}
+							role="presentation"
+							class="px-2.5 pb-1 pt-2 text-xs font-bold uppercase tracking-caps text-text-muted"
+						>
+							{grupo.cabecalho}
+						</div>
+					{/if}
 					<div
 						id={itemId(index)}
 						role="option"
 						aria-selected={isSelected}
+						aria-describedby={grupo?.inicio != null ? `${listboxId}-grupo-${grupo.inicio}` : undefined}
 						aria-disabled={item.option?.disabled || undefined}
 						tabindex="-1"
 						onclick={() => chooseItem(item)}

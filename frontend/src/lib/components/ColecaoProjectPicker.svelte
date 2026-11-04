@@ -16,11 +16,16 @@
 	 * via `colecaoId` (`excluir_colecao`), para não filtrar em cima de uma única
 	 * página. `exclude` fica como reforço client-side (esconde na hora, sem
 	 * esperar o refetch).
+	 *
+	 * `visibilidade` estreita a lista ao que o backend ACEITA incluir (sem ela o
+	 * lote falharia no meio): `area` para o editor de coleção compartilhada,
+	 * `propria` para o dono (área ou convite, sem a visibilidade derivada de
+	 * outra coleção — regra anti re-share).
 	 */
 	import { onMount } from 'svelte';
 	import { fetchProjects } from '$lib/api/projects';
 	import type { Project } from '$lib/types/entities';
-	import type { ProjectsListQuery } from '$lib/types/projects';
+	import type { ProjectsListQuery, ProjectsVisibilidadePicker } from '$lib/types/projects';
 	import { projectStatusDotClass } from '$lib/utils/projectLabels';
 	import { pinSelectedProjects } from '$lib/utils/pinnedPickerSelection';
 
@@ -31,6 +36,8 @@
 		colecaoId?: number;
 		/** Ids ocultados da lista (já estão na coleção). */
 		exclude?: number[];
+		/** Só o que o backend aceita incluir: `area` (editor) ou `propria` (dono). */
+		visibilidade?: ProjectsVisibilidadePicker;
 		/** Recebe a lista COMPLETA de ids a cada toque. */
 		onchange: (ids: number[]) => void;
 		/** Total de projetos disponíveis (sem filtro de busca) — para "N de M". */
@@ -53,6 +60,7 @@
 		selecionados,
 		colecaoId,
 		exclude = [],
+		visibilidade,
 		onchange,
 		ontotal,
 		preencher = false,
@@ -93,6 +101,7 @@
 			};
 			if (q) query.q = q;
 			if (colecaoId !== undefined) query.excluir_colecao = colecaoId;
+			if (visibilidade) query.visibilidade = visibilidade;
 			const data = await fetchProjects(query, abortController.signal);
 			if (minhaGen !== gen) return;
 			for (const projeto of data.projetos) conhecidos.set(projeto.id, projeto);

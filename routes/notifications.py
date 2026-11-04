@@ -8,6 +8,8 @@ from sqlalchemy.orm import joinedload
 
 from models import Etapa, Project, Task, UserNotification, db
 from routes.orgao_scope import user_can_access_project
+from services.collection_participation import colecoes_visiveis_ou_convidadas
+from services.collection_shares import convites_pendentes_de
 from time_utils import iso_utc, utc_now
 
 from .api.envelope import ok
@@ -18,23 +20,33 @@ from .shared import format_local_time
 
 PROJECT_TARGET_RE = re.compile(r"^/(?:project|projetos?)/(\d+)(?:$|/)")
 TASK_TARGET_RE = re.compile(r"^/tarefas/(\d+)(?:$|/)")
+COLLECTION_TARGET_RE = re.compile(r"^/colecoes/(\d+)(?:$|/)")
+
+TARGET_PROJECT = "project"
+TARGET_TASK = "task"
+TARGET_COLLECTION = "collection"
 
 TargetRef = tuple[str, int]
 
+_TARGET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (TARGET_PROJECT, PROJECT_TARGET_RE),
+    (TARGET_TASK, TASK_TARGET_RE),
+    (TARGET_COLLECTION, COLLECTION_TARGET_RE),
+)
+
 
 def _notification_target_ref(target_url: str | None) -> TargetRef | None:
-    """Extrai ``("project"|"task", id)`` do ``target_url``; ``None`` se não reconhecido.
+    """Extrai ``("project"|"task"|"collection", id)`` do ``target_url``.
 
-    Cobre ``/project/<id>``, ``/projeto/<id>[/tarefas]``, ``/projetos/<id>`` e
-    ``/tarefas/<id>``. URL desconhecida mantém a notificação visível.
+    Cobre ``/project/<id>``, ``/projeto/<id>[/tarefas]``, ``/projetos/<id>``,
+    ``/tarefas/<id>`` e ``/colecoes/<id>``. URL desconhecida devolve ``None`` e
+    mantém a notificação visível.
     """
     path = urlparse(target_url or "").path
-    project_match = PROJECT_TARGET_RE.match(path)
-    if project_match:
-        return ("project", int(project_match.group(1)))
-    task_match = TASK_TARGET_RE.match(path)
-    if task_match:
-        return ("task", int(task_match.group(1)))
+    for kind, pattern in _TARGET_PATTERNS:
+        match = pattern.match(path)
+        if match:
+            return (kind, int(match.group(1)))
     return None
 
 
@@ -64,15 +76,30 @@ def _accessible_project_ids(project_ids: set[int]) -> set[int]:
     return {p.id for p in projects if user_can_access_project(g.user, p)}
 
 
+def _visible_collection_ids(collection_ids: set[int]) -> set[int]:
+    """Coleções em que ``g.user`` é dono, tem share válido OU convite pendente.
+
+    Aviso de coleção que a pessoa perdeu (revogação, recusa, saída, coleção
+    apagada) some do sino — o clique cairia em 404. Vale também para o
+    histórico ``colecao_compartilhada``. 3 queries fixas, só se houver alvo.
+    """
+    if not collection_ids or g.user is None:
+        return set()
+    return colecoes_visiveis_ou_convidadas(g.user, collection_ids)
+
+
 def _can_show_notification(
     ref: TargetRef | None,
     accessible_project_ids: set[int],
     project_ids_by_task: dict[int, int | None],
+    visible_collection_ids: set[int] | None = None,
 ) -> bool:
     if ref is None:
         return True
     kind, ref_id = ref
-    if kind == "project":
+    if kind == TARGET_COLLECTION:
+        return ref_id in (visible_collection_ids or set())
+    if kind == TARGET_PROJECT:
         return ref_id in accessible_project_ids
     if ref_id not in project_ids_by_task:
         # Tarefa deletada: o snapshot histórico da notificação permanece visível.
@@ -86,22 +113,27 @@ def _can_show_notification(
 def _filter_visible_notifications(
     notifications: list[UserNotification],
 ) -> list[UserNotification]:
-    """Aplica o escopo de órgão resolvendo projeto/tarefa dos targets em lote.
+    """Aplica o escopo resolvendo projeto/tarefa/coleção dos targets em lote.
 
-    Prefetch em 2 queries (tasks e projects via ``in_``) para evitar N+1 ao
-    iterar todas as notificações do usuário.
+    Prefetch em queries fixas (tasks, projects e coleções via ``in_``) para
+    evitar N+1 ao iterar todas as notificações do usuário.
     """
     refs = [_notification_target_ref(n.target_url) for n in notifications]
-    task_ids = {ref[1] for ref in refs if ref and ref[0] == "task"}
+    task_ids = _ref_ids(refs, TARGET_TASK)
     project_ids_by_task = _project_ids_by_task(task_ids)
-    project_ids = {ref[1] for ref in refs if ref and ref[0] == "project"}
+    project_ids = _ref_ids(refs, TARGET_PROJECT)
     project_ids.update(pid for pid in project_ids_by_task.values() if pid is not None)
     accessible = _accessible_project_ids(project_ids)
+    collections = _visible_collection_ids(_ref_ids(refs, TARGET_COLLECTION))
     return [
         notification
         for notification, ref in zip(notifications, refs)
-        if _can_show_notification(ref, accessible, project_ids_by_task)
+        if _can_show_notification(ref, accessible, project_ids_by_task, collections)
     ]
+
+
+def _ref_ids(refs: list[TargetRef | None], kind: str) -> set[int]:
+    return {ref[1] for ref in refs if ref and ref[0] == kind}
 
 
 def _visible_notifications_for_current_user() -> list[UserNotification]:
@@ -151,6 +183,42 @@ def api_notificacoes_list() -> Response | tuple[Response, int]:
     unread_count = sum(1 for n in visible if not n.is_read)
     items = [_serialize_notification(n) for n in visible[:20]]
     return ok({"items": items, "unread_count": unread_count})
+
+
+@main_bp.route("/api/notificacoes/resumo", methods=["GET"])
+@api_login_required
+def api_notificacoes_resumo() -> Response | tuple[Response, int]:
+    """Contadores do sino para o polling da SPA (somente leitura).
+
+    ``unread_count`` conta as NÃO lidas que o usuário de fato veria (mesmo
+    filtro de escopo da lista — sem isso o ponto do sino acenderia por aviso
+    oculto que "marcar lidas" nunca apaga). ``convites_pendentes`` conta as
+    coleções com convite à espera de resposta (independe de ``is_read``);
+    ``convites`` traz ``{collection_id, nome}`` de cada uma para o toast de
+    convite novo. Custo fixo: só as não lidas são carregadas.
+
+    Returns:
+        ``ok({unread_count, convites_pendentes, convites})`` (200); 401 sem sessão.
+    """
+    convites = convites_pendentes_de(g.user)
+    return ok(
+        {
+            "unread_count": _visible_unread_count(),
+            "convites_pendentes": len(convites),
+            "convites": [
+                {"collection_id": convite.colecao.id, "nome": convite.colecao.nome}
+                for convite in convites
+            ],
+        }
+    )
+
+
+def _visible_unread_count() -> int:
+    unread = UserNotification.query.filter(
+        UserNotification.recipient_user_id == g.user.id,
+        UserNotification.is_read.is_(False),
+    ).all()
+    return len(_filter_visible_notifications(unread))
 
 
 @main_bp.route("/api/notificacoes/marcar-lidas", methods=["POST"])

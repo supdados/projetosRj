@@ -58,9 +58,10 @@ export interface User {
 
 /**
  * Via pelo qual o usuario enxerga o projeto (serializers, §6.4). `convite` e
- * `ambos` sao as vias que ganham o badge "Convidado"; NUNCA recalculado aqui.
+ * `ambos` sao as vias que ganham o badge "Convidado"; `colecao` = ve o projeto
+ * so por uma colecao compartilhada aceita. NUNCA recalculado aqui.
  */
-export type ProjectAccessVia = 'admin' | 'area' | 'convite' | 'ambos';
+export type ProjectAccessVia = 'admin' | 'area' | 'convite' | 'ambos' | 'colecao';
 
 /** Flags autoritativas de acao sobre um projeto (servidor manda). */
 export interface ProjectPermissions {

@@ -3,6 +3,7 @@
  *
  * Espelha `routes/notifications.py`:
  *   - GET  /api/notificacoes            -> NotificacaoListResult (items + unread_count)
+ *   - GET  /api/notificacoes/resumo     -> NotificacoesResumo (polling do sino)
  *   - POST /api/notificacoes/marcar-lidas -> NotificacaoMarcarLidasResult
  *
  * O comportamento do v4.5 era: ao ABRIR o sino, carregava a lista E marcava
@@ -13,10 +14,11 @@
  * O client (`get`/`post`) já desempacota o envelope canônico e devolve `data`.
  */
 
-import { get, post } from './client';
+import { get, getQuiet, post } from './client';
 import type {
 	NotificacaoListResult,
-	NotificacaoMarcarLidasResult
+	NotificacaoMarcarLidasResult,
+	NotificacoesResumo
 } from '$lib/types/notifications';
 
 /** Lista as notificações do usuário (sem alterar o estado de leitura). */
@@ -29,4 +31,13 @@ export function marcarNotificacoesLidas(
 	signal?: AbortSignal
 ): Promise<NotificacaoMarcarLidasResult> {
 	return post<NotificacaoMarcarLidasResult>('/api/notificacoes/marcar-lidas', undefined, signal);
+}
+
+/**
+ * Contadores do sino (não lidas visíveis + convites pendentes) para o polling.
+ * GET de fundo: sessão expirada sobe como `ApiClientError('unauthenticated')`
+ * SEM navegar para /login — quem chama para de consultar.
+ */
+export function fetchNotificacoesResumo(signal?: AbortSignal): Promise<NotificacoesResumo> {
+	return getQuiet<NotificacoesResumo>('/api/notificacoes/resumo', signal);
 }

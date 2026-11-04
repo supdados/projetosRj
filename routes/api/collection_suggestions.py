@@ -36,7 +36,7 @@ from services.ai import (
 from time_utils import iso_utc, utc_now
 
 from ..blueprint import main_bp
-from .collections import _ApiResponse, _mutar
+from .collection_http import ApiResponse, mutar
 from .envelope import fail, fail_internal, fail_not_found, ok
 from .negotiation import api_login_required
 from .serializers import serialize_colecao_sugestao
@@ -52,7 +52,7 @@ _JANELA_DEDUPE_SUGESTOES = timedelta(seconds=60)
 
 @main_bp.route("/api/colecoes/sugestoes", methods=["GET"])
 @api_login_required
-def api_colecao_sugestoes_get() -> _ApiResponse:
+def api_colecao_sugestoes_get() -> ApiResponse:
     """Serve o lote pendente do cache; NUNCA chama o LLM (plano IA Fase 2 §3.3).
 
     Sem lote responde 200 com ``sugestoes: []`` — a UI mostra o CTA de gerar e
@@ -84,7 +84,7 @@ def _payload_do_lote(
 
 @main_bp.route("/api/colecoes/sugestoes", methods=["POST"])
 @api_login_required
-def api_colecao_sugestoes() -> _ApiResponse:
+def api_colecao_sugestoes() -> ApiResponse:
     """Gera sugestões via LLM e substitui o lote pendente (mesmo shape do GET).
 
     REGRA DURA (plano IA Fase 2, risco #2): nenhuma escrita em ``db.session``
@@ -107,7 +107,7 @@ def api_colecao_sugestoes() -> _ApiResponse:
         return fail_internal(
             exc, "sugerir coleções", status=502, public_message=_IA_FALHOU
         )
-    return _mutar(
+    return mutar(
         lambda: ok(_persistir_lote_payload(resultado)),
         "persistir sugestões de coleções",
     )
@@ -147,20 +147,20 @@ def _persistir_lote_payload(resultado: SugestoesGeradas) -> dict[str, Any]:
 
 @main_bp.route("/api/colecoes/sugestoes/<int:sugestao_id>/descartar", methods=["POST"])
 @api_login_required
-def api_colecao_sugestao_descartar(sugestao_id: int) -> _ApiResponse:
+def api_colecao_sugestao_descartar(sugestao_id: int) -> ApiResponse:
     """Marca a sugestão como descartada; o conjunto não volta a ser sugerido.
 
     SEM gate de IA de propósito: descartar cache existente deve funcionar mesmo
     com a credencial removida. Inexistente ou alheia responde 404
     anti-enumeração (mesmo contrato de ``_load_acesso``).
     """
-    return _mutar(
+    return mutar(
         lambda: _descartar_e_confirmar(sugestao_id),
         "descartar sugestão de coleção",
     )
 
 
-def _descartar_e_confirmar(sugestao_id: int) -> _ApiResponse:
+def _descartar_e_confirmar(sugestao_id: int) -> ApiResponse:
     if not descartar_sugestao(g.user.id, sugestao_id):
         return fail_not_found()
     return ok()

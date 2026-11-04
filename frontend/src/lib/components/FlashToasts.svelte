@@ -1,8 +1,8 @@
 <script lang="ts">
 	/**
 	 * Pilha de toasts (FLASH) da SPA: cartões no canto superior direito, abaixo do
-	 * topnav, com ícone na tinta da severidade sobre superfície NEUTRA, título e
-	 * descrição opcional. Auto-dismiss vem do store (`danger` não expira), além de
+	 * topnav, com ícone na tinta da severidade sobre superfície NEUTRA, título,
+	 * descrição opcional e link de ação opcional (`action`, ex.: "Ver convite"). Auto-dismiss vem do store (`danger` não expira), além de
 	 * Esc e fechamento manual.
 	 *
 	 * Montado UMA vez por tela. O anúncio para leitor de tela sai de UMA região
@@ -57,6 +57,11 @@
 
 	function textoCompleto(item: FlashMessage): string {
 		return item.description ? `${item.message} ${item.description}` : item.message;
+	}
+
+	/** Cartão com mais de uma linha (descrição ou link de ação): ícone no topo. */
+	function multilinha(item: FlashMessage): boolean {
+		return Boolean(item.description || item.action);
 	}
 
 	// Zera antes de escrever: reescrever o MESMO texto não muta o nó e não é anunciado.
@@ -133,21 +138,35 @@
 			onfocusin={() => flash.pause(item.id)}
 			onfocusout={() => flash.resume(item.id)}
 			style="opacity: {OPACIDADE[posicao] ?? OPACIDADE[OPACIDADE.length - 1]};"
-			class="pointer-events-auto flex w-96 max-w-[calc(100vw-2rem)] gap-3 rounded-md border border-border-subtle bg-surface px-4 py-3.5 shadow-popover {item.description
+			class="pointer-events-auto flex w-96 max-w-[calc(100vw-2rem)] gap-3 rounded-md border border-border-subtle bg-surface px-4 py-3.5 shadow-popover {multilinha(
+				item
+			)
 				? 'items-start'
 				: 'items-center'}"
 		>
 			<span class="sr-only">{textoCompleto(item)}</span>
-			<div class="flex min-w-0 flex-1 gap-3 {item.description ? 'items-start' : 'items-center'}">
-				<span class="shrink-0 {TINTA[item.category]} {item.description ? 'mt-px' : ''}">
+			<div class="flex min-w-0 flex-1 gap-3 {multilinha(item) ? 'items-start' : 'items-center'}">
+				<span class="shrink-0 {TINTA[item.category]} {multilinha(item) ? 'mt-px' : ''}">
 					<FeedbackIcon id={ICON[item.category]} size={21} />
 				</span>
-				<span class="flex min-w-0 flex-1 flex-col gap-0.5" aria-hidden="true">
-					<span class="text-md font-semibold text-text-primary">{item.message}</span>
-					{#if item.description}
-						<span class="text-md text-text-secondary">{item.description}</span>
+				<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+					<span class="flex min-w-0 flex-col gap-0.5" aria-hidden="true">
+						<span class="text-md font-semibold text-text-primary">{item.message}</span>
+						{#if item.description}
+							<span class="text-md text-text-secondary">{item.description}</span>
+						{/if}
+					</span>
+					{#if item.action}
+						<!-- Fora do aria-hidden: é o único controle do cartão além do X. -->
+						<a
+							href={item.action.href}
+							onclick={() => flash.dismiss(item.id)}
+							class="mt-1 self-start rounded-sm text-sm font-semibold text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+						>
+							{item.action.label}
+						</a>
 					{/if}
-				</span>
+				</div>
 			</div>
 			<button
 				type="button"

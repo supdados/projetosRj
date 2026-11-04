@@ -9,4 +9,9 @@ export interface SelectMenuOption {
 	/** Ícone de estado ou de projeto no lugar do dot; pinta com a cor de `dot`. */
 	icon?: StateIconId | ProjectIconId;
 	disabled?: boolean;
+	/**
+	 * Rótulo do grupo: opções CONSECUTIVAS com o mesmo `group` ganham um
+	 * cabeçalho no painel (ex.: "Compartilhadas comigo"). Omitir = sem cabeçalho.
+	 */
+	group?: string;
 }

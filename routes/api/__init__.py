@@ -66,6 +66,7 @@ from . import project_members  # noqa: F401,E402
 from . import project_relations  # noqa: F401,E402
 from . import collections  # noqa: F401,E402
 from . import collection_suggestions  # noqa: F401,E402
+from . import collection_invites  # noqa: F401,E402
 from . import etapas  # noqa: F401,E402
 from . import tasks  # noqa: F401,E402
 from . import tasks_write  # noqa: F401,E402

@@ -140,11 +140,13 @@ def _seed_shared_collections(count: int, viewer: User) -> None:
             )
         )
         db.session.add(
+            # Legado (sem aceite): as 25 coleções precisam estar no índice.
             ProjectCollectionShare(
                 collection_id=collection.id,
                 user_id=viewer.id,
                 papel="viewer",
                 created_by_user_id=owner.id,
                 created_at=FIXED_TIME,
+                exige_aceite=False,
             )
         )

@@ -234,6 +234,26 @@ export function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 /**
+ * GET de FUNDO (polling): mesmo envelope de `get<T>`, mas o 401 NÃO navega
+ * para /login — sobe como `ApiClientError('unauthenticated')` para o chamador
+ * parar de consultar. Um poll que redireciona sozinho derrubaria o rascunho
+ * que o usuário está digitando no momento em que a sessão expira; a próxima
+ * ação dele (que passa por `get`/`post`) é quem leva ao login.
+ *
+ * Exemplo:
+ *   const resumo = await getQuiet<NotificacoesResumo>('/api/notificacoes/resumo', signal);
+ */
+export async function getQuiet<T>(path: string, signal?: AbortSignal): Promise<T> {
+	const parsed = (await sendOnce<T>(path, { method: 'GET', signal })) as ApiResult<T> & {
+		__status: number;
+	};
+	if (parsed.ok) return parsed.data;
+	const { code, message } = parsed.error;
+	const unauthenticated = parsed.__status === 401 || code === 'unauthenticated';
+	throw new ApiClientError(unauthenticated ? 'unauthenticated' : code, message, parsed.__status);
+}
+
+/**
  * GET tipado que preserva a `meta` do envelope: devolve `{ data, meta }`.
  *
  * Mesmo pipeline de `get<T>` (cookie de sessao, 401 -> navegacao top-level para

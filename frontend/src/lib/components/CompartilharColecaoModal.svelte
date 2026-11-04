@@ -9,34 +9,52 @@
 	 * coleção tem bem menos concessões que um projeto e não há expiração nem
 	 * herança para exibir. O chrome (backdrop/Esc/focus-trap) é o `Modal` base.
 	 *
-	 * Compartilhar CONCEDE ACESSO aos projetos da coleção (acesso derivado, não
-	 * convite materializado): por isso o aviso fica sempre visível, acima do
-	 * formulário. Área = órgão EXATO, sem subárvore (decisão de produto 2026-08-07).
+	 * Compartilhar envia um CONVITE: o share novo nasce pendente e só concede
+	 * acesso aos projetos (derivado, não convite de projeto materializado) depois
+	 * que a pessoa aceita — numa área, cada pessoa lotada aceita por si. Shares
+	 * anteriores ao aceite (legado) seguem valendo. Área = órgão EXATO, sem
+	 * subárvore (decisão de produto 2026-08-07). A busca de pessoas é a da
+	 * coleção (`GET /api/colecoes/destinatarios`, por nome, aberta a qualquer
+	 * logado — sem `@username`, que pode ser o CPF).
 	 *
-	 * Re-busca a lista após cada mutação (o backend faz upsert de papel) e avisa
-	 * o chamador por `onChanged` — o resumo da coleção (`compartilhada`) muda.
+	 * Cada linha (ColecaoShareRow) mostra o status do convite e oferece
+	 * "Reenviar" a quem recusou ou saiu. Revogar e rebaixar editor→leitor
+	 * confirmam com a contagem de projetos que saem da coleção
+	 * (`itens_incluidos` do share + `itens_orfaos`, que toda poda leva). Re-busca
+	 * a lista após cada mutação (o backend faz upsert de papel) e avisa o
+	 * chamador por `onChanged` — o card e os itens da coleção mudam.
 	 */
 	import { onMount, tick } from 'svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import StateBanner from '$lib/components/StateBanner.svelte';
-	import SelectMenu from '$lib/components/SelectMenu.svelte';
-	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
+	import ColecaoShareRow from '$lib/components/ColecaoShareRow.svelte';
 	import { ApiClientError } from '$lib/api/client';
-	import { criarShare, fetchShares, revogarShare } from '$lib/api/collections';
+	import {
+		buscarDestinatarios,
+		criarShare,
+		fetchShares,
+		reenviarShare,
+		revogarShare
+	} from '$lib/api/collections';
 	import { fetchAreas, type AreaOption } from '$lib/api/areas';
-	import { searchInvitableUsers } from '$lib/api/projectMembers';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
-	import { formatIsoDateBR } from '$lib/utils/dateFormat';
-	import type { SelectMenuOption } from '$lib/types/selectMenu';
-	import type { UsuarioConvidavel } from '$lib/types/projectMembers';
+	import {
+		PAPEIS_COMPARTILHAMENTO,
+		nomeDoShare,
+		papelColecaoLabel,
+		textoDeRebaixamento,
+		textoDeRevogacao
+	} from '$lib/utils/colecaoShares';
 	import type {
 		ColecaoResumo,
 		ColecaoShare,
 		ColecaoShareCreatePayload,
-		PapelCompartilhamento
+		CollectionSharesData,
+		PapelCompartilhamento,
+		PessoaDestinavel
 	} from '$lib/types/collections';
 
 	interface Props {
@@ -56,16 +74,14 @@
 	/** `AreaOption` no formato que `buildOrgaoTree` espera (`value` + `pai_id`). */
 	type OrgaoCandidato = AreaOption & { value: number };
 
-	const PAPEL_OPCOES: { id: PapelCompartilhamento; label: string; hint: string }[] = [
-		{ id: 'viewer', label: 'Leitor', hint: 'Vê a coleção e seus projetos' },
-		{ id: 'editor', label: 'Editor', hint: 'Também adiciona e remove projetos' }
-	];
-	const PAPEL_MENU: SelectMenuOption[] = PAPEL_OPCOES.map((o) => ({ value: o.id, label: o.label }));
+	const PAPEL_OPCOES = PAPEIS_COMPARTILHAMENTO;
 
 	const isFavoritos = $derived(colecao.tipo === 'favoritos');
 
 	let loadState = $state<LoadState>('loading');
 	let shares = $state<ColecaoShare[]>([]);
+	/** Itens de quem já não é editor: saem em qualquer poda, entram em toda confirmação. */
+	let itensOrfaos = $state(0);
 	let loadError = $state('');
 
 	let modo = $state<AlvoModo>('pessoa');
@@ -77,11 +93,11 @@
 	let linhaOcupada = $state<number | null>(null);
 
 	let termo = $state('');
-	let resultados = $state<UsuarioConvidavel[]>([]);
+	let resultados = $state<PessoaDestinavel[]>([]);
 	let buscando = $state(false);
 	let listaAberta = $state(false);
 	let destaque = $state(-1);
-	let pessoa = $state<UsuarioConvidavel | null>(null);
+	let pessoa = $state<PessoaDestinavel | null>(null);
 
 	let orgaos = $state<AreaOption[]>([]);
 	let orgaosCarregando = $state(false);
@@ -108,7 +124,7 @@
 		loadState = 'loading';
 		loadError = '';
 		try {
-			shares = await fetchShares(colecao.id);
+			aplicarShares(await fetchShares(colecao.id));
 			loadState = 'ready';
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
@@ -117,9 +133,14 @@
 		}
 	}
 
+	function aplicarShares(dados: Required<CollectionSharesData>): void {
+		shares = dados.compartilhamentos;
+		itensOrfaos = dados.itens_orfaos;
+	}
+
 	async function recarregar(): Promise<void> {
 		try {
-			shares = await fetchShares(colecao.id);
+			aplicarShares(await fetchShares(colecao.id));
 		} catch (err) {
 			if (err instanceof ApiClientError && err.code === 'unauthenticated') return;
 			formError = mensagemDeErro(err, 'Falha ao recarregar os compartilhamentos.');
@@ -147,7 +168,7 @@
 		const controller = new AbortController();
 		const timer = setTimeout(() => {
 			buscando = true;
-			searchInvitableUsers(q, controller.signal)
+			buscarDestinatarios(q, controller.signal)
 				.then((achados) => {
 					resultados = achados;
 					listaAberta = true;
@@ -209,7 +230,7 @@
 		}
 	}
 
-	function escolherPessoa(usuario: UsuarioConvidavel): void {
+	function escolherPessoa(usuario: PessoaDestinavel): void {
 		pessoa = usuario;
 		termo = usuario.name;
 		resultados = [];
@@ -279,10 +300,17 @@
 		return orgao ? { orgao_id: orgao.id, papel: alvo } : null;
 	}
 
+	/** O alvo já está na lista? Então o POST é upsert de papel, não convite novo. */
+	function shareExistente(payload: ColecaoShareCreatePayload): ColecaoShare | undefined {
+		if (payload.user_id !== undefined) return shares.find((s) => s.user_id === payload.user_id);
+		return shares.find((s) => s.orgao_id === payload.orgao_id);
+	}
+
 	async function compartilhar(): Promise<void> {
 		const payload = payloadDoAlvo(papel);
 		if (!payload || enviando) return;
 		const nome = modo === 'pessoa' ? (pessoa?.name ?? '') : (orgao?.sigla ?? orgao?.nome ?? '');
+		const existente = shareExistente(payload);
 		enviando = true;
 		formError = '';
 		resumoAcao = '';
@@ -290,7 +318,11 @@
 			await criarShare(colecao.id, payload);
 			limparPessoa();
 			limparOrgao();
-			resumoAcao = `${nome} agora tem acesso como ${papelLabel(papel)}.`;
+			resumoAcao = !existente
+				? `Convite enviado para ${nome}.`
+				: existente.papel !== papel
+					? `Papel de ${nome} alterado para ${papelColecaoLabel(papel)}.`
+					: `${nome} já está na lista.`;
 			await recarregar();
 		} catch (err) {
 			formError = mensagemDeErro(err, 'Falha ao compartilhar a coleção.');
@@ -299,19 +331,39 @@
 		}
 	}
 
-	/** Troca de papel é o MESMO POST (upsert no backend) com o alvo da linha. */
-	function trocarPapel(share: ColecaoShare, valor: string | null): void {
-		const novo: PapelCompartilhamento = valor === 'editor' ? 'editor' : 'viewer';
-		if (novo === share.papel) return;
+	/**
+	 * Troca de papel é o MESMO POST (upsert no backend) com o alvo da linha.
+	 * Rebaixar editor→leitor tira da coleção o que a pessoa incluiu: confirma
+	 * antes quando há algo a sair.
+	 */
+	async function trocarPapel(share: ColecaoShare, novo: PapelCompartilhamento): Promise<void> {
 		if (share.user_id === null && share.orgao_id === null) {
 			formError = 'Não foi possível identificar o destinatário deste compartilhamento.';
 			return;
 		}
+		const rebaixamento =
+			novo === 'viewer' ? textoDeRebaixamento(share, nomeDoShare(share), itensOrfaos) : null;
+		if (rebaixamento && !(await confirmAction({ ...rebaixamento, tone: 'warning' }))) return;
 		const payload: ColecaoShareCreatePayload =
 			share.user_id !== null
 				? { user_id: share.user_id, papel: novo }
 				: { orgao_id: share.orgao_id as number, papel: novo };
-		void mutarLinha(share.id, () => criarShare(colecao.id, payload).then(() => undefined), 'Falha ao alterar o papel.');
+		void mutarLinha(
+			share.id,
+			() => criarShare(colecao.id, payload).then(() => undefined),
+			'Falha ao alterar o papel.'
+		);
+	}
+
+	/** Reconvida quem recusou ou saiu daquele share (nova notificação para a pessoa). */
+	function reenviar(share: ColecaoShare): void {
+		const nome = nomeDoShare(share);
+		void mutarLinha(
+			share.id,
+			() => reenviarShare(colecao.id, share.id).then(() => undefined),
+			'Falha ao reenviar o convite.',
+			`Convite reenviado para ${nome}.`
+		);
 	}
 
 	async function mutarLinha(
@@ -334,46 +386,20 @@
 		}
 	}
 
-	/** Revogar corta o acesso derivado na hora — confirma citando o destinatário. */
+	/**
+	 * Revogar corta o acesso derivado na hora: quem tem acesso perde só o que vê
+	 * pela coleção, e os projetos que incluiu saem; convite pendente só cancela.
+	 */
 	async function revogar(share: ColecaoShare): Promise<void> {
-		const nome = nomeDoShare(share);
-		const ok = await confirmAction({
-			title: `Revogar o acesso de ${nome}?`,
-			description: `${nome} perde o acesso a esta coleção e aos projetos dela imediatamente. Dá para compartilhar de novo depois.`,
-			tone: 'danger',
-			confirmLabel: 'Revogar acesso',
-			cancelLabel: 'Cancelar'
-		});
+		const { sucesso, ...pergunta } = textoDeRevogacao(share, nomeDoShare(share), itensOrfaos);
+		const ok = await confirmAction({ ...pergunta, tone: 'danger', cancelLabel: 'Voltar' });
 		if (!ok) return;
 		void mutarLinha(
 			share.id,
 			() => revogarShare(colecao.id, share.id),
 			'Falha ao revogar o compartilhamento.',
-			`Acesso de ${nome} revogado.`
+			sucesso
 		);
-	}
-
-	function papelLabel(valor: PapelCompartilhamento): string {
-		return valor === 'editor' ? 'Editor' : 'Leitor';
-	}
-
-	function nomeDoShare(share: ColecaoShare): string {
-		if (share.user) return share.user.nome;
-		return share.orgao ? share.orgao.sigla || share.orgao.nome : 'Destinatário';
-	}
-
-	function metaDoShare(share: ColecaoShare): string {
-		const origem = share.user ? 'Pessoa' : (share.orgao?.nome ?? 'Área');
-		const desde = formatIsoDateBR(share.created_at);
-		return desde ? `${origem} · desde ${desde}` : origem;
-	}
-
-	function iniciais(nome: string): string {
-		const partes = nome.trim().split(/\s+/).filter(Boolean);
-		if (partes.length === 0) return '?';
-		const primeira = partes[0][0] ?? '';
-		const segunda = partes.length > 1 ? (partes[partes.length - 1][0] ?? '') : (partes[0][1] ?? '');
-		return (primeira + segunda).toUpperCase();
 	}
 
 	function requestClose(): void {
@@ -462,7 +488,7 @@
 										aria-activedescendant={destaque >= 0 && listaAberta
 											? `cc-pessoa-op-${destaque}`
 											: undefined}
-										placeholder="Nome ou usuário…"
+										placeholder="Nome da pessoa…"
 										bind:value={termo}
 										oninput={() => {
 											pessoa = null;
@@ -527,10 +553,7 @@
 												? 'bg-surface-muted'
 												: ''}"
 										>
-											<span class="min-w-0 truncate">
-												{usuario.name}
-												<span class="text-text-muted">@{usuario.username}</span>
-											</span>
+											<span class="min-w-0 truncate">{usuario.name}</span>
 											{#if usuario.orgao_sigla}
 												<span class="shrink-0 text-xs text-text-secondary">{usuario.orgao_sigla}</span>
 											{/if}
@@ -612,7 +635,7 @@
 									</span>
 									<span class="text-sm font-semibold text-text-primary">{opcao.label}</span>
 								</span>
-								<span class="text-xs text-text-muted">{opcao.hint}</span>
+								<span class="text-xs leading-snug text-text-muted">{opcao.hint}</span>
 							</label>
 						{/each}
 					</div>
@@ -620,7 +643,7 @@
 
 				<div class="flex items-center gap-3">
 					<Button type="submit" size="sm" disabled={!podeCompartilhar}>
-						{enviando ? 'Compartilhando…' : 'Compartilhar'}
+						{enviando ? 'Convidando…' : 'Convidar'}
 					</Button>
 					{#if formError}
 						<p role="alert" class="min-w-0 flex-1 text-xs text-danger">{formError}</p>
@@ -633,7 +656,7 @@
 			</form>
 
 			<section class="flex min-h-0 flex-col gap-2 border-t border-border-hairline pt-3">
-				<h3 class={labelCls}>Com acesso</h3>
+				<h3 class={labelCls}>Compartilhada com</h3>
 				<div class="thin-scroll min-h-0 max-h-[240px] overflow-y-auto">
 					{#if loadState === 'loading'}
 						<p role="status" aria-live="polite" class="py-4 text-sm text-text-secondary">
@@ -642,13 +665,17 @@
 					{:else if loadState === 'error'}
 						<p role="alert" class="py-4 text-sm text-danger">{loadError}</p>
 					{:else if shares.length === 0}
-						<p class="py-4 text-sm text-text-muted">
-							Ninguém além de você tem acesso a esta coleção.
-						</p>
+						<p class="py-4 text-sm text-text-muted">Só você tem acesso a esta coleção.</p>
 					{:else}
 						<ul class="flex flex-col">
 							{#each shares as share (share.id)}
-								{@render linhaShare(share)}
+								<ColecaoShareRow
+									{share}
+									ocupado={linhaOcupada === share.id}
+									onTrocarPapel={(alvo, novo) => void trocarPapel(alvo, novo)}
+									onReenviar={reenviar}
+									onRevogar={(alvo) => void revogar(alvo)}
+								/>
 							{/each}
 						</ul>
 					{/if}
@@ -695,68 +722,4 @@
 			<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
 		</svg>
 	</button>
-{/snippet}
-
-<!-- Linha de concessão: pessoa (iniciais) ou área (sigla), papel editável e revogação. -->
-{#snippet linhaShare(share: ColecaoShare)}
-	<li
-		class="flex items-center gap-3 border-b border-border-hairline py-2 last:border-b-0 {linhaOcupada ===
-		share.id
-			? 'opacity-60'
-			: ''}"
-	>
-		<span
-			class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-wash-neutral text-2xs font-bold text-brand"
-			aria-hidden="true"
-		>
-			{share.user ? iniciais(share.user.nome) : (share.orgao?.sigla ?? '').slice(0, 3)}
-		</span>
-
-		<div class="flex min-w-0 flex-1 flex-col">
-			<span class="truncate text-sm font-medium text-text-primary">{nomeDoShare(share)}</span>
-			<span class="truncate text-xs text-text-muted">{metaDoShare(share)}</span>
-		</div>
-
-		<div class="shrink-0">
-			<SelectMenu
-				options={PAPEL_MENU}
-				value={share.papel}
-				onSelect={(v) => trocarPapel(share, v)}
-				disabled={linhaOcupada === share.id}
-				unstyled
-				hideCheck
-				align="right"
-				ariaLabel={`Papel de ${nomeDoShare(share)}`}
-			>
-				{#snippet trigger({ open, label })}
-					<span
-						class="flex items-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-semibold text-text-primary transition-colors duration-fast hover:border-border-subtle hover:bg-surface-muted"
-					>
-						{label}
-						<svg
-							viewBox="0 0 20 20"
-							class="h-2.5 w-2.5 text-text-muted transition-transform duration-fast"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							style:transform={open ? 'rotate(180deg)' : 'none'}
-							aria-hidden="true"
-						>
-							<path d="m4 7 6 6 6-6" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-					</span>
-				{/snippet}
-			</SelectMenu>
-		</div>
-
-		<button
-			type="button"
-			onclick={() => void revogar(share)}
-			disabled={linhaOcupada === share.id}
-			aria-label={`Revogar o acesso de ${nomeDoShare(share)}`}
-			class="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-muted transition-colors duration-fast hover:bg-wash-danger hover:text-danger disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-		>
-			<AppIcon id="exclusao" />
-		</button>
-	</li>
 {/snippet}

@@ -1,8 +1,10 @@
-"""Notificação de coleção compartilhada (Fase 4 de Coleções).
+"""Notificações do convite de coleção compartilhada.
 
-Só a CONCESSÃO de share notifica: upsert de papel e revogação são silenciosos.
-Share de pessoa alcança aquele usuário; share de órgão alcança os ATIVOS com
-vínculo no órgão EXATO (sem subárvore), sempre sem o ator.
+Só a CONCESSÃO de share notifica o destinatário (``colecao_convite`` — o acesso
+só vale depois do aceite): upsert de papel e revogação são silenciosos. Share
+de pessoa alcança aquele usuário; share de órgão alcança os ATIVOS com vínculo
+no órgão EXATO (sem subárvore), sempre sem o ator. Aceite, recusa e saída
+avisam o DONO. O antigo ``colecao_compartilhada`` ficou só como histórico.
 """
 
 import pytest
@@ -17,15 +19,23 @@ from models import (
     UserOrgao,
     db,
 )
-from services.orgao_tree import rebuild_orgao_closure
-from services.project_collections import (
+from services.collection_shares import (
+    aceitar_convite,
     compartilhar_colecao,
-    criar_colecao,
+    recusar_convite,
+    reenviar_convite,
     revogar_share,
+    sair_da_colecao,
 )
+from services.notifications import (
+    EVENTO_COLECAO_CONVITE,
+    EVENTO_COLECAO_CONVITE_ACEITO,
+    EVENTO_COLECAO_CONVITE_RECUSADO,
+    EVENTO_COLECAO_PARTICIPANTE_SAIU,
+)
+from services.orgao_tree import rebuild_orgao_closure
+from services.project_collections import criar_colecao
 from time_utils import utc_now
-
-EVENTO_COLECAO_COMPARTILHADA = "colecao_compartilhada"
 
 
 def _add_orgao(sigla: str, pai_id: int | None = None) -> int:
@@ -91,9 +101,9 @@ def _compartilhar(colecao, cenario, papel=PAPEL_SHARE_VIEWER, **destino):
     return share
 
 
-def _notificacoes() -> list[UserNotification]:
+def _notificacoes(evento: str = EVENTO_COLECAO_CONVITE) -> list[UserNotification]:
     return (
-        UserNotification.query.filter_by(event_type=EVENTO_COLECAO_COMPARTILHADA)
+        UserNotification.query.filter_by(event_type=evento)
         .order_by(UserNotification.id)
         .all()
     )
@@ -118,8 +128,9 @@ def test_share_com_pessoa_notifica_somente_o_destinatario(app, cenario_notificac
         notificacao = notificacoes[0]
         assert notificacao.recipient_user_id == cenario_notificacao["convidado"].id
         assert notificacao.actor_user_id == cenario_notificacao["dono"].id
-        assert notificacao.title == 'Coleção "Saúde digital" compartilhada com você'
+        assert notificacao.title == 'Convite para a coleção "Saúde digital"'
         assert "leitor" in notificacao.message
+        assert "aceitar" in notificacao.message
 
 
 def test_share_com_pessoa_aponta_para_a_pagina_da_colecao(app, cenario_notificacao):
@@ -251,3 +262,84 @@ def test_revogacao_nao_notifica(app, cenario_notificacao):
         )
         db.session.commit()
         assert len(_notificacoes()) == 1
+
+
+# ── Respostas avisam o dono ───────────────────────────────────────────────────
+
+
+def _dono_recebeu(cenario, evento: str) -> UserNotification:
+    (notificacao,) = _notificacoes(evento)
+    assert notificacao.recipient_user_id == cenario["dono"].id
+    assert notificacao.actor_user_id == cenario["convidado"].id
+    return notificacao
+
+
+def test_aceite_avisa_o_dono(app, cenario_notificacao):
+    with app.test_request_context("/"):
+        colecao = _colecao_do_dono(cenario_notificacao, "Obras")
+        _compartilhar(
+            colecao, cenario_notificacao, user_id=cenario_notificacao["convidado"].id
+        )
+        aceitar_convite(colecao.id, cenario_notificacao["convidado"])
+        db.session.commit()
+
+        notificacao = _dono_recebeu(cenario_notificacao, EVENTO_COLECAO_CONVITE_ACEITO)
+        assert (notificacao.title, notificacao.message) == (
+            'CONVIDADO_NOTIF aceitou o convite para a coleção "Obras"',
+            "CONVIDADO_NOTIF aceitou o convite para a sua coleção compartilhada.",
+        )
+        assert notificacao.target_url == f"/colecoes/{colecao.id}"
+
+
+def test_recusa_avisa_o_dono(app, cenario_notificacao):
+    with app.test_request_context("/"):
+        colecao = _colecao_do_dono(cenario_notificacao)
+        _compartilhar(
+            colecao, cenario_notificacao, user_id=cenario_notificacao["convidado"].id
+        )
+        recusar_convite(colecao.id, cenario_notificacao["convidado"])
+        db.session.commit()
+
+        notificacao = _dono_recebeu(
+            cenario_notificacao, EVENTO_COLECAO_CONVITE_RECUSADO
+        )
+        assert (notificacao.title, notificacao.message) == (
+            'CONVIDADO_NOTIF recusou o convite para a coleção "Compartilhada"',
+            "CONVIDADO_NOTIF recusou o convite para a sua coleção compartilhada.",
+        )
+
+
+def test_saida_avisa_o_dono(app, cenario_notificacao):
+    with app.test_request_context("/"):
+        colecao = _colecao_do_dono(cenario_notificacao)
+        _compartilhar(
+            colecao, cenario_notificacao, user_id=cenario_notificacao["convidado"].id
+        )
+        aceitar_convite(colecao.id, cenario_notificacao["convidado"])
+        sair_da_colecao(colecao.id, cenario_notificacao["convidado"])
+        db.session.commit()
+
+        notificacao = _dono_recebeu(
+            cenario_notificacao, EVENTO_COLECAO_PARTICIPANTE_SAIU
+        )
+        # Regressão: o molde comum produzia "saiu de a coleção".
+        assert (notificacao.title, notificacao.message) == (
+            'CONVIDADO_NOTIF saiu da coleção "Compartilhada"',
+            "CONVIDADO_NOTIF saiu da sua coleção compartilhada.",
+        )
+
+
+def test_reenviar_notifica_de_novo_quem_recusou(app, cenario_notificacao):
+    with app.test_request_context("/"):
+        colecao = _colecao_do_dono(cenario_notificacao)
+        share = _compartilhar(
+            colecao, cenario_notificacao, user_id=cenario_notificacao["convidado"].id
+        )
+        recusar_convite(colecao.id, cenario_notificacao["convidado"])
+        reenviar_convite(colecao, share.id, ator=cenario_notificacao["dono"])
+        db.session.commit()
+
+        assert [n.recipient_user_id for n in _notificacoes()] == [
+            cenario_notificacao["convidado"].id,
+            cenario_notificacao["convidado"].id,
+        ]

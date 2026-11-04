@@ -29,3 +29,22 @@ export interface NotificacaoMarcarLidasResult {
 	marked: number;
 	unread_count: number; // sempre 0 após marcar
 }
+
+/** Convite pendente citado no resumo do sino (só o necessário para o toast). */
+export interface NotificacaoConviteResumo {
+	collection_id: number;
+	nome: string;
+}
+
+/**
+ * Carga de GET /api/notificacoes/resumo — o polling leve do sino.
+ *
+ * `unread_count` conta só as não lidas VISÍVEIS (mesmo filtro da lista);
+ * `convites_pendentes` independe de `is_read`: o ponto do sino acende pela
+ * soma dos dois. `convites` alimenta o toast de convite novo.
+ */
+export interface NotificacoesResumo {
+	unread_count: number;
+	convites_pendentes: number;
+	convites: NotificacaoConviteResumo[];
+}

@@ -29,6 +29,7 @@ from ..orgao_scope import (
     parse_apenas_orgao_flag,
     sanitize_orgao_filter_for_current_user,
 )
+from ..projects.list_filters import VISIBILIDADES_PICKER
 from ..projects.views import (
     build_project_history_context,
     build_projects_list_context,
@@ -237,15 +238,19 @@ def api_projetos() -> Response | tuple[Response, int]:
     ``?atraso=``, ``?special_project=``, ``?delivery_type=``,
     ``?abep_indicator=``, ``?objetivo=``, ``?q=`` (busca) e ``?page=`` espelham
     os filtros da tela Jinja (``?q`` é o alias JSON de ``?search``). ``?colecao=``
-    restringe à coleção do PRÓPRIO usuário (id de outro dono = lista vazia) e
-    ``?excluir_colecao=`` faz o inverso — omite os projetos já pertencentes à
-    coleção (picker "adicionar projetos"). ``?per_page=`` ajusta o tamanho da
-    página entre 1 e 100 (default 40).
+    restringe à coleção em que o usuário tem papel — dono ou share ACEITO/legado
+    (sem papel = lista vazia) — e ``?excluir_colecao=`` faz o inverso — omite
+    os projetos já pertencentes à coleção (picker "adicionar projetos").
+    ``?visibilidade=area|propria`` estreita a lista ao que o picker pode
+    incluir: ``area`` (editor da coleção) ou ``propria`` = área/convite sem a
+    derivada de coleção (dono). ``?per_page=`` ajusta o tamanho da página
+    entre 1 e 100 (default 40).
 
     Returns:
         Envelope ``{"ok": true, "data": {...}}`` com HTTP 200; ou
-        ``fail(..., 422, "validation")`` quando o filtro de órgão é inválido.
-        ``api_login_required`` devolve 401 JSON quando não há sessão.
+        ``fail(..., 422, "validation")`` quando o filtro de órgão ou de
+        visibilidade é inválido. ``api_login_required`` devolve 401 JSON
+        quando não há sessão.
     """
     selected_orgao_id, invalid_orgao_filter = sanitize_orgao_filter_for_current_user(
         request.args.get("orgao")
@@ -253,6 +258,14 @@ def api_projetos() -> Response | tuple[Response, int]:
     if invalid_orgao_filter:
         return fail(
             "Filtro de órgão inválido para o usuário.",
+            status=422,
+            code="validation",
+        )
+    visibilidade = request.args.get("visibilidade") or None
+    if visibilidade is not None and visibilidade not in VISIBILIDADES_PICKER:
+        return fail(
+            f"Filtro de visibilidade inválido: {visibilidade!r}; "
+            f"esperado um de {'|'.join(VISIBILIDADES_PICKER)}.",
             status=422,
             code="validation",
         )
@@ -273,6 +286,7 @@ def api_projetos() -> Response | tuple[Response, int]:
         selected_objetivo=request.args.get("objetivo"),
         selected_colecao_id=request.args.get("colecao", type=int),
         excluded_colecao_id=request.args.get("excluir_colecao", type=int),
+        selected_visibilidade=visibilidade,
         search_query=(
             request.args.get("q") or request.args.get("search") or ""
         ).strip(),

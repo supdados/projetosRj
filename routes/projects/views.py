@@ -82,6 +82,7 @@ def build_projects_list_context(
     selected_objetivo=None,
     selected_colecao_id=None,
     excluded_colecao_id=None,
+    selected_visibilidade=None,
     search_query="",
     page=1,
     per_page=40,
@@ -106,11 +107,15 @@ def build_projects_list_context(
         selected_delivery_type: Tipo de entrega (ou "").
         selected_abep_indicator: Indicador ABEP (normalizado internamente).
         selected_objetivo: ID de objetivo como string (ou "").
-        selected_colecao_id: ID de coleção do próprio usuário (ou ``None``);
-            coleção de outro dono resulta em lista vazia, não em erro.
-        excluded_colecao_id: ID de coleção do próprio usuário cujos projetos
-            ficam FORA da lista (picker "adicionar projetos"); coleção de outro
-            dono não exclui nada.
+        selected_colecao_id: ID de coleção em que o usuário tem papel — dono
+            ou share VÁLIDO (aceito/legado) — ou ``None``; coleção sem papel
+            (inclusive convite pendente) resulta em lista vazia, não em erro.
+        excluded_colecao_id: ID de coleção (mesma regra de papel) cujos
+            projetos ficam FORA da lista (picker "adicionar projetos");
+            coleção sem papel não exclui nada.
+        selected_visibilidade: ``"area"`` | ``"propria"`` | ``None`` — picker
+            da coleção (``list_filters.VISIBILIDADES_PICKER``); o chamador já
+            validou o valor.
         search_query: Texto de busca (título/órgão/indicador/ID).
         page: Página solicitada (1-based) da lista paginada.
         per_page: Tamanho da página (default 40; o chamador é responsável por
@@ -134,6 +139,7 @@ def build_projects_list_context(
         selected_objetivo=selected_objetivo,
         selected_colecao_id=selected_colecao_id,
         excluded_colecao_id=excluded_colecao_id,
+        selected_visibilidade=selected_visibilidade,
         search_query=search_query,
     )
     query = apply_projects_list_filters(Project.query, filters, g.user)

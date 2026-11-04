@@ -1208,6 +1208,9 @@ def _colecao_com_share(
     db.session.add(
         ProjectCollectionItem(collection_id=colecao.id, project_id=project_id, ordem=0)
     )
+    # Share e item LEGADOS (sem aceite, sem autoria/teto): travam o rank que o
+    # deploy preserva; o ciclo com aceite e o teto têm testes próprios em
+    # tests/test_collection_access_unit.py.
     db.session.add(
         ProjectCollectionShare(
             collection_id=colecao.id,
@@ -1215,6 +1218,7 @@ def _colecao_com_share(
             orgao_id=orgao_id,
             papel=papel,
             created_by_user_id=owner_id,
+            exige_aceite=False,
         )
     )
     db.session.flush()

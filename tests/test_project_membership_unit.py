@@ -258,15 +258,16 @@ def test_sem_convites_flags_equivalem_ao_comportamento_atual(app, arvore):
 def test_flags_de_n_projetos_custam_queries_constantes(app, arvore):
     """Zero N+1: os três mapas são cacheados em `g`, o resto é lookup em dict.
 
-    5 statements: 2 dos mapas originais + 3 do rank de coleções frio
-    (SAVEPOINT + SELECT + RELEASE do begin_nested) — constantes para 50 projetos.
+    6 statements: 2 dos mapas originais + 4 do rank de coleções frio
+    (SAVEPOINT + SELECT via share + SELECT do ramo dono + RELEASE do
+    begin_nested) — constantes para 50 projetos.
     """
     with app.test_request_context("/"):
         user = FakeViewer(13, vinculos=((arvore["sec"], PAPEL_EDITOR),))
         projetos = [FakeProjeto(numero, arvore["sub"]) for numero in range(1, 51)]
         with SqlQueryCounter(db.engine) as counter:
             flags = [project_permission_flags(user, projeto) for projeto in projetos]
-        assert counter.total == 5
+        assert counter.total == 6
         assert all(item["can_edit"] for item in flags)
 
 

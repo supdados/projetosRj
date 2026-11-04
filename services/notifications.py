@@ -292,43 +292,103 @@ def collection_share_recipient_ids(
     return _orgao_active_user_ids(orgao_id)
 
 
-def notify_collection_shared(
+EVENTO_COLECAO_CONVITE = "colecao_convite"
+EVENTO_COLECAO_CONVITE_ACEITO = "colecao_convite_aceito"
+EVENTO_COLECAO_CONVITE_RECUSADO = "colecao_convite_recusado"
+EVENTO_COLECAO_PARTICIPANTE_SAIU = "colecao_participante_saiu"
+
+
+def _colecao_target_url(colecao: ProjectCollection) -> str:
+    # A página da coleção trata o estado "convite pendente" (Aceitar/Recusar).
+    return f"/colecoes/{colecao.id}"
+
+
+def notify_collection_invite(
     colecao: ProjectCollection,
     actor_user_id: int,
     papel: str,
     *,
-    user_id: int | None = None,
-    orgao_id: int | None = None,
-    recipient_ids: set[int] | None = None,
+    recipient_ids: set[int],
 ) -> int:
-    """Avisa quem GANHOU acesso à coleção (Fase 4): só na concessão do share.
+    """Convida para a coleção: o acesso só vale depois do aceite (sem e-mail).
 
-    Share de pessoa avisa aquele usuário; share de órgão avisa os ativos com
-    vínculo no órgão EXATO. Upsert de papel e revogação não notificam.
-    ``recipient_ids`` explícito atende a criação com vários shares (uma
-    notificação por pessoa). Ex.:
-    `notify_collection_shared(colecao, g.user.id, "viewer", orgao_id=12)`.
+    Disparo: share NOVO (pessoa ou membros ativos do órgão exato, um aviso por
+    pessoa) e "reenviar". Upsert de papel e revogação não notificam. O antigo
+    ``colecao_compartilhada`` fica só como histórico. Ex.:
+    `notify_collection_invite(colecao, g.user.id, "viewer", recipient_ids={7})`.
     """
-    if colecao is None:
+    if colecao is None or not recipient_ids:
         return 0
-
-    destinatarios = (
-        collection_share_recipient_ids(user_id=user_id, orgao_id=orgao_id)
-        if recipient_ids is None
-        else set(recipient_ids)
-    )
-    if not destinatarios:
-        return 0
+    rotulo = ROTULO_PAPEL_SHARE.get(papel, papel)
     return create_user_notifications(
-        destinatarios,
+        recipient_ids,
         actor_user_id=actor_user_id,
-        event_type="colecao_compartilhada",
-        title=f'Coleção "{_truncate_text(colecao.nome, 80)}" compartilhada com você',
+        event_type=EVENTO_COLECAO_CONVITE,
+        title=f'Convite para a coleção "{_truncate_text(colecao.nome, 80)}"',
         message=(
-            f"Seu acesso é de {ROTULO_PAPEL_SHARE.get(papel, papel)}: "
-            "você verá os projetos desta coleção."
+            f"Você foi convidado como {rotulo}. Abra a coleção para aceitar ou "
+            "recusar; os projetos só aparecem depois do aceite."
         ),
-        target_url=f"/colecoes/{colecao.id}",
+        target_url=_colecao_target_url(colecao),
+    )
+
+
+def _notify_collection_owner(
+    colecao: ProjectCollection,
+    ator: User,
+    event_type: str,
+    *,
+    titulo: str,
+    mensagem: str,
+) -> int:
+    """``titulo``/``mensagem`` são a frase INTEIRA de cada evento (``{nome}`` e
+    ``{colecao}`` substituídos aqui): montar o verbo + "a coleção" num molde
+    comum deu "saiu de a coleção" — a contração muda com a preposição."""
+    nome = _truncate_text(getattr(ator, "name", "") or "Alguém", 80)
+    nome_colecao = _truncate_text(colecao.nome, 80)
+    return create_user_notifications(
+        [colecao.owner_user_id],
+        actor_user_id=ator.id,
+        event_type=event_type,
+        title=titulo.format(nome=nome, colecao=nome_colecao),
+        message=mensagem.format(nome=nome, colecao=nome_colecao),
+        target_url=_colecao_target_url(colecao),
+    )
+
+
+def notify_collection_invite_accepted(colecao: ProjectCollection, ator: User) -> int:
+    """Avisa o DONO que ``ator`` aceitou o convite da coleção.
+
+    Ex.: `notify_collection_invite_accepted(colecao, g.user)`.
+    """
+    return _notify_collection_owner(
+        colecao,
+        ator,
+        EVENTO_COLECAO_CONVITE_ACEITO,
+        titulo='{nome} aceitou o convite para a coleção "{colecao}"',
+        mensagem="{nome} aceitou o convite para a sua coleção compartilhada.",
+    )
+
+
+def notify_collection_invite_declined(colecao: ProjectCollection, ator: User) -> int:
+    """Avisa o DONO que ``ator`` recusou o convite da coleção."""
+    return _notify_collection_owner(
+        colecao,
+        ator,
+        EVENTO_COLECAO_CONVITE_RECUSADO,
+        titulo='{nome} recusou o convite para a coleção "{colecao}"',
+        mensagem="{nome} recusou o convite para a sua coleção compartilhada.",
+    )
+
+
+def notify_collection_member_left(colecao: ProjectCollection, ator: User) -> int:
+    """Avisa o DONO que ``ator`` saiu da coleção (itens dele já foram podados)."""
+    return _notify_collection_owner(
+        colecao,
+        ator,
+        EVENTO_COLECAO_PARTICIPANTE_SAIU,
+        titulo='{nome} saiu da coleção "{colecao}"',
+        mensagem="{nome} saiu da sua coleção compartilhada.",
     )
 
 

@@ -17,7 +17,18 @@ from routes.shared import (
     project_orgao_search_filter,
 )
 from services.atraso import projeto_atrasado_criterion
-from services.authorization import apply_project_visibility
+from services.authorization import apply_project_visibility, area_visibility_criterion
+from services.collection_participation import colecao_com_papel_criterion
+
+# ``?visibilidade=`` do picker "adicionar projetos" da coleção: restringe a
+# lista ao que o backend ACEITA incluir, para o lote não falhar no meio.
+#   area    — só o que o usuário vê pela própria ÁREA (editor da coleção:
+#             projeto visto só por convite é recusado — decisão 3 da spec).
+#   propria — área OU convite, sem a visibilidade derivada de coleção (dono:
+#             o anti re-share recusa projeto visto só via outra coleção).
+VISIBILIDADE_AREA = "area"
+VISIBILIDADE_PROPRIA = "propria"
+VISIBILIDADES_PICKER = (VISIBILIDADE_AREA, VISIBILIDADE_PROPRIA)
 
 
 @dataclass
@@ -35,14 +46,18 @@ class ProjectsListFilters:
     selected_objetivo: str | None = None
     selected_colecao_id: int | None = None
     excluded_colecao_id: int | None = None
+    selected_visibilidade: str | None = None
     search_query: str | None = ""
 
 
 def _colecao_project_ids_subquery(collection_id: int, user: User) -> Query:
-    """Ids dos projetos da coleção, SÓ se ela pertence ao usuário informado.
+    """Ids dos projetos da coleção, SÓ se o usuário tem papel nela.
 
-    Coleção de outro dono devolve subquery vazia (filtro sem resultado) em vez de
-    erro — a existência da coleção alheia não vaza pela lista.
+    Papel = dono OU share VÁLIDO (aceito/legado), pela regra única de
+    ``services.collection_participation``; convite pendente não conta. Coleção
+    sem papel devolve subquery vazia (filtro sem resultado) em vez de erro — a
+    existência da coleção alheia não vaza pela lista. A lista segue sempre
+    intersectada com a visibilidade do usuário.
     """
     return (
         db.session.query(ProjectCollectionItem.project_id)
@@ -52,7 +67,7 @@ def _colecao_project_ids_subquery(collection_id: int, user: User) -> Query:
         )
         .filter(
             ProjectCollection.id == collection_id,
-            ProjectCollection.owner_user_id == user.id,
+            colecao_com_papel_criterion(ProjectCollection, user),
         )
     )
 
@@ -79,7 +94,24 @@ def _apply_scope_filters(
                 _colecao_project_ids_subquery(filters.excluded_colecao_id, user)
             )
         )
-    return query
+    return _apply_visibilidade_filter(query, filters.selected_visibilidade, user)
+
+
+def _apply_visibilidade_filter(
+    query: Query, visibilidade: str | None, user: User
+) -> Query:
+    """Estreita a lista à visibilidade PRÓPRIA (``propria``) ou só de ÁREA.
+
+    Sempre por cima de ``apply_project_visibility`` (nunca amplia nada); valor
+    fora de ``VISIBILIDADES_PICKER`` não filtra — a rota já o recusa com 422.
+    O bypass do admin mora em ``area_visibility_criterion`` (gate F0-6: nada
+    de ``is_admin`` inline nas rotas).
+    """
+    if visibilidade == VISIBILIDADE_PROPRIA:
+        return apply_project_visibility(query, user, include_collections=False)
+    if visibilidade != VISIBILIDADE_AREA:
+        return query
+    return query.filter(area_visibility_criterion(user))
 
 
 def _apply_attribute_filters(query: Query, filters: ProjectsListFilters) -> Query:

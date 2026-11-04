@@ -20,18 +20,12 @@
 
 	// Modo escuro incompleto: toggle escondido até o tema ser finalizado.
 	const THEME_TOGGLE_ENABLED = false;
-	import {
-		fetchNotificacoes,
-		marcarNotificacoesLidas
-	} from '$lib/api/notifications';
 	import GlobalSearchBox from '$lib/components/GlobalSearchBox.svelte';
+	import NotificationBell from '$lib/components/NotificationBell.svelte';
 	import TopnavIcon, { type NavIconKind } from '$lib/components/TopnavIcon.svelte';
 	import AdminMenuIcon, { type AdminIconKind } from '$lib/components/AdminMenuIcon.svelte';
-	import AppIcon from '$lib/components/AppIcon.svelte';
-	import { APP_ICONS, type AppIconId } from '$lib/icons/appIcons';
 	import { CALENDAR_ENABLED } from '$lib/config/features';
 	import type { User } from '$lib/types/entities';
-	import type { Notificacao } from '$lib/types/notifications';
 	import ExportarProjetosModal from '$lib/components/ExportarProjetosModal.svelte';
 	import ImportarCsvModal from '$lib/components/ImportarCsvModal.svelte';
 	import { fetchProjects, peekProjects, invalidateProjects } from '$lib/api/projects';
@@ -216,139 +210,21 @@
 		adminToggleEl?.focus();
 	}
 
-	/** Esc fecha o menu e devolve foco ao botao acionador. */
+	/** Esc fecha o menu e devolve foco ao botao acionador (o sino trata o seu). */
 	function handleWindowKeydown(event: KeyboardEvent): void {
-		if (event.key === 'Escape') {
-			if (adminOpen || notifOpen) {
-				// Consome o gesto: o FlashToasts (listener irmão no window) checa
-				// defaultPrevented para não dispensar um toast no MESMO Esc que
-				// fechou este dropdown.
-				event.preventDefault();
-			}
-			if (adminOpen) {
-				closeAdmin();
-				adminToggleEl?.focus();
-			}
-			if (notifOpen) {
-				closeNotif();
-				notifToggleEl?.focus();
-			}
-		}
+		if (event.key !== 'Escape' || !adminOpen) return;
+		// Consome o gesto: o FlashToasts (listener irmão no window) checa
+		// defaultPrevented para não dispensar um toast no MESMO Esc que
+		// fechou este dropdown.
+		event.preventDefault();
+		closeAdmin();
+		adminToggleEl?.focus();
 	}
 
-	// Notificacoes (sino): GET /api/notificacoes + POST marcar-lidas (api/notifications.ts)
-	let notifOpen = $state(false);
-	let notifMenuEl = $state<HTMLDivElement | null>(null);
-	let notifToggleEl = $state<HTMLButtonElement | null>(null);
-	let notifItems = $state<Notificacao[]>([]);
-	let notifUnread = $state(0);
-	let notifLoading = $state(false);
-	let notifError = $state(false);
-	let notifLoadedOnce = $state(false);
-
-	/**
-	 * Resolve icone do redesign por `event_type` (13 grupos do doc). A ordem
-	 * importa: comentario/anexo/etapa/reuniao vem ANTES do `_deleted` generico.
-	 */
-	function notifIcon(eventType: string): AppIconId {
-		const t = (eventType ?? '').toString().trim().toLowerCase();
-		if (t.startsWith('task_comment_') || t.startsWith('task_item_comment_')) return 'comentario';
-		if (t.startsWith('task_attachment_')) return 'anexo';
-		if (t.includes('google_meeting')) return 'reuniao';
-		if (
-			t.startsWith('add_etapa') ||
-			t.startsWith('edit_etapa') ||
-			t.startsWith('delete_etapa') ||
-			t === 'import_model'
-		)
-			return 'etapa';
-		if (
-			t === 'task_finalized' ||
-			t.endsWith('finalize') ||
-			t.endsWith('reactivate') ||
-			t.endsWith('toggle_done')
-		)
-			return 'conclusao';
-		if (t === 'task_archived' || t === 'task_unarchived') return 'arquivo';
-		if (t === 'task_assignment' || t === 'task_item_assignment') return 'atribuicao';
-		if (t === 'projeto_convite' || t === 'colecao_compartilhada') return 'convite';
-		if (t === 'task_created' || t.endsWith('create')) return 'criacao';
-		if (
-			t === 'task_status_updated' ||
-			t === 'task_priority_updated' ||
-			t === 'task_type_updated' ||
-			t.endsWith('toggle_iniciada')
-		)
-			return 'status';
-		if (t === 'task_deleted' || t === 'project_delete' || t.endsWith('_deleted')) return 'exclusao';
-		if (t === 'task_updated' || t.endsWith('edit')) return 'edicao';
-		return 'sino';
-	}
-
-	/** Tempo relativo em PT a partir de ISO 8601 (ex.: "há 2 dias"). */
-	function relativeTime(iso: string | null): string {
-		if (!iso) return '';
-		const then = Date.parse(iso);
-		if (Number.isNaN(then)) return '';
-		const diffMs = Date.now() - then;
-		const sec = Math.round(diffMs / 1000);
-		if (sec < 45) return 'agora mesmo';
-		const min = Math.round(sec / 60);
-		if (min < 60) return `há ${min} min`;
-		const hours = Math.round(min / 60);
-		if (hours < 24) return `há ${hours} h`;
-		const days = Math.round(hours / 24);
-		if (days < 7) return `há ${days} dia${days > 1 ? 's' : ''}`;
-		const weeks = Math.round(days / 7);
-		if (weeks < 5) return `há ${weeks} semana${weeks > 1 ? 's' : ''}`;
-		const months = Math.round(days / 30);
-		if (months < 12) return `há ${months} ${months > 1 ? 'meses' : 'mês'}`;
-		const years = Math.round(days / 365);
-		return `há ${years} ano${years > 1 ? 's' : ''}`;
-	}
-
-	/**
-	 * Igual ao v4.5: ao ABRIR o sino, carrega os itens E marca-lidas (o badge
-	 * zera). A lista renderizada preserva `is_unread` da carga (destaque dos
-	 * novos), mas a contagem do badge passa a refletir `unread_count` pos-marca.
-	 */
-	async function loadNotifications(): Promise<void> {
-		if (notifLoading) return;
-		notifLoading = true;
-		notifError = false;
-		try {
-			const list = await fetchNotificacoes();
-			notifItems = list.items;
-			notifUnread = list.unread_count;
-			notifLoadedOnce = true;
-			// Marcar-lidas em seguida (badge volta a zero), como no legado.
-			try {
-				const marked = await marcarNotificacoesLidas();
-				notifUnread = marked.unread_count;
-			} catch {
-				// Falha ao marcar nao deve apagar a lista ja carregada.
-			}
-		} catch {
-			notifError = true;
-		} finally {
-			notifLoading = false;
-		}
-	}
-
-	function closeNotif(): void {
-		notifOpen = false;
-	}
-
-	function toggleNotif(): void {
-		notifOpen = !notifOpen;
-		if (notifOpen) void loadNotifications();
-	}
-
-	/** Roteia o clique-fora para qualquer dropdown aberto. */
+	/** Clique fora fecha o menu de conta (o sino cuida do próprio dropdown). */
 	function handleAnyOutside(event: MouseEvent): void {
 		const target = event.target as Node;
 		if (adminOpen && adminMenuEl && !adminMenuEl.contains(target)) closeAdmin();
-		if (notifOpen && notifMenuEl && !notifMenuEl.contains(target)) closeNotif();
 	}
 </script>
 
@@ -415,120 +291,8 @@
 			<!-- Busca global LIVE (input + dropdown com debounce/teclado) -->
 			<GlobalSearchBox />
 
-			<!-- Notificacoes: sino com badge + dropdown (GET /api/notificacoes) -->
-			<div bind:this={notifMenuEl} class="relative inline-flex">
-				<button
-					bind:this={notifToggleEl}
-					type="button"
-					onclick={toggleNotif}
-					aria-haspopup="menu"
-					aria-expanded={notifOpen}
-					title={notifUnread > 0 ? `Notificações (${notifUnread} não lidas)` : 'Notificações'}
-					aria-label={notifUnread > 0
-						? `Notificações (${notifUnread} não lidas)`
-						: 'Notificações'}
-					class="relative inline-flex h-[1.95rem] w-[1.95rem] items-center justify-center rounded-md border border-transparent text-md transition-ui duration-[180ms] focus:outline-none focus-visible:ring-2 focus-visible:ring-on-brand {notifOpen
-						? 'border-surface-elevated bg-surface-elevated text-brand dark:border-[color-mix(in_srgb,var(--ds-color-neutral-0)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ds-color-neutral-0)_15%,transparent)] dark:text-white'
-						: 'bg-transparent text-on-brand-muted hover:bg-on-brand-hover hover:text-on-topnav'}"
-				>
-					<svg
-						width="20"
-						height="20"
-						viewBox="0 0 24 24"
-						fill="currentColor"
-						class="shrink-0"
-						aria-hidden="true"
-					>
-						{#each APP_ICONS.sino as p (p.d)}
-							<path d={p.d} opacity={p.opacity} />
-						{/each}
-						<g class="nav-fade" opacity={notifOpen ? 1 : 0}
-							><circle cx="12" cy="21" r="1.7" opacity=".48" /></g
-						>
-						<g class="nav-fade" opacity={notifUnread > 0 ? 1 : 0}
-							><circle cx="17.4" cy="6.1" r="3.3" fill="#B45A45" /></g
-						>
-					</svg>
-				</button>
-
-				{#if notifOpen}
-					<div
-						role="menu"
-						aria-label="Notificações"
-						class="app-notifications-dropdown absolute right-0 top-full z-dropdown mt-2 w-[min(360px,90vw)] origin-top-right animate-dropdown-in overflow-hidden rounded-xl border border-border-subtle bg-surface"
-						style="box-shadow: var(--ds-shadow-popover);"
-					>
-						<div
-							class="app-notifications-dropdown-header flex items-center justify-between gap-2 border-b border-border-subtle px-4 py-3"
-							aria-hidden="true"
-						>
-							<span class="text-sm font-semibold text-text-primary">Notificações</span>
-							<span class="text-xs text-text-secondary">{notifUnread} não lida(s)</span>
-						</div>
-						<div class="app-notifications-list max-h-[60vh] overflow-y-auto p-2">
-							{#if notifLoading && !notifLoadedOnce}
-								<div
-									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
-								>
-									Carregando notificações…
-								</div>
-							{:else if notifError}
-								<div
-									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
-								>
-									Não foi possível carregar as notificações.
-								</div>
-							{:else if notifItems.length === 0}
-								<div
-									class="app-notifications-state rounded-lg border border-border-subtle bg-surface-muted px-3 py-3 text-sm text-text-secondary"
-								>
-									Nenhuma notificação no momento.
-								</div>
-							{:else}
-								{#each notifItems as item (item.id)}
-									<a
-										href={item.target_url ?? '#'}
-										role="menuitem"
-										onclick={closeNotif}
-										class="app-notification-item flex items-start gap-3 rounded-lg px-3 py-2.5 no-underline transition-colors duration-fast hover:bg-surface-muted {item.is_unread
-											? 'bg-surface-muted'
-											: ''}"
-									>
-										<span class="relative flex shrink-0 items-center justify-center">
-											{#if item.is_unread}
-												<span
-													class="absolute -left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-brand"
-													aria-hidden="true"
-												></span>
-											{/if}
-											<span class="flex h-8 w-8 items-center justify-center text-brand">
-												<AppIcon id={notifIcon(item.event_type)} size={20} />
-											</span>
-										</span>
-										<span class="min-w-0 flex-1">
-											<span class="flex items-baseline justify-between gap-2">
-												<span class="truncate text-sm font-semibold text-text-primary"
-													>{item.title || 'Atualização'}</span
-												>
-												<span class="shrink-0 text-xs text-text-muted"
-													>{relativeTime(item.created_at)}</span
-												>
-											</span>
-											{#if item.message || item.actor_name}
-												<span class="mt-0.5 block text-xs text-text-secondary">
-													{#if item.actor_name}<span class="font-medium text-text-primary"
-															>{item.actor_name}</span
-														>{/if}{#if item.actor_name && item.message}&nbsp;{/if}{item.message}
-												</span>
-											{/if}
-										</span>
-									</a>
-								{/each}
-							{/if}
-						</div>
-					</div>
-				{/if}
-			</div>
+			<!-- Notificacoes: sino com ponto, polling do resumo e dropdown (NotificationBell). -->
+			<NotificationBell userId={user?.id ?? null} />
 
 			{#if user}
 				<div bind:this={adminMenuEl} class="relative inline-flex">

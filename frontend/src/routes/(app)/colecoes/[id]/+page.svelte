@@ -4,33 +4,53 @@
 	 *
 	 * Consome `GET /api/colecoes/<id>/projetos` via `$lib/api/collections` (SWR)
 	 * e compõe breadcrumb + header + linha de meta + 4 KPIs + tabela de projetos
-	 * (filtros client-side: busca e Todos/Atrasados). Sem Gantt no MVP.
+	 * (filtros client-side: busca e Todos/Atrasados) + cronograma (Gantt, fetch
+	 * próprio). Toda mutação que muda os ITENS (incluir, remover, aceitar,
+	 * revogar/rebaixar no modal de compartilhar — a poda tira itens) recarrega
+	 * as duas coisas (`recarregarTudo`).
 	 *
 	 * Mutações: renomear inline no título (caneta, padrão do ProjectHeader),
 	 * trocar ícone/cor num popover ancorado ao tile (a descrição não é editável
 	 * aqui), compartilhar (CompartilharColecaoModal), adicionar projetos
-	 * (ColecaoProjectPicker num modal simples, POST idempotente por projeto) e
-	 * remover projeto da coleção com confirmação. Erros 404 seguem o contrato
+	 * (ColecaoAdicionarProjetosModal, POST idempotente por projeto) e remover
+	 * projeto da coleção com confirmação. Erros 404 seguem o contrato
 	 * anti-enumeração: coleção inexistente e coleção de outro usuário são
 	 * indistinguíveis.
 	 *
 	 * Fase 2: a UI espelha o papel do ator vindo no payload — viewer só lê
-	 * (nem adicionar nem remover projetos), editor mexe nos itens e dono é o
-	 * único que edita a identidade, compartilha e apaga. O gate real é do
-	 * backend (403); aqui é só não oferecer o que vai falhar.
+	 * (nem adicionar nem remover projetos), editor inclui e remove SÓ o que
+	 * incluiu (`pode_remover` por linha) e dono é o único que edita a
+	 * identidade, compartilha e apaga. O gate real é do backend (403); aqui é só
+	 * não oferecer o que vai falhar.
+	 *
+	 * Convite pendente, dois estados:
+	 *   - SEM acesso: `.../projetos` dá o MESMO 404 de coleção inexistente; aí a
+	 *     página tenta `GET .../convite` e, havendo convite para mim, mostra só
+	 *     os metadados com Aceitar/Recusar (ColecaoConvitePendente);
+	 *   - COM acesso (ex.: Leitor que recebeu share de área como Editor):
+	 *     `.../projetos` dá 200 e a coleção abre normal, com um banner de
+	 *     Aceitar/Recusar acima dos KPIs (ColecaoConviteExtraBanner, gatilho no
+	 *     resumo do sino). Aceitar recarrega tudo (o papel sobe); recusar só
+	 *     fecha o banner — o acesso atual continua.
+	 * Quem já participa (não dono) ganha "Sair da coleção", com a contagem do
+	 * que sai (os próprios itens e os órfãos, de quem já não é editor).
+	 *
+	 * Tabela e modal de adicionar moram em ColecaoProjetosTabela e
+	 * ColecaoAdicionarProjetosModal (a página passava de 1000 linhas).
 	 */
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import {
-		adicionarProjeto,
 		editarColecao,
 		fetchColecaoProjetos,
+		fetchConvite,
 		fetchCronograma,
 		peekColecaoCronograma,
 		peekColecaoProjetos,
-		removerProjeto
+		removerProjeto,
+		sairDaColecao
 	} from '$lib/api/collections';
 	import { ApiClientError } from '$lib/api/client';
 	import type {
@@ -38,22 +58,29 @@
 		CollectionCronogramaData,
 		CollectionDetailData,
 		CollectionIconId,
+		ConviteColecao,
 		ProjetoColecaoRow
 	} from '$lib/types/collections';
 	import CollectionGantt from '$lib/components/CollectionGantt.svelte';
 	import CompartilharColecaoModal from '$lib/components/CompartilharColecaoModal.svelte';
+	import ColecaoAdicionarProjetosModal from '$lib/components/ColecaoAdicionarProjetosModal.svelte';
+	import ColecaoConvitePendente from '$lib/components/ColecaoConvitePendente.svelte';
+	import ColecaoConviteExtraBanner from '$lib/components/ColecaoConviteExtraBanner.svelte';
+	import ColecaoProjetosTabela from '$lib/components/ColecaoProjetosTabela.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
-	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
 	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
-	import ColecaoProjectPicker from '$lib/components/ColecaoProjectPicker.svelte';
-	import Modal from '$lib/components/Modal.svelte';
-	import StateBanner from '$lib/components/StateBanner.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecaoDetalheSkeleton from '$lib/components/skeletons/ColecaoDetalheSkeleton.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import { COLLECTION_ICONS } from '$lib/icons/collectionIcons';
+	import {
+		COLECAO_COR_OPTIONS,
+		COLECAO_ICONE_ATIVO_CLASS,
+		COLECAO_ICONE_OPTIONS
+	} from '$lib/icons/collectionIdentity';
+	import { auth } from '$lib/stores/auth';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
 	import {
@@ -61,11 +88,13 @@
 		accessErrorMessage,
 		type AccessErrorKind
 	} from '$lib/utils/accessErrorMessages';
+	import { textoDeSaida } from '$lib/utils/colecaoShares';
+	import type { DesfechoConvite } from '$lib/utils/conviteColecao';
+	import type { ProjectsVisibilidadePicker } from '$lib/types/projects';
 	import { formatIsoDateBR } from '$lib/utils/dateFormat';
-	import { projectStatusChipClass } from '$lib/utils/projectLabels';
 
-	type LoadState = 'loading' | 'ready' | 'error';
-	type FiltroLinhas = 'todos' | 'atrasados';
+	/** `convite` = sem acesso à coleção, mas com convite pendente para mim. */
+	type LoadState = 'loading' | 'ready' | 'convite' | 'error';
 
 	/** 404 do contrato: nunca dizer se a coleção não existe ou se é de outro usuário. */
 	const MSG_COLECAO_INACESSIVEL = 'Esta coleção não existe ou você não tem acesso.';
@@ -78,6 +107,7 @@
 	let data = $state<CollectionDetailData | null>(initialData);
 	let errorMessage = $state<string>('');
 	let errorKind = $state<AccessErrorKind>('generic');
+	let convite = $state<ConviteColecao | null>(null);
 
 	let inFlight: AbortController | null = null;
 
@@ -111,9 +141,41 @@
 				return;
 			}
 			data = null;
+			if (accessErrorKind(err) === 'not_found' && (await carregarConvite(controller))) return;
+			if (controller.signal.aborted) return;
 			errorMessage = message;
 			errorKind = accessErrorKind(err);
 			loadState = 'error';
+		}
+	}
+
+	/**
+	 * 404 em `.../projetos` pode ser convite pendente: o MESMO 404 anti-
+	 * enumeração, então só `GET .../convite` desempata. `false` = sem convite
+	 * (a página segue para o estado de erro de sempre).
+	 */
+	async function carregarConvite(controller: AbortController): Promise<boolean> {
+		try {
+			const pendente = await fetchConvite(collectionId, controller.signal);
+			if (controller.signal.aborted) return true;
+			convite = pendente;
+			loadState = 'convite';
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	/** Aceitou: a coleção abre normalmente; recusou ou sumiu: volta ao índice. */
+	function onConviteRespondido(desfecho: DesfechoConvite): void {
+		if (desfecho.tipo === 'aceito') {
+			convite = null;
+			void load();
+			void loadCronograma();
+			return;
+		}
+		if (desfecho.tipo === 'recusado' || desfecho.tipo === 'indisponivel') {
+			void goto(`${base}/colecoes`);
 		}
 	}
 
@@ -151,6 +213,7 @@
 		idCarregado = id;
 		const cached = peekColecaoProjetos(id);
 		data = cached;
+		convite = null;
 		loadState = cached ? 'ready' : 'loading';
 		void load();
 		void loadCronograma();
@@ -169,6 +232,9 @@
 	// ── Papel do ator: o que a tela pode oferecer ───────────────────────────
 	const isDono = $derived(colecao?.papel === 'dono');
 	const podeMexerNosItens = $derived(colecao?.papel === 'dono' || colecao?.papel === 'editor');
+	// Quem recebeu a coleção (custom) pode sair; o dono não sai, apaga.
+	const podeSair = $derived(Boolean(colecao) && !isDono && !isFavoritos);
+	const meuId = $derived($auth.user?.id ?? null);
 
 	const PAPEL_LABEL: Record<string, string> = { viewer: 'leitor', editor: 'editor' };
 	const procedencia = $derived(
@@ -195,97 +261,25 @@
 	const atrasadosCount = $derived(rows.filter((r) => r.atrasado).length);
 	const concluidosCount = $derived(rows.filter((r) => CONCLUIDO_KEYS.has(statusKey(r.status))).length);
 
-	// ── Filtros client-side da tabela ────────────────────────────────────────
-	let busca = $state('');
-	let filtroLinhas = $state<FiltroLinhas>('todos');
-
-	const FILTRO_OPTIONS = [
-		{ id: 'todos', label: 'Todos' },
-		{ id: 'atrasados', label: 'Atrasados' }
-	];
-
-	const COMBINING_MARKS = /[̀-ͯ]/g;
-	const norm = (s: string): string =>
-		s.normalize('NFD').replace(COMBINING_MARKS, '').toLowerCase();
-
-	const linhasVisiveis = $derived.by<ProjetoColecaoRow[]>(() => {
-		const termo = norm(busca.trim());
-		return rows.filter((r) => {
-			if (filtroLinhas === 'atrasados' && !r.atrasado) return false;
-			if (!termo) return true;
-			return (
-				norm(r.nome).includes(termo) ||
-				norm(r.orgao_sigla ?? '').includes(termo) ||
-				String(r.id).includes(termo)
-			);
-		});
-	});
-
 	// ── Apresentação ─────────────────────────────────────────────────────────
 	const pluralizar = (n: number, singular: string, plural: string): string =>
 		`${n} ${n === 1 ? singular : plural}`;
 
-	/** Linha inteira navega ao projeto; cliques em controles internos não. */
-	function abrirProjeto(event: MouseEvent, projectId: number): void {
-		const alvo = event.target as HTMLElement | null;
-		if (alvo?.closest('a, button')) return;
-		void goto(`${base}/projetos/${projectId}`);
-	}
-
 	// ── Compartilhar (só dono; o modal cuida das concessões) ─────────────────
 	let shareOpen = $state(false);
 
-	// ── Adicionar projetos (picker num modal simples) ────────────────────────
+	// ── Adicionar projetos (picker num modal; dono × editor mudam a lista) ───
 	let pickerOpen = $state(false);
-	let pickerSelecionados = $state<number[]>([]);
-	let adding = $state(false);
-	let pickerErro = $state<string | null>(null);
-
 	const idsNaColecao = $derived(rows.map((r) => r.id));
+	// O que o backend aceita deste papel: editor só pela área; dono sem a
+	// derivada de outra coleção; Favoritos (nunca compartilhada) aceita tudo.
+	const pickerVisibilidade = $derived<ProjectsVisibilidadePicker | undefined>(
+		isFavoritos ? undefined : isDono ? 'propria' : 'area'
+	);
 
-	function abrirPicker(): void {
-		pickerSelecionados = [];
-		pickerErro = null;
-		adding = false;
-		pickerOpen = true;
-	}
-
-	function fecharPicker(): void {
-		if (adding) return;
-		pickerOpen = false;
-	}
-
-	async function adicionarSelecionados(): Promise<void> {
-		if (adding || pickerSelecionados.length === 0) return;
-		adding = true;
-		pickerErro = null;
-		const total = pickerSelecionados.length;
-		let adicionados = 0;
-		try {
-			// Sequencial: POST idempotente por projeto (repetir um id é no-op).
-			for (const projectId of pickerSelecionados) {
-				await adicionarProjeto(collectionId, projectId);
-				adicionados += 1;
-			}
-			adding = false;
-			pickerOpen = false;
-			flash.success(
-				total === 1 ? '1 projeto adicionado à coleção.' : `${total} projetos adicionados à coleção.`
-			);
-			void load();
-			void loadCronograma();
-		} catch (err) {
-			adding = false;
-			const motivo =
-				err instanceof ApiClientError ? err.message : 'Não foi possível adicionar os projetos.';
-			pickerErro =
-				adicionados > 0
-					? `${motivo} ${adicionados} de ${total} projetos foram adicionados.`
-					: motivo;
-			// Falha no meio do lote: sem resync a tabela e os KPIs mentem até o F5.
-			void load();
-			void loadCronograma();
-		}
+	function recarregarTudo(): void {
+		void load();
+		void loadCronograma();
 	}
 
 	// ── Remover projeto da coleção ───────────────────────────────────────────
@@ -301,47 +295,33 @@
 		});
 		if (!ok) return;
 		flash.success(`Projeto removido da coleção.`);
-		void load();
-		void loadCronograma();
+		recarregarTudo();
+	}
+
+	// ── Sair da coleção (quem recebeu; os projetos que incluí saem junto) ────
+	async function confirmarSaida(): Promise<void> {
+		if (!data) return;
+		const nome = data.colecao.nome;
+		const texto = textoDeSaida(nome, data.itens_incluidos_por_mim ?? 0, data.itens_orfaos ?? 0);
+		const ok = await confirmAction({
+			...texto,
+			tone: 'danger',
+			busyLabel: 'Saindo…',
+			run: async () => {
+				try {
+					await sairDaColecao(collectionId);
+				} catch (err) {
+					// 404 = o acesso já tinha caído (revogado no meio): o resultado é o mesmo.
+					if (accessErrorKind(err) !== 'not_found') throw err;
+				}
+			}
+		});
+		if (!ok) return;
+		flash.success(`Você saiu da coleção "${nome}".`);
+		void goto(`${base}/colecoes`);
 	}
 
 	// ── Identidade (nome inline no título; ícone/cor no popover do tile) ─────
-	const ICONE_OPTIONS: { id: CollectionIconId; label: string }[] = [
-		{ id: 'camadas', label: 'Camadas' },
-		{ id: 'servidores', label: 'Servidores' },
-		{ id: 'pessoas', label: 'Pessoas' },
-		{ id: 'documento', label: 'Documento' },
-		{ id: 'estrela', label: 'Estrela' },
-		{ id: 'rede', label: 'Rede' },
-		{ id: 'capacitacao', label: 'Capacitação' },
-		{ id: 'calendario', label: 'Calendário' }
-	];
-
-	// Mapas ESTÁTICOS por família: classe montada em runtime não compila.
-	const COR_OPTIONS: {
-		id: CollectionColorId;
-		label: string;
-		wash: string;
-		dot: string;
-		ativo: string;
-	}[] = [
-		{ id: 'primary', label: 'Azul', wash: 'bg-wash-brand', dot: 'bg-primary-600', ativo: 'border-primary-600' },
-		{ id: 'success', label: 'Verde', wash: 'bg-wash-success', dot: 'bg-success-600', ativo: 'border-success-600' },
-		{ id: 'warning', label: 'Âmbar', wash: 'bg-wash-warning', dot: 'bg-warning-600', ativo: 'border-warning-600' },
-		{ id: 'attention', label: 'Laranja', wash: 'bg-wash-attention', dot: 'bg-attention-600', ativo: 'border-attention-600' },
-		{ id: 'danger', label: 'Vermelho', wash: 'bg-wash-danger', dot: 'bg-danger-600', ativo: 'border-danger-600' },
-		{ id: 'neutral', label: 'Cinza', wash: 'bg-wash-neutral', dot: 'bg-neutral-600', ativo: 'border-neutral-600' }
-	];
-
-	const ICONE_ATIVO_CLASS: Record<CollectionColorId, string> = {
-		primary: 'border-primary-600 bg-wash-brand text-brand',
-		success: 'border-success-600 bg-wash-success text-success',
-		warning: 'border-warning-600 bg-wash-warning text-warning',
-		attention: 'border-attention-600 bg-wash-attention text-attention',
-		danger: 'border-danger-600 bg-wash-danger text-danger',
-		neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
-	};
-
 	const podeEditarIdentidade = $derived(isDono && !isFavoritos);
 
 	// ── Nome inline no título (padrão ProjectHeader: caneta⇄check⇄spinner) ───
@@ -474,13 +454,10 @@
 	}
 
 	const labelCls = 'text-xs font-medium text-text-secondary';
-	const thCls =
-		'border-b border-border-subtle bg-surface-muted px-2.5 py-2 text-sm font-bold uppercase tracking-caps whitespace-nowrap';
-	const tdCls = 'border-t border-border-subtle px-2.5 py-2.5 align-middle';
 </script>
 
 <svelte:head>
-	<title>ProjetosRJ — {colecao ? colecao.nome : 'Coleção'}</title>
+	<title>ProjetosRJ — {colecao?.nome ?? convite?.nome ?? 'Coleção'}</title>
 </svelte:head>
 
 <section aria-labelledby="colecao-title" class="flex flex-col gap-4">
@@ -495,6 +472,8 @@
 			backHref={`${base}/colecoes`}
 			backLabel="Voltar às coleções"
 		/>
+	{:else if loadState === 'convite' && convite}
+		<ColecaoConvitePendente {convite} onRespondido={onConviteRespondido} />
 	{:else if colecao}
 		<!-- Header-card: tile + nome + ações; linha de meta embutida. -->
 		<div class="relative rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -561,13 +540,18 @@
 					</span>
 				{/snippet}
 				{#snippet actions()}
+					{#if podeSair}
+						<Button size="sm" variant="ghost" onclick={() => void confirmarSaida()}>
+							Sair da coleção
+						</Button>
+					{/if}
 					{#if !isFavoritos && isDono}
 						<Button size="sm" variant="secondary" onclick={() => (shareOpen = true)}>
 							Compartilhar
 						</Button>
 					{/if}
 					{#if podeMexerNosItens}
-						<Button size="sm" onclick={abrirPicker}>
+						<Button size="sm" onclick={() => (pickerOpen = true)}>
 							{#snippet icon()}
 								<i class="fas fa-plus" aria-hidden="true"></i>
 							{/snippet}
@@ -588,7 +572,7 @@
 					<div class="flex flex-col gap-2">
 						<span id="tile-icone-label" class={labelCls}>Ícone</span>
 						<div role="group" aria-labelledby="tile-icone-label" class="grid grid-cols-4 gap-2">
-							{#each ICONE_OPTIONS as opcao (opcao.id)}
+							{#each COLECAO_ICONE_OPTIONS as opcao (opcao.id)}
 								{@const ativo = colecao.icone === opcao.id}
 								<button
 									type="button"
@@ -597,7 +581,7 @@
 									disabled={tileSaving}
 									onclick={() => void aplicarIdentidade({ icone: opcao.id })}
 									class="grid h-9 w-9 place-items-center rounded-md border transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60 {ativo
-										? ICONE_ATIVO_CLASS[colecao.cor]
+										? COLECAO_ICONE_ATIVO_CLASS[colecao.cor]
 										: 'border-border-subtle text-text-secondary hover:bg-surface-muted'}"
 								>
 									<svg
@@ -618,7 +602,7 @@
 					<div class="flex flex-col gap-2">
 						<span id="tile-cor-label" class={labelCls}>Cor</span>
 						<div role="group" aria-labelledby="tile-cor-label" class="flex gap-2">
-							{#each COR_OPTIONS as opcao (opcao.id)}
+							{#each COLECAO_COR_OPTIONS as opcao (opcao.id)}
 								{@const ativo = colecao.cor === opcao.id}
 								<button
 									type="button"
@@ -659,6 +643,14 @@
 				{/if}
 			</div>
 		</div>
+
+		{#if podeSair}
+			<ColecaoConviteExtraBanner
+				{collectionId}
+				papelAtual={colecao.papel}
+				onAceito={recarregarTudo}
+			/>
+		{/if}
 
 		<!-- KPIs: progresso geral destacado + projetos + atrasados + concluídos. -->
 		<div class="grid grid-cols-2 gap-4 xl:grid-cols-[1.3fr_1fr_1fr_1fr]">
@@ -727,188 +719,16 @@
 			</div>
 		</div>
 
-		<!-- Tabela de projetos da coleção (filtros client-side). -->
-		<div class="overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-sm">
-			<div class="flex flex-wrap items-center gap-3 px-4 py-3">
-				<h2 class="m-0 text-base font-bold text-text-primary">Projetos da coleção</h2>
-				<div class="ml-auto flex flex-wrap items-center gap-2">
-					<FilterChipGroup
-						label="Filtrar projetos da coleção"
-						options={FILTRO_OPTIONS}
-						value={filtroLinhas}
-						onchange={(id) => (filtroLinhas = id as FiltroLinhas)}
-					/>
-					<div class="relative w-52">
-						<i
-							class="fas fa-search pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-text-muted"
-							aria-hidden="true"
-						></i>
-						<input
-							id="colecaoProjetosSearch"
-							type="search"
-							autocomplete="off"
-							bind:value={busca}
-							aria-label="Buscar projeto na coleção"
-							placeholder="Buscar projeto"
-							class="h-9 w-full rounded-lg border border-border-subtle bg-surface pl-8 pr-2.5 text-md text-text-primary placeholder:text-text-muted transition-colors duration-fast focus:border-brand focus:outline-none"
-						/>
-					</div>
-				</div>
-			</div>
-
-			{#if rows.length === 0}
-				<!-- Coleção vazia: mensagem curta com CTA único. -->
-				<div class="border-t border-border-subtle px-4 py-8 text-center">
-					<div
-						class="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-xl border border-brand-soft bg-wash-neutral text-xl text-brand"
-					>
-						<AppIcon id="projetos" size={28} />
-					</div>
-					<h3 class="m-0 font-heading text-xl font-bold text-text-primary">
-						{isFavoritos ? 'Nenhum projeto favoritado ainda' : 'Nenhum projeto nesta coleção'}
-					</h3>
-					<p class="mb-3.5 mt-1.5 text-sm text-text-muted">
-						{#if isFavoritos}
-							Marque a estrela em qualquer projeto e ele entra aqui.
-						{:else if podeMexerNosItens}
-							Adicione projetos para acompanhar o andamento agrupado.
-						{:else}
-							Quem compartilhou esta coleção ainda não adicionou projetos a ela.
-						{/if}
-					</p>
-					{#if podeMexerNosItens}
-						<Button size="sm" onclick={abrirPicker}>
-							{#snippet icon()}
-								<i class="fas fa-plus" aria-hidden="true"></i>
-							{/snippet}
-							Adicionar projetos
-						</Button>
-					{/if}
-				</div>
-			{:else if linhasVisiveis.length === 0}
-				<p
-					role="status"
-					aria-live="polite"
-					class="m-0 border-t border-border-subtle px-4 py-6 text-center text-sm text-text-muted"
-				>
-					{filtroLinhas === 'atrasados' && !busca.trim()
-						? 'Nenhum projeto atrasado nesta coleção.'
-						: 'Nenhum projeto corresponde aos filtros aplicados.'}
-				</p>
-			{:else}
-				<div class="overflow-x-auto" aria-busy={loadState !== 'ready'}>
-					<table class="m-0 w-full min-w-[1040px] border-separate border-spacing-0 text-sm">
-						<caption class="sr-only">Projetos da coleção {colecao.nome}</caption>
-						<thead>
-							<tr class="text-left text-text-muted">
-								<th scope="col" class="w-16 {thCls}">ID</th>
-								<th scope="col" class="min-w-[220px] {thCls}">Projeto</th>
-								<th scope="col" class={thCls}>Área responsável</th>
-								<th scope="col" class="{thCls} text-center">Etapas</th>
-								<th scope="col" class="{thCls} text-center">Tarefas</th>
-								<th scope="col" class="min-w-[140px] {thCls}">Progresso</th>
-								<th scope="col" class={thCls}>Início</th>
-								<th scope="col" class={thCls}>Fim previsto</th>
-								<th scope="col" class="{thCls} text-center">Status</th>
-								{#if podeMexerNosItens}
-									<th scope="col" class="w-16 {thCls}">
-										<span class="sr-only">Ações</span>
-									</th>
-								{/if}
-							</tr>
-						</thead>
-						<tbody>
-							{#each linhasVisiveis as row (row.id)}
-								<!-- Clique na linha navega; o teclado usa o link do título. -->
-								<!-- svelte-ignore a11y_click_events_have_key_events -->
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<tr
-									onclick={(e) => abrirProjeto(e, row.id)}
-									class="cursor-pointer transition-colors duration-fast hover:bg-surface-muted"
-								>
-									<td class="{tdCls} font-mono text-sm text-text-muted">{row.id}</td>
-									<td class={tdCls}>
-										<a
-											href={`${base}/projetos/${row.id}`}
-											class="text-md font-medium text-brand no-underline transition-colors duration-fast hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-										>
-											{row.nome}
-										</a>
-									</td>
-									<td class="{tdCls} text-text-secondary">
-										{#if row.orgao_sigla}
-											<span class="text-sm font-medium uppercase tracking-wide">
-												{row.orgao_sigla}
-											</span>
-										{:else}
-											<span class="italic text-text-muted">—</span>
-										{/if}
-									</td>
-									<td class="{tdCls} whitespace-nowrap text-center font-mono text-sm text-text-secondary">
-										{row.etapas_concluidas} / {row.etapas_total}
-									</td>
-									<td class="{tdCls} whitespace-nowrap text-center font-mono text-sm text-text-secondary">
-										{row.tarefas_concluidas} / {row.tarefas_total}
-									</td>
-									<td class={tdCls}>
-										<div class="flex items-center gap-2">
-											<!-- Decorativa: o % é o texto ao lado. -->
-											<div
-												class="h-1.5 flex-1 overflow-hidden rounded-full bg-progress-track"
-												aria-hidden="true"
-											>
-												<div
-													class="h-full rounded-full bg-brand"
-													style:width={`${row.progresso_pct}%`}
-												></div>
-											</div>
-											<span class="shrink-0 font-mono text-xs text-text-secondary">
-												{row.progresso_pct}%
-											</span>
-										</div>
-									</td>
-									<td class="{tdCls} whitespace-nowrap font-mono text-sm text-text-secondary">
-										{#if row.data_inicio}
-											<time datetime={row.data_inicio}>{formatIsoDateBR(row.data_inicio)}</time>
-										{:else}
-											<span class="italic text-text-muted">—</span>
-										{/if}
-									</td>
-									<td class="{tdCls} whitespace-nowrap font-mono text-sm text-text-secondary">
-										{#if row.data_fim}
-											<time datetime={row.data_fim}>{formatIsoDateBR(row.data_fim)}</time>
-										{:else}
-											<span class="italic text-text-muted">—</span>
-										{/if}
-									</td>
-									<td class="{tdCls} whitespace-nowrap text-center">
-										<!-- Atrasado implica Vigente: mostrar só um chip. -->
-										{#if row.atrasado}
-											<span class="chip chip--danger">Atrasado</span>
-										{:else}
-											<span class="chip {projectStatusChipClass(row.status)}">{row.status}</span>
-										{/if}
-									</td>
-									{#if podeMexerNosItens}
-										<td class="{tdCls} text-center">
-											<button
-												type="button"
-												onclick={() => void confirmarRemocao(row)}
-												title="Remover da coleção"
-												aria-label={`Remover ${row.nome} da coleção`}
-												class="inline-flex h-8 w-8 items-center justify-center text-sm text-text-muted transition-colors duration-fast hover:text-danger focus:outline-none focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-danger"
-											>
-												<AppIcon id="exclusao" size={16} />
-											</button>
-										</td>
-									{/if}
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
+		<!-- Tabela de projetos da coleção (filtros client-side, lixeira por linha). -->
+		<ColecaoProjetosTabela
+			{colecao}
+			{rows}
+			ocupado={loadState !== 'ready'}
+			podeIncluir={podeMexerNosItens}
+			{meuId}
+			onAdicionar={() => (pickerOpen = true)}
+			onRemover={(row) => void confirmarRemocao(row)}
+		/>
 
 		<!-- Cronograma das etapas (Gantt): fetch próprio, janela fixa de 7 meses. -->
 		<div class="rounded-xl border border-border-subtle bg-surface shadow-sm">
@@ -941,68 +761,17 @@
 	<CompartilharColecaoModal
 		{colecao}
 		onClose={() => (shareOpen = false)}
-		onChanged={() => void load()}
+		onChanged={recarregarTudo}
 	/>
 {/if}
 
-<!-- Adicionar projetos: picker reutilizável num modal simples. -->
+<!-- Adicionar projetos: o picker lista só o que o backend aceita deste papel. -->
 {#if pickerOpen}
-	<Modal labelId="colecao-add-projetos-title" maxWidth="max-w-[540px]" onBackdrop={fecharPicker}>
-		<div class="flex max-h-[80vh] flex-col gap-4">
-			<div class="flex items-center gap-3">
-				<h2
-					id="colecao-add-projetos-title"
-					class="font-heading text-xl font-bold text-text-primary"
-				>
-					Adicionar projetos
-				</h2>
-				<button
-					type="button"
-					onclick={fecharPicker}
-					disabled={adding}
-					aria-label="Fechar"
-					class="ml-auto grid h-8 w-8 place-items-center rounded-md text-icon-faint transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<svg
-						viewBox="0 0 20 20"
-						class="h-4 w-4"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.6"
-						aria-hidden="true"
-					>
-						<path d="m5 5 10 10M15 5 5 15" stroke-linecap="round" />
-					</svg>
-				</button>
-			</div>
-
-			<div class="thin-scroll flex min-h-0 flex-col gap-4 overflow-y-auto">
-				<ColecaoProjectPicker
-					selecionados={pickerSelecionados}
-					colecaoId={collectionId}
-					exclude={idsNaColecao}
-					onchange={(ids) => (pickerSelecionados = ids)}
-				/>
-				{#if pickerErro}
-					<StateBanner tone="danger" title={pickerErro} />
-				{/if}
-			</div>
-
-			<footer class="flex justify-end gap-2 border-t border-border-hairline pt-4">
-				<Button variant="secondary" onclick={fecharPicker} disabled={adding}>Cancelar</Button>
-				<Button
-					onclick={() => void adicionarSelecionados()}
-					disabled={adding || pickerSelecionados.length === 0}
-				>
-					{adding
-						? 'Adicionando…'
-						: pickerSelecionados.length === 1
-							? 'Adicionar 1 projeto'
-							: `Adicionar ${pickerSelecionados.length} projetos`}
-				</Button>
-			</footer>
-		</div>
-	</Modal>
+	<ColecaoAdicionarProjetosModal
+		{collectionId}
+		{idsNaColecao}
+		visibilidade={pickerVisibilidade}
+		onClose={() => (pickerOpen = false)}
+		onAdicionados={recarregarTudo}
+	/>
 {/if}
-
-

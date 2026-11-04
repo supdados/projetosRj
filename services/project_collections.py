@@ -1,11 +1,12 @@
 """Regras de domínio das coleções de projetos (Fases 1 e 2 do MVP).
 
-Domínio de ``ProjectCollection``/``ProjectCollectionItem``/
-``ProjectCollectionShare``: criação atômica, edição/remoção (com bloqueio de
-Favoritos), itens idempotentes, compartilhamento com pessoa/órgão
-exato (papéis viewer|editor, auditoria em ``AutorizacaoAudit``) e os rollups
-agregados em NÚMERO FIXO de queries. Nada de ``request``/``g`` aqui — o
-HTTP (gates, envelope, anti-enumeração) fica em ``routes/api/collections.py``.
+Domínio de ``ProjectCollection``/``ProjectCollectionItem``: criação atômica,
+edição/remoção (com bloqueio de Favoritos), itens idempotentes com autoria e
+teto de rank, e os rollups agregados em NÚMERO FIXO de queries. O
+compartilhamento com aceite (shares, convites, respostas, poda) mora em
+``services/collection_shares.py``; a regra de quando um share/item concede
+acesso, em ``services/collection_access.py``. Nada de ``request``/``g`` aqui —
+o HTTP (gates, envelope, anti-enumeração) fica em ``routes/api/collections.py``.
 
 O service NÃO commita: valida, muta a sessão (com ``flush`` quando precisa de
 id) e deixa o commit/rollback para a rota — padrão ``services/project_invites``.
@@ -20,9 +21,9 @@ from __future__ import annotations
 import datetime
 from typing import Any, Iterable
 
-from sqlalchemy import and_, case, func, or_
+from sqlalchemy import and_, case, func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import aliased
 
 from catalogs.collection_identity import (
     COLLECTION_COLORS,
@@ -31,33 +32,49 @@ from catalogs.collection_identity import (
     FAVORITOS_ICON,
 )
 from models import (
-    ALVO_COLECAO,
     Etapa,
     OrgaoUnidade,
-    PAPEIS_SHARE,
     PAPEL_SHARE_EDITOR,
-    PAPEL_SHARE_VIEWER,
     Project,
     ProjectCollection,
     ProjectCollectionItem,
-    ProjectCollectionShare,
     Task,
     TIPO_COLECAO_CUSTOM,
     TIPO_COLECAO_FAVORITOS,
     User,
     db,
-    registrar_autorizacao,
 )
 from services.atraso import etapa_vencida_criterion, hoje_utc
 from services.authorization import (
     apply_project_visibility,
+    area_project_rank,
     invalidate_collection_rank_cache,
-    lotacao_orgao_ids,
-    project_visibility_criterion,
 )
-from services.notifications import (
-    collection_share_recipient_ids,
-    notify_collection_shared,
+from services.collection_access import (
+    RANK_LEITOR,
+    pode_remover_item,
+    rank_teto_de_inclusao,
+)
+from services.collection_curation import exigir_editor_apos_inclusao, reincluir_item
+
+# Erros reexportados: rotas/serializers importam daqui (contrato antigo).
+from services.collection_errors import (
+    PAPEL_COLECAO_DONO,
+    ColecaoInvalida,
+    ColecaoSemPermissao,
+    ProjetoForaDoEscopo,
+    ProjetoSoPorConvite,
+    bloquear_favoritos,
+)
+from services.collection_participation import (
+    colecoes_compartilhadas_validas,
+    papeis_validos_por_colecao,
+)
+from services.collection_shares import (
+    apagar_shares_da_colecao,
+    aplicar_shares_iniciais,
+    auditar_item_colecao,
+    auditar_item_se_compartilhada,
 )
 from time_utils import utc_now
 
@@ -65,7 +82,6 @@ MAX_COLECOES_CUSTOM = 20
 NOME_MAX_COLECAO = 100
 DESCRICAO_MAX_COLECAO = 200
 FAVORITOS_NOME = "Favoritos"
-PAPEL_COLECAO_DONO = "dono"
 
 BARRA_CONCLUIDA = "concluida"
 BARRA_EXECUCAO = "execucao"
@@ -73,18 +89,6 @@ BARRA_VENCIDA = "vencida"
 BARRA_PREVISTA = "prevista"
 
 _NAO_INFORMADO: Any = object()
-
-
-class ColecaoInvalida(ValueError):
-    """Payload de coleção recusado (nome, ícone/cor, limite, Favoritos)."""
-
-
-class ProjetoForaDoEscopo(ColecaoInvalida):
-    """Projeto inexistente OU invisível ao ator — a rota mapeia para 404."""
-
-
-class ColecaoSemPermissao(ColecaoInvalida):
-    """Ator VÊ a coleção mas o papel não cobre a ação — a rota mapeia para 403."""
 
 
 def colecao_do_usuario(user_id: int, collection_id: int) -> ProjectCollection | None:
@@ -96,7 +100,8 @@ def colecao_do_usuario(user_id: int, collection_id: int) -> ProjectCollection | 
 
 def listar_colecoes(user_id: int) -> list[tuple[ProjectCollection, str]]:
     """Pares ``(coleção, papel)``: minhas (Favoritos primeiro, custom por
-    ``updated_at``) e depois as compartilhadas comigo/meu órgão exato."""
+    ``updated_at``) e depois as compartilhadas comigo/meu órgão exato com share
+    VÁLIDO (aceito ou legado) — convite pendente fica fora do índice."""
     favoritos = get_or_create_favoritos(user_id)
     custom = (
         ProjectCollection.query.filter_by(
@@ -106,38 +111,9 @@ def listar_colecoes(user_id: int) -> list[tuple[ProjectCollection, str]]:
         .all()
     )
     minhas = [(colecao, PAPEL_COLECAO_DONO) for colecao in (favoritos, *custom)]
-    return [*minhas, *_colecoes_compartilhadas_com(user_id)]
-
-
-def _colecoes_compartilhadas_com(user_id: int) -> list[tuple[ProjectCollection, str]]:
-    """Coleções de terceiros com share para mim/meu órgão; papel mais alto vence."""
     user = db.session.get(User, user_id)
-    if user is None:
-        return []
-    rows = (
-        db.session.query(ProjectCollection, ProjectCollectionShare.papel)
-        .join(
-            ProjectCollectionShare,
-            ProjectCollectionShare.collection_id == ProjectCollection.id,
-        )
-        .join(User, User.id == ProjectCollection.owner_user_id)
-        .options(contains_eager(ProjectCollection.owner))
-        .filter(
-            _share_alcanca_usuario(user),
-            ProjectCollection.owner_user_id != user_id,
-            # Share de dono soft-deletado deixa de conceder acesso.
-            User.deleted_at.is_(None),
-        )
-        .order_by(ProjectCollection.updated_at.desc(), ProjectCollection.id.desc())
-        .all()
-    )
-    por_id: dict[int, tuple[ProjectCollection, str]] = {}
-    for colecao, papel in rows:
-        registrado = por_id.get(colecao.id)
-        if registrado is not None:
-            papel = _papel_share_mais_alto(registrado[1], papel)
-        por_id[colecao.id] = (colecao, papel)
-    return list(por_id.values())
+    compartilhadas = colecoes_compartilhadas_validas(user) if user else []
+    return [*minhas, *compartilhadas]
 
 
 def favoritos_existente(user_id: int) -> ProjectCollection | None:
@@ -188,9 +164,10 @@ def criar_colecao(
     """Cria coleção custom + itens + shares iniciais numa única transação.
 
     ``compartilhamentos`` opcional (default nenhum = "Só eu"): lista de
-    ``{"user_id"|"orgao_id": int, "papel": "viewer"|"editor"}``. Exemplo:
-    ``criar_colecao(g.user, "Saúde digital", None, "pessoas", "success",
-    [3, 7])`` — o chamador commita.
+    ``{"user_id"|"orgao_id": int, "papel": "viewer"|"editor"}`` — cada um nasce
+    CONVITE pendente. Itens gravam autoria e teto (rank de área do dono).
+    Exemplo: ``criar_colecao(g.user, "Saúde digital", None, "pessoas",
+    "success", [3, 7])`` — o chamador commita.
     """
     nome_limpo = _validar_nome(owner.id, nome)
     _validar_icone(icone)
@@ -207,62 +184,21 @@ def criar_colecao(
     db.session.add(colecao)
     db.session.flush()
     # Shares antes dos itens: coleção que NASCE compartilhada audita cada item.
-    _aplicar_shares_iniciais(colecao, owner, compartilhamentos or [])
+    aplicar_shares_iniciais(colecao, owner, compartilhamentos or [])
+    tetos = _tetos_de_inclusao(owner, ids_visiveis)
     for ordem, project_id in enumerate(ids_visiveis):
         db.session.add(
-            ProjectCollectionItem(
-                collection_id=colecao.id, project_id=project_id, ordem=ordem
-            )
+            _novo_item(colecao, project_id, ordem, owner, tetos.get(project_id, 0))
         )
         if compartilhamentos:
-            _auditar_item(colecao, project_id, "colecao_projeto_adicionado", owner)
+            auditar_item_colecao(
+                colecao, project_id, "colecao_projeto_adicionado", owner
+            )
+    # Hoje nada muda para ninguém (item próprio não concede ao dono; share novo
+    # é pendente), mas a regra é "toda mutação de item/share invalida": assim
+    # ninguém precisa reprovar essa dedução quando a regra de acesso mudar.
+    invalidate_collection_rank_cache()
     return colecao
-
-
-def _aplicar_shares_iniciais(
-    colecao: ProjectCollection, owner: User, compartilhamentos: list[dict[str, Any]]
-) -> None:
-    """Aplica os shares e notifica UMA vez por pessoa alcançada.
-
-    Shares sobrepostos (pessoa + órgão de lotação dela) geravam avisos
-    duplicados no mesmo instante, com papéis contraditórios; aqui vence o
-    papel mais alto, o mesmo que ``papel_do_usuario`` resolve.
-    """
-    papel_por_destinatario: dict[int, str] = {}
-    for share_spec in compartilhamentos:
-        compartilhar_colecao(
-            colecao,
-            ator=owner,
-            user_id=share_spec.get("user_id"),
-            orgao_id=share_spec.get("orgao_id"),
-            papel=share_spec.get("papel"),
-            notificar=False,
-        )
-        _acumular_destinatarios(papel_por_destinatario, share_spec)
-    _notificar_shares_iniciais(colecao, owner, papel_por_destinatario)
-
-
-def _acumular_destinatarios(
-    acumulado: dict[int, str], share_spec: dict[str, Any]
-) -> None:
-    papel = share_spec.get("papel")
-    for destinatario_id in collection_share_recipient_ids(
-        user_id=share_spec.get("user_id"), orgao_id=share_spec.get("orgao_id")
-    ):
-        registrado = acumulado.get(destinatario_id)
-        acumulado[destinatario_id] = (
-            papel if registrado is None else _papel_share_mais_alto(registrado, papel)
-        )
-
-
-def _notificar_shares_iniciais(
-    colecao: ProjectCollection, ator: User, papel_por_destinatario: dict[int, str]
-) -> None:
-    ids_por_papel: dict[str, set[int]] = {}
-    for destinatario_id, papel in papel_por_destinatario.items():
-        ids_por_papel.setdefault(papel, set()).add(destinatario_id)
-    for papel, destinatarios in ids_por_papel.items():
-        notify_collection_shared(colecao, ator.id, papel, recipient_ids=destinatarios)
 
 
 def editar_colecao(
@@ -277,7 +213,7 @@ def editar_colecao(
 
     Campos ausentes no payload ficam intactos (sentinela ``_NAO_INFORMADO``).
     """
-    _bloquear_favoritos(colecao, "editar")
+    bloquear_favoritos(colecao, "editar")
     if nome is not _NAO_INFORMADO:
         colecao.nome = _validar_nome(colecao.owner_user_id, nome, colecao_id=colecao.id)
     if descricao is not _NAO_INFORMADO:
@@ -295,13 +231,13 @@ def editar_colecao(
 
 
 def apagar_colecao(colecao: ProjectCollection) -> None:
-    """Hard-delete da coleção, dos itens e dos shares; projetos ficam intactos."""
-    _bloquear_favoritos(colecao, "apagar")
-    # DELETE explícito de itens E shares: o ondelete CASCADE do banco não é
-    # confiável em SQLite sem PRAGMA foreign_keys, e share órfão seria herdado
-    # pela próxima coleção via reuso de rowid.
+    """Hard-delete da coleção, itens, shares e respostas; projetos ficam intactos."""
+    bloquear_favoritos(colecao, "apagar")
+    # DELETE explícito de itens, respostas E shares: o ondelete CASCADE do banco
+    # não é confiável em SQLite sem PRAGMA foreign_keys, e linha órfã seria
+    # herdada pela próxima coleção/share via reuso de rowid (falha aberta).
     ProjectCollectionItem.query.filter_by(collection_id=colecao.id).delete()
-    ProjectCollectionShare.query.filter_by(collection_id=colecao.id).delete()
+    apagar_shares_da_colecao(colecao.id)
     db.session.delete(colecao)
     invalidate_collection_rank_cache()
 
@@ -314,30 +250,32 @@ def adicionar_projeto(
     Ator precisa ser dono ou editor E ver o projeto (anti-escalação). Coleção
     CUSTOM exige visibilidade PRÓPRIA (área/convite): projeto visto só via
     share de outra coleção não pode ser re-semeado — fecharia a revogação.
-    Favoritos (nunca compartilhável, nunca concede) aceita a derivada. Bumpa
-    ``updated_at`` manualmente (mutação de item não toca a linha da coleção);
-    em coleção compartilhada a ação entra na trilha de auditoria.
+    O EDITOR (não dono) só inclui o que vê pela ÁREA (ou admin): projeto visto
+    só por convite → ``ProjetoSoPorConvite`` (422). O item grava quem incluiu e
+    o teto (rank de área do incluidor, até editor); re-incluir o próprio item
+    sobe o teto. Favoritos (nunca compartilhável, nunca concede) aceita a
+    derivada. Em coleção compartilhada a ação entra na trilha de auditoria.
     """
-    _exigir_edicao_de_itens(colecao, ator)
+    papel = _exigir_edicao_de_itens(colecao, ator)
     derivada_ok = colecao.tipo == TIPO_COLECAO_FAVORITOS
     if not projeto_visivel_para(ator, project_id, incluir_derivada=derivada_ok):
         raise ProjetoForaDoEscopo(
             f"projeto inexistente ou fora do escopo: id={project_id}"
         )
+    rank_de_area = area_project_rank(ator, db.session.get(Project, project_id))
+    _exigir_area_para_editor(colecao, papel, project_id, rank_de_area)
+    teto = rank_teto_de_inclusao(rank_de_area)
     ja_existe = ProjectCollectionItem.query.filter_by(
         collection_id=colecao.id, project_id=project_id
     ).first()
     if ja_existe is not None:
+        reincluir_item(colecao, ja_existe, ator, teto)
         return False
-    db.session.add(
-        ProjectCollectionItem(
-            collection_id=colecao.id,
-            project_id=project_id,
-            ordem=_proxima_ordem(colecao.id),
-        )
-    )
+    ordem = _proxima_ordem(colecao.id)
+    db.session.add(_novo_item(colecao, project_id, ordem, ator, teto))
+    exigir_editor_apos_inclusao(colecao, ator)
     _bump_updated_at(colecao)
-    _auditar_item_se_compartilhada(
+    auditar_item_se_compartilhada(
         colecao, project_id, "colecao_projeto_adicionado", ator
     )
     invalidate_collection_rank_cache()
@@ -347,23 +285,28 @@ def adicionar_projeto(
 def remover_projeto(colecao: ProjectCollection, project_id: int, *, ator: User) -> bool:
     """Remove o par coleção×projeto; ``False`` se não estava na coleção.
 
-    Editor só remove projeto que VÊ (anti-enumeração); dono remove qualquer um
-    (inclusive item órfão que saiu do próprio escopo).
+    Dono remove qualquer item (inclusive órfão que saiu do próprio escopo).
+    Editor só remove o que VÊ (404 anti-enumeração) E que ELE incluiu — item
+    alheio ou legado (sem autoria = do dono) → ``ColecaoSemPermissao`` (403).
     """
     papel = _exigir_edicao_de_itens(colecao, ator)
     if papel != PAPEL_COLECAO_DONO and not projeto_visivel_para(ator, project_id):
         raise ProjetoForaDoEscopo(
             f"projeto inexistente ou fora do escopo: id={project_id}"
         )
-    removidos = ProjectCollectionItem.query.filter_by(
+    item = ProjectCollectionItem.query.filter_by(
         collection_id=colecao.id, project_id=project_id
-    ).delete()
-    if not removidos:
+    ).first()
+    if item is None:
         return False
+    if not pode_remover_item(papel, item.added_by_user_id, ator.id):
+        raise ColecaoSemPermissao(
+            f"editor id={ator.id} só remove projetos que incluiu; "
+            f"projeto id={project_id} foi incluído por {item.added_by_user_id!r}"
+        )
+    db.session.delete(item)
     _bump_updated_at(colecao)
-    _auditar_item_se_compartilhada(
-        colecao, project_id, "colecao_projeto_removido", ator
-    )
+    auditar_item_se_compartilhada(colecao, project_id, "colecao_projeto_removido", ator)
     invalidate_collection_rank_cache()
     return True
 
@@ -383,68 +326,12 @@ def toggle_favorito(user: User, project_id: int) -> bool:
     return adicionar_projeto(favoritos, project_id, ator=user)
 
 
-def compartilhar_colecao(
-    colecao: ProjectCollection,
-    *,
-    ator: User,
-    user_id: int | None = None,
-    orgao_id: int | None = None,
-    papel: Any,
-    notificar: bool = True,
-) -> ProjectCollectionShare:
-    """Cria o share (ou faz upsert do papel no duplicado) — SÓ o dono.
-
-    Exatamente um de ``user_id``/``orgao_id``; Favoritos nunca compartilhável.
-    ``notificar=False`` deixa o aviso a cargo do chamador (criação com vários
-    shares notifica agregado). Exemplo: ``compartilhar_colecao(colecao,
-    ator=g.user, user_id=7, papel="editor")`` — o chamador commita.
-    """
-    _exigir_dono(colecao, ator)
-    _bloquear_favoritos(colecao, "compartilhar")
-    _validar_xor_destinatario(user_id, orgao_id)
-    _validar_papel_share(papel)
-    if user_id is not None:
-        _validar_destinatario_user(user_id, ator)
-    else:
-        _validar_destinatario_orgao(orgao_id)
-    existente = _share_existente(colecao.id, user_id, orgao_id)
-    if existente is not None:
-        return _atualizar_papel_share(colecao, existente, papel, ator)
-    return _criar_share(colecao, user_id, orgao_id, papel, ator, notificar)
-
-
-def revogar_share(colecao: ProjectCollection, share_id: int, *, ator: User) -> bool:
-    """Apaga o share (acesso derivado some na hora) — SÓ o dono.
-
-    ``False`` quando o share não existe/não é desta coleção (404 na rota);
-    atribuições de tarefa/etapa dos alcançados ficam como histórico.
-    """
-    _exigir_dono(colecao, ator)
-    share = ProjectCollectionShare.query.filter_by(
-        id=share_id, collection_id=colecao.id
-    ).first()
-    if share is None:
-        return False
-    _auditar_share(colecao, share, "colecao_share_revogado", ator)
-    db.session.delete(share)
-    invalidate_collection_rank_cache()
-    return True
-
-
-def listar_shares(colecao: ProjectCollection) -> list[ProjectCollectionShare]:
-    """Shares da coleção em ordem estável de criação (rota 9, só dono)."""
-    return (
-        ProjectCollectionShare.query.filter_by(collection_id=colecao.id)
-        .order_by(ProjectCollectionShare.id)
-        .all()
-    )
-
-
 def papel_do_usuario(colecao: ProjectCollection, user: User) -> str | None:
     """``"dono"`` | ``"editor"`` | ``"viewer"`` | ``None`` (não vê a coleção).
 
-    Share direto e share por órgão de lotação exato acumulam: vence o papel
-    MAIS ALTO (editor > viewer).
+    Só share VÁLIDO conta (aceito ou legado; convite pendente/recusado/saiu
+    não). Share direto e share por órgão de lotação exato acumulam: vence o
+    papel MAIS ALTO (editor > viewer). Regra em ``collection_access``.
     """
     if user.id == colecao.owner_user_id:
         return PAPEL_COLECAO_DONO
@@ -452,26 +339,16 @@ def papel_do_usuario(colecao: ProjectCollection, user: User) -> str | None:
     dono = db.session.get(User, colecao.owner_user_id)
     if dono is None or dono.deleted_at is not None:
         return None
-    papeis = {
-        share.papel
-        for share in ProjectCollectionShare.query.filter(
-            ProjectCollectionShare.collection_id == colecao.id,
-            _share_alcanca_usuario(user),
-        ).all()
-    }
-    if PAPEL_SHARE_EDITOR in papeis:
-        return PAPEL_SHARE_EDITOR
-    if PAPEL_SHARE_VIEWER in papeis:
-        return PAPEL_SHARE_VIEWER
-    return None
+    return papeis_validos_por_colecao(user, [colecao.id]).get(colecao.id)
 
 
 def colecao_visivel_para(
     user: User, collection_id: int
 ) -> tuple[ProjectCollection, str] | None:
-    """Coleção + papel quando o usuário a alcança (dono OU share); senão ``None``.
+    """Coleção + papel quando o usuário a alcança (dono OU share válido).
 
-    ``None`` → 404 anti-enumeração na rota. Exemplo:
+    ``None`` → 404 anti-enumeração na rota (inclusive para convite pendente:
+    quem só foi convidado não vê projetos nem cronograma). Exemplo:
     ``resultado = colecao_visivel_para(g.user, collection_id)``.
     """
     colecao = db.session.get(ProjectCollection, collection_id)
@@ -483,95 +360,45 @@ def colecao_visivel_para(
     return colecao, papel
 
 
-def collection_ids_com_share(collection_ids: Iterable[int]) -> set[int]:
-    """Ids (do subconjunto dado) que têm ≥1 share — flag ``compartilhada`` em
-    1 query, sem N+1 no serializer."""
-    ids = [int(collection_id) for collection_id in collection_ids]
-    if not ids:
-        return set()
-    rows = (
-        db.session.query(ProjectCollectionShare.collection_id)
-        .filter(ProjectCollectionShare.collection_id.in_(ids))
-        .distinct()
-        .all()
-    )
-    return {collection_id for (collection_id,) in rows}
-
-
-def _share_alcanca_usuario(user: User) -> Any:
-    """Cláusula SQL: share direto no usuário OU no órgão EXATO de lotação."""
-    destinos = [ProjectCollectionShare.user_id == user.id]
-    lotacao = lotacao_orgao_ids(user)
-    if lotacao:
-        destinos.append(ProjectCollectionShare.orgao_id.in_(lotacao))
-    return or_(*destinos)
-
-
-def _share_existente(
-    collection_id: int, user_id: int | None, orgao_id: int | None
-) -> ProjectCollectionShare | None:
-    if user_id is not None:
-        return ProjectCollectionShare.query.filter_by(
-            collection_id=collection_id, user_id=user_id
-        ).first()
-    return ProjectCollectionShare.query.filter_by(
-        collection_id=collection_id, orgao_id=orgao_id
-    ).first()
-
-
-def _criar_share(
+def _novo_item(
     colecao: ProjectCollection,
-    user_id: int | None,
-    orgao_id: int | None,
-    papel: str,
+    project_id: int,
+    ordem: int,
     ator: User,
-    notificar: bool = True,
-) -> ProjectCollectionShare:
-    share = ProjectCollectionShare(
+    rank_teto: int,
+) -> ProjectCollectionItem:
+    return ProjectCollectionItem(
         collection_id=colecao.id,
-        user_id=user_id,
-        orgao_id=orgao_id,
-        papel=papel,
-        created_by_user_id=ator.id,
+        project_id=project_id,
+        ordem=ordem,
+        added_by_user_id=ator.id,
+        rank_teto=rank_teto,
     )
-    try:
-        with db.session.begin_nested():
-            db.session.add(share)
-    except IntegrityError:
-        # Corrida entre dois upserts: quem perdeu o INSERT relê o vencedor e
-        # só ajusta o papel, em vez de estourar 500.
-        existente = _share_existente(colecao.id, user_id, orgao_id)
-        if existente is None:
-            raise
-        return _atualizar_papel_share(colecao, existente, papel, ator)
-    _auditar_share(colecao, share, "colecao_share_concedido", ator)
-    if notificar:
-        notify_collection_shared(
-            colecao, ator.id, papel, user_id=user_id, orgao_id=orgao_id
-        )
-    invalidate_collection_rank_cache()
-    return share
 
 
-def _atualizar_papel_share(
-    colecao: ProjectCollection,
-    share: ProjectCollectionShare,
-    papel: str,
-    ator: User,
-) -> ProjectCollectionShare:
-    if share.papel == papel:
-        return share
-    share.papel = papel
-    _auditar_share(colecao, share, "colecao_share_alterado", ator)
-    invalidate_collection_rank_cache()
-    return share
+def _tetos_de_inclusao(ator: User, project_ids: list[int]) -> dict[int, int]:
+    """``{project_id: rank_teto}`` em 1 query (rank de área do ator, até editor)."""
+    if not project_ids:
+        return {}
+    projetos = Project.query.filter(Project.id.in_(project_ids)).all()
+    return {
+        projeto.id: rank_teto_de_inclusao(area_project_rank(ator, projeto))
+        for projeto in projetos
+    }
 
 
-def _exigir_dono(colecao: ProjectCollection, ator: User) -> None:
-    if colecao.owner_user_id == ator.id:
+def _exigir_area_para_editor(
+    colecao: ProjectCollection, papel: str, project_id: int, rank_de_area: int
+) -> None:
+    """Editor só inclui o que vê pela área: convite repassado a N pessoas
+    contornaria "só gestor convida". Admin passa (rank de área = 100)."""
+    if papel == PAPEL_COLECAO_DONO or colecao.tipo != TIPO_COLECAO_CUSTOM:
         return
-    raise ColecaoSemPermissao(
-        f"somente o dono gerencia compartilhamentos da coleção id={colecao.id}"
+    if rank_de_area >= RANK_LEITOR:
+        return
+    raise ProjetoSoPorConvite(
+        f"o projeto id={project_id} só é visível para você por convite; "
+        "editores só incluem projetos que veem pela própria área"
     )
 
 
@@ -581,89 +408,6 @@ def _exigir_edicao_de_itens(colecao: ProjectCollection, ator: User) -> str:
         return papel
     raise ColecaoSemPermissao(
         f"papel {papel!r} não permite alterar projetos da coleção id={colecao.id}"
-    )
-
-
-def _papel_share_mais_alto(papel_a: str, papel_b: str) -> str:
-    if PAPEL_SHARE_EDITOR in (papel_a, papel_b):
-        return PAPEL_SHARE_EDITOR
-    return papel_a
-
-
-def _validar_xor_destinatario(user_id: int | None, orgao_id: int | None) -> None:
-    if (user_id is None) != (orgao_id is None):
-        return
-    raise ColecaoInvalida(
-        f"informe exatamente um de user_id/orgao_id; "
-        f"recebido user_id={user_id!r}, orgao_id={orgao_id!r}"
-    )
-
-
-def _validar_papel_share(papel: Any) -> None:
-    if papel in PAPEIS_SHARE:
-        return
-    esperados = "|".join(PAPEIS_SHARE)
-    raise ColecaoInvalida(f"papel inválido: {papel!r}; esperado um de {esperados}")
-
-
-def _validar_destinatario_user(user_id: int, ator: User) -> None:
-    if user_id == ator.id:
-        raise ColecaoInvalida(
-            f"não é possível compartilhar a coleção consigo mesmo (user_id={user_id})"
-        )
-    destinatario = db.session.get(User, user_id)
-    if destinatario is None or destinatario.deleted_at is not None:
-        raise ColecaoInvalida(f"usuário inexistente ou inativo: user_id={user_id}")
-
-
-def _validar_destinatario_orgao(orgao_id: int | None) -> None:
-    orgao = db.session.get(OrgaoUnidade, orgao_id)
-    if orgao is None or not orgao.ativo:
-        raise ColecaoInvalida(f"órgão inexistente ou inativo: orgao_id={orgao_id}")
-
-
-def _auditar_share(
-    colecao: ProjectCollection,
-    share: ProjectCollectionShare,
-    evento: str,
-    ator: User,
-) -> None:
-    registrar_autorizacao(
-        evento=evento,
-        # Share por órgão não tem usuário único; a trilha registra o ator (dono)
-        # e o rótulo ``destino`` desambigua a leitura da auditoria.
-        user_id=share.user_id or ator.id,
-        ator_id=ator.id,
-        alvo_tipo=ALVO_COLECAO,
-        alvo_id=colecao.id,
-        detalhe={
-            "destino": "orgao" if share.orgao_id is not None else "user",
-            "papel": share.papel,
-            "user_id": share.user_id,
-            "orgao_id": share.orgao_id,
-        },
-    )
-
-
-def _auditar_item_se_compartilhada(
-    colecao: ProjectCollection, project_id: int, evento: str, ator: User
-) -> None:
-    if not collection_ids_com_share([colecao.id]):
-        return
-    _auditar_item(colecao, project_id, evento, ator)
-
-
-def _auditar_item(
-    colecao: ProjectCollection, project_id: int, evento: str, ator: User
-) -> None:
-    registrar_autorizacao(
-        evento=evento,
-        # Ação em lote sem destinatário único; a trilha registra o ator.
-        user_id=ator.id,
-        ator_id=ator.id,
-        alvo_tipo=ALVO_COLECAO,
-        alvo_id=colecao.id,
-        detalhe={"project_id": project_id},
     )
 
 
@@ -708,16 +452,24 @@ def collection_rollups(
 
 
 def colecao_project_rows(
-    colecao: ProjectCollection, viewer: User
+    colecao: ProjectCollection, viewer: User, *, papel: str | None = None
 ) -> list[dict[str, Any]]:
     """Linhas da página interna da coleção em 2 queries fixas.
 
     Cada linha traz os campos do projeto + agregados prontos para
     ``serialize_project_collection_row``: etapas x/y, tarefas x/y, datas
-    derivadas das etapas e ``atrasado`` (Vigente com etapa de workflow não
-    concluída vencida — regra da lista de projetos, ortogonal ao status).
+    derivadas das etapas, ``atrasado`` (Vigente com etapa de workflow não
+    concluída vencida — regra da lista de projetos, ortogonal ao status),
+    ``adicionado_por`` (``{id, name}`` ou ``None`` em item legado) e
+    ``pode_remover`` (dono: tudo; editor: só o que incluiu). ``papel`` evita
+    recalcular o papel do viewer quando a rota já o tem.
     """
-    rows = [_project_row_dict(row) for row in _project_rows(colecao.id, viewer)]
+    if papel is None:
+        papel = papel_do_usuario(colecao, viewer)
+    rows = [
+        _project_row_dict(row, papel, viewer.id)
+        for row in _project_rows(colecao.id, viewer)
+    ]
     tarefas = _task_counts_by_project([row["id"] for row in rows])
     for row in rows:
         total, concluidas = tarefas.get(row["id"], (0, 0))
@@ -835,6 +587,7 @@ def _rollup_rows(ids: list[int], viewer: User) -> list[Any]:
 
 def _project_rows(collection_id: int, viewer: User) -> list[Any]:
     workflow = Etapa.entry_type != "google_meeting"
+    incluidor = aliased(User)
     query = (
         db.session.query(
             Project.id,
@@ -847,11 +600,14 @@ def _project_rows(collection_id: int, viewer: User) -> list[Any]:
             # Reunião Google fora do min/max: caso sem else vira NULL, ignorado.
             func.min(case((workflow, Etapa.data_inicio))),
             func.max(case((workflow, Etapa.data_fim))),
+            ProjectCollectionItem.added_by_user_id,
+            incluidor.name,
         )
         .select_from(ProjectCollectionItem)
         .join(Project, Project.id == ProjectCollectionItem.project_id)
         .outerjoin(OrgaoUnidade, OrgaoUnidade.id == Project.orgao_id)
         .outerjoin(Etapa, Etapa.project_id == Project.id)
+        .outerjoin(incluidor, incluidor.id == ProjectCollectionItem.added_by_user_id)
         .filter(ProjectCollectionItem.collection_id == collection_id)
         .group_by(
             Project.id,
@@ -859,14 +615,17 @@ def _project_rows(collection_id: int, viewer: User) -> list[Any]:
             Project.status,
             OrgaoUnidade.sigla,
             ProjectCollectionItem.ordem,
+            ProjectCollectionItem.added_by_user_id,
+            incluidor.name,
         )
         .order_by(ProjectCollectionItem.ordem, Project.id)
     )
     return _com_visibilidade(query, viewer).all()
 
 
-def _project_row_dict(row: Any) -> dict[str, Any]:
-    pid, titulo, status, sigla, total, concluidas, vencidas, inicio, fim = row
+def _project_row_dict(row: Any, papel: str | None, viewer_id: int) -> dict[str, Any]:
+    pid, titulo, status, sigla, total, concluidas, vencidas, inicio, fim = row[:9]
+    added_by_id, added_by_nome = row[9:]
     return {
         "id": pid,
         "nome": titulo,
@@ -877,6 +636,10 @@ def _project_row_dict(row: Any) -> dict[str, Any]:
         "atrasado": status == "Vigente" and int(vencidas) > 0,
         "data_inicio": inicio,
         "data_fim": fim,
+        "adicionado_por": (
+            None if added_by_id is None else {"id": added_by_id, "name": added_by_nome}
+        ),
+        "pode_remover": pode_remover_item(papel, added_by_id, viewer_id),
     }
 
 
@@ -929,14 +692,6 @@ def _progresso_pct(concluidas: int, total: int) -> int:
 
 def _bump_updated_at(colecao: ProjectCollection) -> None:
     colecao.updated_at = utc_now()
-
-
-def _bloquear_favoritos(colecao: ProjectCollection, acao: str) -> None:
-    if colecao.tipo != TIPO_COLECAO_FAVORITOS:
-        return
-    raise ColecaoInvalida(
-        f"não é possível {acao} a coleção Favoritos (coleção de sistema)"
-    )
 
 
 def _validar_nome(owner_id: int, nome: Any, *, colecao_id: int | None = None) -> str:

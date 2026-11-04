@@ -41,6 +41,18 @@ describe('flash store — inserção e auto-dismiss', () => {
 		expect(items[1].description).toBeUndefined();
 	});
 
+	it('options.action viaja até o cartão (link de ação do toast)', () => {
+		const flash = createFlashStore();
+		flash.info('Você recebeu um convite', {
+			action: { label: 'Ver convite', href: '/colecoes/4' }
+		});
+		flash.info('Sem ação');
+
+		const items = get(flash);
+		expect(items[0].action).toEqual({ label: 'Ver convite', href: '/colecoes/4' });
+		expect(items[1].action).toBeUndefined();
+	});
+
 	it('cada instância numera os ids do zero (sem contador compartilhado)', () => {
 		const primeira = createFlashStore();
 		const segunda = createFlashStore();
@@ -272,6 +284,16 @@ describe('flash store — reescrita sob a mesma key', () => {
 
 		flash.show('Salvo.', 'success', { key: KEY });
 		expect(get(flash)[0].description).toBeUndefined();
+	});
+
+	it('action acompanha a reescrita e some quando a mensagem nova não tem', () => {
+		const flash = createFlashStore();
+		const action = { label: 'Ver convite', href: '/colecoes/4' };
+		flash.info('Convite para "Obras"', { key: KEY, action });
+		expect(get(flash)[0].action).toEqual(action);
+
+		flash.info('2 convites', { key: KEY });
+		expect(get(flash)[0].action).toBeUndefined();
 	});
 
 	it('revision só sobe na reescrita: repetição idêntica continua contando em count', () => {

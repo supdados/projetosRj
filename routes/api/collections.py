@@ -18,7 +18,10 @@ As rotas da §6 do plano de coleções, todas no envelope canônico e anexadas a
     - ``GET    /api/colecoes/<cid>/cronograma``       — Gantt das etapas.
 
 As rotas de SUGESTÕES por IA (``/api/colecoes/sugestoes*``) moram em
-``routes/api/collection_suggestions.py`` (mesmo ``main_bp``).
+``routes/api/collection_suggestions.py``; as do CONVITE (lado do destinatário:
+listar, aceitar, recusar, sair), o reenvio do dono e a busca de destinatários,
+em ``routes/api/collection_invites.py`` — todas no mesmo ``main_bp``. Gates e
+tradução de erro compartilhados: ``routes/api/collection_http.py``.
 
 O toggle mora aqui (e não em ``projects_write``) por ser açúcar sobre a coleção
 Favoritos: o cliente nunca precisa conhecer o id dela.
@@ -27,126 +30,68 @@ Rotas finas: parse do payload aqui, regra em ``services/project_collections.py``
 commit/rollback nesta camada. Papel decide o gate: leitura (dono/viewer/editor),
 itens (dono/editor) e gestão da coleção e dos shares (só dono). Quem NÃO alcança
 a coleção recebe ``fail_not_found`` (nunca 403) — mesmo contrato anti-enumeração
-de S5/F4-2b, que vale também para projeto invisível ao ator.
+de S5/F4-2b, que vale também para projeto invisível ao ator e para quem só tem
+CONVITE pendente (não vê projetos nem cronograma antes de aceitar).
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
-from flask import Response, current_app, g, request
+from flask import current_app, g
 
 from catalogs.collection_identity import (
     DEFAULT_COLLECTION_COLOR,
     DEFAULT_COLLECTION_ICON,
 )
-from models import (
-    PAPEL_SHARE_EDITOR,
-    PAPEL_SHARE_VIEWER,
-    ProjectCollection,
-    db,
-)
+from models import ProjectCollection, db
 from services.ai import ia_habilitada, marcar_aceita
+from services.collection_shares import (
+    compartilhar_colecao,
+    listar_shares,
+    prever_poda,
+    revogar_share,
+    status_dos_shares,
+)
 from services.project_collections import (
     ColecaoInvalida,
-    ColecaoSemPermissao,
     PAPEL_COLECAO_DONO,
-    ProjetoForaDoEscopo,
     adicionar_projeto,
     apagar_colecao,
     colecao_cronograma_rows,
     colecao_project_rows,
-    colecao_visivel_para,
-    collection_ids_com_share,
-    collection_rollups,
-    compartilhar_colecao,
     criar_colecao,
     editar_colecao,
     favoritos_existente,
     get_or_create_favoritos,
     listar_colecoes,
-    listar_shares,
     remover_projeto,
-    revogar_share,
     toggle_favorito,
 )
 from ..blueprint import main_bp
-from .envelope import fail, fail_internal, fail_not_found, ok
-from .negotiation import api_login_required
-from .serializers import (
-    serialize_colecao_resumo,
-    serialize_colecao_share,
-    serialize_cronograma_projeto,
-    serialize_project_collection_row,
+from .collection_http import (
+    PAPEIS_DONO,
+    PAPEIS_ITENS,
+    PAPEIS_LEITURA,
+    ApiResponse,
+    cards_das_colecoes,
+    carregar_acesso,
+    ler_json,
+    mutar,
+    resumo_da_colecao,
 )
-
-_ApiResponse = Response | tuple[Response, int]
-_Acesso = tuple[ProjectCollection, str]
+from .collection_serializers import (
+    serialize_colecao_projeto_row,
+    serialize_colecao_share_com_status,
+)
+from .envelope import fail_internal, fail_not_found, ok
+from .negotiation import api_login_required
+from .serializers import serialize_cronograma_projeto
 
 _CAMPOS_EDITAVEIS = ("nome", "descricao", "icone", "cor")
 
-_PAPEIS_LEITURA = (PAPEL_COLECAO_DONO, PAPEL_SHARE_EDITOR, PAPEL_SHARE_VIEWER)
-_PAPEIS_ITENS = (PAPEL_COLECAO_DONO, PAPEL_SHARE_EDITOR)
-_PAPEIS_DONO = (PAPEL_COLECAO_DONO,)
-
-_SEM_PERMISSAO = "Você não tem permissão para esta ação na coleção."
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
-
-
-def _erro_de_colecao(exc: ColecaoInvalida) -> tuple[Response, int]:
-    """Projeto fora do escopo vira 404; papel insuficiente 403; o resto é 422."""
-    if isinstance(exc, ProjetoForaDoEscopo):
-        return fail_not_found()
-    if isinstance(exc, ColecaoSemPermissao):
-        return fail(_SEM_PERMISSAO, status=403, code="forbidden")
-    return fail(str(exc), status=422, code="validation")
-
-
-def _ler_json() -> tuple[dict[str, Any] | None, Any]:
-    payload = request.get_json(silent=True)
-    if isinstance(payload, dict):
-        return payload, None
-    return None, fail(
-        "Corpo JSON inválido; esperado um objeto.", status=422, code="validation"
-    )
-
-
-def _load_acesso(
-    collection_id: int, papeis: tuple[str, ...]
-) -> tuple[_Acesso | None, Any]:
-    """Coleção + papel do ator; 404 se ele não a alcança, 403 se o papel não cobre."""
-    acesso = colecao_visivel_para(g.user, collection_id)
-    if acesso is None:
-        return None, fail_not_found()
-    if acesso[1] not in papeis:
-        return None, fail(_SEM_PERMISSAO, status=403, code="forbidden")
-    return acesso, None
-
-
-def _mutar(acao: Callable[[], _ApiResponse], log_label: str) -> _ApiResponse:
-    """Monta a resposta dentro da transação e comita; traduz erros de domínio."""
-    try:
-        resposta = acao()
-        db.session.commit()
-    except ColecaoInvalida as exc:
-        db.session.rollback()
-        return _erro_de_colecao(exc)
-    except Exception as exc:
-        db.session.rollback()
-        return fail_internal(exc, log_label)
-    return resposta
-
-
-def _resumo(colecao: ProjectCollection, papel: str) -> dict[str, Any]:
-    rollup = collection_rollups([colecao.id], g.user)[colecao.id]
-    return serialize_colecao_resumo(
-        colecao,
-        rollup,
-        papel=papel,
-        compartilhada=bool(collection_ids_com_share([colecao.id])),
-    )
 
 
 def _parse_project_id(raw: object) -> int:
@@ -204,7 +149,7 @@ def _parse_compartilhamentos(raw: object) -> list[dict[str, Any]]:
 
 @main_bp.route("/api/colecoes", methods=["GET"])
 @api_login_required
-def api_colecoes_list() -> _ApiResponse:
+def api_colecoes_list() -> ApiResponse:
     """Lista minhas coleções (Favoritos 1ª) + as compartilhadas comigo, com rollup.
 
     Leitura pura: o caminho comum não comita. Só o primeiro acesso — quando a
@@ -226,24 +171,14 @@ def _garantir_favoritos() -> None:
 
 
 def _indice_payload() -> list[dict[str, Any]]:
-    acessos = listar_colecoes(g.user.id)
-    ids = [colecao.id for colecao, _ in acessos]
-    rollups = collection_rollups(ids, g.user)
-    compartilhadas = collection_ids_com_share(ids)
-    return [
-        serialize_colecao_resumo(
-            colecao,
-            rollups[colecao.id],
-            papel=papel,
-            compartilhada=colecao.id in compartilhadas,
-        )
-        for colecao, papel in acessos
-    ]
+    # Convite pendente não entra: ``listar_colecoes`` só traz share válido, e
+    # os convites têm rota própria (``GET /api/colecoes/convites``).
+    return cards_das_colecoes(listar_colecoes(g.user.id))
 
 
 @main_bp.route("/api/colecoes", methods=["POST"])
 @api_login_required
-def api_colecao_criar() -> _ApiResponse:
+def api_colecao_criar() -> ApiResponse:
     """Cria coleção custom: ``{nome, descricao?, icone, cor, project_ids?[],
     compartilhamentos?[], sugestao_id?}``.
 
@@ -252,13 +187,13 @@ def api_colecao_criar() -> _ApiResponse:
     fora do escopo do ator invalida a criação inteira. ``sugestao_id`` marca a
     sugestão de IA como aceita no mesmo commit; valor inválido só loga warning.
     """
-    payload, invalid = _ler_json()
+    payload, invalid = ler_json()
     if invalid:
         return invalid
-    return _mutar(
+    return mutar(
         lambda: ok(
             {
-                "colecao": _resumo(
+                "colecao": resumo_da_colecao(
                     _criar_e_vincular_sugestao(payload), PAPEL_COLECAO_DONO
                 )
             }
@@ -299,20 +234,20 @@ def _criar_da_payload(payload: dict[str, Any]) -> ProjectCollection:
 
 @main_bp.route("/api/colecoes/<int:collection_id>", methods=["PUT"])
 @api_login_required
-def api_colecao_atualizar(collection_id: int) -> _ApiResponse:
+def api_colecao_atualizar(collection_id: int) -> ApiResponse:
     """Edita nome/descrição/ícone/cor; campos ausentes ficam intactos.
 
     Só o dono edita (403 para quem a vê via share); Favoritos é coleção de
     sistema: qualquer edição responde 422.
     """
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_DONO)
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_DONO)
     if missing:
         return missing
-    payload, invalid = _ler_json()
+    payload, invalid = ler_json()
     if invalid:
         return invalid
     campos = {campo: payload[campo] for campo in _CAMPOS_EDITAVEIS if campo in payload}
-    return _mutar(
+    return mutar(
         lambda: ok({"colecao": _editar_e_resumir(acesso[0], campos)}),
         "editar coleção",
     )
@@ -321,20 +256,20 @@ def api_colecao_atualizar(collection_id: int) -> _ApiResponse:
 def _editar_e_resumir(
     colecao: ProjectCollection, campos: dict[str, Any]
 ) -> dict[str, Any]:
-    return _resumo(editar_colecao(colecao, **campos), PAPEL_COLECAO_DONO)
+    return resumo_da_colecao(editar_colecao(colecao, **campos), PAPEL_COLECAO_DONO)
 
 
 @main_bp.route("/api/colecoes/<int:collection_id>", methods=["DELETE"])
 @api_login_required
-def api_colecao_apagar(collection_id: int) -> _ApiResponse:
+def api_colecao_apagar(collection_id: int) -> ApiResponse:
     """Apaga a coleção e seus itens; os projetos ficam intactos (422 em Favoritos)."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_DONO)
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_DONO)
     if missing:
         return missing
-    return _mutar(lambda: _apagar_e_confirmar(acesso[0]), "apagar coleção")
+    return mutar(lambda: _apagar_e_confirmar(acesso[0]), "apagar coleção")
 
 
-def _apagar_e_confirmar(colecao: ProjectCollection) -> _ApiResponse:
+def _apagar_e_confirmar(colecao: ProjectCollection) -> ApiResponse:
     apagar_colecao(colecao)
     return ok()
 
@@ -344,32 +279,53 @@ def _apagar_e_confirmar(colecao: ProjectCollection) -> _ApiResponse:
 
 @main_bp.route("/api/colecoes/<int:collection_id>/projetos", methods=["GET"])
 @api_login_required
-def api_colecao_projetos_list(collection_id: int) -> _ApiResponse:
-    """Página interna: cabeçalho da coleção + linhas dos projetos visíveis."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_LEITURA)
+def api_colecao_projetos_list(collection_id: int) -> ApiResponse:
+    """Página interna: cabeçalho da coleção + linhas dos projetos visíveis.
+
+    Cada linha traz ``adicionado_por``/``pode_remover`` decididos no servidor.
+    Diálogo "Sair da coleção": ``itens_incluidos_por_mim`` (projetos meus que
+    saem junto; 0 para o dono, que não sai) e ``itens_orfaos`` (de quem já não
+    tem papel editor; saem em qualquer poda, sem dupla contagem com o meu).
+    Convite pendente → 404.
+    """
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_LEITURA)
     if missing:
         return missing
     colecao, papel = acesso
-    linhas = colecao_project_rows(colecao, g.user)
+    linhas = colecao_project_rows(colecao, g.user, papel=papel)
     return ok(
         {
-            "colecao": _resumo(colecao, papel),
-            "projetos": [serialize_project_collection_row(linha) for linha in linhas],
+            "colecao": resumo_da_colecao(colecao, papel),
+            "projetos": [serialize_colecao_projeto_row(linha) for linha in linhas],
+            **_contagens_do_dialogo_de_saida(colecao, papel),
         }
     )
 
 
+def _contagens_do_dialogo_de_saida(
+    colecao: ProjectCollection, papel: str
+) -> dict[str, int]:
+    previsao = prever_poda(colecao)
+    meus = 0 if papel == PAPEL_COLECAO_DONO else previsao.por_editor.get(g.user.id, 0)
+    return {"itens_incluidos_por_mim": meus, "itens_orfaos": previsao.orfaos}
+
+
 @main_bp.route("/api/colecoes/<int:collection_id>/projetos", methods=["POST"])
 @api_login_required
-def api_colecao_projeto_adicionar(collection_id: int) -> _ApiResponse:
-    """Adiciona ``{project_id}`` à coleção; duplicado é sucesso (idempotente)."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_ITENS)
+def api_colecao_projeto_adicionar(collection_id: int) -> ApiResponse:
+    """Adiciona ``{project_id}`` à coleção; duplicado é sucesso (idempotente).
+
+    Re-incluir o PRÓPRIO item sobe o teto dele ao rank de área de agora;
+    editor rebaixado no meio do request toma 403 e o revogado o 404 idêntico
+    (nada gravado nos dois casos).
+    """
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_ITENS)
     if missing:
         return missing
-    payload, invalid = _ler_json()
+    payload, invalid = ler_json()
     if invalid:
         return invalid
-    return _mutar(
+    return mutar(
         lambda: _adicionar_e_confirmar(acesso[0], payload),
         "adicionar projeto à coleção",
     )
@@ -377,7 +333,7 @@ def api_colecao_projeto_adicionar(collection_id: int) -> _ApiResponse:
 
 def _adicionar_e_confirmar(
     colecao: ProjectCollection, payload: dict[str, Any]
-) -> _ApiResponse:
+) -> ApiResponse:
     adicionar_projeto(
         colecao, _parse_project_id(payload.get("project_id")), ator=g.user
     )
@@ -388,18 +344,18 @@ def _adicionar_e_confirmar(
     "/api/colecoes/<int:collection_id>/projetos/<int:project_id>", methods=["DELETE"]
 )
 @api_login_required
-def api_colecao_projeto_remover(collection_id: int, project_id: int) -> _ApiResponse:
+def api_colecao_projeto_remover(collection_id: int, project_id: int) -> ApiResponse:
     """Remove o projeto da coleção; projeto que não estava lá também responde ok."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_ITENS)
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_ITENS)
     if missing:
         return missing
-    return _mutar(
+    return mutar(
         lambda: _remover_e_confirmar(acesso[0], project_id),
         "remover projeto da coleção",
     )
 
 
-def _remover_e_confirmar(colecao: ProjectCollection, project_id: int) -> _ApiResponse:
+def _remover_e_confirmar(colecao: ProjectCollection, project_id: int) -> ApiResponse:
     remover_projeto(colecao, project_id, ator=g.user)
     return ok()
 
@@ -409,31 +365,48 @@ def _remover_e_confirmar(colecao: ProjectCollection, project_id: int) -> _ApiRes
 
 @main_bp.route("/api/colecoes/<int:collection_id>/compartilhamentos", methods=["GET"])
 @api_login_required
-def api_colecao_shares_list(collection_id: int) -> _ApiResponse:
-    """Lista quem enxerga a coleção (pessoas e órgãos exatos) — só o dono."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_DONO)
+def api_colecao_shares_list(collection_id: int) -> ApiResponse:
+    """Lista quem recebeu a coleção (pessoas e órgãos exatos) — só o dono.
+
+    Cada share traz o status do convite (pessoa), o agregado por pessoa
+    lotada (órgão) e ``itens_incluidos`` (projetos que saem se revogar);
+    ``itens_orfaos`` = projetos de quem já não tem papel editor, que saem em
+    qualquer revogação (fora dos ``itens_incluidos``, sem dupla contagem).
+    """
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_DONO)
     if missing:
         return missing
-    shares = listar_shares(acesso[0])
-    return ok(
-        {"compartilhamentos": [serialize_colecao_share(share) for share in shares]}
-    )
+    return ok(_shares_com_status(acesso[0]))
+
+
+def _shares_com_status(colecao: ProjectCollection) -> dict[str, Any]:
+    shares = listar_shares(colecao)
+    previsao = prever_poda(colecao, shares)
+    status = status_dos_shares(colecao, shares, previsao=previsao)
+    return {
+        "compartilhamentos": [
+            serialize_colecao_share_com_status(s, status[s.id]) for s in shares
+        ],
+        "itens_orfaos": previsao.orfaos,
+    }
 
 
 @main_bp.route("/api/colecoes/<int:collection_id>/compartilhamentos", methods=["POST"])
 @api_login_required
-def api_colecao_share_criar(collection_id: int) -> _ApiResponse:
-    """Concede ``{user_id | orgao_id, papel}``; destinatário repetido vira upsert.
+def api_colecao_share_criar(collection_id: int) -> ApiResponse:
+    """Convida ``{user_id | orgao_id, papel}``; destinatário repetido vira upsert.
 
-    422 em Favoritos, XOR violado ou papel fora de ``viewer|editor``.
+    Share novo nasce CONVITE pendente (sem acesso até o aceite) e notifica;
+    upsert só troca o papel (editor→viewer poda o que a pessoa incluiu). 422 em
+    Favoritos, XOR violado ou papel fora de ``viewer|editor``.
     """
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_DONO)
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_DONO)
     if missing:
         return missing
-    payload, invalid = _ler_json()
+    payload, invalid = ler_json()
     if invalid:
         return invalid
-    return _mutar(
+    return mutar(
         lambda: ok({"compartilhamento": _conceder_share(acesso[0], payload)}),
         "compartilhar coleção",
     )
@@ -450,7 +423,8 @@ def _conceder_share(
         orgao_id=spec["orgao_id"],
         papel=spec["papel"],
     )
-    return serialize_colecao_share(share)
+    status = status_dos_shares(colecao, [share])[share.id]
+    return serialize_colecao_share_com_status(share, status)
 
 
 @main_bp.route(
@@ -458,18 +432,22 @@ def _conceder_share(
     methods=["DELETE"],
 )
 @api_login_required
-def api_colecao_share_revogar(collection_id: int, share_id: int) -> _ApiResponse:
-    """Revoga o share; o acesso derivado aos projetos cai no mesmo commit."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_DONO)
+def api_colecao_share_revogar(collection_id: int, share_id: int) -> ApiResponse:
+    """Revoga o share; o acesso derivado cai no mesmo commit.
+
+    Também apaga as respostas do share e poda os projetos incluídos por quem
+    perdeu o papel editor (auditado). Share alheio/inexistente → 404.
+    """
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_DONO)
     if missing:
         return missing
-    return _mutar(
+    return mutar(
         lambda: _revogar_e_confirmar(acesso[0], share_id),
         "revogar compartilhamento da coleção",
     )
 
 
-def _revogar_e_confirmar(colecao: ProjectCollection, share_id: int) -> _ApiResponse:
+def _revogar_e_confirmar(colecao: ProjectCollection, share_id: int) -> ApiResponse:
     if not revogar_share(colecao, share_id, ator=g.user):
         return fail_not_found()
     return ok()
@@ -480,9 +458,9 @@ def _revogar_e_confirmar(colecao: ProjectCollection, share_id: int) -> _ApiRespo
 
 @main_bp.route("/api/colecoes/<int:collection_id>/cronograma", methods=["GET"])
 @api_login_required
-def api_colecao_cronograma(collection_id: int) -> _ApiResponse:
+def api_colecao_cronograma(collection_id: int) -> ApiResponse:
     """Etapas datadas dos projetos visíveis, com a faixa da barra já decidida."""
-    acesso, missing = _load_acesso(collection_id, _PAPEIS_LEITURA)
+    acesso, missing = carregar_acesso(collection_id, PAPEIS_LEITURA)
     if missing:
         return missing
     linhas = colecao_cronograma_rows(acesso[0], g.user)
@@ -494,12 +472,12 @@ def api_colecao_cronograma(collection_id: int) -> _ApiResponse:
 
 @main_bp.route("/api/projetos/<int:project_id>/favorito", methods=["POST"])
 @api_login_required
-def api_projeto_favorito_toggle(project_id: int) -> _ApiResponse:
+def api_projeto_favorito_toggle(project_id: int) -> ApiResponse:
     """Alterna o projeto na coleção Favoritos e devolve o estado resultante.
 
     Projeto inexistente ou fora do escopo responde 404 anti-enumeração.
     """
-    return _mutar(
+    return mutar(
         lambda: ok({"favorito": toggle_favorito(g.user, project_id)}),
         "alternar favorito do projeto",
     )

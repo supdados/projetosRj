@@ -157,6 +157,7 @@ function buildQuery(query: ProjectsListQuery): string {
 	if (query.excluir_colecao !== undefined && query.excluir_colecao !== null) {
 		params.set('excluir_colecao', String(query.excluir_colecao));
 	}
+	if (query.visibilidade) params.set('visibilidade', query.visibilidade);
 	if (query.per_page) params.set('per_page', String(query.per_page));
 	if (query.page && query.page > 1) params.set('page', String(query.page));
 	const qs = params.toString();
