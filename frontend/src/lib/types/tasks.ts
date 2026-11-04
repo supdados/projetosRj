@@ -138,9 +138,18 @@ export interface ArchiveFinalizadasInput extends TaskHubFilterValues {
 	task_ids?: number[];
 }
 
+/** Linha do card de revisão do arquivamento (`tarefas` da consulta prévia). */
+export interface ArchiveCandidate {
+	id: number;
+	descricao: string;
+	project_titulo: string | null;
+	assignees: TaskAssignee[];
+}
+
 export interface ArchiveFinalizadasPreview {
 	task_ids: number[];
 	total: number;
+	tarefas: ArchiveCandidate[];
 }
 
 /**

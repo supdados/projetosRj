@@ -47,7 +47,11 @@ from ..tasks.permissions import (
     _can_manage_task_restricted_actions,
     api_task_denial,
 )
-from ..tasks.queries import _build_visible_tasks_query, _read_task_filter_values
+from ..tasks.queries import (
+    _build_visible_tasks_query,
+    _read_task_filter_values,
+    serialize_task_assignees,
+)
 from .envelope import fail, fail_internal, ok
 from .negotiation import api_login_required
 from .serializers import serialize_task_card
@@ -218,8 +222,10 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
     Tarefas alheias no escopo ficam intactas (não é erro do lote). Filtro de
     órgão fora do escopo => 422 (padrão do ``/api/tarefas``).
 
-    ``preview: true`` consulta IDs/total sem gravar; ``task_ids`` restringe o
-    lote aos IDs confirmados, sempre reaplicando filtros e autorização.
+    ``preview: true`` consulta IDs/total sem gravar e devolve ``tarefas`` (as
+    linhas do card de revisão da SPA, inclusive de outras páginas da lista);
+    ``task_ids`` restringe o lote aos IDs confirmados, sempre reaplicando
+    filtros e autorização.
 
     Returns:
         ``ok({archived_count, archived_task_ids, message})`` (200); 422 órgão; 401.
@@ -267,7 +273,9 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
         status_filter=filter_values["status_filter"],
         responsavel_filter=filter_values["responsavel_filter"],
         search_filter=filter_values["search_filter"],
-        include_relations=False,
+        # a revisão mostra projeto e responsáveis: carrega as relações do card
+        # de uma vez em vez de um lazy-load por tarefa.
+        include_relations=preview,
     ).filter(Task.status == "finalizada")
     if task_ids is not None:
         finalized_query = finalized_query.filter(Task.id.in_(task_ids))
@@ -285,6 +293,9 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
             {
                 "task_ids": [task.id for task in finalized_tasks],
                 "total": len(finalized_tasks),
+                "tarefas": [
+                    _serialize_archive_candidate(task) for task in finalized_tasks
+                ],
             }
         )
 
@@ -310,6 +321,20 @@ def api_tarefas_arquivar_finalizadas() -> Response | tuple[Response, int]:
             "message": message,
         }
     )
+
+
+def _serialize_archive_candidate(task: Task) -> dict[str, Any]:
+    """Linha do card de revisão do arquivamento em lote (só o que ele exibe).
+
+    Exemplo: ``{"id": 7, "descricao": "Publicar edital", "project_titulo":
+    "Obra X", "assignees": [{"id": 3, "name": "Ana", ...}]}``.
+    """
+    return {
+        "id": task.id,
+        "descricao": task.descricao,
+        "project_titulo": task.project.titulo if task.project else None,
+        "assignees": serialize_task_assignees(task),
+    }
 
 
 def _resolve_orgao_id_por_sigla(sigla: str) -> int | None:

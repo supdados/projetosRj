@@ -32,8 +32,16 @@
 	import { flash } from '$lib/stores/flash';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { effectiveTaskFilters } from '$lib/utils/taskFilters';
-	import { archiveFilteredTasks } from '$lib/utils/taskArchive';
+	import {
+		archivedMessage,
+		finalizadaIds,
+		startArchiveReview,
+		type ArchiveReview
+	} from '$lib/utils/taskArchive';
+	import ArchiveFinalizadasDialog from '$lib/components/ArchiveFinalizadasDialog.svelte';
 	import type {
+		ArchiveFinalizadasInput,
+		ArchiveFinalizadasResult,
 		TaskAssignee,
 		TaskCard,
 		TaskHubData,
@@ -327,44 +335,69 @@
 		}
 	}
 
-	// ARQUIVAR FINALIZADAS em lote (modo lista). Confirmação com a CONTAGEM do que
-	// sai da lista; o lote não tem efeito visível imediato, então o sucesso é
-	// confirmado por toast e o desfecho sem/com erro por banner ancorado na tela.
+	// ARQUIVAR FINALIZADAS em lote: o card de revisão (ArchiveFinalizadasDialog)
+	// lista o que sai e deixa desmarcar. Duas portas: o botão global (filtros
+	// atuais, todas as páginas — lista e Kanban) e o ícone no cabeçalho de cada
+	// projeto (só as finalizadas visíveis dele). O lote não tem efeito visível
+	// imediato, então o sucesso é confirmado por toast e o desfecho sem/com erro
+	// por banner ancorado na tela.
 	let archiving = $state(false);
 	let archiveNotice = $state<{ tone: 'danger' | 'info'; title: string } | null>(null);
+	let archiveReview = $state<ArchiveReview | null>(null);
 
-	async function requestArchive(): Promise<void> {
+	async function openArchiveReview(
+		filters: ArchiveFinalizadasInput,
+		emptyMessage: string
+	): Promise<void> {
 		if (archiving) return;
 		archiveNotice = null;
 		archiving = true;
 		try {
-			const result = await archiveFilteredTasks(buildEffectiveFilters(), (count) =>
-				confirmAction({
-					title: 'Arquivar tarefas finalizadas?',
-					description: `Arquivar ${count === 1 ? '1 tarefa finalizada' : `${count} tarefas finalizadas`} dos filtros atuais, considerando todas as páginas. Você pode restaurar depois.`,
-					tone: 'brand', icon: 'archive', confirmLabel: 'Arquivar finalizadas'
-				})
-			);
-			if (result === null) return;
-			if (result.archived_count === 0) {
-				archiveNotice = { tone: 'info', title: result.message };
+			const review = await startArchiveReview(filters);
+			if (review.candidatas.length === 0) {
+				archiveNotice = { tone: 'info', title: emptyMessage };
 				return;
 			}
-			// Remove os cards do board (se carregado) e re-busca a lista.
-			for (const id of result.archived_task_ids) board.removeCard(Number(id));
-			flash.success(
-				result.archived_count === 1 ? '1 tarefa arquivada.' : `${result.archived_count} tarefas arquivadas.`,
-				{ description: 'Elas ficam no histórico de arquivadas.' }
-			);
-			void load();
+			archiveReview = review;
 		} catch (err) {
 			archiveNotice = {
 				tone: 'danger',
-				title: err instanceof ApiClientError ? err.message : 'Erro ao arquivar tarefas.'
+				title: err instanceof ApiClientError ? err.message : 'Erro ao consultar as tarefas.'
 			};
 		} finally {
 			archiving = false;
 		}
+	}
+
+	function requestArchive(): void {
+		void openArchiveReview(
+			buildEffectiveFilters(),
+			'Nenhuma tarefa finalizada para arquivar nos filtros atuais.'
+		);
+	}
+
+	/** Ícone do cabeçalho do projeto: só as finalizadas que o grupo mostra. */
+	function requestProjectArchive(group: TaskHubGroup): void {
+		const ids = finalizadaIds(group.tasks);
+		if (ids.length === 0) return;
+		void openArchiveReview(
+			{ project: group.project_value, task_ids: ids },
+			'Nenhuma tarefa concluída deste projeto que você possa arquivar.'
+		);
+	}
+
+	function onArchived(result: ArchiveFinalizadasResult): void {
+		archiveReview = null;
+		if (result.archived_count === 0) {
+			archiveNotice = { tone: 'info', title: result.message };
+			return;
+		}
+		// Remove os cards do board (se carregado) e re-busca a lista.
+		for (const id of result.archived_task_ids) board.removeCard(Number(id));
+		flash.success(archivedMessage(result.archived_count), {
+			description: 'Elas ficam no histórico de arquivadas.'
+		});
+		void load();
 	}
 	setContext('requestArchiveFinalizadas', () => void requestArchive());
 
@@ -1027,6 +1060,9 @@
 							taskCount={group.tasks.length}
 							stagesCount={groupStages.length}
 							href={group.project_id != null ? `${base}/projetos/${group.project_id}` : null}
+							finalizadasCount={finalizadaIds(group.tasks).length}
+							archiveDisabled={archiving}
+							onArchive={() => requestProjectArchive(group)}
 						/>
 
 						<div class="border-t border-border-subtle">
@@ -1179,6 +1215,14 @@
 </section>
 
 <TaskDrawer store={drawer} />
+
+{#if archiveReview !== null}
+	<ArchiveFinalizadasDialog
+		review={archiveReview}
+		onCancel={() => (archiveReview = null)}
+		{onArchived}
+	/>
+{/if}
 
 <ArchivedTasksDrawer
 	open={archivedDrawerOpen}

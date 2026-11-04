@@ -14,7 +14,9 @@
 	 *  - header fixo com pílula done/total e barra de progresso; a pílula da
 	 *    etapa na página hospedeira sincroniza via `onProgressChange`;
 	 *  - fechar com rascunho digitado pede confirmação inline no rodapé;
-	 *  - etapa concluída bloqueia criação (aviso no lugar do form).
+	 *  - etapa concluída bloqueia criação (aviso no lugar do form);
+	 *  - "Arquivar concluídas" abre um card modal (ArchiveFinalizadasDialog) por cima
+	 *    do drawer: o usuário desmarca o que deve ficar antes de confirmar.
 	 *
 	 * Toda mutação re-busca a lista (server-autoritativo, paridade com o hub).
 	 * O clique na descrição das linhas NÃO abre o TaskDrawer por cima
@@ -32,11 +34,19 @@
 	import { focusTrap } from '$lib/actions/focusTrap';
 	import { flash } from '$lib/stores/flash';
 	import type { StageTaskCard } from '$lib/types/pendentes';
-	import type { TaskAssignee, TaskCard } from '$lib/types/tasks';
+	import type { ArchiveFinalizadasResult, TaskAssignee, TaskCard } from '$lib/types/tasks';
 	import type { TaskDrawerStore } from '$lib/stores/taskDrawer';
 	import { normalizeStatus } from '$lib/utils/taskStatus';
 	import { priorityDotColor, priorityIconId, statusIconId } from '$lib/utils/taskLabels';
 	import TaskHubTaskRow from '$lib/components/TaskHubTaskRow.svelte';
+	import ArchiveFinalizadasDialog from '$lib/components/ArchiveFinalizadasDialog.svelte';
+	import FeedbackIcon from '$lib/components/FeedbackIcon.svelte';
+	import {
+		archivedMessage,
+		finalizadaIds,
+		startArchiveReview,
+		type ArchiveReview
+	} from '$lib/utils/taskArchive';
 	import InlineConfirm from '$lib/components/InlineConfirm.svelte';
 	import AssigneePicker from '$lib/components/AssigneePicker.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
@@ -155,6 +165,43 @@
 
 	function openDrawer(taskId: number): void {
 		void drawer.open(taskId, { mode: 'etapa' });
+	}
+
+	// --- Arquivar concluídas (card de revisão antes do lote) ------------------
+
+	let archiveReview = $state<ArchiveReview | null>(null);
+	let archivePreviewing = $state(false);
+
+	/** Pergunta ao servidor o que dá para arquivar e abre o card com tudo marcado. */
+	async function openArchiveReview(): Promise<void> {
+		const ids = finalizadaIds(tarefas);
+		if (archivePreviewing || ids.length === 0) return;
+		archivePreviewing = true;
+		try {
+			// A etapa não é filtro do lote: os IDs da lista fazem esse papel.
+			const review = await startArchiveReview({ project: String(projectId), task_ids: ids });
+			if (review.candidatas.length === 0) {
+				flash.info('Nenhuma tarefa concluída que você possa arquivar.', {
+					description: 'Só o autor da tarefa ou um administrador pode arquivá-la.'
+				});
+				return;
+			}
+			archiveReview = review;
+		} catch (err) {
+			flash.danger(err instanceof ApiClientError ? err.message : 'Erro ao consultar as tarefas.');
+		} finally {
+			archivePreviewing = false;
+		}
+	}
+
+	function onArchived(result: ArchiveFinalizadasResult): void {
+		archiveReview = null;
+		if (result.archived_count === 0) flash.info(result.message);
+		else
+			flash.success(archivedMessage(result.archived_count), {
+				description: 'Elas ficam no histórico de arquivadas.'
+			});
+		void loadTasks();
 	}
 
 	// --- Form "+ Adicionar nova tarefa" (template idêntico ao hub) -------------
@@ -366,7 +413,8 @@
 	 *  - `defaultPrevented`: edição inline de descrição, popover do
 	 *    AssigneePicker e o form de adição cancelam com preventDefault;
 	 *  - painel de comentários da linha fecha a si mesmo (região identificável);
-	 *  - lightbox de anexos (aria-modal aninhado) fecha a si mesmo.
+	 *  - lightbox de anexos (aria-modal aninhado) fecha a si mesmo;
+	 *  - card do arquivamento: ele trata o próprio Esc; o drawer não fecha.
 	 */
 	function onWindowKeydown(event: KeyboardEvent): void {
 		if (event.key !== 'Escape') return;
@@ -375,6 +423,7 @@
 		const target = event.target instanceof HTMLElement ? event.target : null;
 		if (target?.closest('[id$="-comments-region"]')) return;
 		if (panelEl?.querySelector('[aria-modal="true"]')) return;
+		if (archiveReview !== null) return;
 		if (discardTarget !== null) {
 			keepEditing();
 			return;
@@ -430,6 +479,18 @@
 				{/if}
 			</div>
 			<div class="flex shrink-0 items-center gap-2">
+				{#if loadState === 'ready' && done > 0}
+					<button
+						type="button"
+						onclick={() => void openArchiveReview()}
+						disabled={archivePreviewing}
+						title="Revisar e arquivar as tarefas finalizadas desta etapa"
+						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-subtle bg-surface px-2.5 text-sm font-medium text-text-primary transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+					>
+						<FeedbackIcon id="archive" size={16} />
+						Arquivar concluídas
+					</button>
+				{/if}
 				<span
 					class="inline-flex items-center rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-xs font-semibold text-text-secondary"
 					aria-label={`${done} de ${total} tarefas concluídas`}
@@ -647,6 +708,16 @@
 		</footer>
 	{/if}
 </div>
+
+<!-- Card do arquivamento: IRMÃO do painel (não filho) para ficar acima dele
+     no mesmo z-modal e fora do focusTrap do drawer. -->
+{#if archiveReview !== null}
+	<ArchiveFinalizadasDialog
+		review={archiveReview}
+		onCancel={() => (archiveReview = null)}
+		{onArchived}
+	/>
+{/if}
 
 <!-- Tipo não tem `icon` na régua de ícones (o desenho é o bloco chanfrado do
 	 TaskTipoIcon), então vai por snippet; o gatilho padrão do SelectMenu já

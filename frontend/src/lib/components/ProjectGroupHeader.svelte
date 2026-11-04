@@ -4,7 +4,11 @@
 	 * ("42 - Nome do Projeto"), sigla do órgão e, à direita, as contagens de
 	 * tarefas e etapas. O nome LINKA para a página do projeto. Tipografia/cores
 	 * de id/título/órgão seguem o padrão de Projetos e Projetos Pendentes.
+	 * Com finalizadas no grupo e `onArchive`, um ícone ao lado do nome abre o
+	 * card de arquivamento só deste projeto.
 	 */
+	import FeedbackIcon from './FeedbackIcon.svelte';
+
 	interface Props {
 		titulo: string;
 		/** Código do projeto (id) exibido antes do nome; `null` se sem projeto. */
@@ -14,9 +18,29 @@
 		stagesCount: number;
 		/** Link para a página do projeto; `null` quando o grupo não tem projeto. */
 		href?: string | null;
+		/** Finalizadas visíveis no grupo; 0 esconde o ícone de arquivar. */
+		finalizadasCount?: number;
+		archiveDisabled?: boolean;
+		onArchive?: () => void;
 	}
 
-	let { titulo, code, orgaoSigla, taskCount, stagesCount, href = null }: Props = $props();
+	let {
+		titulo,
+		code,
+		orgaoSigla,
+		taskCount,
+		stagesCount,
+		href = null,
+		finalizadasCount = 0,
+		archiveDisabled = false,
+		onArchive
+	}: Props = $props();
+
+	const archiveHint = $derived(
+		finalizadasCount === 1
+			? 'Arquivar 1 tarefa concluída'
+			: `Arquivar ${finalizadasCount} tarefas concluídas`
+	);
 </script>
 
 <div class="flex w-full items-center gap-1.5 px-5 py-4">
@@ -39,6 +63,19 @@
 			<span class="truncate text-text-primary">{titulo}</span>
 		{/if}
 	</h2>
+
+	{#if onArchive && finalizadasCount > 0}
+		<button
+			type="button"
+			onclick={onArchive}
+			disabled={archiveDisabled}
+			title={archiveHint}
+			aria-label="{archiveHint} de {titulo}"
+			class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+		>
+			<FeedbackIcon id="archive" size={16} />
+		</button>
+	{/if}
 
 	{#if orgaoSigla}
 		<span class="shrink-0 text-xs text-text-muted">

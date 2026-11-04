@@ -25,7 +25,6 @@ import type {
 	TaskAssignee,
 	TaskCard,
 	TaskHubData,
-	TaskHubFilterValues,
 	TaskHubQuery
 } from '$lib/types/tasks';
 
@@ -130,7 +129,7 @@ export function archiveFinalizadas(
 
 /** Consulta o conjunto arquivável em todas as páginas, sem alterar tarefas. */
 export function previewArchiveFinalizadas(
-	filters: TaskHubFilterValues,
+	filters: ArchiveFinalizadasInput,
 	signal?: AbortSignal
 ): Promise<ArchiveFinalizadasPreview> {
 	return post<ArchiveFinalizadasPreview>(
