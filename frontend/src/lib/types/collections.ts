@@ -98,28 +98,6 @@ export interface ResumoShareOrgao {
 }
 
 /**
- * Situação de um destinatário na linha "Compartilhada com" do card. `dono`
- * aparece só para quem participa (o dono abre a lista dos membros); o dono da
- * coleção recebe todos os status, quem participa só `aceito`/`legado`.
- */
-export type StatusDestinatario = 'dono' | StatusConvite;
-
-/**
- * Um destinatário do card (`ColecaoResumo.destinatarios`), já filtrado pela
- * regra de quem vê no backend (`destinatarios_por_colecao`). `tipo` decide o
- * avatar: pessoa (iniciais) ou área (sigla).
- */
-export interface DestinatarioColecao {
-	tipo: 'user' | 'orgao';
-	id: number;
-	nome: string;
-	/** Sigla do órgão; `null` em pessoa. */
-	sigla: string | null;
-	papel: PapelColecao;
-	status: StatusDestinatario;
-}
-
-/**
  * Resumo de uma coleção com rollup agregado (`collection_rollups`), usado no
  * índice (`GET /api/colecoes`) e devolvido pelas mutações de coleção.
  *
@@ -153,13 +131,9 @@ export interface ColecaoResumo {
 	/** ISO 8601, `null` em linha legada; bumpado à mão nas mutações de item. */
 	updated_at: string | null;
 	papel: PapelColecao;
-	/** Há algum destinatário (qualquer status para o dono; sempre `true` para quem participa). */
+	/** Tem ≥ 1 share de qualquer status (sempre `true` para quem participa). */
 	compartilhada: boolean;
 	owner: ColecaoShareUsuario | null;
-	/** Até 5 destinatários para a pilha de avatares; a regra de quem vê já veio aplicada. */
-	destinatarios: DestinatarioColecao[];
-	/** Total de destinatários (base do "+N" da pilha). */
-	destinatarios_total: number;
 }
 
 /** Uma área da coleção: sigla do órgão dos projetos (`null` = projeto sem órgão). */

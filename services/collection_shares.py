@@ -12,8 +12,8 @@ módulos irmãos e são reexportados aqui — um ponto de import para a rota:
 - ``services.collection_pruning``: ``podar_itens_sem_editor``,
   ``incluidores_sem_editor``, ``prever_poda``, ``itens_que_saem_por_share``,
   ``itens_incluidos_por``.
-- ``services.collection_recipients``: ``destinatarios_por_colecao``,
-  ``status_dos_shares``, ``buscar_pessoas_para_compartilhar``.
+- ``services.collection_recipients``: ``status_dos_shares``,
+  ``buscar_pessoas_para_compartilhar``.
 
 NÃO commita (a rota commita via ``_mutar``), não lê ``request``/``g``. Toda
 mutação invalida o rank map do request.
@@ -72,11 +72,9 @@ from services.collection_pruning import (
     prever_poda,
 )
 from services.collection_recipients import (
-    DestinatarioColecao,
     ResumoDoOrgao,
     StatusDoShare,
     buscar_pessoas_para_compartilhar,
-    destinatarios_por_colecao,
     status_dos_shares,
 )
 from services.notifications import (
@@ -89,7 +87,6 @@ _Resposta = ProjectCollectionShareResposta
 # Fachada: o domínio de shares inteiro importável daqui (rota, testes).
 __all__ = [
     "ConvitePendente",
-    "DestinatarioColecao",
     "MOTIVO_PODA_INCLUIDOR_SEM_PAPEL",
     "MOTIVO_PODA_REBAIXADO",
     "MOTIVO_PODA_REVOGADO",
@@ -107,7 +104,6 @@ __all__ = [
     "convite_pendente",
     "convites_pendentes_de",
     "destinatarios_do_share",
-    "destinatarios_por_colecao",
     "incluidores_sem_editor",
     "itens_incluidos_por",
     "itens_que_saem_por_share",

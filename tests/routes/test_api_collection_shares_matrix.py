@@ -252,7 +252,7 @@ def _queries_do_indice(app, user_id: int) -> int:
     return queries.total
 
 
-def test_indice_do_dono_com_destinatarios_custa_queries_constantes(app, ids):
+def test_indice_do_dono_com_compartilhamentos_custa_queries_constantes(app, ids):
     _dono_com_colecoes_compartilhadas(app, ids, 2)
     com_duas = _queries_do_indice(app, ids.dono)
 
@@ -262,7 +262,7 @@ def test_indice_do_dono_com_destinatarios_custa_queries_constantes(app, ids):
     assert com_oito == com_duas
     assert com_oito <= 20
     card = card_do_indice(app, ids.dono, _ultima_colecao_do_dono(app, ids))
-    assert {d["status"] for d in card["destinatarios"]} == {"pendente", "aceito"}
+    assert card["compartilhada"] is True
 
 
 def _ultima_colecao_do_dono(app, ids: IdsDoCenario) -> int:

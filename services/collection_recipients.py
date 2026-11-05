@@ -1,14 +1,10 @@
-"""Quem recebeu cada coleção e em que pé está cada convite (card e modal).
+"""Em que pé está cada convite de uma coleção (modal Compartilhar do dono).
 
-Duas leituras em LOTE, sem N+1 (orçamento de ≤ 20 queries do índice em
-``tests/routes/test_read_materialization.py``):
-
-- ``status_dos_shares``: o modal do dono — status por pessoa
-  (``pendente|aceito|recusado|saiu|legado``), agregados do share de órgão e
-  quantos itens a poda tiraria se o share fosse revogado.
-- ``destinatarios_por_colecao``: a linha "Compartilhada com" do card. O dono vê
-  todos os destinatários com status; quem participa vê o dono e os OUTROS
-  aceitos (pendente/recusado alheio não é da conta dele).
+``status_dos_shares`` lê em LOTE, sem N+1: status por pessoa
+(``pendente|aceito|recusado|saiu|legado``), agregados do share de órgão e
+quantos itens a poda tiraria se o share fosse revogado. O card do índice NÃO
+lista destinatários (saiu da tela); a flag ``compartilhada`` dele vem de
+``collection_shares.collection_ids_com_share``, em 1 query.
 
 E a busca de quem PODE receber (``buscar_pessoas_para_compartilhar``, rota
 ``GET /api/colecoes/destinatarios``).
@@ -21,8 +17,6 @@ from __future__ import annotations
 
 from collections import Counter
 from typing import Iterable, TypedDict
-
-from sqlalchemy.orm import joinedload
 
 from models import (
     STATUS_RESPOSTA_ACEITO,
@@ -40,14 +34,9 @@ from services.collection_access import (
     STATUS_PENDENTE,
     status_do_destinatario,
 )
-from services.collection_errors import PAPEL_COLECAO_DONO
 from services.collection_pruning import PrevisaoDaPoda, prever_poda
 
-STATUS_DONO = "dono"
-TIPO_DESTINATARIO_USER = "user"
-TIPO_DESTINATARIO_ORGAO = "orgao"
 LIMITE_BUSCA_DESTINATARIOS = 20
-_COM_ACESSO = (STATUS_RESPOSTA_ACEITO, STATUS_LEGADO)
 
 _RespostasPorShare = dict[int, dict[int, str]]
 _MembrosPorOrgao = dict[int, set[int]]
@@ -72,17 +61,6 @@ class StatusDoShare(TypedDict):
     status: str | None
     resumo: ResumoDoOrgao | None
     itens_incluidos: int
-
-
-class DestinatarioColecao(TypedDict):
-    """Uma entrada da linha "Compartilhada com" do card."""
-
-    tipo: str
-    id: int
-    nome: str
-    sigla: str | None
-    papel: str
-    status: str
 
 
 def status_dos_shares(
@@ -116,32 +94,6 @@ def status_dos_shares(
     }
 
 
-def destinatarios_por_colecao(
-    colecoes: Iterable[ProjectCollection], viewer: User
-) -> dict[int, list[DestinatarioColecao]]:
-    """``{collection_id: [DestinatarioColecao]}`` do card, com a regra de quem vê.
-
-    Recebe as coleções já carregadas (o dono das compartilhadas vem com
-    ``contains_eager`` do índice). Até 3 queries, independente de N coleções.
-    A rota corta a lista (ex.: 5 primeiros) e usa ``len`` como total.
-    """
-    colecoes = list(colecoes)
-    shares = _shares_com_destino([colecao.id for colecao in colecoes])
-    respostas = _respostas_por_share([share.id for share in shares])
-    membros = _membros_por_orgao({s.orgao_id for s in shares if s.orgao_id})
-    por_colecao: dict[int, list[DestinatarioColecao]] = {c.id: [] for c in colecoes}
-    donos = {colecao.id: colecao.owner_user_id for colecao in colecoes}
-    for share in shares:
-        dono_id = donos[share.collection_id]
-        por_colecao[share.collection_id].append(
-            _destinatario(share, respostas, membros, dono_id)
-        )
-    return {
-        colecao.id: _visiveis_para(colecao, por_colecao[colecao.id], viewer)
-        for colecao in colecoes
-    }
-
-
 def buscar_pessoas_para_compartilhar(
     termo: str, *, ator: User, limite: int = LIMITE_BUSCA_DESTINATARIOS
 ) -> list[User]:
@@ -169,63 +121,6 @@ def buscar_pessoas_para_compartilhar(
 def _escapar_like(termo: str) -> str:
     # "%" ou "_" digitados casariam qualquer nome e virariam dump do diretório.
     return termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
-def _visiveis_para(
-    colecao: ProjectCollection,
-    destinatarios: list[DestinatarioColecao],
-    viewer: User,
-) -> list[DestinatarioColecao]:
-    if viewer.id == colecao.owner_user_id:
-        return destinatarios
-    outros_aceitos = [
-        destinatario
-        for destinatario in destinatarios
-        if destinatario["status"] in _COM_ACESSO
-        and not (
-            destinatario["tipo"] == TIPO_DESTINATARIO_USER
-            and destinatario["id"] == viewer.id
-        )
-    ]
-    return [_entrada_do_dono(colecao), *outros_aceitos]
-
-
-def _entrada_do_dono(colecao: ProjectCollection) -> DestinatarioColecao:
-    dono = colecao.owner
-    return DestinatarioColecao(
-        tipo=TIPO_DESTINATARIO_USER,
-        id=colecao.owner_user_id,
-        nome=dono.name if dono is not None else "",
-        sigla=None,
-        papel=PAPEL_COLECAO_DONO,
-        status=STATUS_DONO,
-    )
-
-
-def _destinatario(
-    share: ProjectCollectionShare,
-    respostas: _RespostasPorShare,
-    membros: _MembrosPorOrgao,
-    dono_id: int,
-) -> DestinatarioColecao:
-    if share.user_id is not None:
-        return DestinatarioColecao(
-            tipo=TIPO_DESTINATARIO_USER,
-            id=share.user_id,
-            nome=share.user.name if share.user is not None else "",
-            sigla=None,
-            papel=share.papel,
-            status=_status_da_pessoa(share, respostas),
-        )
-    orgao = share.orgao
-    return DestinatarioColecao(
-        tipo=TIPO_DESTINATARIO_ORGAO,
-        id=share.orgao_id,
-        nome=orgao.nome if orgao is not None else "",
-        sigla=orgao.sigla if orgao is not None else None,
-        papel=share.papel,
-        status=_status_do_orgao(share, respostas, membros, dono_id),
-    )
 
 
 def _status_da_pessoa(
@@ -262,37 +157,6 @@ def _resumo_do_orgao(
         pendentes=contagem[STATUS_PENDENTE],
         recusados=contagem[STATUS_RESPOSTA_RECUSADO],
         sairam=contagem[STATUS_RESPOSTA_SAIU],
-    )
-
-
-def _status_do_orgao(
-    share: ProjectCollectionShare,
-    respostas: _RespostasPorShare,
-    membros: _MembrosPorOrgao,
-    dono_id: int,
-) -> str:
-    """Um status para o selo do órgão: alguém com acesso > pendente > recusas."""
-    contagem = _contagem_do_orgao(share, respostas, membros, dono_id)
-    if contagem[STATUS_RESPOSTA_ACEITO] or contagem[STATUS_LEGADO]:
-        return STATUS_RESPOSTA_ACEITO if share.exige_aceite else STATUS_LEGADO
-    for status in (STATUS_PENDENTE, STATUS_RESPOSTA_RECUSADO, STATUS_RESPOSTA_SAIU):
-        if contagem[status]:
-            return status
-    # Órgão sem ninguém lotado: o convite fica esperando quem entrar.
-    return STATUS_PENDENTE if share.exige_aceite else STATUS_LEGADO
-
-
-def _shares_com_destino(colecao_ids: list[int]) -> list[ProjectCollectionShare]:
-    if not colecao_ids:
-        return []
-    return (
-        ProjectCollectionShare.query.options(
-            joinedload(ProjectCollectionShare.user),
-            joinedload(ProjectCollectionShare.orgao),
-        )
-        .filter(ProjectCollectionShare.collection_id.in_(colecao_ids))
-        .order_by(ProjectCollectionShare.id)
-        .all()
     )
 
 

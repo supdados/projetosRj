@@ -48,7 +48,6 @@ from services.collection_shares import (
     MOTIVO_PODA_REVOGADO,
     aceitar_convite,
     compartilhar_colecao,
-    destinatarios_por_colecao,
     itens_incluidos_por,
     itens_que_saem_por_share,
     listar_shares,
@@ -385,29 +384,6 @@ def test_status_dos_shares_por_pessoa_e_agregado_do_orgao(app, cenario):
             "sairam": 0,
         }
         assert {item["itens_incluidos"] for item in status.values()} == {0}
-
-
-def test_destinatarios_dono_ve_todos_com_status(app, cenario):
-    with app.test_request_context("/"):
-        colecao = _cenario_de_status(cenario)
-        destinatarios = destinatarios_por_colecao([colecao], cenario.dono)[colecao.id]
-        assert [(d["tipo"], d["id"], d["status"]) for d in destinatarios] == [
-            ("user", cenario.convidado.id, "aceito"),
-            ("user", cenario.colega.id, "pendente"),
-            ("orgao", cenario.orgx_id, "aceito"),
-        ]
-
-
-def test_destinatarios_membro_ve_dono_e_outros_aceitos(app, cenario):
-    with app.test_request_context("/"):
-        colecao = _cenario_de_status(cenario)
-        destinatarios = destinatarios_por_colecao([colecao], cenario.convidado)
-        assert [
-            (d["tipo"], d["id"], d["papel"]) for d in destinatarios[colecao.id]
-        ] == [
-            ("user", cenario.dono.id, "dono"),
-            ("orgao", cenario.orgx_id, PAPEL_SHARE_VIEWER),
-        ]
 
 
 def test_sino_mostra_coleção_com_papel_ou_convite_e_esconde_recusada(app, cenario):

@@ -42,7 +42,7 @@
  * reabre com o último dado bom e revalida em silêncio. Toda escrita —
  * incluindo compartilhamento — invalida os caches de coleção: o rollup
  * (`projetos`/`etapas`/`progresso_pct`) e o cronograma mudam quando um item
- * entra ou sai de qualquer coleção, e `papel`/`destinatarios` do resumo mudam
+ * entra ou sai de qualquer coleção, e `papel`/`compartilhada` do resumo mudam
  * com qualquer share.
  *
  * O cache de `projects.ts` também cai quando a escrita pode mudar QUAIS

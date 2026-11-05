@@ -215,7 +215,7 @@ def test_card_serializa_areas_e_faixas_de_etapa(app, areas):
             colecao,
             rollup,
             papel="dono",
-            destinatarios=[],
+            compartilhada=False,
             areas=[{"sigla": "ALFA", "projetos": 2}],
         )
 
@@ -227,7 +227,7 @@ def test_card_sem_areas_informadas_sai_com_lista_vazia(app, areas):
     with app.test_request_context("/"):
         colecao = _add_colecao(areas["dono"].id, "Sem áreas", [])
         db.session.commit()
-        card = serialize_colecao_card(colecao, {}, papel="dono", destinatarios=[])
+        card = serialize_colecao_card(colecao, {}, papel="dono", compartilhada=False)
 
     assert card["areas"] == []
     assert card["etapas_em_andamento"] == card["etapas_atrasadas"] == 0

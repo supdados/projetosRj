@@ -6,7 +6,7 @@ aqui ficam só os shapes que nasceram com o aceite e a curadoria — os antigos
 ``serialize_project_collection_row``) continuam lá e são ESTENDIDOS por
 composição, sem mudar nenhum campo existente.
 
-Nenhuma função consulta banco: status, destinatários e contagens chegam prontos
+Nenhuma função consulta banco: status, flags e contagens chegam prontos
 de ``services.collection_shares`` (lote, sem N+1).
 """
 
@@ -18,7 +18,6 @@ from models import ProjectCollection, ProjectCollectionShare, User
 from services.collection_areas import AreaDaColecao
 from services.collection_shares import (
     ConvitePendente,
-    DestinatarioColecao,
     ResumoDoOrgao,
     StatusDoShare,
 )
@@ -30,57 +29,32 @@ from .serializers import (
     serialize_project_collection_row,
 )
 
-# A linha "Compartilhada com" do card mostra no máximo 5 avatares + "+N".
-LIMITE_DESTINATARIOS_CARD = 5
-
 
 def serialize_colecao_card(
     colecao: ProjectCollection,
     rollup: dict[str, int],
     *,
     papel: str,
-    destinatarios: list[DestinatarioColecao],
+    compartilhada: bool,
     areas: Optional[list[AreaDaColecao]] = None,
 ) -> dict[str, Any]:
-    """``ColecaoResumo`` + ``destinatarios`` (até 5), ``destinatarios_total``
-    e ``areas`` (pílula "N áreas" da capa, já ordenada).
+    """``ColecaoResumo`` + ``areas`` (pílula "N áreas" da capa, já ordenada).
 
-    ``destinatarios`` já vem com a regra de quem vê aplicada
-    (``destinatarios_por_colecao``): o dono recebe todos com status; quem
-    participa recebe o dono e os outros aceitos. ``compartilhada`` deriva da
-    mesma lista. ``areas`` vem de ``areas_por_colecao`` (só projetos
-    visíveis). Exemplo:
-    ``serialize_colecao_card(c, rollup, papel="dono", destinatarios=lista, areas=areas)``.
+    ``compartilhada`` = a coleção tem ≥ 1 share de qualquer status (vem de
+    ``collection_ids_com_share``, 1 query para o índice inteiro). Com quem
+    está compartilhada NÃO vai no card: é do modal Compartilhar
+    (``status_dos_shares``). ``areas`` vem de ``areas_por_colecao`` (só
+    projetos visíveis). Exemplo:
+    ``serialize_colecao_card(c, rollup, papel="dono", compartilhada=True, areas=areas)``.
     """
     card = serialize_colecao_resumo(
-        colecao, rollup, papel=papel, compartilhada=bool(destinatarios)
+        colecao, rollup, papel=papel, compartilhada=compartilhada
     )
-    card["destinatarios"] = [
-        serialize_destinatario_colecao(destinatario)
-        for destinatario in destinatarios[:LIMITE_DESTINATARIOS_CARD]
-    ]
-    card["destinatarios_total"] = len(destinatarios)
     card["areas"] = [
         {"sigla": area["sigla"], "projetos": int(area["projetos"])}
         for area in areas or []
     ]
     return card
-
-
-def serialize_destinatario_colecao(destinatario: DestinatarioColecao) -> dict[str, Any]:
-    """Uma entrada do card: ``{tipo, id, nome, sigla, papel, status}``.
-
-    ``tipo`` é ``user|orgao``; ``status`` é ``dono|aceito|legado|pendente|
-    recusado|saiu`` (só o dono recebe os três últimos).
-    """
-    return {
-        "tipo": destinatario["tipo"],
-        "id": destinatario["id"],
-        "nome": destinatario["nome"],
-        "sigla": destinatario["sigla"],
-        "papel": destinatario["papel"],
-        "status": destinatario["status"],
-    }
 
 
 def serialize_colecao_share_com_status(

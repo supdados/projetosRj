@@ -59,17 +59,8 @@ def test_criar_com_compartilhamentos_iniciais_vira_convite(app, ids):
     card = dados(post(app, ids.dono, "/api/colecoes", body))["colecao"]
 
     assert card["compartilhada"] is True
-    assert card["destinatarios"] == [
-        {
-            "tipo": "user",
-            "id": ids.convidado,
-            "nome": "CONVIDADO",
-            "sigla": None,
-            "papel": "editor",
-            "status": "pendente",
-        }
-    ]
-    assert card["destinatarios_total"] == 1
+    # Com quem está compartilhada é do modal, não do card (saiu em 2026-11).
+    assert "destinatarios" not in card
     convites = dados(get(app, ids.convidado, "/api/colecoes/convites"))["convites"]
     assert [(c["id"], c["papel"]) for c in convites] == [(card["id"], "editor")]
     assert (

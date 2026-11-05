@@ -395,38 +395,23 @@ def test_compartilhamentos_trazem_status_por_pessoa_e_agregado_do_orgao(app, ids
     assert {s["itens_incluidos"] for s in shares["compartilhamentos"]} == {0}
 
 
-def test_card_do_indice_aplica_a_regra_de_quem_ve(app, ids):
+def test_card_do_indice_marca_compartilhada_sem_listar_destinatarios(app, ids):
     cid = _colecao(app, ids)
+    assert card_do_indice(app, ids.dono, cid)["compartilhada"] is False
     convidar(app, ids.dono, cid, user_id=ids.convidado)
-    convidar(app, ids.dono, cid, user_id=ids.membro_a)
     convidar(app, ids.dono, cid, user_id=ids.editor)
     aceito(app, ids.convidado, cid)
-    aceito(app, ids.membro_a, cid)
     dados(responder(app, ids.editor, cid, "recusar"))
 
     do_dono = card_do_indice(app, ids.dono, cid)
-    assert do_dono["compartilhada"] is True
-    assert do_dono["destinatarios_total"] == 3
-    assert {d["status"] for d in do_dono["destinatarios"]} == {"aceito", "recusado"}
     do_membro = card_do_indice(app, ids.convidado, cid)
-    assert [(d["id"], d["status"]) for d in do_membro["destinatarios"]] == [
-        (ids.dono, "dono"),
-        (ids.membro_a, "aceito"),
-    ]
-    assert do_membro["destinatarios_total"] == 2
 
-
-def test_card_corta_em_cinco_destinatarios_e_conta_o_total(app, ids):
-    cid = _colecao(app, ids)
-    for user_id in (ids.colega, ids.convidado, ids.editor, ids.membro_a, ids.membro_b):
-        convidar(app, ids.dono, cid, user_id=user_id)
-    convidar(app, ids.dono, cid, orgao_id=ids.ext)
-
-    card = card_do_indice(app, ids.dono, cid)
-
-    assert len(card["destinatarios"]) == 5
-    assert card["destinatarios_total"] == 6
-    assert {d["status"] for d in card["destinatarios"]} == {"pendente"}
+    # Share recusado/pendente ainda conta: a flag é "tem share", não "tem aceite".
+    assert do_dono["compartilhada"] is True
+    assert do_membro["compartilhada"] is True
+    for card in (do_dono, do_membro):
+        assert "destinatarios" not in card
+        assert "destinatarios_total" not in card
 
 
 # ── Regressões ───────────────────────────────────────────────────────────────
