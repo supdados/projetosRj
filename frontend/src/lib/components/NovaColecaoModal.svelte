@@ -93,6 +93,7 @@
 	let submitting = $state(false);
 	let erro = $state<string | null>(null);
 	let nomeInputEl = $state<HTMLInputElement | null>(null);
+	let quemEnxerga = $state<ReturnType<typeof ColecaoQuemEnxerga> | null>(null);
 
 	/** Coleção recém-criada: presente = tela de sucesso no lugar do formulário. */
 	let criada = $state<ColecaoResumo | null>(null);
@@ -154,6 +155,7 @@
 			nomeInputEl?.focus();
 			return;
 		}
+		if (quemEnxerga && !quemEnxerga.confirmarPendente()) return;
 		submitting = true;
 		erro = null;
 		try {
@@ -218,7 +220,12 @@
 					<div class="grid gap-6 px-5 py-6 sm:px-7 md:grid-cols-[350px_minmax(0,1fr)] md:gap-8">
 						<div class="flex min-w-0 flex-col gap-5">
 							<ColecaoAparencia bind:icone bind:cor idPrefix="nc" />
-							<ColecaoQuemEnxerga bind:soEu bind:destinatarios idPrefix="nc" />
+							<ColecaoQuemEnxerga
+								bind:this={quemEnxerga}
+								bind:soEu
+								bind:destinatarios
+								idPrefix="nc"
+							/>
 						</div>
 
 						<!-- md+: conteúdo fora do fluxo para a lista não inflar a linha do grid — a

@@ -21,6 +21,7 @@
 	import { buildOrgaoTree, flattenTreeWithPath, type OrgaoTreeRow } from '$lib/utils/orgaoTree';
 	import { PAPEIS_COMPARTILHAMENTO } from '$lib/utils/colecaoShares';
 	import {
+		comPendenteIncluido,
 		destinatarioDeArea,
 		destinatarioDePessoa,
 		type DestinatarioNovo
@@ -144,23 +145,48 @@
 		listaAberta = false;
 	}
 
+	function destinatarioDoAlvo(escolhido: Alvo): DestinatarioNovo {
+		return escolhido.tipo === 'pessoa'
+			? destinatarioDePessoa(escolhido.pessoa, papel)
+			: destinatarioDeArea(escolhido.orgao, papel);
+	}
+
+	function limparCampo(): void {
+		erro = '';
+		alvo = null;
+		termo = '';
+	}
+
+	/**
+	 * Chamado pelo modal no "Criar coleção": quem ficou escolhido no campo sem
+	 * o "+" entra na lista (antes era descartado em silêncio e a coleção nascia
+	 * pessoal). Texto digitado sem escolher da lista barra a criação com aviso.
+	 * Ex.: `quemEnxerga.confirmarPendente()` → `false` = não criar ainda.
+	 */
+	export function confirmarPendente(): boolean {
+		if (soEu) return true;
+		if (alvo) {
+			destinatarios = comPendenteIncluido(destinatarios, destinatarioDoAlvo(alvo));
+			limparCampo();
+			return true;
+		}
+		if (!termo.trim()) return true;
+		erro = 'Escolha uma pessoa ou área da lista, ou apague o texto do campo.';
+		return false;
+	}
+
 	function adicionar(): void {
 		if (!alvo) {
 			erro = termo.trim() ? 'Escolha uma pessoa ou área da lista.' : '';
 			return;
 		}
-		const novo =
-			alvo.tipo === 'pessoa'
-				? destinatarioDePessoa(alvo.pessoa, papel)
-				: destinatarioDeArea(alvo.orgao, papel);
+		const novo = destinatarioDoAlvo(alvo);
 		if (destinatarios.some((d) => d.chave === novo.chave)) {
 			erro = `${novo.nome} já está na lista.`;
 			return;
 		}
 		destinatarios = [...destinatarios, novo];
-		erro = '';
-		alvo = null;
-		termo = '';
+		limparCampo();
 	}
 
 	// Enter no campo adiciona o alvo escolhido — nunca submete o modal.

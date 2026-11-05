@@ -56,6 +56,24 @@ export function destinatarioDeArea(orgao: AreaOption, papel: PapelCompartilhamen
 	};
 }
 
+/**
+ * Lista com o alvo escolhido no campo e ainda não posto com o "+". Criar a
+ * coleção com alguém só no campo descartava o convite em silêncio; repetido
+ * pela chave não duplica.
+ *
+ * Ex.: `comPendenteIncluido([], ana)` → `[ana]`;
+ * `comPendenteIncluido([ana], ana)` → `[ana]`; `comPendenteIncluido([ana], null)` → `[ana]`.
+ */
+export function comPendenteIncluido(
+	destinatarios: readonly DestinatarioNovo[],
+	pendente: DestinatarioNovo | null
+): DestinatarioNovo[] {
+	if (!pendente || destinatarios.some((d) => d.chave === pendente.chave)) {
+		return [...destinatarios];
+	}
+	return [...destinatarios, pendente];
+}
+
 /** "Só eu" ligado (ou lista vazia) = coleção pessoal: o campo nem vai no POST. */
 export function compartilhamentosDaCriacao(
 	soEu: boolean,

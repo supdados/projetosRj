@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	comPendenteIncluido,
 	compartilhamentosDaCriacao,
 	destinatarioDeArea,
 	destinatarioDePessoa,
@@ -25,6 +26,18 @@ describe('destinatários', () => {
 		expect(semOrgao.detalhe).toBe('Pessoa');
 		const semSigla = destinatarioDeArea({ id: 9, sigla: '', nome: 'Gabinete', pai_id: null }, 'viewer');
 		expect(semSigla.nome).toBe('Gabinete');
+	});
+});
+
+describe('comPendenteIncluido', () => {
+	it('inclui quem ficou escolhido no campo sem o "+" (regressão: convite descartado)', () => {
+		expect(comPendenteIncluido([], ANA)).toEqual([ANA]);
+		expect(comPendenteIncluido([SUPEST], ANA)).toEqual([SUPEST, ANA]);
+	});
+
+	it('não duplica quem já está na lista e não mexe sem pendente', () => {
+		expect(comPendenteIncluido([ANA], ANA)).toEqual([ANA]);
+		expect(comPendenteIncluido([ANA], null)).toEqual([ANA]);
 	});
 });
 
