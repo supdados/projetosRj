@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Tela de sucesso do modal Nova coleção (design "Coleções 3a"): a capa da
-	 * coleção recém-criada "cai" na mesa levemente girada, com o selo de visto
+	 * coleção recém-criada entra reta (sem giro), com o selo de visto
 	 * na cor da família, e embaixo os números (projetos · áreas · etapas), quem
 	 * enxerga e os dois caminhos — criar outra ou abrir a coleção.
 	 *
@@ -65,7 +65,7 @@
 		</svg>
 	</button>
 
-	<div class="capa-pop relative w-[264px] -rotate-[2.5deg]" aria-hidden="true">
+	<div class="capa-pop relative w-[264px]" aria-hidden="true">
 		<div class="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-lg">
 			<ColecaoCapa
 				icone={colecao.icone}
@@ -145,14 +145,14 @@
 	@keyframes capa-pop {
 		0% {
 			opacity: 0;
-			transform: scale(0.6) rotate(-10deg);
+			transform: scale(0.6);
 		}
 		60% {
 			opacity: 1;
 		}
 		100% {
 			opacity: 1;
-			transform: scale(1) rotate(-2.5deg);
+			transform: scale(1);
 		}
 	}
 
