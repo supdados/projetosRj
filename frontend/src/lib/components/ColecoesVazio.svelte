@@ -1,7 +1,8 @@
 <script lang="ts">
 	/**
 	 * Estado vazio do índice de Coleções (design "Coleções 2b"): só Favoritos
-	 * existe. Ocupa as 3 colunas ao lado do card de Favoritos com um leque de
+	 * existe. Ocupa a trilha ao lado do card de Favoritos (grade própria,
+	 * `COLECOES_GRID_VAZIO_CLS`; empilha abaixo de `md`) com um leque de
 	 * duas capas de EXEMPLO (decorativas, `aria-hidden`) atrás do botão
 	 * "Criar primeira coleção", e o convite em texto embaixo.
 	 *
@@ -55,7 +56,7 @@
 </script>
 
 <div
-	class="col-span-full flex flex-col items-center gap-6 overflow-hidden rounded-xl border border-border-subtle bg-surface px-6 pb-10 pt-9 lg:col-span-3"
+	class="flex min-w-0 flex-col items-center gap-6 overflow-hidden rounded-xl border border-border-subtle bg-surface px-6 pb-10 pt-9"
 >
 	<div class="relative flex h-[210px] w-full max-w-[580px] items-center justify-center">
 		<div class="pointer-events-none absolute inset-0 hidden sm:block" aria-hidden="true">

@@ -12,21 +12,20 @@
 	 *
 	 * Variante Favoritos (`tipo === 'favoritos'`): badge "Padrão" no lugar do
 	 * kebab — coleção de sistema não é renomeável nem deletável — e, vazia, a
-	 * dica de usar a estrela no lugar da barra (e sem o "0 projetos" na capa).
+	 * dica de usar a estrela no lugar dos números, sob a mesma barra (vazia) dos
+	 * outros cards: a anatomia barra + linha de texto se repete em todo card,
+	 * então a linha do grid fica alinhada (e sem o "0 projetos" na capa).
 	 *
 	 * Compartilhamento: coleção que chegou por share mostra a procedência
-	 * ("Compartilhada por Fulano · Leitura") e NÃO tem kebab — editar, apagar e
-	 * gerir acessos são só do dono. A linha "Compartilhada com"
-	 * (`ColecaoDestinatarios`) fica no rodapé, com `mt-auto` para as barras
-	 * seguirem alinhadas na linha do grid com ou sem ela. O dono a vê sempre
-	 * que convidou alguém (com status); quem participa, só quando há alguém
-	 * além do dono (que a procedência já cita).
+	 * ("Compartilhada por Fulano · Leitura") no rodapé, com `mt-auto` para as
+	 * barras seguirem alinhadas na linha do grid, e NÃO tem kebab — editar,
+	 * apagar e gerir acessos são só do dono. Com quem está compartilhada fica
+	 * no modal Compartilhar, não no card.
 	 */
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import ColecaoAndamento from '$lib/components/ColecaoAndamento.svelte';
 	import ColecaoAreasPill from '$lib/components/ColecaoAreasPill.svelte';
 	import ColecaoCapa from '$lib/components/ColecaoCapa.svelte';
-	import ColecaoDestinatarios from '$lib/components/ColecaoDestinatarios.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
 	import { plural } from '$lib/utils/colecaoCapa';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
@@ -55,13 +54,8 @@
 
 	const PAPEL_LABEL: Record<string, string> = { viewer: 'Leitura', editor: 'Edição' };
 
-	// `?? []`/`?? 0`: payload antigo em cache SWR (pré-aceite/pré-capa) não quebra o card.
+	// `?? []`: payload antigo em cache SWR (pré-capa) não quebra o card.
 	const areas = $derived(colecao.areas ?? []);
-	const destinatarios = $derived(colecao.destinatarios ?? []);
-	const destinatariosTotal = $derived(colecao.destinatarios_total ?? destinatarios.length);
-	const mostrarDestinatarios = $derived(
-		!isFavoritos && (isDono ? destinatariosTotal > 0 : destinatariosTotal > 1)
-	);
 
 	// Procedência de coleção alheia; `owner` só vem preenchido quando papel ≠ dono.
 	const procedencia = $derived(
@@ -140,25 +134,21 @@
 
 	<div class="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3.5">
 		{#if isFavoritos && colecao.projetos === 0}
-			<p class="m-0 text-sm leading-snug text-text-muted">
-				Use a estrela nos projetos para guardá-los aqui.
-			</p>
+			<!-- Mesma anatomia do ColecaoAndamento (barra de 6px + gap-2.5 + texto),
+			     com a trilha vazia: o texto cai onde os números caem nos vizinhos. -->
+			<div class="flex flex-col gap-2.5">
+				<div class="h-1.5 rounded-full bg-progress-track" aria-hidden="true"></div>
+				<p class="m-0 text-xs leading-snug text-text-muted">
+					Use a estrela nos projetos para guardá-los aqui.
+				</p>
+			</div>
 		{:else}
 			<ColecaoAndamento etapas={colecao} />
 		{/if}
 
-		{#if procedencia || mostrarDestinatarios}
-			<div class="mt-auto flex flex-col gap-2 border-t border-border-hairline pt-3">
-				{#if procedencia}
-					<span class="min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
-				{/if}
-				{#if mostrarDestinatarios}
-					<!-- Acima do link sobreposto (z-20, só na largura da pilha): o title de cada
-					     avatar é o único jeito de saber quem é cada iniciais no hover. -->
-					<div class="relative z-20 max-w-full self-start">
-						<ColecaoDestinatarios {destinatarios} total={destinatariosTotal} souDono={isDono} />
-					</div>
-				{/if}
+		{#if procedencia}
+			<div class="mt-auto border-t border-border-hairline pt-3">
+				<span class="block min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
 			</div>
 		{/if}
 	</div>

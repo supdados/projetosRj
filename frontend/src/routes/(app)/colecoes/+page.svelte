@@ -57,6 +57,7 @@
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecoesSkeleton from '$lib/components/skeletons/ColecoesSkeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
+	import { COLECOES_GRID_CLS, COLECOES_GRID_VAZIO_CLS } from '$lib/utils/colecoesGrid';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
 	import { notificationSummary } from '$lib/stores/notificationSummary';
@@ -200,9 +201,10 @@
 		return filtradas;
 	});
 
-	// Só Favoritos e nenhum filtro ativo: o grid ganha o estado vazio ilustrado.
-	// Nele o card de Favoritos NÃO estica até a altura do painel (`items-start`,
-	// como no design); com coleções, `items-stretch` iguala a linha de cards.
+	// Só Favoritos e nenhum filtro ativo: o grid ganha o estado vazio ilustrado
+	// (trilhas próprias, ver `colecoesGrid.ts`). Nele o card de Favoritos NÃO
+	// estica até a altura do painel (`items-start`, como no design); com
+	// coleções, o `stretch` padrão do grid iguala a altura da linha de cards.
 	const soFavoritos = $derived(
 		(colecoes ?? []).every((c) => c.tipo === 'favoritos') && !busca.trim() && escopoAtivo === ''
 	);
@@ -396,9 +398,7 @@
 			</div>
 		{:else}
 			<div
-				class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 {soFavoritos
-					? 'items-start'
-					: 'items-stretch'}"
+				class={soFavoritos ? COLECOES_GRID_VAZIO_CLS : COLECOES_GRID_CLS}
 				aria-busy={loadState !== 'ready'}
 			>
 				{#each visiveis as colecao (colecao.id)}

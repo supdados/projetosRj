@@ -1,18 +1,20 @@
 <script lang="ts">
 	/**
 	 * Skeleton do índice de Coleções, espelho do estado pronto de
-	 * routes/(app)/colecoes/+page.svelte: grid 1/2/4 colunas de cards no mesmo
-	 * chrome do ColecaoCard em formato capa (faixa de 124px com ícone e nome,
-	 * barra + três números embaixo) — a transição loading → pronto acontece sem
-	 * salto de layout. Só aparece na 1ª visita (sem cache SWR).
+	 * routes/(app)/colecoes/+page.svelte: a MESMA grade de colunas automáticas
+	 * (`COLECOES_GRID_CLS`) com cards no chrome do ColecaoCard em formato capa
+	 * (faixa de 124px com ícone e nome, barra + três números embaixo) — a
+	 * transição loading → pronto acontece sem salto de layout. Só aparece na 1ª
+	 * visita (sem cache SWR).
 	 */
 	import Skeleton from '$lib/components/Skeleton.svelte';
+	import { COLECOES_GRID_CLS } from '$lib/utils/colecoesGrid';
 
 	// Larguras variadas dos títulos — quebra a monotonia dos cards.
 	const titleWidths = ['w-2/5', 'w-3/5', 'w-1/2', 'w-2/3', 'w-2/5', 'w-3/5', 'w-1/2', 'w-2/5'];
 </script>
 
-<div aria-hidden="true" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+<div aria-hidden="true" class={COLECOES_GRID_CLS}>
 	{#each titleWidths as width, i (i)}
 		<div class="flex h-full flex-col rounded-xl border border-border-subtle bg-surface shadow-sm">
 			<div

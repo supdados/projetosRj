@@ -13,13 +13,11 @@
 import type {
 	ColecaoShare,
 	ConviteColecao,
-	DestinatarioColecao,
 	PapelColecao,
 	PapelCompartilhamento,
 	ProjetoColecaoRow,
 	ResumoShareOrgao,
-	StatusConvite,
-	StatusDestinatario
+	StatusConvite
 } from '$lib/types/collections';
 
 /** Tinta do marcador de status (mapeada para classes estáticas no componente). */
@@ -259,53 +257,6 @@ export function textoDoConviteExtra(
 			? `Seu papel atual é ${atual}: aceite para passar a ${papelColecaoLabel(convite.papel)}. Recusar mantém o acesso que você já tem.`
 			: `Aceitar ou recusar não muda o seu papel atual (${atual}).`
 	};
-}
-
-/** Pilha do card: os avatares a desenhar e quantos ficam no "+N". */
-export interface PilhaDestinatarios {
-	visiveis: DestinatarioColecao[];
-	excedente: number;
-}
-
-/**
- * Corta a lista em `limite` avatares; o "+N" vem do TOTAL do servidor (a lista
- * já chega cortada em 5, então não dá para contar os escondidos no cliente).
- */
-export function pilhaDestinatarios(
-	destinatarios: readonly DestinatarioColecao[],
-	total: number,
-	limite = 5
-): PilhaDestinatarios {
-	const visiveis = destinatarios.slice(0, limite);
-	return { visiveis, excedente: Math.max(0, total - visiveis.length) };
-}
-
-const STATUS_DESTINATARIO: Record<StatusDestinatario, string> = {
-	dono: 'Dono',
-	pendente: 'Pendente',
-	aceito: '',
-	legado: '',
-	recusado: 'Recusou',
-	saiu: 'Saiu'
-};
-
-/** Tooltip do avatar: "Maria · Editor", "SEPLAG · Pendente", "João · Dono". */
-export function rotuloDestinatario(destinatario: DestinatarioColecao): string {
-	const nome =
-		destinatario.tipo === 'orgao' && destinatario.sigla
-			? `${destinatario.sigla} (${destinatario.nome})`
-			: destinatario.nome;
-	const situacao = STATUS_DESTINATARIO[destinatario.status] || papelColecaoLabel(destinatario.papel);
-	return `${nome} · ${situacao}`;
-}
-
-/** Sem acesso hoje (convite em aberto, recusado ou saiu) — avatar esmaecido no card do dono. */
-export function destinatarioSemAcesso(destinatario: DestinatarioColecao): boolean {
-	return (
-		destinatario.status === 'pendente' ||
-		destinatario.status === 'recusado' ||
-		destinatario.status === 'saiu'
-	);
 }
 
 /**

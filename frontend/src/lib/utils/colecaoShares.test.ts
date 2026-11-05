@@ -2,18 +2,16 @@
  * Testes dos utils PUROS da coleção compartilhada com aceite: rótulos de papel
  * e status, marcador/detalhe de share de área, gatilho do "Reenviar", textos
  * das confirmações (revogar, rebaixar, sair — com os itens órfãos), banner do
- * convite de quem já participa, pilha do card e chip "Incluído por".
+ * convite de quem já participa e chip "Incluído por".
  */
 import { describe, expect, it } from 'vitest';
 import type {
 	ColecaoShare,
 	ConviteColecao,
-	DestinatarioColecao,
 	ResumoShareOrgao
 } from '$lib/types/collections';
 import {
 	PAPEIS_COMPARTILHAMENTO,
-	destinatarioSemAcesso,
 	detalheDoShareDeArea,
 	fraseDeItensOrfaos,
 	fraseDeItensQueSaem,
@@ -21,10 +19,8 @@ import {
 	nomeDoShare,
 	papelColecaoLabel,
 	permissaoDoConvite,
-	pilhaDestinatarios,
 	podeReenviarShare,
 	procedenciaDoConvite,
-	rotuloDestinatario,
 	rotuloIncluidoPor,
 	rotuloStatusConvite,
 	textoDeRebaixamento,
@@ -65,10 +61,6 @@ function shareArea(resumo: ResumoShareOrgao, extra: Partial<ColecaoShare> = {}):
 		resumo,
 		...extra
 	});
-}
-
-function destinatario(extra: Partial<DestinatarioColecao> = {}): DestinatarioColecao {
-	return { tipo: 'user', id: 9, nome: 'João', sigla: null, papel: 'viewer', status: 'aceito', ...extra };
 }
 
 describe('papéis e status', () => {
@@ -268,32 +260,6 @@ describe('convite, pilha do card e autoria', () => {
 		expect(permissaoDoConvite('viewer')).toBe('Você vê a coleção e lê os projetos.');
 		expect(permissaoDoConvite('editor')).toMatch(/^Você vê a coleção, inclui projetos/);
 		expect(permissaoDoConvite('x' as never)).toBe('Você vê a coleção e lê os projetos.');
-	});
-
-	it('o "+N" vem do total do servidor, não da lista já cortada', () => {
-		const lista = [1, 2, 3, 4, 5].map((id) => destinatario({ id }));
-		const pilha = pilhaDestinatarios(lista, 8);
-		expect(pilha.visiveis).toHaveLength(5);
-		expect(pilha.excedente).toBe(3);
-		expect(pilhaDestinatarios(lista.slice(0, 2), 2).excedente).toBe(0);
-		expect(pilhaDestinatarios(lista, 5, 3)).toEqual({ visiveis: lista.slice(0, 3), excedente: 2 });
-	});
-
-	it('tooltip do avatar mostra papel para quem tem acesso e status para o resto', () => {
-		expect(rotuloDestinatario(destinatario({ papel: 'editor' }))).toBe('João · Editor');
-		expect(rotuloDestinatario(destinatario({ status: 'dono', papel: 'dono' }))).toBe('João · Dono');
-		expect(
-			rotuloDestinatario(
-				destinatario({ tipo: 'orgao', nome: 'Planejamento', sigla: 'SEPLAG', status: 'pendente' })
-			)
-		).toBe('SEPLAG (Planejamento) · Pendente');
-	});
-
-	it('pendente, recusado e saiu não têm acesso; aceito, legado e dono têm', () => {
-		expect(destinatarioSemAcesso(destinatario({ status: 'pendente' }))).toBe(true);
-		expect(destinatarioSemAcesso(destinatario({ status: 'saiu' }))).toBe(true);
-		expect(destinatarioSemAcesso(destinatario({ status: 'legado' }))).toBe(false);
-		expect(destinatarioSemAcesso(destinatario({ status: 'dono' }))).toBe(false);
 	});
 
 	it('chip "Incluído por" some para o dono e para item legado', () => {
