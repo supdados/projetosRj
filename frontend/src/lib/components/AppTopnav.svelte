@@ -22,6 +22,7 @@
 	const THEME_TOGGLE_ENABLED = false;
 	import GlobalSearchBox from '$lib/components/GlobalSearchBox.svelte';
 	import NotificationBell from '$lib/components/NotificationBell.svelte';
+	import NovidadesBotao from '$lib/components/novidades/NovidadesBotao.svelte';
 	import TopnavIcon, { type NavIconKind } from '$lib/components/TopnavIcon.svelte';
 	import AdminMenuIcon, { type AdminIconKind } from '$lib/components/AdminMenuIcon.svelte';
 	import { CALENDAR_ENABLED } from '$lib/config/features';
@@ -138,7 +139,8 @@
 	const adminLinks: { label: string; path: string; kind: AdminIconKind }[] = [
 		{ label: 'Usuários', path: '/admin/usuarios', kind: 'usuarios' },
 		{ label: 'Órgãos', path: '/admin/orgaos', kind: 'orgaos' },
-		{ label: 'Templates', path: '/admin/templates', kind: 'templates' }
+		{ label: 'Templates', path: '/admin/templates', kind: 'templates' },
+		{ label: 'Novidades', path: '/admin/novidades', kind: 'novidades' }
 	];
 
 	// Dropdown acessivel: estado aberto + ativacao por teclado/aria.
@@ -290,6 +292,9 @@
 		<div class="flex flex-[0_0_auto] items-center justify-end gap-[1.1rem]">
 			<!-- Busca global LIVE (input + dropdown com debounce/teclado) -->
 			<GlobalSearchBox />
+
+			<!-- Novidades: reabre o onboarding; ponto enquanto houver novidade não vista. -->
+			<NovidadesBotao />
 
 			<!-- Notificacoes: sino com ponto, polling do resumo e dropdown (NotificationBell). -->
 			<NotificationBell userId={user?.id ?? null} />

@@ -1,5 +1,12 @@
 <script module lang="ts">
-	export type AdminIconKind = 'usuarios' | 'orgaos' | 'templates' | 'csv' | 'csv-upload' | 'sair';
+	export type AdminIconKind =
+		| 'usuarios'
+		| 'orgaos'
+		| 'templates'
+		| 'novidades'
+		| 'csv'
+		| 'csv-upload'
+		| 'sair';
 </script>
 
 <script lang="ts">
@@ -91,6 +98,23 @@
 				fill="#8FB6CC"
 				><path d="M2.6 2.6H14.6V14.6H2.6Z" /></g
 			><path d="M8 8H19.4L21.4 10V21.4H8Z" fill="#1B6E96" /></svg
+		>
+	{:else if kind === 'novidades'}
+		<svg
+			viewBox="0 0 24 24"
+			fill="currentColor"
+			class="absolute inset-0 group-hover:opacity-0 group-focus-visible:opacity-0"
+			><path d="M19 14.6l1 2.9 2.9 1-2.9 1-1 2.9-1-2.9-2.9-1 2.9-1Z" opacity=".48" /><path
+				d="M10 2l2.4 6.6L19 11l-6.6 2.4L10 20l-2.4-6.6L1 11l6.6-2.4Z"
+			/></svg
+		>
+		<svg
+			viewBox="0 0 24 24"
+			class="absolute inset-0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+			><path d="M19 14.6l1 2.9 2.9 1-2.9 1-1 2.9-1-2.9-2.9-1 2.9-1Z" fill="#8FB6CC" /><path
+				d="M10 2l2.4 6.6L19 11l-6.6 2.4L10 20l-2.4-6.6L1 11l6.6-2.4Z"
+				fill="#1B6E96"
+			/></svg
 		>
 	{:else if kind === 'csv'}
 		<svg

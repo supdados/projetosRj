@@ -16,6 +16,7 @@
 	import AppFooter from '$lib/components/AppFooter.svelte';
 	import FlashToasts from '$lib/components/FlashToasts.svelte';
 	import ConfirmHost from '$lib/components/ConfirmHost.svelte';
+	import NovidadesHost from '$lib/components/novidades/NovidadesHost.svelte';
 	import ChatbotWidget from '$lib/components/ChatbotWidget.svelte';
 
 	let { children }: { children: Snippet } = $props();
@@ -122,6 +123,7 @@
 	     FIM do shell porque empata em z-index com os modais abertos dentro de
 	     <main> (ambos 1050) — no empate quem decide é a ordem no DOM, e o diálogo
 	     precisa cobrir o modal que o disparou. -->
+	<NovidadesHost />
 	<ConfirmHost />
 
 	<!-- Assistente virtual: em TODAS as telas autenticadas, como na v4.5 (o widget

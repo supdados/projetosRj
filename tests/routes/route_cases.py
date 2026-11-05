@@ -1961,6 +1961,61 @@ ROUTE_CASES += [
         "requires_login": True,
         "requires_admin": False,
     },
+    # SPA API — Novidades (onboarding). Banco de teste nasce sem novidades
+    # (create_all, sem o insert da migração): listar devolve lista vazia e as
+    # rotas por slug respondem o 404 canônico.
+    {
+        "id": "api_novidades_list_get",
+        "method": "GET",
+        "rule": "/api/novidades",
+        "path": "/api/novidades",
+        "role": "user",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_novidade_vista_post",
+        "method": "POST",
+        "rule": "/api/novidades/<string:slug>/vista",
+        "path": "/api/novidades/inexistente/vista",
+        "role": "user",
+        "json": {"concluida": True},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": False,
+    },
+    {
+        "id": "api_admin_novidades_list_get",
+        "method": "GET",
+        "rule": "/api/admin/novidades",
+        "path": "/api/admin/novidades",
+        "role": "admin",
+        "expected_status": 200,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
+        "id": "api_admin_novidade_ativa_put",
+        "method": "PUT",
+        "rule": "/api/admin/novidades/<string:slug>",
+        "path": "/api/admin/novidades/inexistente",
+        "role": "admin",
+        "json": {"ativa": True},
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": True,
+    },
+    {
+        "id": "api_admin_novidade_mostrar_de_novo_post",
+        "method": "POST",
+        "rule": "/api/admin/novidades/<string:slug>/mostrar-de-novo",
+        "path": "/api/admin/novidades/inexistente/mostrar-de-novo",
+        "role": "admin",
+        "expected_status": 404,
+        "requires_login": True,
+        "requires_admin": True,
+    },
 ]
 
 LOGIN_REQUIRED_CASES = [case for case in ROUTE_CASES if case["requires_login"]]
