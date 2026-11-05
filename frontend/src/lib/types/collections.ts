@@ -23,7 +23,11 @@ export type CollectionIconId =
 	| 'estrela'
 	| 'rede'
 	| 'capacitacao'
-	| 'calendario';
+	| 'calendario'
+	| 'dados'
+	| 'indicadores'
+	| 'seguranca'
+	| 'orgao';
 
 /** Famílias de cor da régua aceitas para coleção (nunca hex; dark desloca sozinho). */
 export type CollectionColorId = 'primary' | 'success' | 'warning' | 'attention' | 'danger' | 'neutral';
@@ -137,7 +141,13 @@ export interface ColecaoResumo {
 	projetos: number;
 	etapas_total: number;
 	etapas_concluidas: number;
+	/** Começou (pela data), não concluída e no prazo — `services/atraso.py`. */
+	etapas_em_andamento: number;
+	/** Não concluída com fim vencido (mesmo critério do projeto "atrasado"). */
+	etapas_atrasadas: number;
 	progresso_pct: number;
+	/** Áreas dos projetos visíveis, mais projetos primeiro (pílula "N áreas" da capa). */
+	areas: AreaColecao[];
 	/** ISO 8601. */
 	created_at: string;
 	/** ISO 8601, `null` em linha legada; bumpado à mão nas mutações de item. */
@@ -150,6 +160,12 @@ export interface ColecaoResumo {
 	destinatarios: DestinatarioColecao[];
 	/** Total de destinatários (base do "+N" da pilha). */
 	destinatarios_total: number;
+}
+
+/** Uma área da coleção: sigla do órgão dos projetos (`null` = projeto sem órgão). */
+export interface AreaColecao {
+	sigla: string | null;
+	projetos: number;
 }
 
 /**

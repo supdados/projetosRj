@@ -26,11 +26,23 @@
 		maxWidth?: string;
 		onBackdrop?: () => void;
 		onEscape?: () => void;
+		/**
+		 * Sem o `p-6` do painel (e recortando o conteúdo na borda arredondada):
+		 * para modais cujo topo é uma faixa sangrada, como a capa do Nova coleção.
+		 */
+		flush?: boolean;
 		children: Snippet;
 	}
 
-	let { labelId, open = true, maxWidth = 'max-w-md', onBackdrop, onEscape, children }: Props =
-		$props();
+	let {
+		labelId,
+		open = true,
+		maxWidth = 'max-w-md',
+		onBackdrop,
+		onEscape,
+		flush = false,
+		children
+	}: Props = $props();
 
 	let panelEl: HTMLDivElement | undefined = $state();
 
@@ -70,7 +82,9 @@
 	>
 		<div
 			bind:this={panelEl}
-			class="w-full {maxWidth} rounded-xl border border-border-subtle bg-surface p-6 shadow-lg"
+			class="w-full {maxWidth} rounded-xl border border-border-subtle bg-surface shadow-lg {flush
+				? 'overflow-hidden'
+				: 'p-6'}"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby={labelId}

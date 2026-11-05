@@ -1,11 +1,14 @@
 <script lang="ts">
 	/**
 	 * Índice de Coleções (tela 3a). Consome `GET /api/colecoes` via
-	 * `$lib/api/collections` (SWR) e renderiza o grid de ColecaoCard —
-	 * Favoritos sempre primeiro — com busca e ordenação client-side (o teto é
-	 * 20 coleções por usuário; não há filtro server-side).
+	 * `$lib/api/collections` (SWR) e renderiza o grid de ColecaoCard (formato
+	 * capa, design "Coleções 2b") — Favoritos sempre primeiro — com busca e
+	 * ordenação client-side (o teto é
+	 * 20 coleções por usuário; não há filtro server-side). O card fantasma
+	 * "Nova coleção" fecha o grid; só com Favoritos, o resto da linha vira o
+	 * estado vazio ilustrado (ColecoesVazio).
 	 *
-	 * Mutações: criar via NovaColecaoModal (2 passos, POST atômico), editar
+	 * Mutações: criar via NovaColecaoModal (tela única + sucesso, POST atômico), editar
 	 * identidade num modal próprio (mesmo formulário do passo 1), compartilhar
 	 * (CompartilharColecaoModal) e apagar com confirmação destrutiva
 	 * (`confirmAction`). Toda escrita invalida o cache no client de API; a tela
@@ -44,6 +47,8 @@
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import FilterChipGroup from '$lib/components/FilterChipGroup.svelte';
 	import ColecaoCard from '$lib/components/ColecaoCard.svelte';
+	import ColecaoCardFantasma from '$lib/components/ColecaoCardFantasma.svelte';
+	import ColecoesVazio from '$lib/components/ColecoesVazio.svelte';
 	import ColecaoConvitesPainel from '$lib/components/ColecaoConvitesPainel.svelte';
 	import NovaColecaoModal from '$lib/components/NovaColecaoModal.svelte';
 	import SugerirColecoesModal from '$lib/components/SugerirColecoesModal.svelte';
@@ -52,7 +57,6 @@
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecoesSkeleton from '$lib/components/skeletons/ColecoesSkeleton.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
-	import TopnavIcon from '$lib/components/TopnavIcon.svelte';
 	import { confirmAction } from '$lib/stores/confirm';
 	import { flash } from '$lib/stores/flash';
 	import { notificationSummary } from '$lib/stores/notificationSummary';
@@ -196,6 +200,13 @@
 		return filtradas;
 	});
 
+	// Só Favoritos e nenhum filtro ativo: o grid ganha o estado vazio ilustrado.
+	// Nele o card de Favoritos NÃO estica até a altura do painel (`items-start`,
+	// como no design); com coleções, `items-stretch` iguala a linha de cards.
+	const soFavoritos = $derived(
+		(colecoes ?? []).every((c) => c.tipo === 'favoritos') && !busca.trim() && escopoAtivo === ''
+	);
+
 	const totalColecoes = $derived(colecoes?.length ?? 0);
 	const totalProjetos = $derived(
 		(colecoes ?? []).reduce((soma, c) => soma + c.projetos, 0)
@@ -211,18 +222,14 @@
 		sugestaoAceita = null;
 	}
 
-	function onColecaoCriada(colecao: ColecaoResumo): void {
-		// Compartilhamento inicial nasce convite pendente: o recibo diz isso.
-		const convidados = colecao.destinatarios_total ?? 0;
-		flash.success(`Coleção "${colecao.nome}" criada.`, {
-			description:
-				convidados > 0
-					? `Convite enviado para ${convidados} ${convidados === 1 ? 'destinatário' : 'destinatários'}.`
-					: undefined
-		});
+	function onColecaoCriada(): void {
+		// O recibo (inclusive dos convites enviados) é a tela de sucesso do
+		// próprio modal; aqui só atualiza o grid que aparece por trás dele.
 		// Aceite de sugestão: fecha o modal de sugestões; reabrir refaz o GET
-		// barato e o cartão aceito já não volta (deixou de ser pendente).
+		// barato e o cartão aceito já não volta (deixou de ser pendente). Limpar
+		// a sugestão faz o "Criar outra" do sucesso abrir em branco.
 		if (sugestaoAceita) sugerirOpen = false;
+		sugestaoAceita = null;
 		void load();
 	}
 
@@ -388,7 +395,12 @@
 				</p>
 			</div>
 		{:else}
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-busy={loadState !== 'ready'}>
+			<div
+				class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 {soFavoritos
+					? 'items-start'
+					: 'items-stretch'}"
+				aria-busy={loadState !== 'ready'}
+			>
 				{#each visiveis as colecao (colecao.id)}
 					{@const gerenciavel = colecao.tipo === 'custom' && colecao.papel === 'dono'}
 					<ColecaoCard
@@ -400,20 +412,11 @@
 					/>
 				{/each}
 
-				<!-- Card fantasma: cria coleção (button tracejado, a11y de verdade). -->
-				<button
-					type="button"
-					onclick={() => (createOpen = true)}
-					class="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-strong bg-surface p-4 text-center transition-ui duration-fast hover:border-brand hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-				>
-					<span
-						class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-wash-brand text-brand"
-						aria-hidden="true"
-					>
-						<TopnavIcon kind="colecoes" active={false} />
-					</span>
-					<span class="text-sm font-semibold text-text-primary">Criar uma nova coleção</span>
-				</button>
+				{#if soFavoritos}
+					<ColecoesVazio onCriar={() => (createOpen = true)} />
+				{:else}
+					<ColecaoCardFantasma onCriar={() => (createOpen = true)} />
+				{/if}
 			</div>
 		{/if}
 	{/if}

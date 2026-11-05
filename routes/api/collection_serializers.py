@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from models import ProjectCollection, ProjectCollectionShare, User
+from services.collection_areas import AreaDaColecao
 from services.collection_shares import (
     ConvitePendente,
     DestinatarioColecao,
@@ -39,14 +40,17 @@ def serialize_colecao_card(
     *,
     papel: str,
     destinatarios: list[DestinatarioColecao],
+    areas: Optional[list[AreaDaColecao]] = None,
 ) -> dict[str, Any]:
-    """``ColecaoResumo`` + ``destinatarios`` (até 5) e ``destinatarios_total``.
+    """``ColecaoResumo`` + ``destinatarios`` (até 5), ``destinatarios_total``
+    e ``areas`` (pílula "N áreas" da capa, já ordenada).
 
     ``destinatarios`` já vem com a regra de quem vê aplicada
     (``destinatarios_por_colecao``): o dono recebe todos com status; quem
     participa recebe o dono e os outros aceitos. ``compartilhada`` deriva da
-    mesma lista. Exemplo:
-    ``serialize_colecao_card(c, rollup, papel="dono", destinatarios=lista)``.
+    mesma lista. ``areas`` vem de ``areas_por_colecao`` (só projetos
+    visíveis). Exemplo:
+    ``serialize_colecao_card(c, rollup, papel="dono", destinatarios=lista, areas=areas)``.
     """
     card = serialize_colecao_resumo(
         colecao, rollup, papel=papel, compartilhada=bool(destinatarios)
@@ -56,6 +60,10 @@ def serialize_colecao_card(
         for destinatario in destinatarios[:LIMITE_DESTINATARIOS_CARD]
     ]
     card["destinatarios_total"] = len(destinatarios)
+    card["areas"] = [
+        {"sigla": area["sigla"], "projetos": int(area["projetos"])}
+        for area in areas or []
+    ]
     return card
 
 

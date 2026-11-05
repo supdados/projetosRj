@@ -451,6 +451,13 @@
 		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 		transition-duration: 150ms;
 	}
+
+	/* Véu sobre a CAPA da coleção (pílula de áreas, kebab, fechar do modal): a
+	   superfície a 75% deixa o wash da família aparecer. `bg-surface/75` não
+	   compila — as cores do tema são var(...) —, daí o color-mix explícito. */
+	.bg-capa-veu {
+		background-color: color-mix(in srgb, var(--ds-color-surface-base) 75%, transparent);
+	}
 }
 
 @layer components {

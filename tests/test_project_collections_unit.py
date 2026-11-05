@@ -528,10 +528,13 @@ def test_rollups_ignoram_projeto_invisivel_ao_viewer(app, cenario, dono, admin):
         db.session.commit()
 
         do_dono = collection_rollups([colecao.id], dono)[colecao.id]
+        # A etapa aberta terminou em jan/2026 (fixture): entra como atrasada.
         assert do_dono == {
             "projetos": 1,
             "etapas_total": 2,
             "etapas_concluidas": 1,
+            "etapas_em_andamento": 0,
+            "etapas_atrasadas": 1,
             "progresso_pct": 50,
         }
         do_admin = collection_rollups([colecao.id], admin)[colecao.id]
@@ -547,6 +550,8 @@ def test_rollups_de_colecao_vazia_saem_zerados(app, cenario, dono):
             "projetos": 0,
             "etapas_total": 0,
             "etapas_concluidas": 0,
+            "etapas_em_andamento": 0,
+            "etapas_atrasadas": 0,
             "progresso_pct": 0,
         }
 

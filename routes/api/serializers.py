@@ -963,7 +963,8 @@ def serialize_colecao_resumo(
 
     Args:
         colecao: Instância de ``ProjectCollection``.
-        rollup: ``{projetos, etapas_total, etapas_concluidas, progresso_pct}``.
+        rollup: ``{projetos, etapas_total, etapas_concluidas,
+            etapas_em_andamento, etapas_atrasadas, progresso_pct}``.
         papel: Papel do viewer na coleção — ``"dono"``/``"viewer"``/``"editor"``.
         compartilhada: ``True`` quando a coleção tem ≥ 1 compartilhamento.
 
@@ -987,6 +988,8 @@ def serialize_colecao_resumo(
         "projetos": int(rollup.get("projetos", 0)),
         "etapas_total": int(rollup.get("etapas_total", 0)),
         "etapas_concluidas": int(rollup.get("etapas_concluidas", 0)),
+        "etapas_em_andamento": int(rollup.get("etapas_em_andamento", 0)),
+        "etapas_atrasadas": int(rollup.get("etapas_atrasadas", 0)),
         "progresso_pct": int(rollup.get("progresso_pct", 0)),
         "created_at": _iso_or_none(colecao.created_at),
         "updated_at": _iso_or_none(colecao.updated_at),

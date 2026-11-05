@@ -571,7 +571,7 @@
 				>
 					<div class="flex flex-col gap-2">
 						<span id="tile-icone-label" class={labelCls}>Ícone</span>
-						<div role="group" aria-labelledby="tile-icone-label" class="grid grid-cols-4 gap-2">
+						<div role="group" aria-labelledby="tile-icone-label" class="grid grid-cols-6 gap-2">
 							{#each COLECAO_ICONE_OPTIONS as opcao (opcao.id)}
 								{@const ativo = colecao.icone === opcao.id}
 								<button
@@ -766,9 +766,9 @@
 {/if}
 
 <!-- Adicionar projetos: o picker lista só o que o backend aceita deste papel. -->
-{#if pickerOpen}
+{#if pickerOpen && colecao}
 	<ColecaoAdicionarProjetosModal
-		{collectionId}
+		{colecao}
 		{idsNaColecao}
 		visibilidade={pickerVisibilidade}
 		onClose={() => (pickerOpen = false)}

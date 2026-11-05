@@ -17,6 +17,10 @@ COLLECTION_ICONS: frozenset[str] = frozenset(
         "rede",
         "capacitacao",
         "calendario",
+        "dados",
+        "indicadores",
+        "seguranca",
+        "orgao",
     }
 )
 

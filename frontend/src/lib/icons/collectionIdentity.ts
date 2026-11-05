@@ -38,7 +38,11 @@ export const COLECAO_ICONE_OPTIONS: readonly OpcaoIconeColecao[] = [
 	{ id: 'estrela', label: 'Estrela' },
 	{ id: 'rede', label: 'Rede' },
 	{ id: 'capacitacao', label: 'Capacitação' },
-	{ id: 'calendario', label: 'Calendário' }
+	{ id: 'calendario', label: 'Calendário' },
+	{ id: 'dados', label: 'Dados' },
+	{ id: 'indicadores', label: 'Indicadores' },
+	{ id: 'seguranca', label: 'Segurança' },
+	{ id: 'orgao', label: 'Órgão' }
 ];
 
 export const COLECAO_COR_OPTIONS: readonly OpcaoCorColecao[] = [
@@ -59,3 +63,28 @@ export const COLECAO_ICONE_ATIVO_CLASS: Readonly<Record<CollectionColorId, strin
 	danger: 'border-danger-600 bg-wash-danger text-danger',
 	neutral: 'border-neutral-600 bg-wash-neutral text-text-secondary'
 };
+
+/**
+ * Tom da CAPA (card do índice, topo do modal Nova coleção, tela de sucesso):
+ * `wash` pinta o fundo, `tinta` o ícone e a marca d'água, `selo` o círculo
+ * sólido do visto da tela de sucesso. Mesmos degraus do `ColecaoIconTile`.
+ */
+export interface TomCapaColecao {
+	wash: string;
+	tinta: string;
+	selo: string;
+}
+
+export const COLECAO_CAPA_TOM: Readonly<Record<CollectionColorId, TomCapaColecao>> = {
+	primary: { wash: 'bg-wash-brand', tinta: 'text-brand', selo: 'bg-primary-600' },
+	success: { wash: 'bg-wash-success', tinta: 'text-success', selo: 'bg-success-600' },
+	warning: { wash: 'bg-wash-warning', tinta: 'text-warning', selo: 'bg-warning-600' },
+	attention: { wash: 'bg-wash-attention', tinta: 'text-attention', selo: 'bg-attention-600' },
+	danger: { wash: 'bg-wash-danger', tinta: 'text-danger', selo: 'bg-danger-600' },
+	neutral: { wash: 'bg-wash-neutral', tinta: 'text-text-secondary', selo: 'bg-neutral-600' }
+};
+
+/** Cor fora da whitelist (drift do backend) cai no azul padrão em vez de sumir. */
+export function tomDaCapa(cor: CollectionColorId): TomCapaColecao {
+	return COLECAO_CAPA_TOM[cor] ?? COLECAO_CAPA_TOM.primary;
+}

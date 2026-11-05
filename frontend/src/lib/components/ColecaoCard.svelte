@@ -1,28 +1,34 @@
 <script lang="ts">
 	/**
-	 * Cartão de coleção do índice (`/colecoes`): tile de ícone + nome + descrição
-	 * + barra de progresso (% de etapas concluídas) + meta "N projetos · N etapas".
+	 * Cartão de coleção do índice (`/colecoes`) no formato CAPA (design
+	 * "Coleções 2b"): a capa leva o ícone, o nome e "N projetos"; embaixo ficam
+	 * a barra das etapas por situação e os três números. A pílula "N áreas"
+	 * abre, no hover/foco, quantos projetos vêm de cada área.
 	 *
 	 * O card inteiro é clicável por um link SOBREPOSTO (`absolute inset-0`), e não
-	 * envolvendo o conteúdo num `<a>` — assim o kebab continua sendo um controle
-	 * legítimo (interativo dentro de link é HTML inválido). Molde do sobreposto:
-	 * `dashboard/+page.svelte:474-478`.
+	 * envolvendo o conteúdo num `<a>` — assim o kebab e a pílula continuam sendo
+	 * controles legítimos (interativo dentro de link é HTML inválido). Molde do
+	 * sobreposto: `dashboard/+page.svelte:474-478`.
 	 *
 	 * Variante Favoritos (`tipo === 'favoritos'`): badge "Padrão" no lugar do
-	 * kebab — coleção de sistema não é renomeável nem deletável.
+	 * kebab — coleção de sistema não é renomeável nem deletável — e, vazia, a
+	 * dica de usar a estrela no lugar da barra (e sem o "0 projetos" na capa).
 	 *
 	 * Compartilhamento: coleção que chegou por share mostra a procedência
 	 * ("Compartilhada por Fulano · Leitura") e NÃO tem kebab — editar, apagar e
 	 * gerir acessos são só do dono. A linha "Compartilhada com"
-	 * (`ColecaoDestinatarios`) fica ACIMA do bloco de progresso: o `mt-auto`
-	 * dele segura as barras alinhadas na linha do grid com ou sem a pilha. O
-	 * dono a vê sempre que convidou alguém (com status); quem participa, só
-	 * quando há alguém além do dono (que a procedência já cita).
+	 * (`ColecaoDestinatarios`) fica no rodapé, com `mt-auto` para as barras
+	 * seguirem alinhadas na linha do grid com ou sem ela. O dono a vê sempre
+	 * que convidou alguém (com status); quem participa, só quando há alguém
+	 * além do dono (que a procedência já cita).
 	 */
 	import AppIcon from '$lib/components/AppIcon.svelte';
-	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
+	import ColecaoAndamento from '$lib/components/ColecaoAndamento.svelte';
+	import ColecaoAreasPill from '$lib/components/ColecaoAreasPill.svelte';
+	import ColecaoCapa from '$lib/components/ColecaoCapa.svelte';
 	import ColecaoDestinatarios from '$lib/components/ColecaoDestinatarios.svelte';
 	import SelectMenu from '$lib/components/SelectMenu.svelte';
+	import { plural } from '$lib/utils/colecaoCapa';
 	import type { SelectMenuOption } from '$lib/types/selectMenu';
 	import type { ColecaoResumo } from '$lib/types/collections';
 
@@ -42,17 +48,15 @@
 
 	const isFavoritos = $derived(colecao.tipo === 'favoritos');
 	const isDono = $derived(colecao.papel === 'dono');
-
-	const plural = (n: number, singular: string): string =>
-		`${n} ${n === 1 ? singular : `${singular}s`}`;
-
-	const meta = $derived(
-		`${plural(colecao.projetos, 'projeto')} · ${plural(colecao.etapas_total, 'etapa')}`
+	const projetosLabel = $derived(plural(colecao.projetos, 'projeto'));
+	const linkLabel = $derived(
+		`Abrir coleção ${colecao.nome}: ${projetosLabel}, ${plural(colecao.etapas_total, 'etapa')}, ${colecao.progresso_pct}% concluído`
 	);
 
 	const PAPEL_LABEL: Record<string, string> = { viewer: 'Leitura', editor: 'Edição' };
 
-	// `?? []`/`?? 0`: payload antigo em cache SWR (pré-aceite) não quebra o card.
+	// `?? []`/`?? 0`: payload antigo em cache SWR (pré-aceite/pré-capa) não quebra o card.
+	const areas = $derived(colecao.areas ?? []);
 	const destinatarios = $derived(colecao.destinatarios ?? []);
 	const destinatariosTotal = $derived(colecao.destinatarios_total ?? destinatarios.length);
 	const mostrarDestinatarios = $derived(
@@ -66,7 +70,7 @@
 			: `Compartilhada por ${colecao.owner.nome} · ${PAPEL_LABEL[colecao.papel] ?? 'Leitura'}`
 	);
 
-	const acoes = $derived.by<SelectMenuOption[]>(() => {
+	const acoesMenu = $derived.by<SelectMenuOption[]>(() => {
 		const out: SelectMenuOption[] = [];
 		if (onEditar) out.push({ value: 'editar', label: 'Editar' });
 		if (onCompartilhar) out.push({ value: 'compartilhar', label: 'Compartilhar' });
@@ -81,77 +85,81 @@
 	}
 </script>
 
+<!-- Sem `h-full`: num item de grid o 100% resolve contra a LINHA inteira e o
+     card esticava até o painel do estado vazio mesmo com `items-start`. A
+     altura igual entre cards vem do `align-items: stretch` do grid. -->
 <article
-	class="relative flex h-full flex-col gap-3 rounded-lg border border-border-subtle bg-surface p-4 shadow-sm transition-ui duration-slow focus-within:border-brand hover:border-brand hover:shadow-md"
+	class="relative flex flex-col rounded-xl border border-border-subtle bg-surface shadow-sm transition-ui duration-slow focus-within:border-brand hover:border-brand hover:shadow-md"
 >
 	<a
 		{href}
-		aria-label={`Abrir coleção ${colecao.nome}: ${meta}, ${colecao.progresso_pct}% concluído`}
-		class="absolute inset-0 z-10 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+		aria-label={linkLabel}
+		class="absolute inset-0 z-10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
 	></a>
 
-	<div class="flex items-center gap-3">
-		<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} />
-		<div class="flex min-w-0 flex-1 flex-col">
-			<span class="min-w-0 truncate text-base font-bold text-text-primary" title={colecao.nome}>
-				{colecao.nome}
-			</span>
-			{#if procedencia}
-				<span class="min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
+	<ColecaoCapa
+		icone={colecao.icone}
+		cor={colecao.cor}
+		nome={colecao.nome}
+		meta={isFavoritos && colecao.projetos === 0 ? undefined : projetosLabel}
+		class="rounded-t-[15px]"
+	>
+		{#snippet acoes()}
+			{#if areas.length > 0}
+				<ColecaoAreasPill {areas} cor={colecao.cor} detalhe />
 			{/if}
-		</div>
-		{#if isFavoritos}
-			<span
-				class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
-			>
-				Padrão
-			</span>
-		{:else if isDono && acoes.length > 0}
-			<div class="relative z-20 w-8 shrink-0">
-				<SelectMenu
-					options={acoes}
-					value={null}
-					onSelect={executarAcao}
-					unstyled
-					hideCheck
-					align="right"
-					ariaLabel={`Ações da coleção ${colecao.nome}`}
+			{#if isFavoritos}
+				<span
+					class="bg-capa-veu inline-flex h-6 items-center rounded-full px-2.5 text-2xs font-semibold text-text-secondary"
 				>
-					{#snippet trigger()}
-						<span
-							class="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors duration-fast hover:bg-surface-muted hover:text-text-primary"
-						>
-							<AppIcon id="kebab" />
-						</span>
-					{/snippet}
-				</SelectMenu>
+					Padrão
+				</span>
+			{:else if isDono && acoesMenu.length > 0}
+				<div class="w-7 shrink-0">
+					<SelectMenu
+						options={acoesMenu}
+						value={null}
+						onSelect={executarAcao}
+						unstyled
+						hideCheck
+						align="right"
+						ariaLabel={`Ações da coleção ${colecao.nome}`}
+					>
+						{#snippet trigger()}
+							<span
+								class="bg-capa-veu flex h-7 w-7 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast hover:text-text-primary"
+							>
+								<AppIcon id="kebab" size={16} />
+							</span>
+						{/snippet}
+					</SelectMenu>
+				</div>
+			{/if}
+		{/snippet}
+	</ColecaoCapa>
+
+	<div class="flex flex-1 flex-col gap-3 px-4 pb-4 pt-3.5">
+		{#if isFavoritos && colecao.projetos === 0}
+			<p class="m-0 text-sm leading-snug text-text-muted">
+				Use a estrela nos projetos para guardá-los aqui.
+			</p>
+		{:else}
+			<ColecaoAndamento etapas={colecao} />
+		{/if}
+
+		{#if procedencia || mostrarDestinatarios}
+			<div class="mt-auto flex flex-col gap-2 border-t border-border-hairline pt-3">
+				{#if procedencia}
+					<span class="min-w-0 truncate text-xs text-text-muted">{procedencia}</span>
+				{/if}
+				{#if mostrarDestinatarios}
+					<!-- Acima do link sobreposto (z-20, só na largura da pilha): o title de cada
+					     avatar é o único jeito de saber quem é cada iniciais no hover. -->
+					<div class="relative z-20 max-w-full self-start">
+						<ColecaoDestinatarios {destinatarios} total={destinatariosTotal} souDono={isDono} />
+					</div>
+				{/if}
 			</div>
 		{/if}
-	</div>
-
-	{#if colecao.descricao}
-		<p class="m-0 line-clamp-1 text-sm text-text-secondary">{colecao.descricao}</p>
-	{/if}
-
-	{#if mostrarDestinatarios}
-		<!-- Acima do link sobreposto (z-20, só na largura da pilha): o title de cada
-		     avatar é o único jeito de saber quem é cada iniciais no hover. -->
-		<div class="relative z-20 max-w-full self-start">
-			<ColecaoDestinatarios {destinatarios} total={destinatariosTotal} souDono={isDono} />
-		</div>
-	{/if}
-
-	<div class="mt-auto">
-		<!-- Barra decorativa: o % já é lido no texto abaixo e no label do link. -->
-		<div class="h-1.5 w-full overflow-hidden rounded-full bg-progress-track" aria-hidden="true">
-			<div
-				class="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
-				style:width={`${colecao.progresso_pct}%`}
-			></div>
-		</div>
-		<div class="mt-2 flex items-center text-xs text-text-muted">
-			<span class="truncate">{meta}</span>
-			<span class="ml-auto shrink-0 font-mono text-text-secondary">{colecao.progresso_pct}%</span>
-		</div>
 	</div>
 </article>

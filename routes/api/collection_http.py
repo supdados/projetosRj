@@ -17,6 +17,7 @@ from typing import Any, Callable
 from flask import Response, g, request
 
 from models import PAPEL_SHARE_EDITOR, PAPEL_SHARE_VIEWER, ProjectCollection, db
+from services.collection_areas import areas_por_colecao
 from services.collection_shares import destinatarios_por_colecao
 from services.project_collections import (
     PAPEL_COLECAO_DONO,
@@ -97,14 +98,17 @@ def mutar(acao: Callable[[], ApiResponse], log_label: str) -> ApiResponse:
 
 
 def cards_das_colecoes(acessos: list[AcessoColecao]) -> list[dict[str, Any]]:
-    """Cards do índice em lote: rollups (1 query) + destinatários (2–3 queries).
+    """Cards do índice em lote: rollups (1 query) + áreas (1 query) +
+    destinatários (2–3 queries).
 
     ``compartilhada`` deriva dos destinatários já carregados — sem a query
     extra de ``collection_ids_com_share`` (orçamento ≤ 20 do índice em
     ``tests/routes/test_read_materialization.py``).
     """
     colecoes = [colecao for colecao, _ in acessos]
-    rollups = collection_rollups([colecao.id for colecao in colecoes], g.user)
+    ids = [colecao.id for colecao in colecoes]
+    rollups = collection_rollups(ids, g.user)
+    areas = areas_por_colecao(ids, g.user)
     destinatarios = destinatarios_por_colecao(colecoes, g.user)
     return [
         serialize_colecao_card(
@@ -112,6 +116,7 @@ def cards_das_colecoes(acessos: list[AcessoColecao]) -> list[dict[str, Any]]:
             rollups[colecao.id],
             papel=papel,
             destinatarios=destinatarios.get(colecao.id, []),
+            areas=areas.get(colecao.id, []),
         )
         for colecao, papel in acessos
     ]

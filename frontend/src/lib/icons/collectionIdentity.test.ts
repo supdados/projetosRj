@@ -8,7 +8,14 @@ import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 import { describe, expect, it } from 'vitest';
 import config from '../../../tailwind.config';
-import { COLECAO_COR_OPTIONS, COLECAO_ICONE_ATIVO_CLASS } from './collectionIdentity';
+import {
+	COLECAO_CAPA_TOM,
+	COLECAO_COR_OPTIONS,
+	COLECAO_ICONE_ATIVO_CLASS,
+	COLECAO_ICONE_OPTIONS,
+	tomDaCapa
+} from './collectionIdentity';
+import { COLLECTION_ICONS } from './collectionIcons';
 
 /** Compila só os utilitários das classes dadas, com o tema do projeto. */
 async function cssDasClasses(classes: readonly string[]): Promise<string> {
@@ -31,7 +38,8 @@ function regraDe(css: string, classe: string): string | null {
 
 const CLASSES_DA_IDENTIDADE = [
 	...COLECAO_COR_OPTIONS.flatMap((opcao) => [opcao.wash, opcao.dot, opcao.ativo]),
-	...Object.values(COLECAO_ICONE_ATIVO_CLASS).flatMap((classes) => classes.split(' '))
+	...Object.values(COLECAO_ICONE_ATIVO_CLASS).flatMap((classes) => classes.split(' ')),
+	...Object.values(COLECAO_CAPA_TOM).flatMap((tom) => [tom.wash, tom.tinta, tom.selo])
 ];
 
 describe('identidade da coleção × config do Tailwind', () => {
@@ -54,5 +62,18 @@ describe('identidade da coleção × config do Tailwind', () => {
 		expect(regraDe(css, 'border-warning')).toContain('var(--ds-color-border-warning)');
 		expect(regraDe(css, 'border-danger')).toContain('var(--ds-color-border-danger)');
 		expect(regraDe(css, 'border-danger-soft')).toContain('var(--ds-color-border-danger-soft)');
+	});
+});
+
+describe('opções de ícone e tom da capa', () => {
+	it('todo ícone escolhível tem desenho no registry (12, grade 6×2 do modal)', () => {
+		expect(COLECAO_ICONE_OPTIONS).toHaveLength(12);
+		const semDesenho = COLECAO_ICONE_OPTIONS.filter((o) => !COLLECTION_ICONS[o.id]?.length);
+		expect(semDesenho).toEqual([]);
+	});
+
+	it('cor desconhecida cai no tom azul padrão', () => {
+		expect(tomDaCapa('inexistente' as never)).toBe(COLECAO_CAPA_TOM.primary);
+		expect(tomDaCapa('success')).toBe(COLECAO_CAPA_TOM.success);
 	});
 });

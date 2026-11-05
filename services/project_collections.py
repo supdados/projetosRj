@@ -44,7 +44,11 @@ from models import (
     User,
     db,
 )
-from services.atraso import etapa_vencida_criterion, hoje_utc
+from services.atraso import (
+    etapa_em_andamento_criterion,
+    etapa_vencida_criterion,
+    hoje_utc,
+)
 from services.authorization import (
     apply_project_visibility,
     area_project_rank,
@@ -433,19 +437,25 @@ def collection_rollups(
     """Agregados por coleção em 1 query (independe de N coleções).
 
     Retorna ``{collection_id: {projetos, etapas_total, etapas_concluidas,
-    progresso_pct}}`` contando SÓ projetos visíveis ao viewer; coleção sem
-    projeto visível sai zerada. Etapa concluída = ``iniciada AND done`` nas
-    etapas de workflow (regra de ``Project.etapas_concluidas``).
+    etapas_em_andamento, etapas_atrasadas, progresso_pct}}`` contando SÓ
+    projetos visíveis ao viewer; coleção sem projeto visível sai zerada. Etapa
+    concluída = ``iniciada AND done`` nas etapas de workflow (regra de
+    ``Project.etapas_concluidas``); atrasada e em andamento seguem
+    ``services.atraso`` (excludentes entre si e com concluída). As não
+    iniciadas são o resto — a barra da capa do card as deriva do total.
     """
     ids = [int(collection_id) for collection_id in collection_ids]
     rollups = {collection_id: _rollup_zerado() for collection_id in ids}
     if not ids:
         return rollups
-    for collection_id, projetos, total, concluidas in _rollup_rows(ids, viewer):
+    for row in _rollup_rows(ids, viewer):
+        collection_id, projetos, total, concluidas, em_andamento, atrasadas = row
         rollups[collection_id] = {
             "projetos": int(projetos),
             "etapas_total": int(total),
             "etapas_concluidas": int(concluidas),
+            "etapas_em_andamento": int(em_andamento),
+            "etapas_atrasadas": int(atrasadas),
             "progresso_pct": _progresso_pct(int(concluidas), int(total)),
         }
     return rollups
@@ -569,12 +579,16 @@ def _rollup_rows(ids: list[int], viewer: User) -> list[Any]:
     etapa_workflow = and_(
         Etapa.project_id == Project.id, Etapa.entry_type != "google_meeting"
     )
+    # Um relógio só para as duas faixas: atraso e andamento não podem divergir.
+    hoje = hoje_utc()
     query = (
         db.session.query(
             ProjectCollectionItem.collection_id,
             func.count(func.distinct(Project.id)),
             func.count(Etapa.id),
             _sum_case(and_(Etapa.iniciada.is_(True), Etapa.done.is_(True))),
+            _sum_case(etapa_em_andamento_criterion(hoje)),
+            _sum_case(etapa_vencida_criterion(hoje)),
         )
         .select_from(ProjectCollectionItem)
         .join(Project, Project.id == ProjectCollectionItem.project_id)
@@ -680,6 +694,8 @@ def _rollup_zerado() -> dict[str, int]:
         "projetos": 0,
         "etapas_total": 0,
         "etapas_concluidas": 0,
+        "etapas_em_andamento": 0,
+        "etapas_atrasadas": 0,
         "progresso_pct": 0,
     }
 

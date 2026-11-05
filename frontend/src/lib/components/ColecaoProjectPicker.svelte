@@ -1,7 +1,8 @@
 <script lang="ts">
 	/**
 	 * Checklist multi-select de projetos para coleções: busca server-side em
-	 * GET /api/projetos?q= (debounce) + lista com meta "área · N etapas".
+	 * GET /api/projetos?q= (debounce) + lista com a sigla da área num chip e
+	 * "N etapas" alinhado à direita (design "Coleções 3a").
 	 * REUTILIZÁVEL: passo 2 do modal "Nova coleção" e "Adicionar projetos" da
 	 * página interna. A seleção é CONTROLADA pelo pai (`selecionados` +
 	 * `onchange`).
@@ -43,6 +44,11 @@
 		/** Total de projetos disponíveis (sem filtro de busca) — para "N de M". */
 		ontotal?: (total: number) => void;
 		/**
+		 * Cada página que chega do servidor — o modal Nova coleção guarda a
+		 * área de cada projeto para a pílula "N áreas" da capa ao vivo.
+		 */
+		onprojetosCarregados?: (projetos: Project[]) => void;
+		/**
 		 * Cresce até o fim do pai — que precisa ser uma coluna flex de altura
 		 * definida — em vez do teto fixo de 15rem; a lista rola por dentro.
 		 * Só a partir de `md`: empilhado no mobile o teto continua valendo,
@@ -63,6 +69,7 @@
 		visibilidade,
 		onchange,
 		ontotal,
+		onprojetosCarregados,
 		preencher = false,
 		mostrarTodosInicial = false
 	}: Props = $props();
@@ -105,6 +112,7 @@
 			const data = await fetchProjects(query, abortController.signal);
 			if (minhaGen !== gen) return;
 			for (const projeto of data.projetos) conhecidos.set(projeto.id, projeto);
+			onprojetosCarregados?.(data.projetos);
 			// Com busca ativa vale só o que casa com o termo (comportamento de busca).
 			projetos = q ? data.projetos : pinSelectedProjects(data.projetos, selecionados, conhecidos);
 			if (!q) ontotal?.(data.pagination.total);
@@ -140,11 +148,11 @@
 		onchange(proximos);
 	}
 
-	function metaProjeto(projeto: Project): string {
-		const area = projeto.orgao_sigla ?? projeto.orgao;
+	const areaDoProjeto = (projeto: Project): string | null => projeto.orgao_sigla ?? projeto.orgao;
+
+	function etapasDoProjeto(projeto: Project): string {
 		const total = projeto.total_workflow_etapas;
-		const etapas = `${total} ${total === 1 ? 'etapa' : 'etapas'}`;
-		return area ? `${area} · ${etapas}` : etapas;
+		return `${total} ${total === 1 ? 'etapa' : 'etapas'}`;
 	}
 
 	onMount(() => {
@@ -260,20 +268,20 @@
 						<button
 							type="button"
 							onclick={() => toggle(projeto.id)}
-							class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {marcado
+							class="flex min-h-[2.875rem] w-full items-center gap-3 px-3.5 py-2 text-left transition-colors duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand {marcado
 								? 'bg-wash-brand'
 								: 'hover:bg-surface-muted'}"
 						>
 							<span
-								class="grid h-4 w-4 shrink-0 place-items-center rounded border transition-colors duration-fast {marcado
+								class="grid h-5 w-5 shrink-0 place-items-center rounded-[6px] border-2 transition-colors duration-fast {marcado
 									? 'border-brand bg-brand'
 									: 'border-border-strong bg-surface'}"
 								aria-hidden="true"
 							>
 								{#if marcado}
 									<svg
-										width="10"
-										height="10"
+										width="13"
+										height="13"
 										viewBox="0 0 24 24"
 										fill="none"
 										stroke="currentColor"
@@ -286,8 +294,23 @@
 									</svg>
 								{/if}
 							</span>
-							<span class="min-w-0 flex-1 truncate text-sm text-text-primary">{projeto.titulo}</span>
-							<span class="shrink-0 pl-3 text-xs text-text-muted">{metaProjeto(projeto)}</span>
+							<span
+								class="min-w-0 flex-1 truncate text-md text-text-primary {marcado
+									? 'font-semibold'
+									: ''}"
+							>
+								{projeto.titulo}
+							</span>
+							{#if areaDoProjeto(projeto)}
+								<span
+									class="max-w-[8rem] shrink-0 truncate rounded-sm bg-surface-chip px-1.5 py-0.5 text-2xs font-semibold text-text-secondary"
+								>
+									{areaDoProjeto(projeto)}
+								</span>
+							{/if}
+							<span class="w-[4.5rem] shrink-0 text-right text-xs text-text-muted">
+								{etapasDoProjeto(projeto)}
+							</span>
 							<!-- Bolinha só no que foge do padrão (vigente é o caso comum); a coluna
 							     é reservada em toda linha quando a lista mistura status, para a
 							     meta continuar alinhada à direita. Tooltip no padrão do Gantt, aberto

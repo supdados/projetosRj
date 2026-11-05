@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime
 from typing import Any
 
-from sqlalchemy import and_, exists
+from sqlalchemy import and_, exists, or_
 
 from models import Etapa, Project, db
 from time_utils import utc_now
@@ -37,6 +37,29 @@ def etapa_vencida_criterion(hoje: datetime.date | None = None) -> Any:
         Etapa.done.is_(False),
         Etapa.entry_type != "google_meeting",
         Etapa.data_fim < data_referencia,
+    )
+
+
+def etapa_em_andamento_criterion(hoje: datetime.date | None = None) -> Any:
+    """Condição SQL de etapa de workflow EM ANDAMENTO: já começou (pela data),
+    não está concluída e não está vencida.
+
+    Complementa ``etapa_vencida_criterion`` sem sobrepor: uma etapa nunca é as
+    duas coisas. A data (e não a flag ``iniciada``) decide, como na faixa
+    "em execução" do cronograma das Coleções. Exemplo:
+    ``func.sum(case((etapa_em_andamento_criterion(hoje), 1), else_=0))``.
+    """
+    data_referencia = hoje if hoje is not None else hoje_utc()
+    return and_(
+        Etapa.entry_type != "google_meeting",
+        ~and_(Etapa.iniciada.is_(True), Etapa.done.is_(True)),
+        Etapa.data_inicio <= data_referencia,
+        # Negação de "vencida" explícita: NOT sobre data_fim NULL viraria NULL.
+        or_(
+            Etapa.done.is_(True),
+            Etapa.data_fim.is_(None),
+            Etapa.data_fim >= data_referencia,
+        ),
     )
 
 
