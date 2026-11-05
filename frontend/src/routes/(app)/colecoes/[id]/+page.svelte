@@ -69,7 +69,8 @@
 	import ColecaoProjetosTabela from '$lib/components/ColecaoProjetosTabela.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import Button from '$lib/components/Button.svelte';
-	import ColecaoIconTile from '$lib/components/ColecaoIconTile.svelte';
+	import ColecaoAreasPill from '$lib/components/ColecaoAreasPill.svelte';
+	import ColecaoIconeSvg from '$lib/components/ColecaoIconeSvg.svelte';
 	import LoadErrorState from '$lib/components/LoadErrorState.svelte';
 	import ColecaoDetalheSkeleton from '$lib/components/skeletons/ColecaoDetalheSkeleton.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
@@ -78,7 +79,8 @@
 	import {
 		COLECAO_COR_OPTIONS,
 		COLECAO_ICONE_ATIVO_CLASS,
-		COLECAO_ICONE_OPTIONS
+		COLECAO_ICONE_OPTIONS,
+		tomDaCapa
 	} from '$lib/icons/collectionIdentity';
 	import { auth } from '$lib/stores/auth';
 	import { confirmAction } from '$lib/stores/confirm';
@@ -88,6 +90,7 @@
 		accessErrorMessage,
 		type AccessErrorKind
 	} from '$lib/utils/accessErrorMessages';
+	import { segmentosDaBarra } from '$lib/utils/colecaoCapa';
 	import { textoDeSaida } from '$lib/utils/colecaoShares';
 	import type { DesfechoConvite } from '$lib/utils/conviteColecao';
 	import type { ProjectsVisibilidadePicker } from '$lib/types/projects';
@@ -237,11 +240,18 @@
 	const meuId = $derived($auth.user?.id ?? null);
 
 	const PAPEL_LABEL: Record<string, string> = { viewer: 'leitor', editor: 'editor' };
+	// Procedência de coleção alheia: quem compartilhou + o papel (este na cor da coleção).
 	const procedencia = $derived(
 		colecao && !isDono && colecao.owner
-			? `Compartilhada por ${colecao.owner.nome} · você é ${PAPEL_LABEL[colecao.papel] ?? 'leitor'}`
-			: ''
+			? { dono: colecao.owner.nome, papel: PAPEL_LABEL[colecao.papel] ?? 'leitor' }
+			: null
 	);
+
+	// Identidade da capa no cabeçalho (design "Cabeçalho B"): a barra de título é
+	// a capa na horizontal — fundo e tinta da família da coleção — e o progresso
+	// usa a mesma barra segmentada dos cards do índice.
+	const tom = $derived(colecao ? tomDaCapa(colecao.cor) : null);
+	const segmentos = $derived(colecao ? segmentosDaBarra(colecao) : []);
 
 	const tarefasTotal = $derived(rows.reduce((s, r) => s + r.tarefas_total, 0));
 	const areasCount = $derived(
@@ -264,6 +274,8 @@
 	// ── Apresentação ─────────────────────────────────────────────────────────
 	const pluralizar = (n: number, singular: string, plural: string): string =>
 		`${n} ${n === 1 ? singular : plural}`;
+	const palavra = (n: number, singular: string, plural: string): string =>
+		n === 1 ? singular : plural;
 
 	// ── Compartilhar (só dono; o modal cuida das concessões) ─────────────────
 	let shareOpen = $state(false);
@@ -477,89 +489,108 @@
 	{:else if colecao}
 		<!-- Header-card: tile + nome + ações; linha de meta embutida. -->
 		<div class="relative rounded-xl border border-border-subtle bg-surface shadow-sm">
-			<PageHeader compact embedded class="min-h-[3.5rem]" labelId="colecao-title">
-				{#snippet titleContent()}
-					<span class="group/titulo inline-flex max-w-full items-center gap-2 align-middle">
-						{#if podeEditarIdentidade}
-							<button
-								type="button"
-								bind:this={tileBtnEl}
-								onclick={alternarTilePopover}
-								aria-haspopup="dialog"
-								aria-expanded={tileOpen}
-								aria-label="Alterar ícone e cor da coleção"
-								class="shrink-0 rounded-md transition-opacity duration-fast hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-							>
-								<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} size={32} />
-							</button>
-						{:else}
-							<ColecaoIconTile icone={colecao.icone} cor={colecao.cor} size={32} />
+			<!-- Barra de título = capa na horizontal: fundo na cor da coleção e o mesmo
+			     ícone, grande e apagado, vazando por cima (recortado pela faixa). -->
+			<div class="relative overflow-hidden rounded-t-[11px] {tom?.wash ?? ''}">
+				<div class="pointer-events-none absolute inset-0" aria-hidden="true">
+					<ColecaoIconeSvg
+						icone={colecao.icone}
+						size={132}
+						class="absolute -top-[38px] right-[22rem] opacity-[.12] {tom?.tinta ?? ''}"
+					/>
+				</div>
+				<PageHeader compact embedded class="relative min-h-[3.5rem]" labelId="colecao-title">
+					{#snippet titleContent()}
+						<span class="group/titulo inline-flex max-w-full items-center gap-2 align-middle">
+							{#if podeEditarIdentidade}
+								<button
+									type="button"
+									bind:this={tileBtnEl}
+									onclick={alternarTilePopover}
+									aria-haspopup="dialog"
+									aria-expanded={tileOpen}
+									aria-label="Alterar ícone e cor da coleção"
+									class="grid h-8 w-8 shrink-0 place-items-center rounded-md transition-colors duration-fast hover:bg-capa-veu focus:outline-none focus-visible:ring-2 focus-visible:ring-brand {tom?.tinta ??
+										''}"
+								>
+									<ColecaoIconeSvg icone={colecao.icone} size={22} />
+								</button>
+							{:else}
+								<span class="grid h-8 w-8 shrink-0 place-items-center {tom?.tinta ?? ''}" aria-hidden="true">
+									<ColecaoIconeSvg icone={colecao.icone} size={22} />
+								</span>
+							{/if}
+							{#if tituloEditando}
+								<input
+									bind:this={tituloInputEl}
+									bind:value={tituloDraft}
+									type="text"
+									aria-label="Nome da coleção"
+									onkeydown={onTituloKeydown}
+									onblur={() => void commitTitulo()}
+									class="h-8 w-72 min-w-0 max-w-full rounded-md border border-brand bg-surface px-2 font-heading text-xl font-bold leading-tight text-text-primary focus:outline-none"
+								/>
+							{:else}
+								<span class="min-w-0 truncate text-text-primary">{shownNome}</span>
+							{/if}
+							{#if !isFavoritos && (colecao.areas ?? []).length > 0}
+								<span class="shrink-0 font-sans text-base font-normal">
+									<ColecaoAreasPill areas={colecao.areas} cor={colecao.cor} />
+								</span>
+							{/if}
+							{#if isFavoritos}
+								<span
+									class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
+								>
+									Padrão
+								</span>
+							{/if}
+							{#if podeEditarIdentidade}
+								<button
+									type="button"
+									bind:this={tituloPenEl}
+									disabled={tituloSaving}
+									aria-label={tituloEditando ? 'Salvar nome da coleção' : 'Editar nome da coleção'}
+									onmousedown={onPenMousedown}
+									onclick={onPenClick}
+									class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-secondary transition-opacity duration-fast hover:bg-capa-veu hover:text-text-primary focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand group-hover/titulo:opacity-100 group-focus-within/titulo:opacity-100 {tituloEditando ||
+									tituloSaving
+										? 'opacity-100'
+										: 'opacity-0'}"
+								>
+									{#if tituloSaving}
+										<i class="fas fa-spinner fa-spin text-xs" aria-hidden="true"></i>
+									{:else if tituloEditando}
+										<i class="fas fa-check text-xs" aria-hidden="true"></i>
+									{:else}
+										<AppIcon id="edicao" size={14} />
+									{/if}
+								</button>
+							{/if}
+						</span>
+					{/snippet}
+					{#snippet actions()}
+						{#if podeSair}
+							<Button size="sm" variant="ghost" onclick={() => void confirmarSaida()}>
+								Sair da coleção
+							</Button>
 						{/if}
-						{#if tituloEditando}
-							<input
-								bind:this={tituloInputEl}
-								bind:value={tituloDraft}
-								type="text"
-								aria-label="Nome da coleção"
-								onkeydown={onTituloKeydown}
-								onblur={() => void commitTitulo()}
-								class="h-8 w-72 min-w-0 max-w-full rounded-md border border-brand bg-surface px-2 font-heading text-xl font-bold leading-tight text-brand focus:outline-none"
-							/>
-						{:else}
-							<span class="min-w-0 truncate">{shownNome}</span>
+						{#if !isFavoritos && isDono}
+							<Button size="sm" variant="secondary" onclick={() => (shareOpen = true)}>
+								Compartilhar
+							</Button>
 						{/if}
-						{#if isFavoritos}
-							<span
-								class="shrink-0 rounded-sm border border-border-subtle bg-wash-neutral px-2 py-0.5 text-2xs font-medium text-text-secondary"
-							>
-								Padrão
-							</span>
+						{#if podeMexerNosItens}
+							<Button size="sm" onclick={() => (pickerOpen = true)}>
+								{#snippet icon()}
+									<i class="fas fa-plus" aria-hidden="true"></i>
+								{/snippet}
+								Adicionar projetos
+							</Button>
 						{/if}
-						{#if podeEditarIdentidade}
-							<button
-								type="button"
-								bind:this={tituloPenEl}
-								disabled={tituloSaving}
-								aria-label={tituloEditando ? 'Salvar nome da coleção' : 'Editar nome da coleção'}
-								onmousedown={onPenMousedown}
-								onclick={onPenClick}
-								class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition-opacity duration-fast hover:bg-surface-muted hover:text-text-primary focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand group-hover/titulo:opacity-100 group-focus-within/titulo:opacity-100 {tituloEditando ||
-								tituloSaving
-									? 'opacity-100'
-									: 'opacity-0'}"
-							>
-								{#if tituloSaving}
-									<i class="fas fa-spinner fa-spin text-xs" aria-hidden="true"></i>
-								{:else if tituloEditando}
-									<i class="fas fa-check text-xs" aria-hidden="true"></i>
-								{:else}
-									<AppIcon id="edicao" size={14} />
-								{/if}
-							</button>
-						{/if}
-					</span>
-				{/snippet}
-				{#snippet actions()}
-					{#if podeSair}
-						<Button size="sm" variant="ghost" onclick={() => void confirmarSaida()}>
-							Sair da coleção
-						</Button>
-					{/if}
-					{#if !isFavoritos && isDono}
-						<Button size="sm" variant="secondary" onclick={() => (shareOpen = true)}>
-							Compartilhar
-						</Button>
-					{/if}
-					{#if podeMexerNosItens}
-						<Button size="sm" onclick={() => (pickerOpen = true)}>
-							{#snippet icon()}
-								<i class="fas fa-plus" aria-hidden="true"></i>
-							{/snippet}
-							Adicionar projetos
-						</Button>
-					{/if}
-				{/snippet}
-			</PageHeader>
+					{/snippet}
+				</PageHeader>
+			</div>
 			{#if tileOpen}
 				<!-- Overlay absoluto abaixo do tile: não altera a altura da barra. -->
 				<div
@@ -624,22 +655,34 @@
 			<div
 				class="flex min-h-[calc(var(--control-h-md)+1.25rem)] flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle px-4 py-2.5 text-sm text-text-secondary"
 			>
-				<span>{pluralizar(colecao.etapas_total, 'etapa', 'etapas')}</span>
+				<span>
+					<span class="font-semibold text-text-primary">{colecao.etapas_total}</span>
+					{palavra(colecao.etapas_total, 'etapa', 'etapas')}
+				</span>
 				<span class="text-text-faint" aria-hidden="true">|</span>
-				<span>{pluralizar(tarefasTotal, 'tarefa', 'tarefas')}</span>
+				<span>
+					<span class="font-semibold text-text-primary">{tarefasTotal}</span>
+					{palavra(tarefasTotal, 'tarefa', 'tarefas')}
+				</span>
 				<span class="text-text-faint" aria-hidden="true">|</span>
-				<span>{pluralizar(areasCount, 'área responsável', 'áreas responsáveis')}</span>
+				<span>
+					<span class="font-semibold text-text-primary">{areasCount}</span>
+					{palavra(areasCount, 'área responsável', 'áreas responsáveis')}
+				</span>
 				{#if prazoMaisDistante}
 					<span class="text-text-faint" aria-hidden="true">|</span>
 					<span>
-						Prazo mais distante:
-						<time datetime={prazoMaisDistante} class="font-mono text-text-primary">
+						Prazo mais distante
+						<time datetime={prazoMaisDistante} class="font-semibold text-text-primary">
 							{formatIsoDateBR(prazoMaisDistante)}
 						</time>
 					</span>
 				{/if}
 				{#if procedencia}
-					<span class="ml-auto text-xs text-text-muted">{procedencia}</span>
+					<span class="ml-auto text-xs text-text-muted">
+						Compartilhada por {procedencia.dono} ·
+						<span class="font-semibold {tom?.tinta ?? ''}">você é {procedencia.papel}</span>
+					</span>
 				{/if}
 			</div>
 		</div>
@@ -654,18 +697,34 @@
 
 		<!-- KPIs: progresso geral destacado + projetos + atrasados + concluídos. -->
 		<div class="grid grid-cols-2 gap-4 xl:grid-cols-[1.3fr_1fr_1fr_1fr]">
+			<!-- Progresso: a mesma barra segmentada dos cards (concluídas · vigentes ·
+			     atrasadas · não iniciadas); o % na cor das concluídas. -->
 			<div
-				class="flex items-center gap-4 rounded-lg border border-brand-soft bg-wash-brand p-4 shadow-sm"
+				class="flex items-center gap-4 rounded-lg border border-border-subtle bg-surface p-4 shadow-sm"
 			>
-				<span class="shrink-0 font-heading text-4xl font-bold tracking-tight text-brand">
+				<span class="shrink-0 font-heading text-4xl font-bold tracking-tight text-success">
 					{colecao.progresso_pct}%
 				</span>
-				<div class="min-w-0">
-					<p class="m-0 text-md font-semibold text-brand">Progresso geral</p>
-					<p class="m-0 text-sm text-text-secondary">
-						{colecao.etapas_concluidas} de {colecao.etapas_total}
-						{colecao.etapas_total === 1 ? 'etapa concluída' : 'etapas concluídas'}
+				<div class="flex min-w-0 flex-1 flex-col gap-2">
+					<p class="m-0 truncate text-md font-semibold text-text-primary">
+						Progresso geral
+						<span class="font-normal text-text-muted">
+							· {colecao.etapas_concluidas} de {colecao.etapas_total}
+							{colecao.etapas_total === 1 ? 'etapa concluída' : 'etapas concluídas'}
+						</span>
 					</p>
+					<div
+						class="flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-progress-track"
+						aria-hidden="true"
+					>
+						{#each segmentos as segmento (segmento.faixa)}
+							<div
+								class="rounded-sm {segmento.classe}"
+								style:flex-grow={segmento.valor}
+								title={segmento.rotulo}
+							></div>
+						{/each}
+					</div>
 				</div>
 			</div>
 			<div
@@ -675,7 +734,7 @@
 					{colecao.projetos}
 				</span>
 				<div class="min-w-0">
-					<p class="m-0 text-md font-medium text-text-primary">
+					<p class="m-0 text-md font-semibold text-text-primary">
 						{colecao.projetos === 1 ? 'Projeto na coleção' : 'Projetos na coleção'}
 					</p>
 					<p class="m-0 text-sm text-text-muted">
@@ -694,7 +753,7 @@
 					{atrasadosCount}
 				</span>
 				<div class="min-w-0">
-					<p class="m-0 text-md font-medium text-text-primary">
+					<p class="m-0 text-md font-semibold text-text-primary">
 						{atrasadosCount === 1 ? 'Atrasado' : 'Atrasados'}
 					</p>
 					<p class="m-0 text-sm text-text-muted">
@@ -709,7 +768,7 @@
 					{concluidosCount}
 				</span>
 				<div class="min-w-0">
-					<p class="m-0 text-md font-medium text-text-primary">
+					<p class="m-0 text-md font-semibold text-text-primary">
 						{concluidosCount === 1 ? 'Concluído' : 'Concluídos'}
 					</p>
 					<p class="m-0 text-sm text-text-muted">
